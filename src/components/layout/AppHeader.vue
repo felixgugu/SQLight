@@ -1,7 +1,14 @@
 <template>
-  <header class="h-10 bg-dark-850 border-b border-dark-700 flex items-center justify-between px-3 text-xs select-none flex-shrink-0">
+  <header class="h-10 bg-dark-850 border-b border-dark-700 flex items-center justify-between px-3 text-xs select-none flex-shrink-0 relative">
+    <!-- Click Outside Backdrop for Connection Dropdown -->
+    <div
+      v-if="isConnDropdownOpen"
+      class="fixed inset-0 z-40"
+      @click="isConnDropdownOpen = false"
+    />
+
     <!-- Left: App Branding & Connection / DB Pickers -->
-    <div class="flex items-center space-x-3">
+    <div class="flex items-center space-x-3 z-50">
       <!-- App Brand -->
       <div class="flex items-center space-x-2 font-bold text-dark-100 tracking-wide pr-2 border-r border-dark-700">
         <div class="w-5 h-5 rounded bg-brand-500/20 text-brand-500 flex items-center justify-center font-mono text-xs font-black">
@@ -10,17 +17,99 @@
         <span class="text-sm font-semibold">SQLight</span>
       </div>
 
-      <!-- Active Connection Selector / Open Modal -->
-      <div
-        @click="$emit('open-connection-modal')"
-        class="flex items-center space-x-1.5 bg-dark-800 hover:bg-dark-750 px-2 py-1 rounded border border-dark-700 cursor-pointer transition-colors"
-        title="Manage Connections"
-      >
-        <Database class="w-3.5 h-3.5 text-emerald-400" />
-        <span class="text-dark-200 font-medium max-w-[150px] truncate">
-          {{ connectionStore.activeConnection?.name ?? 'Select Connection' }}
-        </span>
-        <ChevronDown class="w-3 h-3 text-dark-400" />
+      <!-- Active Connection Selector Dropdown -->
+      <div class="relative">
+        <!-- Trigger Button -->
+        <button
+          type="button"
+          @click="isConnDropdownOpen = !isConnDropdownOpen"
+          :class="[
+            'flex items-center space-x-1.5 bg-dark-800 hover:bg-dark-750 px-2.5 py-1 rounded border transition-colors cursor-pointer text-xs',
+            isConnDropdownOpen ? 'border-brand-500 bg-dark-750 text-dark-100' : 'border-dark-700 text-dark-200'
+          ]"
+          title="切換連線 (Switch Connection)"
+        >
+          <!-- Connection indicator / server icon -->
+          <span
+            v-if="connectionStore.status === 'connected' && connectionStore.activeConnection"
+            class="w-2 h-2 rounded-full bg-emerald-500 flex-shrink-0 shadow-xs shadow-emerald-500/50"
+          />
+          <Server v-else class="w-3.5 h-3.5 text-dark-400 flex-shrink-0" />
+
+          <span class="font-medium max-w-[160px] truncate">
+            {{ connectionStore.activeConnection?.name ?? 'Select Connection' }}
+          </span>
+          <ChevronDown :class="['w-3 h-3 text-dark-400 transition-transform duration-150', isConnDropdownOpen ? 'rotate-180 text-brand-400' : '']" />
+        </button>
+
+        <!-- Dropdown Menu -->
+        <div
+          v-if="isConnDropdownOpen"
+          class="absolute top-full left-0 mt-1.5 w-72 bg-dark-850 border border-dark-700 rounded-md shadow-2xl z-50 py-1 font-sans text-xs select-none"
+        >
+          <!-- Dropdown Header -->
+          <div class="px-2.5 py-1 text-xxs font-semibold uppercase tracking-wider text-dark-400 flex items-center justify-between border-b border-dark-750/70 mb-1">
+            <span>連線清單 (Connections)</span>
+            <span class="font-mono text-dark-500">{{ connectionStore.connections.length }}</span>
+          </div>
+
+          <!-- Empty State -->
+          <div
+            v-if="connectionStore.connections.length === 0"
+            class="px-3 py-3 text-center text-dark-500 text-xs italic"
+          >
+            尚無已儲存的連線
+          </div>
+
+          <!-- Connections List -->
+          <div v-else class="max-h-64 overflow-y-auto space-y-0.5 px-1">
+            <button
+              v-for="conn in connectionStore.connections"
+              :key="conn.id"
+              type="button"
+              @click="handleSelectConnection(conn.id)"
+              :class="[
+                'w-full text-left px-2 py-1.5 rounded flex items-center space-x-2 transition-colors group cursor-pointer',
+                connectionStore.activeConnectionId === conn.id
+                  ? 'bg-brand-500/15 text-brand-300'
+                  : 'hover:bg-dark-750 text-dark-200'
+              ]"
+            >
+              <!-- Icon / Status dot -->
+              <span
+                v-if="connectionStore.activeConnectionId === conn.id && connectionStore.status === 'connected'"
+                class="w-2 h-2 rounded-full bg-emerald-500 flex-shrink-0"
+              />
+              <Server v-else class="w-3.5 h-3.5 text-dark-400 group-hover:text-dark-200 flex-shrink-0" />
+
+              <!-- Connection Name & Info -->
+              <div class="flex-1 min-w-0 flex flex-col">
+                <span class="font-medium truncate leading-tight">{{ conn.name }}</span>
+                <span class="text-xxs text-dark-400 font-mono truncate leading-tight mt-0.5">
+                  {{ conn.username ? `${conn.username}@` : '' }}{{ conn.host }}:{{ conn.port }}
+                </span>
+              </div>
+
+              <!-- Selected Checkmark -->
+              <Check
+                v-if="connectionStore.activeConnectionId === conn.id"
+                class="w-3.5 h-3.5 text-brand-400 flex-shrink-0 ml-1"
+              />
+            </button>
+          </div>
+
+          <!-- Bottom Action: New Connection -->
+          <div class="border-t border-dark-750 mt-1 pt-1 px-1">
+            <button
+              type="button"
+              @click="handleOpenNewConnection"
+              class="w-full text-left px-2 py-1.5 rounded flex items-center space-x-2 text-brand-400 hover:text-brand-300 hover:bg-dark-750 transition-colors cursor-pointer font-medium"
+            >
+              <Plus class="w-3.5 h-3.5" />
+              <span>建立新連線 (New Connection...)</span>
+            </button>
+          </div>
+        </div>
       </div>
 
       <!-- Active Database Selector Dropdown -->
@@ -134,8 +223,9 @@
 </template>
 
 <script setup lang="ts">
+import { ref } from 'vue';
 import {
-  Database,
+  Server,
   ChevronDown,
   Play,
   Square,
@@ -144,6 +234,7 @@ import {
   PanelBottom,
   Settings,
   RotateCw,
+  Check,
 } from 'lucide-vue-next';
 import { useWorkspaceStore } from '@/stores/workspaceStore';
 import { useConnectionStore } from '@/stores/connectionStore';
@@ -153,10 +244,30 @@ const workspaceStore = useWorkspaceStore();
 const connectionStore = useConnectionStore();
 const queryStore = useQueryStore();
 
-defineEmits<{
+const isConnDropdownOpen = ref(false);
+
+const emit = defineEmits<{
   (e: 'run-query'): void;
   (e: 'open-connection-modal'): void;
 }>();
+
+async function handleSelectConnection(connId: string) {
+  isConnDropdownOpen.value = false;
+  if (connectionStore.activeConnectionId === connId && connectionStore.status === 'connected') {
+    return;
+  }
+  try {
+    await connectionStore.connect(connId);
+  } catch (err: unknown) {
+    console.error('Failed to switch connection:', err);
+    alert(`切換連線失敗: ${err instanceof Error ? err.message : String(err)}`);
+  }
+}
+
+function handleOpenNewConnection() {
+  isConnDropdownOpen.value = false;
+  emit('open-connection-modal');
+}
 
 function onDatabaseChange(e: Event) {
   const target = e.target as HTMLSelectElement;

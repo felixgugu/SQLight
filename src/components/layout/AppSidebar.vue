@@ -47,17 +47,25 @@
       >
         <!-- Connection Header Item -->
         <div
-          @click="toggleConnection(conn.id)"
+          @click="selectConnection(conn.id)"
           @contextmenu.prevent="openConnContextMenu($event, conn)"
           :class="[
             'flex items-center space-x-1 px-1.5 py-1 rounded cursor-pointer group transition-colors relative',
             connectionStore.activeConnectionId === conn.id ? 'bg-dark-800 text-dark-100' : 'hover:bg-dark-750 text-dark-300'
           ]"
         >
-          <component
-            :is="expandedConns[conn.id] ? ChevronDown : ChevronRight"
-            class="w-3 h-3 text-dark-500 group-hover:text-dark-300 flex-shrink-0"
-          />
+          <!-- Direction chevron: ONLY clicking this expands/collapses! -->
+          <button
+            type="button"
+            @click.stop="toggleConnectionExpand(conn.id)"
+            class="p-0.5 hover:bg-dark-700 text-dark-500 hover:text-dark-200 rounded transition-colors flex-shrink-0 flex items-center justify-center"
+            title="展開/收合 (Expand/Collapse)"
+          >
+            <component
+              :is="expandedConns[conn.id] ? ChevronDown : ChevronRight"
+              class="w-3 h-3"
+            />
+          </button>
           <Server
             :class="[
               'w-3.5 h-3.5 flex-shrink-0',
@@ -568,16 +576,21 @@ const filteredTables = computed(() => {
   );
 });
 
-async function toggleConnection(connId: string) {
+function toggleConnectionExpand(connId: string) {
   if (inlineEditingId.value === connId) return;
   expandedConns[connId] = !expandedConns[connId];
-  if (expandedConns[connId] && (connectionStore.activeConnectionId !== connId || connectionStore.status !== 'connected')) {
-    try {
-      await connectionStore.connect(connId);
-      await loadTables();
-    } catch (err) {
-      console.warn('Failed to connect on toggle:', err);
-    }
+}
+
+async function selectConnection(connId: string) {
+  if (inlineEditingId.value === connId) return;
+  if (connectionStore.activeConnectionId === connId && connectionStore.status === 'connected') {
+    return;
+  }
+  try {
+    await connectionStore.connect(connId);
+    await loadTables();
+  } catch (err) {
+    console.warn('Failed to connect on select:', err);
   }
 }
 
