@@ -1,8 +1,25 @@
 import { defineStore } from 'pinia';
-import { ref, computed } from 'vue';
+import { ref, computed, reactive } from 'vue';
 import type { ConnectionProfile, ConnectionStatus } from '@/types/connection';
 import { connectionService, type SaveConnectionPayload } from '@/services/connectionService';
 import { schemaService } from '@/services/schemaService';
+
+const STORAGE_DATABASES_KEY = 'sqlight_cached_databases';
+
+function loadDatabasesCache(): Record<string, string[]> {
+  try {
+    const raw = localStorage.getItem(STORAGE_DATABASES_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (parsed && typeof parsed === 'object') {
+        return parsed;
+      }
+    }
+  } catch (e) {
+    console.warn('Failed to parse cached databases:', e);
+  }
+  return {};
+}
 
 export const useConnectionStore = defineStore('connection', () => {
   const connections = ref<ConnectionProfile[]>([]);
@@ -10,8 +27,30 @@ export const useConnectionStore = defineStore('connection', () => {
   const status = ref<ConnectionStatus>('disconnected');
   const activeDatabase = ref<string>('master');
   const availableDatabases = ref<string[]>(['master', 'tempdb', 'model', 'msdb']);
+  const databasesByConn = reactive<Record<string, string[]>>(loadDatabasesCache());
   const isLoading = ref<boolean>(false);
   const errorMessage = ref<string | null>(null);
+
+  function saveDatabasesCache() {
+    try {
+      localStorage.setItem(STORAGE_DATABASES_KEY, JSON.stringify(databasesByConn));
+    } catch (e) {
+      console.warn('Failed to save cached databases:', e);
+    }
+  }
+
+  function getDatabases(connectionId: string): string[] {
+    const list = databasesByConn[connectionId];
+    if (list && list.length > 0) {
+      return list;
+    }
+    const profile = connections.value.find((c) => c.id === connectionId);
+    if (profile?.database) {
+      const defaults = [profile.database, 'master', 'tempdb', 'model', 'msdb'];
+      return Array.from(new Set(defaults));
+    }
+    return ['master', 'tempdb', 'model', 'msdb'];
+  }
 
   const activeConnection = computed(() => {
     return connections.value.find((c) => c.id === activeConnectionId.value) ?? null;
@@ -34,8 +73,16 @@ export const useConnectionStore = defineStore('connection', () => {
         if (first) {
           activeConnectionId.value = first.id;
           activeDatabase.value = first.database || 'master';
-          status.value = 'connected';
-          await refreshDatabases();
+          const cachedDbs = databasesByConn[first.id];
+          if (cachedDbs && cachedDbs.length > 0) {
+            availableDatabases.value = cachedDbs;
+          }
+          try {
+            await connect(first.id);
+          } catch (e) {
+            console.warn('Auto-connect on startup deferred:', e);
+            status.value = 'disconnected';
+          }
         }
       }
     } catch (err) {
@@ -96,6 +143,9 @@ export const useConnectionStore = defineStore('connection', () => {
       await disconnect();
     }
 
+    delete databasesByConn[id];
+    saveDatabasesCache();
+
     await connectionService.deleteConnection(id);
     await loadConnections();
 
@@ -128,7 +178,7 @@ export const useConnectionStore = defineStore('connection', () => {
         activeDatabase.value = profile.database || 'master';
       }
       status.value = 'connected';
-      await refreshDatabases();
+      await refreshDatabases(id);
     } catch (err: unknown) {
       status.value = 'error';
       errorMessage.value = err instanceof Error ? err.message : String(err);
@@ -148,15 +198,45 @@ export const useConnectionStore = defineStore('connection', () => {
     }
   }
 
-  async function refreshDatabases(): Promise<void> {
-    if (!activeConnectionId.value) return;
+  async function refreshDatabases(connectionId?: string): Promise<void> {
+    const targetId = connectionId || activeConnectionId.value;
+    if (!targetId) return;
+
     try {
-      const dbs = await schemaService.getDatabases(activeConnectionId.value);
-      if (dbs && dbs.length > 0) {
-        availableDatabases.value = dbs.map((d) => d.name);
+      let dbs;
+      try {
+        dbs = await schemaService.getDatabases(targetId);
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : String(err);
+        if (
+          msg.includes('Not connected') ||
+          msg.includes('Connection profile') ||
+          msg.includes('Connection not found')
+        ) {
+          await connectionService.connect(targetId);
+          dbs = await schemaService.getDatabases(targetId);
+        } else {
+          throw err;
+        }
       }
-    } catch (err) {
-      console.warn('Failed to fetch databases:', err);
+
+      if (dbs && dbs.length > 0) {
+        const names = dbs.map((d) => d.name);
+        databasesByConn[targetId] = names;
+        saveDatabasesCache();
+
+        if (activeConnectionId.value === targetId) {
+          availableDatabases.value = names;
+          if (!names.includes(activeDatabase.value)) {
+            activeDatabase.value = names.includes('master') ? 'master' : names[0] || 'master';
+          }
+        }
+      }
+    } catch (err: unknown) {
+      console.error('Failed to fetch databases:', err);
+      const errMsg = err instanceof Error ? err.message : String(err);
+      errorMessage.value = errMsg;
+      throw err;
     }
   }
 
@@ -178,9 +258,11 @@ export const useConnectionStore = defineStore('connection', () => {
     status,
     activeDatabase,
     availableDatabases,
+    databasesByConn,
     isLoading,
     errorMessage,
     isNameDuplicate,
+    getDatabases,
     loadConnections,
     saveConnection,
     renameConnection,

@@ -1,15 +1,16 @@
 import { defineStore } from 'pinia';
-import { ref, computed } from 'vue';
+import { ref, computed, watch } from 'vue';
 import type { WorkspaceTab, BottomPanelTab, SqlEditorTab, TableDataTab } from '@/types/workspace';
 import { format as formatSql } from 'sql-formatter';
 
-export const useWorkspaceStore = defineStore('workspace', () => {
-  const tabs = ref<WorkspaceTab[]>([
-    {
-      id: 'tab-initial-sql-1',
-      type: 'sql_editor',
-      title: 'Query 1.sql',
-      query: `-- Welcome to SQLight!
+const STORAGE_TABS_KEY = 'sqlight_workspace_tabs';
+const STORAGE_ACTIVE_TAB_KEY = 'sqlight_active_tab_id';
+
+const DEFAULT_INITIAL_TAB: SqlEditorTab = {
+  id: 'tab-initial-sql-1',
+  type: 'sql_editor',
+  title: 'Query 1.sql',
+  query: `-- Welcome to SQLight!
 -- Press Ctrl+Enter to execute selected query or entire editor.
 -- Press Shift+Alt+F to format SQL.
 
@@ -20,13 +21,82 @@ SELECT
 FROM sys.databases
 ORDER BY name;
 `,
-      isDirty: false,
-    } as SqlEditorTab,
-  ]);
+  isDirty: false,
+};
 
-  const activeTabId = ref<string>('tab-initial-sql-1');
+function loadSavedTabs(): WorkspaceTab[] {
+  try {
+    const raw = localStorage.getItem(STORAGE_TABS_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        const validTabs: WorkspaceTab[] = parsed.filter(
+          (t: unknown): t is WorkspaceTab =>
+            typeof t === 'object' &&
+            t !== null &&
+            'id' in t &&
+            typeof (t as { id: unknown }).id === 'string' &&
+            'type' in t &&
+            ((t as { type: unknown }).type === 'sql_editor' || (t as { type: unknown }).type === 'table_data')
+        );
+        if (validTabs.length > 0) {
+          return validTabs;
+        }
+      }
+    }
+  } catch (e) {
+    console.warn('Failed to parse saved workspace tabs:', e);
+  }
+  return [{ ...DEFAULT_INITIAL_TAB }];
+}
+
+function loadSavedActiveTabId(availableTabs: WorkspaceTab[]): string {
+  try {
+    const savedId = localStorage.getItem(STORAGE_ACTIVE_TAB_KEY);
+    if (savedId && availableTabs.some((t) => t.id === savedId)) {
+      return savedId;
+    }
+  } catch (e) {
+    console.warn('Failed to load active tab id:', e);
+  }
+  return availableTabs[0]?.id ?? DEFAULT_INITIAL_TAB.id;
+}
+
+function saveTabsToStorage(tabList: WorkspaceTab[]) {
+  try {
+    localStorage.setItem(STORAGE_TABS_KEY, JSON.stringify(tabList));
+  } catch (e) {
+    console.warn('Failed to save workspace tabs to storage:', e);
+  }
+}
+
+function saveActiveTabIdToStorage(id: string) {
+  try {
+    localStorage.setItem(STORAGE_ACTIVE_TAB_KEY, id);
+  } catch (e) {
+    console.warn('Failed to save active tab id to storage:', e);
+  }
+}
+
+export const useWorkspaceStore = defineStore('workspace', () => {
+  const initialTabs = loadSavedTabs();
+  const tabs = ref<WorkspaceTab[]>(initialTabs);
+  const activeTabId = ref<string>(loadSavedActiveTabId(initialTabs));
   const bottomPanelTab = ref<BottomPanelTab>('results');
   const isBottomPanelOpen = ref<boolean>(true);
+
+  // Watchers to auto-persist changes
+  watch(
+    tabs,
+    (newTabs) => {
+      saveTabsToStorage(newTabs);
+    },
+    { deep: true }
+  );
+
+  watch(activeTabId, (newId) => {
+    saveActiveTabIdToStorage(newId);
+  });
 
   const activeTab = computed(() => {
     return tabs.value.find((t) => t.id === activeTabId.value) ?? tabs.value[0] ?? null;
@@ -37,7 +107,13 @@ ORDER BY name;
   }
 
   function addSqlTab(initialQuery = '', title?: string) {
-    const nextNum = tabs.value.filter((t) => t.type === 'sql_editor').length + 1;
+    const existingNums = tabs.value
+      .filter((t) => t.type === 'sql_editor')
+      .map((t) => {
+        const match = t.title.match(/^Query\s*(\d+)/i);
+        return match ? parseInt(match[1] || '0', 10) : 0;
+      });
+    const nextNum = existingNums.length > 0 ? Math.max(...existingNums) + 1 : 1;
     const tabId = `tab-sql-${Date.now()}`;
     const newTab: SqlEditorTab = {
       id: tabId,

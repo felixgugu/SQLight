@@ -53,6 +53,7 @@
         <div class="flex-1 relative overflow-hidden">
           <MonacoEditor
             ref="monacoRef"
+            :key="workspaceStore.activeTab.id"
             v-model="(workspaceStore.activeTab as SqlEditorTab).query"
             @execute="runQuery"
             @format="workspaceStore.formatActiveQuery()"

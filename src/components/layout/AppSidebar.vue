@@ -161,22 +161,22 @@
         <!-- Connection Children: Databases -->
         <div v-if="expandedConns[conn.id]" class="pl-3.5 mt-1 space-y-0.5 border-l border-dark-750 ml-2">
           <div
-            v-for="db in connectionStore.availableDatabases"
+            v-for="db in connectionStore.getDatabases(conn.id)"
             :key="db"
             class="space-y-0.5"
           >
             <!-- Database Item -->
             <div
-              @click="toggleDatabase(db)"
+              @click="toggleDatabase(conn.id, db)"
               :class="[
                 'flex items-center space-x-1 px-1.5 py-0.5 rounded cursor-pointer transition-colors',
-                connectionStore.activeDatabase === db
+                connectionStore.activeConnectionId === conn.id && connectionStore.activeDatabase === db
                   ? 'bg-brand-500/20 text-brand-300 font-semibold'
                   : 'text-dark-300 hover:bg-dark-750 hover:text-dark-100'
               ]"
             >
               <component
-                :is="expandedDbs[db] ? ChevronDown : ChevronRight"
+                :is="expandedDbs[`${conn.id}:${db}`] ? ChevronDown : ChevronRight"
                 class="w-2.5 h-2.5 text-dark-500 flex-shrink-0"
               />
               <Database class="w-3 h-3 text-amber-400/80 flex-shrink-0" />
@@ -184,7 +184,7 @@
             </div>
 
             <!-- Database Tables & Views List -->
-            <div v-if="expandedDbs[db]" class="pl-3.5 border-l border-dark-750 ml-2 space-y-0.5">
+            <div v-if="expandedDbs[`${conn.id}:${db}`]" class="pl-3.5 border-l border-dark-750 ml-2 space-y-0.5">
               <div
                 v-if="filteredTables.length === 0"
                 class="py-1 px-1.5 text-xxs text-dark-500 italic"
@@ -495,8 +495,10 @@ onMounted(async () => {
   await connectionStore.loadConnections();
   if (connectionStore.activeConnectionId) {
     expandedConns[connectionStore.activeConnectionId] = true;
-    expandedDbs[connectionStore.activeDatabase] = true;
-    await loadTables();
+    expandedDbs[`${connectionStore.activeConnectionId}:${connectionStore.activeDatabase}`] = true;
+    if (connectionStore.status === 'connected') {
+      await loadTables();
+    }
   }
 });
 
@@ -514,24 +516,31 @@ async function loadTables() {
 
 async function refreshCurrent() {
   isRefreshing.value = true;
-  await connectionStore.refreshDatabases();
-  await loadTables();
-  isRefreshing.value = false;
+  try {
+    await connectionStore.refreshDatabases();
+    await loadTables();
+  } catch (err: unknown) {
+    console.error('Refresh current failed:', err);
+    alert(`重新整理失敗: ${err instanceof Error ? err.message : String(err)}`);
+  } finally {
+    isRefreshing.value = false;
+  }
 }
 
 async function handleRefreshConn(conn: ConnectionProfile) {
   connContextMenu.visible = false;
   refreshingConnId.value = conn.id;
   try {
-    if (connectionStore.activeConnectionId !== conn.id) {
+    if (connectionStore.activeConnectionId !== conn.id || connectionStore.status !== 'connected') {
       await connectionStore.connect(conn.id);
       expandedConns[conn.id] = true;
     } else {
-      await connectionStore.refreshDatabases();
+      await connectionStore.refreshDatabases(conn.id);
     }
     await loadTables();
-  } catch (err) {
-    console.warn('Failed to refresh connection:', err);
+  } catch (err: unknown) {
+    console.error('Failed to refresh connection:', err);
+    alert(`連線或更新資料庫失敗: ${err instanceof Error ? err.message : String(err)}`);
   } finally {
     refreshingConnId.value = null;
   }
@@ -562,15 +571,28 @@ const filteredTables = computed(() => {
 async function toggleConnection(connId: string) {
   if (inlineEditingId.value === connId) return;
   expandedConns[connId] = !expandedConns[connId];
-  if (expandedConns[connId] && connectionStore.activeConnectionId !== connId) {
-    await connectionStore.connect(connId);
-    await loadTables();
+  if (expandedConns[connId] && (connectionStore.activeConnectionId !== connId || connectionStore.status !== 'connected')) {
+    try {
+      await connectionStore.connect(connId);
+      await loadTables();
+    } catch (err) {
+      console.warn('Failed to connect on toggle:', err);
+    }
   }
 }
 
-async function toggleDatabase(db: string) {
-  expandedDbs[db] = !expandedDbs[db];
-  if (expandedDbs[db]) {
+async function toggleDatabase(connId: string, db: string) {
+  const dbKey = `${connId}:${db}`;
+  expandedDbs[dbKey] = !expandedDbs[dbKey];
+  if (expandedDbs[dbKey]) {
+    if (connectionStore.activeConnectionId !== connId || connectionStore.status !== 'connected') {
+      try {
+        await connectionStore.connect(connId);
+      } catch (err) {
+        console.warn('Failed to connect on db toggle:', err);
+        return;
+      }
+    }
     await connectionStore.switchDatabase(db);
     await loadTables();
   }

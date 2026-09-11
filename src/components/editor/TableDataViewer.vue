@@ -67,7 +67,7 @@
     </div>
 
     <!-- AG Grid Content -->
-    <div v-else class="flex-1 w-full overflow-hidden relative">
+    <div v-else class="flex-1 w-full overflow-hidden relative" @contextmenu.prevent>
       <AgGridVue
         class="w-full h-full"
         :theme="sqlightGridTheme"
@@ -76,8 +76,10 @@
         :quick-filter-text="quickFilter"
         :enable-cell-text-selection="true"
         :ensure-dom-order="true"
-        :tooltip-show-delay="100"
-        :tooltip-hide-delay="5000"
+        :prevent-default-on-context-menu="true"
+        :tooltip-show-mode="'whenTruncated'"
+        :tooltip-show-delay="150"
+        :tooltip-hide-delay="6000"
         :suppress-row-hover-highlight="false"
         @grid-ready="onGridReady"
         @cell-context-menu="onCellContextMenu"
@@ -199,60 +201,142 @@ function onGridReady(params: GridReadyEvent) {
   gridApi.value = params.api;
 }
 
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
+function formatValueForDisplay(val: unknown): string {
+  if (val === null || val === undefined) return 'NULL';
+  if (typeof val === 'object' && val !== null && 'type' in val && (val as any).type === 'binary') {
+    return `[Binary ${(val as any).length} B]`;
+  }
+  if (typeof val === 'boolean') {
+    return val ? 'TRUE' : 'FALSE';
+  }
+  return String(val);
+}
+
+function estimateTextWidth(text: string, isMono = true): number {
+  let width = 0;
+  const charWidth = isMono ? 7.8 : 7.2;
+  for (let i = 0; i < text.length; i++) {
+    width += text.charCodeAt(i) > 255 ? 15 : charWidth;
+  }
+  return width;
+}
+
+function calculateColumnWidth(headerName: string, firstRowVal: unknown): number {
+  const firstRowStr = firstRowVal !== undefined ? formatValueForDisplay(firstRowVal) : '';
+  
+  // Header: text width + padding + sort icon (~18px) + filter icon (~18px)
+  const headerWidth = Math.ceil(estimateTextWidth(headerName, false) + 48);
+
+  // First row: text width + cell left/right padding (~28px)
+  const firstRowWidth = firstRowVal !== undefined && firstRowStr.length > 0
+    ? Math.ceil(estimateTextWidth(firstRowStr, true) + 28)
+    : 0;
+
+  // Decide width based on first row length (at least large enough for header)
+  const calculated = Math.max(headerWidth, firstRowWidth);
+
+  // Keep within reasonable bounds: min 75px, max 600px
+  return Math.min(Math.max(calculated, 75), 600);
+}
+
 // Column Definitions
 const columnDefs = computed<ColDef[]>(() => {
   if (!columns.value.length) return [];
 
+  const rowCount = rows.value.length;
+  const digits = Math.max(2, String(rowCount).length);
+  const indexWidth = Math.max(60, digits * 10 + 36);
+
   const indexCol: ColDef = {
     headerName: '#',
     pinned: 'left',
-    width: 55,
-    minWidth: 45,
-    maxWidth: 75,
+    width: indexWidth,
+    minWidth: 48,
     suppressMovable: true,
     sortable: false,
     filter: false,
-    resizable: false,
+    resizable: true,
     valueGetter: (params) => (params.node?.rowIndex != null ? params.node.rowIndex + 1 : ''),
-    cellClass: 'text-dark-500 bg-dark-850/40 text-center font-mono text-xxs select-none',
+    cellClass: 'text-dark-500 bg-dark-850/40 text-center font-mono text-xxs select-none !px-1',
+    headerClass: 'text-center !px-1',
   };
 
-  const dataCols: ColDef[] = columns.value.map((col, colIdx) => ({
-    colId: col.name,
-    field: `col_${colIdx}`,
-    headerName: col.name,
-    headerTooltip: `型別 (Type): ${col.dataType}${col.nullable ? ' | 可為 NULL' : ' | NOT NULL'}`,
-    sortable: true,
-    filter: true,
-    resizable: true,
-    suppressMovable: false,
-    valueGetter: (params) => params.data?.[colIdx],
-    cellRenderer: (params: ICellRendererParams) => {
-      const val = params.value;
-      if (val === null || val === undefined) {
-        return '<span class="italic text-dark-500 font-mono text-xxs">NULL</span>';
-      }
-      if (typeof val === 'object' && val !== null && 'type' in val && val.type === 'binary') {
-        return `<span class="bg-indigo-950/60 text-indigo-300 px-1.5 py-0.5 rounded text-xxs font-sans font-medium border border-indigo-800/50">[Binary ${val.length} B]</span>`;
-      }
-      if (typeof val === 'boolean') {
-        const color = val ? 'text-emerald-400' : 'text-rose-400';
-        return `<span class="${color} font-semibold text-xxs">${val ? 'TRUE' : 'FALSE'}</span>`;
-      }
-      return String(val);
-    },
-  }));
+  const firstRow = rows.value[0];
+
+  const dataCols: ColDef[] = columns.value.map((col, colIdx) => {
+    const firstVal = firstRow ? firstRow[colIdx] : undefined;
+    const colWidth = calculateColumnWidth(col.name, firstVal);
+
+    return {
+      colId: col.name,
+      field: `col_${colIdx}`,
+      headerName: col.name,
+      width: colWidth,
+      minWidth: 70,
+      tooltipShowMode: 'whenTruncated',
+      headerTooltip: `型別 (Type): ${col.dataType}${col.nullable ? ' | 可為 NULL' : ' | NOT NULL'}`,
+      tooltipValueGetter: (params) => {
+        const val = params.value;
+        if (val === null || val === undefined) return 'NULL';
+        if (typeof val === 'object' && val !== null && 'type' in val && (val as any).type === 'binary') {
+          return `[Binary ${(val as any).length} Bytes]`;
+        }
+        if (typeof val === 'boolean') {
+          return val ? 'TRUE' : 'FALSE';
+        }
+        return String(val);
+      },
+      sortable: true,
+      filter: true,
+      resizable: true,
+      suppressMovable: false,
+      valueGetter: (params) => params.data?.[colIdx],
+      cellRenderer: (params: ICellRendererParams) => {
+        const val = params.value;
+        if (val === null || val === undefined) {
+          return '<span class="italic text-dark-500 font-mono text-xxs">NULL</span>';
+        }
+        if (typeof val === 'object' && val !== null && 'type' in val && (val as any).type === 'binary') {
+          return `<span class="bg-indigo-950/60 text-indigo-300 px-1.5 py-0.5 rounded text-xxs font-sans font-medium border border-indigo-800/50">[Binary ${(val as any).length} B]</span>`;
+        }
+        if (typeof val === 'boolean') {
+          const color = val ? 'text-emerald-400' : 'text-rose-400';
+          return `<span class="${color} font-semibold text-xxs">${val ? 'TRUE' : 'FALSE'}</span>`;
+        }
+        return escapeHtml(String(val));
+      },
+    };
+  });
 
   return [indexCol, ...dataCols];
 });
 
 function onCellContextMenu(event: CellContextMenuEvent) {
-  event.event?.preventDefault();
-  if (!event.event) return;
+  if (event.event) {
+    (event.event as Event).preventDefault?.();
+    (event.event as Event).stopPropagation?.();
+  }
+  const mouseEvent = event.event as MouseEvent | undefined;
+  if (!mouseEvent) return;
+
+  // Viewport clamping (menu width is 192px / w-48, approximate height ~200px)
+  const menuWidth = 200;
+  const menuHeight = 200;
+  const x = Math.min(mouseEvent.clientX, Math.max(0, window.innerWidth - menuWidth - 8));
+  const y = Math.min(mouseEvent.clientY, Math.max(0, window.innerHeight - menuHeight - 8));
 
   contextMenu.visible = true;
-  contextMenu.x = (event.event as MouseEvent).clientX;
-  contextMenu.y = (event.event as MouseEvent).clientY;
+  contextMenu.x = x;
+  contextMenu.y = y;
   contextMenu.colName = event.column?.getColId() || '';
   contextMenu.cellValue = event.value;
   contextMenu.rowIndex = event.node?.rowIndex ?? -1;
