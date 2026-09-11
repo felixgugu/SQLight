@@ -120,9 +120,14 @@
         <template v-if="selectionStats">
           <div class="flex items-center space-x-1 font-semibold text-brand-300 flex-shrink-0">
             <span>選取:</span>
-            <span class="font-mono text-dark-100">{{ selectionStats.totalCells.toLocaleString() }} 格</span>
+            <span v-if="selectedColumnsCount > 1" class="text-amber-300 font-mono">
+              {{ selectedColumnsCount }} 欄
+            </span>
+            <span class="font-mono text-dark-100">
+              {{ selectedColumnsCount > 1 ? `(${selectionStats.totalCells.toLocaleString()} 格)` : `${selectionStats.totalCells.toLocaleString()} 格` }}
+            </span>
             <span v-if="selectionStats.numericCount > 0" class="text-dark-400 font-mono text-[10px]">
-              ({{ selectionStats.numericCount.toLocaleString() }} 數值)
+              [{{ selectionStats.numericCount.toLocaleString() }} 數值]
             </span>
           </div>
 
@@ -166,7 +171,7 @@
             <span class="text-dark-600">|</span>
             <span><strong class="font-mono text-dark-200">{{ columns.length }}</strong> 個欄位</span>
             <span class="text-dark-600">|</span>
-            <span class="text-dark-500 italic text-[10px]">提示：滑鼠框選儲存格可查看即時統計 (Sum / Avg / Min / Max)</span>
+            <span class="text-dark-500 italic text-[10px]">提示：支援標題列拖曳多欄選取、Shift 連續多欄、Ctrl 多選、儲存格框選與 Ctrl+A 全選</span>
           </div>
         </template>
       </div>
@@ -177,7 +182,7 @@
           type="button"
           @click="copySelectedCells"
           class="flex items-center space-x-1 px-1.5 py-0.5 bg-brand-500/20 hover:bg-brand-500/30 text-brand-300 rounded border border-brand-500/40 text-[10px] transition-colors cursor-pointer"
-          title="複製選取區域內容 (Ctrl+C)"
+          title="複製選取內容 (Ctrl+C)"
         >
           <Copy class="w-2.5 h-2.5" />
           <span>複製選取</span>
@@ -222,18 +227,18 @@
 
       <div class="my-1 border-t border-dark-750"></div>
 
-      <!-- Selection Copy (if range active) -->
+      <!-- Selection Copy (if selection active) -->
       <button
-        v-if="selectionRange"
+        v-if="hasSelection"
         @click="copySelectedCells"
         class="w-full text-left px-2.5 py-1.5 hover:bg-dark-750 hover:text-dark-100 flex items-center space-x-2 transition-colors"
       >
         <Copy class="w-3.5 h-3.5 text-brand-300" />
-        <span>複製選取區域 ({{ selectionStats?.totalCells }} 格)</span>
+        <span>複製選取內容 ({{ selectionStats?.totalCells }} 格)</span>
       </button>
 
       <button
-        v-if="selectionRange"
+        v-if="hasSelection"
         @click="copySelectedAsJson"
         class="w-full text-left px-2.5 py-1.5 hover:bg-dark-750 hover:text-dark-100 flex items-center space-x-2 transition-colors"
       >
@@ -375,14 +380,15 @@ const gridApi = ref<GridApi | null>(null);
 const gridContainerRef = ref<HTMLDivElement | null>(null);
 const copiedTsv = ref(false);
 
-// Mapping column name to index
-const colNameToIndex = computed(() => {
-  const map = new Map<string, number>();
-  columns.value.forEach((c, idx) => {
-    map.set(c.name, idx);
-  });
-  return map;
-});
+// Helper to extract 0-based column index from standard colId `col_N`
+function getColIndex(colId: string | null | undefined): number | undefined {
+  if (!colId) return undefined;
+  if (colId.startsWith('col_')) {
+    const idx = parseInt(colId.substring(4), 10);
+    return isNaN(idx) ? undefined : idx;
+  }
+  return undefined;
+}
 
 // Cell Selection & Aggregates State
 interface CellCoord {
@@ -407,11 +413,69 @@ interface SelectionStats {
   distinctCount: number;
 }
 
-const isSelecting = ref(false);
-const dragStart = ref<CellCoord | null>(null);
-const dragEnd = ref<CellCoord | null>(null);
+// Selection states
+const isCellDragging = ref(false);
+const isHeaderDragging = ref(false);
+const isRowDragging = ref(false);
+
+const cellDragStart = ref<CellCoord | null>(null);
+const cellDragEnd = ref<CellCoord | null>(null);
+const lastAnchorCell = ref<CellCoord | null>(null);
+
+const headerDragStartCol = ref<number | null>(null);
+const headerDragEndCol = ref<number | null>(null);
+const lastAnchorHeaderCol = ref<number | null>(null);
+
+const rowDragStart = ref<number | null>(null);
+const lastAnchorRow = ref<number | null>(null);
+
 const selectionRange = ref<SelectionRange | null>(null);
+const selectedColSet = ref<Set<number>>(new Set());
 const selectionStats = ref<SelectionStats | null>(null);
+
+const hasSelection = computed(() => {
+  return selectedColSet.value.size > 0 || selectionRange.value !== null;
+});
+
+const selectedColumnsCount = computed(() => {
+  if (selectedColSet.value.size > 0) {
+    return selectedColSet.value.size;
+  }
+  if (selectionRange.value && rows.value.length > 0) {
+    const { minRow, maxRow, minCol, maxCol } = selectionRange.value;
+    if (minRow === 0 && maxRow === rows.value.length - 1) {
+      return maxCol - minCol + 1;
+    }
+  }
+  return 0;
+});
+
+function isCellInSelection(r: number, c: number): boolean {
+  if (selectedColSet.value.size > 0) {
+    return selectedColSet.value.has(c);
+  }
+  if (selectionRange.value) {
+    const { minRow, maxRow, minCol, maxCol } = selectionRange.value;
+    return r >= minRow && r <= maxRow && c >= minCol && c <= maxCol;
+  }
+  return false;
+}
+
+function isColumnSelected(c: number): boolean {
+  if (selectedColSet.value.size > 0) {
+    return selectedColSet.value.has(c);
+  }
+  if (selectionRange.value && rows.value.length > 0) {
+    const { minRow, maxRow, minCol, maxCol } = selectionRange.value;
+    return (
+      minRow === 0 &&
+      maxRow === rows.value.length - 1 &&
+      c >= minCol &&
+      c <= maxCol
+    );
+  }
+  return false;
+}
 
 function formatAggregateNumber(num: number): string {
   if (Number.isInteger(num)) {
@@ -421,34 +485,49 @@ function formatAggregateNumber(num: number): string {
 }
 
 function computeSelectionStats() {
-  if (!dragStart.value || !dragEnd.value || !rows.value.length) {
-    selectionRange.value = null;
+  if (!rows.value.length || !hasSelection.value) {
     selectionStats.value = null;
     return;
   }
 
-  const minRow = Math.max(0, Math.min(dragStart.value.rowIndex, dragEnd.value.rowIndex));
-  const maxRow = Math.min(rows.value.length - 1, Math.max(dragStart.value.rowIndex, dragEnd.value.rowIndex));
-  const minCol = Math.max(0, Math.min(dragStart.value.colIndex, dragEnd.value.colIndex));
-  const maxCol = Math.min(columns.value.length - 1, Math.max(dragStart.value.colIndex, dragEnd.value.colIndex));
-
-  selectionRange.value = { minRow, maxRow, minCol, maxCol };
-
-  const totalCells = (maxRow - minRow + 1) * (maxCol - minCol + 1);
   const distinctValues = new Set<string>();
   const numericValues: number[] = [];
+  let totalCells = 0;
 
-  for (let r = minRow; r <= maxRow; r++) {
-    const row = rows.value[r];
-    if (!row) continue;
-    for (let c = minCol; c <= maxCol; c++) {
-      const val = row[c];
-      distinctValues.add(val === null || val === undefined ? 'NULL' : String(val));
+  if (selectedColSet.value.size > 0) {
+    const colIndices = Array.from(selectedColSet.value);
+    const rowCount = rows.value.length;
+    totalCells = colIndices.length * rowCount;
 
-      if (val !== null && val !== undefined && val !== '' && typeof val !== 'boolean') {
-        const num = typeof val === 'number' ? val : Number(val);
-        if (!isNaN(num)) {
-          numericValues.push(num);
+    for (let r = 0; r < rowCount; r++) {
+      const row = rows.value[r];
+      if (!row) continue;
+      for (const c of colIndices) {
+        const val = row[c];
+        distinctValues.add(val === null || val === undefined ? 'NULL' : String(val));
+        if (val !== null && val !== undefined && val !== '' && typeof val !== 'boolean') {
+          const num = typeof val === 'number' ? val : Number(val);
+          if (!isNaN(num)) {
+            numericValues.push(num);
+          }
+        }
+      }
+    }
+  } else if (selectionRange.value) {
+    const { minRow, maxRow, minCol, maxCol } = selectionRange.value;
+    totalCells = (maxRow - minRow + 1) * (maxCol - minCol + 1);
+
+    for (let r = minRow; r <= maxRow; r++) {
+      const row = rows.value[r];
+      if (!row) continue;
+      for (let c = minCol; c <= maxCol; c++) {
+        const val = row[c];
+        distinctValues.add(val === null || val === undefined ? 'NULL' : String(val));
+        if (val !== null && val !== undefined && val !== '' && typeof val !== 'boolean') {
+          const num = typeof val === 'number' ? val : Number(val);
+          if (!isNaN(num)) {
+            numericValues.push(num);
+          }
         }
       }
     }
@@ -481,11 +560,9 @@ function updateSelectionHighlight() {
   const container = gridContainerRef.value;
   if (!container) return;
 
-  const range = selectionRange.value;
   const cells = container.querySelectorAll('.ag-cell');
-
   cells.forEach((cell) => {
-    if (!range) {
+    if (!hasSelection.value) {
       cell.classList.remove('sqlight-cell-selected');
       return;
     }
@@ -496,42 +573,122 @@ function updateSelectionHighlight() {
       return;
     }
     const r = parseInt(rStr, 10);
-    const c = colNameToIndex.value.get(cId);
-    if (c != null && r >= range.minRow && r <= range.maxRow && c >= range.minCol && c <= range.maxCol) {
+    const c = getColIndex(cId);
+    if (c !== undefined && isCellInSelection(r, c)) {
       cell.classList.add('sqlight-cell-selected');
     } else {
       cell.classList.remove('sqlight-cell-selected');
     }
   });
+
+  // Highlight column headers if whole column selected
+  const headerCells = container.querySelectorAll('.ag-header-cell');
+  headerCells.forEach((hCell) => {
+    const cId = hCell.getAttribute('col-id');
+    const c = getColIndex(cId);
+    if (c !== undefined && isColumnSelected(c)) {
+      hCell.classList.add('sqlight-header-selected');
+    } else {
+      hCell.classList.remove('sqlight-header-selected');
+    }
+  });
 }
 
 function clearCellSelection() {
-  dragStart.value = null;
-  dragEnd.value = null;
+  cellDragStart.value = null;
+  cellDragEnd.value = null;
+  headerDragStartCol.value = null;
+  headerDragEndCol.value = null;
+  rowDragStart.value = null;
   selectionRange.value = null;
+  selectedColSet.value.clear();
   selectionStats.value = null;
-  isSelecting.value = false;
+  isCellDragging.value = false;
+  isHeaderDragging.value = false;
+  isRowDragging.value = false;
+  updateSelectionHighlight();
+}
+
+function selectAll() {
+  if (rows.value.length === 0 || columns.value.length === 0) return;
+  selectedColSet.value.clear();
+  selectionRange.value = {
+    minRow: 0,
+    maxRow: rows.value.length - 1,
+    minCol: 0,
+    maxCol: columns.value.length - 1,
+  };
+  computeSelectionStats();
   updateSelectionHighlight();
 }
 
 function onGridMouseDown(e: MouseEvent) {
-  if (e.button !== 0) return;
+  if (e.button !== 0 || rows.value.length === 0) return;
   const target = e.target as HTMLElement;
 
-  // Check if clicked inside column header -> Select whole column
+  // 1. Check if clicked inside column header
   const headerCell = target.closest('.ag-header-cell');
-  if (headerCell && rows.value.length > 0) {
+  if (headerCell) {
     const cId = headerCell.getAttribute('col-id');
-    if (cId && colNameToIndex.value.has(cId)) {
-      const colIdx = colNameToIndex.value.get(cId)!;
-      dragStart.value = { rowIndex: 0, colIndex: colIdx };
-      dragEnd.value = { rowIndex: rows.value.length - 1, colIndex: colIdx };
+
+    // If clicked on '#' top-left corner header -> SELECT ALL
+    if (!cId || cId === 'row_index' || cId === '#') {
+      e.preventDefault();
+      selectAll();
+      return;
+    }
+
+    const colIdx = getColIndex(cId);
+    if (colIdx === undefined) return;
+
+    e.preventDefault();
+
+    const rowCount = rows.value.length;
+    if (rowCount === 0) return;
+
+    // A. Ctrl + Click on Header: Toggle multi-column selection
+    if (e.ctrlKey || e.metaKey) {
+      if (selectedColSet.value.size === 0 && selectionRange.value) {
+        for (let c = selectionRange.value.minCol; c <= selectionRange.value.maxCol; c++) {
+          selectedColSet.value.add(c);
+        }
+        selectionRange.value = null;
+      }
+      if (selectedColSet.value.has(colIdx)) {
+        selectedColSet.value.delete(colIdx);
+      } else {
+        selectedColSet.value.add(colIdx);
+      }
+      lastAnchorHeaderCol.value = colIdx;
       computeSelectionStats();
       updateSelectionHighlight();
       return;
     }
+
+    // B. Shift + Click on Header: Select range of columns
+    if (e.shiftKey && lastAnchorHeaderCol.value !== null) {
+      selectedColSet.value.clear();
+      const start = Math.min(lastAnchorHeaderCol.value, colIdx);
+      const end = Math.max(lastAnchorHeaderCol.value, colIdx);
+      selectionRange.value = { minRow: 0, maxRow: rowCount - 1, minCol: start, maxCol: end };
+      computeSelectionStats();
+      updateSelectionHighlight();
+      return;
+    }
+
+    // C. Normal Header Click: Start Header Drag Selection across columns
+    selectedColSet.value.clear();
+    lastAnchorHeaderCol.value = colIdx;
+    headerDragStartCol.value = colIdx;
+    headerDragEndCol.value = colIdx;
+    isHeaderDragging.value = true;
+    selectionRange.value = { minRow: 0, maxRow: rowCount - 1, minCol: colIdx, maxCol: colIdx };
+    computeSelectionStats();
+    updateSelectionHighlight();
+    return;
   }
 
+  // 2. Check if clicked inside a data cell
   const cellEl = target.closest('.ag-cell');
   if (!cellEl) {
     clearCellSelection();
@@ -545,68 +702,163 @@ function onGridMouseDown(e: MouseEvent) {
   const r = parseInt(rStr, 10);
   if (isNaN(r)) return;
 
-  // If clicked on '#' index column -> Select whole row
-  if (!cId || cId === '#') {
-    if (rows.value.length > 0) {
-      dragStart.value = { rowIndex: r, colIndex: 0 };
-      dragEnd.value = { rowIndex: r, colIndex: columns.value.length - 1 };
+  const colCount = columns.value.length;
+
+  // Clicked on '#' row number column -> Select entire row
+  if (!cId || cId === 'row_index' || cId === '#') {
+    e.preventDefault();
+    selectedColSet.value.clear();
+
+    if (e.shiftKey && lastAnchorRow.value !== null) {
+      const minRow = Math.min(lastAnchorRow.value, r);
+      const maxRow = Math.max(lastAnchorRow.value, r);
+      selectionRange.value = { minRow, maxRow, minCol: 0, maxCol: colCount - 1 };
+    } else {
+      lastAnchorRow.value = r;
+      rowDragStart.value = r;
+      isRowDragging.value = true;
+      selectionRange.value = { minRow: r, maxRow: r, minCol: 0, maxCol: colCount - 1 };
+    }
+    computeSelectionStats();
+    updateSelectionHighlight();
+    return;
+  }
+
+  const colIdx = getColIndex(cId);
+  if (colIdx === undefined) return;
+
+  e.preventDefault();
+  selectedColSet.value.clear();
+
+  // Shift + Click on Cell: Rectangular Range Selection from Anchor
+  if (e.shiftKey && lastAnchorCell.value) {
+    const minRow = Math.min(lastAnchorCell.value.rowIndex, r);
+    const maxRow = Math.max(lastAnchorCell.value.rowIndex, r);
+    const minCol = Math.min(lastAnchorCell.value.colIndex, colIdx);
+    const maxCol = Math.max(lastAnchorCell.value.colIndex, colIdx);
+    selectionRange.value = { minRow, maxRow, minCol, maxCol };
+    computeSelectionStats();
+    updateSelectionHighlight();
+    return;
+  }
+
+  // Normal Cell Click: Start Cell Drag Selection
+  lastAnchorCell.value = { rowIndex: r, colIndex: colIdx };
+  cellDragStart.value = { rowIndex: r, colIndex: colIdx };
+  cellDragEnd.value = { rowIndex: r, colIndex: colIdx };
+  isCellDragging.value = true;
+  selectionRange.value = { minRow: r, maxRow: r, minCol: colIdx, maxCol: colIdx };
+  computeSelectionStats();
+  updateSelectionHighlight();
+}
+
+function handleGlobalMouseMove(e: MouseEvent) {
+  if (!gridContainerRef.value || rows.value.length === 0) return;
+
+  // 1. Header Dragging across columns
+  if (isHeaderDragging.value && headerDragStartCol.value !== null) {
+    const el = document.elementFromPoint(e.clientX, e.clientY);
+    const headerCell = el?.closest('.ag-header-cell');
+    const cellEl = el?.closest('.ag-cell');
+    const cId = headerCell?.getAttribute('col-id') || cellEl?.getAttribute('col-id');
+    const c = getColIndex(cId);
+
+    if (c !== undefined && c !== headerDragEndCol.value) {
+      headerDragEndCol.value = c;
+      const start = Math.min(headerDragStartCol.value, c);
+      const end = Math.max(headerDragStartCol.value, c);
+      selectionRange.value = {
+        minRow: 0,
+        maxRow: rows.value.length - 1,
+        minCol: start,
+        maxCol: end,
+      };
       computeSelectionStats();
       updateSelectionHighlight();
     }
     return;
   }
 
-  const colIdx = colNameToIndex.value.get(cId);
-  if (colIdx === undefined) return;
+  // 2. Row Dragging across rows
+  if (isRowDragging.value && rowDragStart.value !== null) {
+    const el = document.elementFromPoint(e.clientX, e.clientY);
+    const cellEl = el?.closest('.ag-cell');
+    const rStr = cellEl?.getAttribute('row-index');
+    if (rStr != null) {
+      const r = parseInt(rStr, 10);
+      if (!isNaN(r)) {
+        const minRow = Math.min(rowDragStart.value, r);
+        const maxRow = Math.max(rowDragStart.value, r);
+        selectionRange.value = {
+          minRow,
+          maxRow,
+          minCol: 0,
+          maxCol: columns.value.length - 1,
+        };
+        computeSelectionStats();
+        updateSelectionHighlight();
+      }
+    }
+    return;
+  }
 
-  e.preventDefault();
+  // 3. Cell Dragging across rows and columns
+  if (isCellDragging.value && cellDragStart.value !== null) {
+    const el = document.elementFromPoint(e.clientX, e.clientY);
+    const cellEl = el?.closest('.ag-cell');
+    if (!cellEl) return;
 
-  isSelecting.value = true;
-  dragStart.value = { rowIndex: r, colIndex: colIdx };
-  dragEnd.value = { rowIndex: r, colIndex: colIdx };
-  computeSelectionStats();
-  updateSelectionHighlight();
-}
+    const rStr = cellEl.getAttribute('row-index');
+    const cId = cellEl.getAttribute('col-id');
+    if (rStr == null || !cId) return;
 
-function handleGlobalMouseMove(e: MouseEvent) {
-  if (!isSelecting.value || !gridContainerRef.value) return;
+    const r = parseInt(rStr, 10);
+    const c = getColIndex(cId);
+    if (isNaN(r) || c === undefined) return;
 
-  const target = e.target as HTMLElement;
-  const cellEl = target.closest('.ag-cell');
-  if (!cellEl) return;
-
-  const rStr = cellEl.getAttribute('row-index');
-  const cId = cellEl.getAttribute('col-id');
-  if (rStr == null || !cId) return;
-
-  const r = parseInt(rStr, 10);
-  const colIdx = colNameToIndex.value.get(cId);
-  if (isNaN(r) || colIdx === undefined) return;
-
-  if (dragEnd.value?.rowIndex !== r || dragEnd.value?.colIndex !== colIdx) {
-    dragEnd.value = { rowIndex: r, colIndex: colIdx };
-    computeSelectionStats();
-    updateSelectionHighlight();
+    if (cellDragEnd.value?.rowIndex !== r || cellDragEnd.value?.colIndex !== c) {
+      cellDragEnd.value = { rowIndex: r, colIndex: c };
+      const minRow = Math.min(cellDragStart.value.rowIndex, r);
+      const maxRow = Math.max(cellDragStart.value.rowIndex, r);
+      const minCol = Math.min(cellDragStart.value.colIndex, c);
+      const maxCol = Math.max(cellDragStart.value.colIndex, c);
+      selectionRange.value = { minRow, maxRow, minCol, maxCol };
+      computeSelectionStats();
+      updateSelectionHighlight();
+    }
   }
 }
 
 function handleGlobalMouseUp() {
-  if (isSelecting.value) {
-    isSelecting.value = false;
-  }
+  if (isHeaderDragging.value) isHeaderDragging.value = false;
+  if (isCellDragging.value) isCellDragging.value = false;
+  if (isRowDragging.value) isRowDragging.value = false;
 }
 
 function handleGlobalKeyDown(e: KeyboardEvent) {
+  const active = document.activeElement;
+  if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA')) {
+    return;
+  }
+
+  // Escape: Clear selection
   if (e.key === 'Escape') {
     clearCellSelection();
     return;
   }
 
-  if ((e.ctrlKey || e.metaKey) && e.key === 'c' && selectionRange.value) {
-    const active = document.activeElement;
-    if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA')) {
+  // Ctrl+A / Cmd+A: Select All
+  if ((e.ctrlKey || e.metaKey) && (e.key === 'a' || e.key === 'A')) {
+    if (gridContainerRef.value && gridContainerRef.value.contains(document.activeElement || null)) {
+      e.preventDefault();
+      selectAll();
       return;
     }
+  }
+
+  // Ctrl+C / Cmd+C: Copy Selected Cells / Columns
+  if ((e.ctrlKey || e.metaKey) && (e.key === 'c' || e.key === 'C') && hasSelection.value) {
+    e.preventDefault();
     copySelectedCells();
   }
 }
@@ -632,6 +884,7 @@ const contextMenu = reactive<{
   visible: boolean;
   x: number;
   y: number;
+  colId: string;
   colName: string;
   cellValue: unknown;
   rowIndex: number;
@@ -639,14 +892,15 @@ const contextMenu = reactive<{
   visible: false,
   x: 0,
   y: 0,
+  colId: '',
   colName: '',
   cellValue: null,
   rowIndex: -1,
 });
 
 const isColPinned = computed(() => {
-  if (!gridApi.value || !contextMenu.colName) return false;
-  const col = gridApi.value.getColumn(contextMenu.colName);
+  if (!gridApi.value || !contextMenu.colId) return false;
+  const col = gridApi.value.getColumn(contextMenu.colId);
   return col ? col.isPinned() : false;
 });
 
@@ -684,13 +938,11 @@ function estimateTextWidth(text: string, isMono = true): number {
 }
 
 function calculateColumnWidth(headerName: string, firstRowVal: unknown): number {
-  const firstRowStr = firstRowVal !== undefined ? formatValueForDisplay(firstRowVal) : '';
-  
   const headerWidth = Math.ceil(estimateTextWidth(headerName, false) + 48);
-  const firstRowWidth = firstRowVal !== undefined && firstRowStr.length > 0
+  const firstRowStr = firstRowVal !== undefined && firstRowVal !== null ? formatValueForDisplay(firstRowVal) : '';
+  const firstRowWidth = firstRowStr.length > 0
     ? Math.ceil(estimateTextWidth(firstRowStr, true) + 28)
     : 0;
-
   const calculated = Math.max(headerWidth, firstRowWidth);
   return Math.min(Math.max(calculated, 75), 600);
 }
@@ -704,6 +956,7 @@ const columnDefs = computed<ColDef[]>(() => {
   const indexWidth = Math.max(60, digits * 10 + 36);
 
   const indexCol: ColDef = {
+    colId: 'row_index',
     headerName: '#',
     pinned: 'left',
     width: indexWidth,
@@ -713,8 +966,9 @@ const columnDefs = computed<ColDef[]>(() => {
     filter: false,
     resizable: true,
     valueGetter: (params) => (params.node?.rowIndex != null ? params.node.rowIndex + 1 : ''),
-    cellClass: 'text-dark-500 bg-dark-850/40 text-center font-mono text-xxs select-none !px-1',
-    headerClass: 'text-center !px-1 cursor-pointer',
+    cellClass: 'text-dark-500 bg-dark-850/40 text-center font-mono text-xxs select-none !px-1 cursor-pointer',
+    headerClass: 'text-center !px-1 cursor-pointer select-none',
+    headerTooltip: '點選此處全選表格 (Select All)',
   };
 
   const firstRow = rows.value[0];
@@ -724,13 +978,14 @@ const columnDefs = computed<ColDef[]>(() => {
     const colWidth = calculateColumnWidth(col.name, firstVal);
 
     return {
-      colId: col.name,
+      colId: `col_${colIdx}`,
       field: `col_${colIdx}`,
       headerName: col.name,
       width: colWidth,
       minWidth: 70,
+      suppressMovable: true,
       tooltipShowMode: 'whenTruncated',
-      headerTooltip: `型別 (Type): ${col.dataType}${col.nullable ? ' | 可為 NULL' : ' | NOT NULL'} (點選標題選取整欄)`,
+      headerTooltip: `型別 (Type): ${col.dataType}${col.nullable ? ' | 可為 NULL' : ' | NOT NULL'} (拖曳或 Shift 點選多欄)`,
       tooltipValueGetter: (params) => {
         const val = params.value;
         if (val === null || val === undefined) return 'NULL';
@@ -745,7 +1000,6 @@ const columnDefs = computed<ColDef[]>(() => {
       sortable: true,
       filter: true,
       resizable: true,
-      suppressMovable: false,
       valueGetter: (params) => params.data?.[colIdx],
       cellRenderer: (params: ICellRendererParams) => {
         const val = params.value;
@@ -780,10 +1034,15 @@ function onCellContextMenu(event: CellContextMenuEvent) {
   const x = Math.min(mouseEvent.clientX, Math.max(0, window.innerWidth - menuWidth - 8));
   const y = Math.min(mouseEvent.clientY, Math.max(0, window.innerHeight - menuHeight - 8));
 
+  const cId = event.column?.getColId() || '';
+  const colIdx = getColIndex(cId);
+  const realColName = colIdx !== undefined && columns.value[colIdx] ? columns.value[colIdx].name : cId;
+
   contextMenu.visible = true;
   contextMenu.x = x;
   contextMenu.y = y;
-  contextMenu.colName = event.column?.getColId() || '';
+  contextMenu.colId = cId;
+  contextMenu.colName = realColName || '';
   contextMenu.cellValue = event.value;
   contextMenu.rowIndex = event.node?.rowIndex ?? -1;
 
@@ -896,46 +1155,70 @@ function copyCurrentRowAsJson() {
 }
 
 function copySelectedCells() {
-  if (!selectionRange.value || !rows.value.length) return;
-  const { minRow, maxRow, minCol, maxCol } = selectionRange.value;
+  if (!rows.value.length || !hasSelection.value) return;
 
   const lines: string[] = [];
-  for (let r = minRow; r <= maxRow; r++) {
-    const row = rows.value[r];
-    if (!row) continue;
-    const rowCells: string[] = [];
-    for (let c = minCol; c <= maxCol; c++) {
-      rowCells.push(formatCellForExport(row[c]));
+
+  if (selectedColSet.value.size > 0) {
+    const colIndices = Array.from(selectedColSet.value).sort((a, b) => a - b);
+    lines.push(colIndices.map((cIdx) => columns.value[cIdx]?.name || '').join('\t'));
+    for (let r = 0; r < rows.value.length; r++) {
+      const row = rows.value[r];
+      if (!row) continue;
+      lines.push(colIndices.map((cIdx) => formatCellForExport(row[cIdx])).join('\t'));
     }
-    lines.push(rowCells.join('\t'));
+  } else if (selectionRange.value) {
+    const { minRow, maxRow, minCol, maxCol } = selectionRange.value;
+    if (minRow === 0 && maxRow === rows.value.length - 1) {
+      lines.push(columns.value.slice(minCol, maxCol + 1).map((c) => c.name).join('\t'));
+    }
+    for (let r = minRow; r <= maxRow; r++) {
+      const row = rows.value[r];
+      if (!row) continue;
+      const rowCells: string[] = [];
+      for (let c = minCol; c <= maxCol; c++) {
+        rowCells.push(formatCellForExport(row[c]));
+      }
+      lines.push(rowCells.join('\t'));
+    }
   }
 
   navigator.clipboard.writeText(lines.join('\n'));
-  workspaceStore.showToast(`已複製選取區域 (${selectionStats.value?.totalCells} 格) 至剪貼簿`, 'success', 2000);
+  workspaceStore.showToast(`已複製選取內容 (${selectionStats.value?.totalCells} 格) 至剪貼簿`, 'success', 2000);
   contextMenu.visible = false;
 }
 
 function copySelectedAsJson() {
-  if (!selectionRange.value || !rows.value.length) return;
-  const { minRow, maxRow, minCol, maxCol } = selectionRange.value;
-  const cols = columns.value.slice(minCol, maxCol + 1);
-  const rowsSlice = rows.value
-    .slice(minRow, maxRow + 1)
-    .map((r) => r.slice(minCol, maxCol + 1));
+  if (!rows.value.length || !hasSelection.value) return;
 
-  const jsonStr = exportRowsAsJson(cols, rowsSlice);
+  let cols: { name: string }[] = [];
+  let rowsData: unknown[][] = [];
+
+  if (selectedColSet.value.size > 0) {
+    const colIndices = Array.from(selectedColSet.value).sort((a, b) => a - b);
+    cols = colIndices.map((cIdx) => ({ name: columns.value[cIdx]?.name || '' }));
+    rowsData = rows.value.map((r) => colIndices.map((cIdx) => r[cIdx]));
+  } else if (selectionRange.value) {
+    const { minRow, maxRow, minCol, maxCol } = selectionRange.value;
+    cols = columns.value.slice(minCol, maxCol + 1).map((c) => ({ name: c.name }));
+    rowsData = rows.value
+      .slice(minRow, maxRow + 1)
+      .map((r) => r.slice(minCol, maxCol + 1));
+  }
+
+  const jsonStr = exportRowsAsJson(cols, rowsData);
   navigator.clipboard.writeText(jsonStr);
-  workspaceStore.showToast(`已複製選取區域為 JSON 物件陣列 (${rowsSlice.length} 筆)`, 'success', 2000);
+  workspaceStore.showToast(`已複製選取為 JSON (${rowsData.length} 列 x ${cols.length} 欄)`, 'success', 2000);
   contextMenu.visible = false;
 }
 
 function togglePinColumn() {
-  if (!gridApi.value || !contextMenu.colName) return;
-  const col = gridApi.value.getColumn(contextMenu.colName);
+  if (!gridApi.value || !contextMenu.colId) return;
+  const col = gridApi.value.getColumn(contextMenu.colId);
   if (!col) return;
 
   const newPinState = col.isPinned() ? null : 'left';
-  gridApi.value.setColumnsPinned([contextMenu.colName], newPinState);
+  gridApi.value.setColumnsPinned([contextMenu.colId], newPinState);
   contextMenu.visible = false;
 }
 
@@ -1017,5 +1300,11 @@ async function loadData() {
 :deep(.sqlight-cell-selected) {
   background-color: rgba(59, 130, 246, 0.22) !important;
   box-shadow: inset 0 0 0 1px #3b82f6 !important;
+}
+
+:deep(.sqlight-header-selected) {
+  background-color: rgba(59, 130, 246, 0.28) !important;
+  color: #93c5fd !important;
+  font-weight: 700 !important;
 }
 </style>
