@@ -1,5 +1,5 @@
 <template>
-  <header class="h-10 bg-dark-850 border-b border-dark-700 flex items-center justify-between px-3 text-xs select-none flex-shrink-0 relative">
+  <header class="h-10 bg-dark-850 border-b border-dark-700 flex items-center justify-between px-3 text-xs select-none flex-shrink-0 relative z-30">
     <!-- Click Outside Backdrop for Connection & DBA Dropdown -->
     <div
       v-if="isConnDropdownOpen || isDbaDropdownOpen"
@@ -8,7 +8,7 @@
     />
 
     <!-- Left: App Branding & Connection / DB Pickers -->
-    <div class="flex items-center space-x-2.5 z-50">
+    <div :class="['flex items-center space-x-2.5', isConnDropdownOpen ? 'relative z-50' : '']">
       <!-- App Brand -->
       <div class="flex items-center space-x-2 font-bold text-dark-100 tracking-wide pr-2 border-r border-dark-700">
         <div class="w-5 h-5 rounded bg-brand-500/20 text-brand-500 flex items-center justify-center font-mono text-xs font-black">
@@ -45,6 +45,7 @@
         <!-- Dropdown Menu -->
         <div
           v-if="isConnDropdownOpen"
+          @click.stop
           class="absolute top-full left-0 mt-1.5 w-72 bg-dark-850 border border-dark-700 rounded-md shadow-2xl z-50 py-1 font-sans text-xs select-none"
         >
           <!-- Dropdown Header -->
@@ -135,7 +136,7 @@
     <div class="flex-1 min-w-4" />
 
     <!-- Right: Actions Toolbar & Settings -->
-    <div class="flex items-center space-x-2 z-10">
+    <div :class="['flex items-center space-x-2', isDbaDropdownOpen ? 'relative z-50' : '']">
       <!-- Main Action Toolbar (Run, Run All, Stop, Format, New Tab, Limit) -->
       <div class="flex items-center space-x-1">
         <!-- Run Current Statement / Selected Button -->
@@ -216,6 +217,7 @@
           <!-- Dropdown Menu -->
           <div
             v-if="isDbaDropdownOpen"
+            @click.stop
             class="absolute top-full right-0 mt-1.5 w-80 bg-dark-850 border border-dark-700 rounded-md shadow-2xl z-50 py-1 font-sans text-xs select-none"
           >
             <div class="px-3 py-1.5 text-xxs font-semibold uppercase tracking-wider text-dark-400 flex items-center justify-between border-b border-dark-750 mb-1">
@@ -231,7 +233,7 @@
                 v-for="query in DBA_QUERIES"
                 :key="query.id"
                 type="button"
-                @click="openDbaQuery(query)"
+                @click.stop="openDbaQuery(query)"
                 class="w-full text-left px-2.5 py-2 rounded hover:bg-dark-750 text-dark-200 transition-colors flex flex-col space-y-0.5 cursor-pointer group"
               >
                 <div class="flex items-center justify-between w-full">
