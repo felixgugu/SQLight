@@ -1,6 +1,7 @@
 # Node & Vite
 node_modules
 dist
+dist-portable
 dist-ssr
 *.local
 
