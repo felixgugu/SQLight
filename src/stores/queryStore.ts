@@ -3,6 +3,7 @@ import { ref, computed } from 'vue';
 import type { QueryResult, QueryHistoryItem, QueryResultTab } from '@/types/query';
 import { queryService } from '@/services/queryService';
 import { useSettingsStore } from './settingsStore';
+import { parseTargetTableFromSql } from '@/utils/sqlGenerator';
 
 export const useQueryStore = defineStore('query', () => {
   const resultTabs = ref<QueryResultTab[]>([]);
@@ -27,14 +28,14 @@ export const useQueryStore = defineStore('query', () => {
 
   function enforceResultLimit() {
     const settingsStore = useSettingsStore();
-    const limit = Math.max(1, settingsStore.maxResultTabs || 10);
+    const maxTabs = settingsStore.maxResultTabs;
 
-    while (resultTabs.value.length > limit) {
-      // Find oldest unpinned tab starting from the right (oldest)
+    while (resultTabs.value.length > maxTabs) {
+      // Find the oldest unpinned tab from the end
       let targetIndex = -1;
       for (let i = resultTabs.value.length - 1; i >= 0; i--) {
-        const item = resultTabs.value[i];
-        if (item && !item.isPinned) {
+        const tab = resultTabs.value[i];
+        if (tab && !tab.isPinned) {
           targetIndex = i;
           break;
         }
@@ -51,6 +52,10 @@ export const useQueryStore = defineStore('query', () => {
 
   function extractFirstTableName(sql: string): string {
     if (!sql || !sql.trim()) return 'Query';
+    const parsed = parseTargetTableFromSql(sql);
+    if (parsed?.tableName) {
+      return parsed.tableName;
+    }
 
     const cleanSql = sql
       .replace(/--[^\n]*/g, '')
@@ -108,7 +113,9 @@ export const useQueryStore = defineStore('query', () => {
       const hasError = result.messages.some((m) => m.level === 'error');
       const rowCount = result.resultSets[0]?.rowCount ?? result.affectedRows ?? 0;
       const timeStr = new Date().toLocaleTimeString();
-      const tableName = extractFirstTableName(sql);
+      const parsed = parseTargetTableFromSql(sql);
+      const tableName = parsed?.tableName || extractFirstTableName(sql);
+      const schema = parsed?.schema;
 
       const newTab: QueryResultTab = {
         id: `tab-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
@@ -122,6 +129,7 @@ export const useQueryStore = defineStore('query', () => {
         connectionId,
         database,
         tableName,
+        schema,
       };
 
       insertNewTab(newTab);
@@ -145,6 +153,9 @@ export const useQueryStore = defineStore('query', () => {
       const msg = err instanceof Error ? err.message : String(err);
       executionError.value = msg;
       const timeStr = new Date().toLocaleTimeString();
+      const parsed = parseTargetTableFromSql(sql);
+      const tableName = parsed?.tableName || extractFirstTableName(sql);
+      const schema = parsed?.schema;
 
       const errorResult: QueryResult = {
         resultSets: [],
@@ -161,13 +172,17 @@ export const useQueryStore = defineStore('query', () => {
 
       const newTab: QueryResultTab = {
         id: `tab-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
-        title: extractFirstTableName(sql),
+        title: tableName,
         sql,
         result: errorResult,
         executedAt: timeStr,
         isPinned: false,
         durationMs: duration,
         rowCount: 0,
+        connectionId,
+        database,
+        tableName,
+        schema,
       };
 
       insertNewTab(newTab);

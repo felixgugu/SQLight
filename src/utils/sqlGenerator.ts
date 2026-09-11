@@ -57,11 +57,11 @@ export function formatSqlLiteral(val: CellValue | undefined): string {
 }
 
 /**
- * Formats the full qualified table name [schema].[tableName] or [tableName]
+ * Formats the full qualified table name [schema].[tableName] (defaults schema to dbo if omitted)
  */
 export function formatTableName(tableName: string, schema?: string): string {
   const cleanTable = tableName.replace(/[\[\]]/g, '').trim();
-  const cleanSchema = schema?.replace(/[\[\]]/g, '').trim();
+  const cleanSchema = (schema || 'dbo').replace(/[\[\]]/g, '').trim();
 
   if (cleanSchema) {
     return `${wrapIdentifierIfNeeded(cleanSchema)}.${wrapIdentifierIfNeeded(cleanTable)}`;
@@ -103,6 +103,71 @@ export function buildWhereConditions(
 }
 
 /**
+ * Splits a multipart SQL identifier (e.g. [db].[dbo].[table] or db..table) into clean parts
+ */
+export function splitIdentifierParts(targetStr: string): string[] {
+  const parts: string[] = [];
+  let current = '';
+  let inBrackets = false;
+
+  for (let i = 0; i < targetStr.length; i++) {
+    const char = targetStr[i];
+    if (char === '[') {
+      inBrackets = true;
+    } else if (char === ']') {
+      inBrackets = false;
+    } else if (char === '.' && !inBrackets) {
+      parts.push(current.trim().replace(/[\[\]]/g, ''));
+      current = '';
+      continue;
+    } else {
+      current += char;
+    }
+  }
+  parts.push(current.trim().replace(/[\[\]]/g, ''));
+  return parts;
+}
+
+/**
+ * Extracts target schema and table name from a single multipart identifier string
+ */
+function resolveTableParts(rawTarget: string): { schema?: string; tableName: string } | null {
+  const parts = splitIdentifierParts(rawTarget);
+  if (parts.length === 0) return null;
+
+  let rawTable = '';
+  let rawSchema: string | undefined = undefined;
+
+  if (parts.length >= 3) {
+    // 3 or 4 part name: [Server].[DB].[Schema].[Table] or [DB].[Schema].[Table] or [DB]..[Table]
+    rawTable = parts[parts.length - 1] || '';
+    const secondLast = parts[parts.length - 2];
+    rawSchema = secondLast ? secondLast : 'dbo';
+  } else if (parts.length === 2) {
+    // 2 part name: [Schema].[Table]
+    rawTable = parts[1] || '';
+    rawSchema = parts[0] ? parts[0] : 'dbo';
+  } else if (parts.length === 1) {
+    // 1 part name: [Table]
+    rawTable = parts[0] || '';
+    rawSchema = undefined;
+  }
+
+  const cleanTable = rawTable.trim();
+  if (!cleanTable) return null;
+
+  const upper = cleanTable.toUpperCase();
+  if (['SELECT', 'WHERE', 'VALUES', 'SET', 'GROUP', 'ORDER'].includes(upper)) {
+    return null;
+  }
+
+  return {
+    schema: rawSchema?.trim() || undefined,
+    tableName: cleanTable,
+  };
+}
+
+/**
  * Extracts target schema and table name from a SQL query string
  */
 export function parseTargetTableFromSql(
@@ -115,33 +180,49 @@ export function parseTargetTableFromSql(
     .replace(/\/\*[\s\S]*?\*\//g, '')
     .trim();
 
-  // Match FROM, INTO, UPDATE, JOIN, TRUNCATE TABLE followed by [schema].[table] or [table]
-  const regex = /\b(?:FROM|INTO|UPDATE|JOIN|TRUNCATE\s+TABLE)\s+(?:(?:\[?([a-zA-Z_][\w]*)\]?)\.)?(?:\[?([a-zA-Z_][\w]*)\]?)/i;
+  // Match FROM, INTO, UPDATE, JOIN, TRUNCATE TABLE followed by multipart table identifier
+  const regex = /\b(?:FROM|INTO|UPDATE|JOIN|TRUNCATE\s+TABLE)\s+((?:\[[^\]]+\]|[a-zA-Z0-9_#$@]+)(?:\s*\.\s*(?:\[[^\]]+\]|[a-zA-Z0-9_#$@]*))*)/i;
   const match = cleanSql.match(regex);
 
-  if (match) {
-    const rawSchema = match[1];
-    const rawTable = match[2];
+  if (match && match[1]) {
+    return resolveTableParts(match[1].trim());
+  }
 
-    if (rawTable) {
-      const upper = rawTable.toUpperCase();
-      if (!['SELECT', 'WHERE', 'VALUES', 'SET', 'GROUP', 'ORDER'].includes(upper)) {
-        return {
-          schema: rawSchema,
-          tableName: rawTable,
-        };
-      }
-    } else if (rawSchema) {
-      const upper = rawSchema.toUpperCase();
-      if (!['SELECT', 'WHERE', 'VALUES', 'SET', 'GROUP', 'ORDER'].includes(upper)) {
-        return {
-          tableName: rawSchema,
-        };
+  return null;
+}
+
+/**
+ * Extracts all table names referenced in FROM or JOIN clauses of a SQL query
+ */
+export function extractAllTableNamesFromSql(
+  sql: string
+): { schema?: string; tableName: string }[] {
+  if (!sql || !sql.trim()) return [];
+
+  const cleanSql = sql
+    .replace(/--[^\n]*/g, '')
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .trim();
+
+  const regex = /\b(?:FROM|JOIN)\s+((?:\[[^\]]+\]|[a-zA-Z0-9_#$@]+)(?:\s*\.\s*(?:\[[^\]]+\]|[a-zA-Z0-9_#$@]*))*)/gi;
+  const results: { schema?: string; tableName: string }[] = [];
+  const seen = new Set<string>();
+
+  let match: RegExpExecArray | null;
+  while ((match = regex.exec(cleanSql)) !== null) {
+    if (match[1]) {
+      const parsed = resolveTableParts(match[1].trim());
+      if (parsed) {
+        const key = `${parsed.schema || ''}.${parsed.tableName}`.toLowerCase();
+        if (!seen.has(key)) {
+          seen.add(key);
+          results.push(parsed);
+        }
       }
     }
   }
 
-  return null;
+  return results;
 }
 
 /**

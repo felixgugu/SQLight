@@ -54,4 +54,5 @@ export interface QueryResultTab {
   connectionId?: string;
   database?: string;
   tableName?: string;
+  schema?: string;
 }

@@ -342,7 +342,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, reactive, onMounted, onUnmounted } from 'vue';
+import { ref, computed, reactive, onMounted, onUnmounted, watch } from 'vue';
 import {
   Inbox,
   Search,
@@ -386,6 +386,7 @@ import {
   generateUpdateStatement,
   generateDeleteStatement,
   parseTargetTableFromSql,
+  extractAllTableNamesFromSql,
   type ColumnInfo,
 } from '@/utils/sqlGenerator';
 import type { ResultSet, CellValue } from '@/types/query';
@@ -412,6 +413,49 @@ const copiedCsv = ref(false);
 const currentSet = computed(() => {
   return props.resultSets[activeSetIndex.value] ?? props.resultSets[0] ?? null;
 });
+
+// Set of lowercased primary key column names for the active query result
+const primaryKeyColumnNames = computed<Set<string>>(() => {
+  const tab = queryStore.activeResultTab;
+  const connId = tab?.connectionId || connectionStore.activeConnectionId;
+  const db = tab?.database || connectionStore.activeDatabase;
+  if (!connId || !db) return new Set();
+
+  const sql = tab?.sql || '';
+  const parsedTables = extractAllTableNamesFromSql(sql);
+
+  if (parsedTables.length === 0 && tab?.tableName) {
+    parsedTables.push({ schema: tab.schema, tableName: tab.tableName });
+  }
+
+  const pkNames = new Set<string>();
+  for (const t of parsedTables) {
+    const tableSchema = schemaStore.getTable(t.tableName, connId, db) ||
+      (t.schema ? schemaStore.getTable(`${t.schema}.${t.tableName}`, connId, db) : undefined);
+    if (tableSchema) {
+      for (const col of tableSchema.columns) {
+        if (col.isPrimaryKey) {
+          pkNames.add(col.name.toLowerCase());
+        }
+      }
+    }
+  }
+
+  return pkNames;
+});
+
+// Auto-fetch database schema if not yet loaded so primary keys show up promptly
+watch(
+  () => [queryStore.activeResultTab?.connectionId, queryStore.activeResultTab?.database] as const,
+  ([cId, db]) => {
+    const connId = cId || connectionStore.activeConnectionId;
+    const database = db || connectionStore.activeDatabase;
+    if (connId && database && !schemaStore.isDatabaseLoaded(connId, database)) {
+      schemaStore.loadDatabaseSchema(connId, database).catch(() => {});
+    }
+  },
+  { immediate: true }
+);
 
 // Helper to extract 0-based column index from standard colId `col_N`
 function getColIndex(colId: string | null | undefined): number | undefined {
@@ -1046,9 +1090,10 @@ function estimateTextWidth(text: string, isMono = true): number {
   return width;
 }
 
-function calculateColumnWidth(headerName: string, firstRowVal: unknown): number {
+function calculateColumnWidth(headerName: string, firstRowVal: unknown, isPk = false): number {
   const firstRowStr = firstRowVal !== undefined ? formatValueForDisplay(firstRowVal) : '';
-  const headerWidth = Math.ceil(estimateTextWidth(headerName, false) + 48);
+  const pkExtra = isPk ? 22 : 0;
+  const headerWidth = Math.ceil(estimateTextWidth(headerName, false) + 48 + pkExtra);
   const firstRowWidth = firstRowVal !== undefined && firstRowStr.length > 0
     ? Math.ceil(estimateTextWidth(firstRowStr, true) + 28)
     : 0;
@@ -1086,18 +1131,22 @@ const columnDefs = computed<ColDef[]>(() => {
 
   // 2. Dynamic Data Columns with standardized colId: `col_${colIdx}`
   const dataCols: ColDef[] = currentSet.value.columns.map((col, colIdx) => {
+    const isPk = primaryKeyColumnNames.value.has(col.name.toLowerCase());
     const firstVal = firstRow ? firstRow[colIdx] : undefined;
-    const colWidth = calculateColumnWidth(col.name, firstVal);
+    const colWidth = calculateColumnWidth(col.name, firstVal, isPk);
 
     return {
       colId: `col_${colIdx}`,
       field: `col_${colIdx}`,
       headerName: col.name,
+      headerClass: isPk ? 'pk-column-header' : '',
       width: colWidth,
       minWidth: 70,
       suppressMovable: false, // Allows dragging column headers to reorder
       tooltipShowMode: 'whenTruncated',
-      headerTooltip: `型別 (Type): ${col.dataType}${col.nullable ? ' | 可為 NULL' : ' | NOT NULL'} (拖曳表頭調整順序，點擊或 Shift 點選)`,
+      headerTooltip: isPk
+        ? `🔑 [主鍵 / Primary Key] 型別 (Type): ${col.dataType}${col.nullable ? ' | 可為 NULL' : ' | NOT NULL'} (拖曳表頭調整順序，點擊或 Shift 點選)`
+        : `型別 (Type): ${col.dataType}${col.nullable ? ' | 可為 NULL' : ' | NOT NULL'} (拖曳表頭調整順序，點擊或 Shift 點選)`,
       tooltipValueGetter: (params) => {
         const val = params.value;
         if (val === null || val === undefined) return 'NULL';
@@ -1183,13 +1232,23 @@ function handleGenerateDml(type: 'INSERT' | 'UPDATE' | 'DELETE') {
   const parsedTarget = parseTargetTableFromSql(sql);
 
   const tableName = parsedTarget?.tableName || tab?.tableName || tab?.title || 'TargetTable';
-  const schema = parsedTarget?.schema;
+  let schema = parsedTarget?.schema || tab?.schema;
 
   const connId = tab?.connectionId || connectionStore.activeConnectionId || undefined;
   const db = tab?.database || connectionStore.activeDatabase || undefined;
 
-  // Resolve PKs from schemaStore if available
-  const tableSchema = connId && db ? schemaStore.getTable(tableName, connId, db) : undefined;
+  // Resolve PKs & schema from schemaStore if available
+  const tableSchema = connId && db
+    ? (schemaStore.getTable(tableName, connId, db) || (schema ? schemaStore.getTable(`${schema}.${tableName}`, connId, db) : undefined))
+    : undefined;
+
+  if (!schema && tableSchema?.schema) {
+    schema = tableSchema.schema;
+  }
+  if (!schema) {
+    schema = 'dbo';
+  }
+
   const pkColNames = new Set(
     tableSchema?.columns
       .filter((c) => c.isPrimaryKey)
@@ -1232,7 +1291,7 @@ function handleGenerateDml(type: 'INSERT' | 'UPDATE' | 'DELETE') {
     // Ignore clipboard error
   }
 
-  workspaceStore.addSqlTab(generated, `${type}: ${tableName}`);
+  workspaceStore.addSqlTab(generated, `${type}: [${schema}].[${tableName}]`);
   workspaceStore.showToast(`已建立 ${type} 語法並開啟新分頁（已複製至剪貼簿）`, 'success', 2500);
 
   contextMenu.visible = false;
@@ -1431,5 +1490,33 @@ function copyAsMarkdown() {
   background-color: rgba(59, 130, 246, 0.28) !important;
   color: #93c5fd !important;
   font-weight: 700 !important;
+}
+
+/* Primary Key Column Header Styling with Lucide Key vector icon */
+:deep(.pk-column-header .ag-header-cell-text) {
+  color: #fbbf24 !important; /* amber-400 */
+  font-weight: 600 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 4px !important;
+}
+
+:deep(.pk-column-header .ag-header-cell-text::before) {
+  content: '' !important;
+  display: inline-block !important;
+  width: 12px !important;
+  height: 12px !important;
+  flex-shrink: 0 !important;
+  background-color: #fbbf24 !important; /* amber-400 */
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='7.5' cy='15.5' r='5.5'/%3E%3Cpath d='m21 2-9.6 9.6'/%3E%3Cpath d='m15.5 7.5 3 3L22 7l-3-3'/%3E%3C/svg%3E") no-repeat center / contain !important;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='7.5' cy='15.5' r='5.5'/%3E%3Cpath d='m21 2-9.6 9.6'/%3E%3Cpath d='m15.5 7.5 3 3L22 7l-3-3'/%3E%3C/svg%3E") no-repeat center / contain !important;
+}
+
+:deep(.sqlight-header-selected.pk-column-header .ag-header-cell-text) {
+  color: #fef08a !important; /* amber-200 */
+}
+
+:deep(.sqlight-header-selected.pk-column-header .ag-header-cell-text::before) {
+  background-color: #fef08a !important;
 }
 </style>
