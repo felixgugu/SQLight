@@ -143,14 +143,16 @@ SQLight 採用現代跨平台桌面客戶端的雙層解耦架構：
   - 有選取時僅格式化選取的 SQL；未選取時僅格式化當前游標所在的獨立語句。
 
 ### 4. 多結果歷史分頁、AG Grid & 即時統計列
-- **全方位多欄選取與跨區域框選 (Multi-Column & Range Selection Engine)**：
-  - **欄位標題拖曳選取 (Header Drag)**：滑鼠於任何欄位標題按住並左右拖曳，即可連續框選多個整欄資料。
-  - **Shift + 點擊欄位標題 (Shift + Click Header)**：點擊任一欄位後，按住 <kbd>Shift</kbd> 點擊另一欄位，自動連續選取兩欄間的所有整欄。
-  - **Ctrl + 點擊欄位標題 (Ctrl + Click Header)**：按住 <kbd>Ctrl</kbd> 點擊欄位標題，支援非連續性自由挑選多個欄位（如同時選取第 1 欄與第 5 欄）。
+- **欄位拖曳重排與全方位選取引擎 (Column Reordering & Selection Engine)**：
+  - **欄位拖曳重排 (Column Reordering)**：滑鼠於任何欄位標題按住拖曳（移動距離 > 4px），即可自由調換欄位前後排列順序，具備原生的拖曳陰影與插入定位箭頭。已選取的欄位在重排後持續維持選取高亮狀態。
+  - **單擊欄位標題 (Click Header)**：單擊任一欄位標題即可選取該整欄所有儲存格，底部統計列即時更新該欄之數值總和與平均。
+  - **Shift + 點擊欄位標題 (Shift + Click Header)**：點擊起點欄位後，按住 <kbd>Shift</kbd> 點擊另一欄位，自動依據當前畫面最新排列順序，連續選取兩欄間的所有整欄。
+  - **Ctrl + 點擊欄位標題 (Ctrl + Click Header)**：按住 <kbd>Ctrl</kbd>（或 <kbd>Cmd</kbd>）點擊欄位標題，支援非連續性自由挑選多個欄位（如同時選取第 1 欄與第 5 欄）。
   - **儲存格拖曳矩形框選 (Cell Box Drag)**：滑鼠於任一儲存格按住拖曳，自由框選任意跨列、跨欄的矩形資料區域。
   - **Shift + 點擊儲存格 (Shift + Click Cell)**：點擊起始儲存格後，按住 <kbd>Shift</kbd> 點擊結束儲存格，快速建立矩形選取範圍。
   - **點擊左上角 `#` 標題或快捷鍵 <kbd>Ctrl</kbd> + <kbd>A</kbd> 全選**：一鍵選取整張表格所有列與欄位。
   - **點擊列號 `#` 整列選取與拖曳**：點擊左側行號選取整列，按住拖曳或配合 <kbd>Shift</kbd> 快速連續選取多列。
+  - **視覺順序同步匯出**：當欄位經過拖曳調整前後順序後，選取複製、TSV、CSV、JSON 與 Markdown 匯出自動忠實依據使用者所排定之**畫面視覺順序**輸出。
   - **直觀視覺高亮與清除**：被選取的欄位標題以專屬淡藍色高亮標示（`.sqlight-header-selected`），儲存格呈現清晰反白效果；按 <kbd>Esc</kbd> 鍵隨時清除所有選取。
 - **Excel 級即時統計列 (Excel-Grade Live Aggregate Bar)**：
   - 於查詢結果表格（`ResultGrid`）與資料表瀏覽器（`TableDataViewer`）底部配備即時統計狀態列。

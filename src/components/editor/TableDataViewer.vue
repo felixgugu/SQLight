@@ -93,6 +93,7 @@
       class="flex-1 w-full overflow-hidden relative"
       @contextmenu.prevent
       @mousedown="onGridMouseDown"
+      @click="onGridClick"
     >
       <AgGridVue
         class="w-full h-full"
@@ -110,6 +111,7 @@
         @grid-ready="onGridReady"
         @cell-context-menu="onCellContextMenu"
         @body-scroll="onBodyScroll"
+        @column-moved="onColumnMoved"
       />
     </div>
 
@@ -339,6 +341,7 @@ import {
   type ColDef,
   type CellContextMenuEvent,
   type ICellRendererParams,
+  type ColumnMovedEvent,
 } from 'ag-grid-community';
 import { sqlightGridTheme } from '@/styles/gridTheme';
 import { queryService } from '@/services/queryService';
@@ -390,6 +393,22 @@ function getColIndex(colId: string | null | undefined): number | undefined {
   return undefined;
 }
 
+// Helper to get visual display column data indices (reflecting user column drag-reordering)
+function getVisualDataColIndices(): number[] {
+  if (!gridApi.value) {
+    return columns.value.map((_, i) => i);
+  }
+  const cols = gridApi.value.getAllGridColumns();
+  if (!cols || !cols.length) {
+    return columns.value.map((_, i) => i);
+  }
+  return cols
+    .map((c) => c.getColId())
+    .filter((id) => id && id !== 'row_index' && id !== '#')
+    .map((id) => getColIndex(id))
+    .filter((idx): idx is number => idx !== undefined);
+}
+
 // Cell Selection & Aggregates State
 interface CellCoord {
   rowIndex: number;
@@ -415,15 +434,12 @@ interface SelectionStats {
 
 // Selection states
 const isCellDragging = ref(false);
-const isHeaderDragging = ref(false);
 const isRowDragging = ref(false);
 
 const cellDragStart = ref<CellCoord | null>(null);
 const cellDragEnd = ref<CellCoord | null>(null);
 const lastAnchorCell = ref<CellCoord | null>(null);
 
-const headerDragStartCol = ref<number | null>(null);
-const headerDragEndCol = ref<number | null>(null);
 const lastAnchorHeaderCol = ref<number | null>(null);
 
 const rowDragStart = ref<number | null>(null);
@@ -432,6 +448,14 @@ const lastAnchorRow = ref<number | null>(null);
 const selectionRange = ref<SelectionRange | null>(null);
 const selectedColSet = ref<Set<number>>(new Set());
 const selectionStats = ref<SelectionStats | null>(null);
+
+// Tracks mousedown on column header to distinguish drag (column move) from click (column select)
+let headerMouseDownInfo: {
+  x: number;
+  y: number;
+  time: number;
+  colId: string;
+} | null = null;
 
 const hasSelection = computed(() => {
   return selectedColSet.value.size > 0 || selectionRange.value !== null;
@@ -450,28 +474,30 @@ const selectedColumnsCount = computed(() => {
   return 0;
 });
 
-function isCellInSelection(r: number, c: number): boolean {
+function isCellInSelection(r: number, c: number, vColIdx?: number): boolean {
   if (selectedColSet.value.size > 0) {
     return selectedColSet.value.has(c);
   }
   if (selectionRange.value) {
     const { minRow, maxRow, minCol, maxCol } = selectionRange.value;
-    return r >= minRow && r <= maxRow && c >= minCol && c <= maxCol;
+    const colPosition = vColIdx !== undefined ? vColIdx : c;
+    return r >= minRow && r <= maxRow && colPosition >= minCol && colPosition <= maxCol;
   }
   return false;
 }
 
-function isColumnSelected(c: number): boolean {
+function isColumnSelected(c: number, vColIdx?: number): boolean {
   if (selectedColSet.value.size > 0) {
     return selectedColSet.value.has(c);
   }
   if (selectionRange.value && rows.value.length > 0) {
     const { minRow, maxRow, minCol, maxCol } = selectionRange.value;
+    const colPosition = vColIdx !== undefined ? vColIdx : c;
     return (
       minRow === 0 &&
       maxRow === rows.value.length - 1 &&
-      c >= minCol &&
-      c <= maxCol
+      colPosition >= minCol &&
+      colPosition <= maxCol
     );
   }
   return false;
@@ -515,12 +541,14 @@ function computeSelectionStats() {
     }
   } else if (selectionRange.value) {
     const { minRow, maxRow, minCol, maxCol } = selectionRange.value;
-    totalCells = (maxRow - minRow + 1) * (maxCol - minCol + 1);
+    const visualIndices = getVisualDataColIndices();
+    const rangeCols = visualIndices.filter((_, vIdx) => vIdx >= minCol && vIdx <= maxCol);
+    totalCells = (maxRow - minRow + 1) * rangeCols.length;
 
     for (let r = minRow; r <= maxRow; r++) {
       const row = rows.value[r];
       if (!row) continue;
-      for (let c = minCol; c <= maxCol; c++) {
+      for (const c of rangeCols) {
         const val = row[c];
         distinctValues.add(val === null || val === undefined ? 'NULL' : String(val));
         if (val !== null && val !== undefined && val !== '' && typeof val !== 'boolean') {
@@ -560,6 +588,8 @@ function updateSelectionHighlight() {
   const container = gridContainerRef.value;
   if (!container) return;
 
+  const visualIndices = getVisualDataColIndices();
+
   const cells = container.querySelectorAll('.ag-cell');
   cells.forEach((cell) => {
     if (!hasSelection.value) {
@@ -574,8 +604,13 @@ function updateSelectionHighlight() {
     }
     const r = parseInt(rStr, 10);
     const c = getColIndex(cId);
-    if (c !== undefined && isCellInSelection(r, c)) {
-      cell.classList.add('sqlight-cell-selected');
+    if (c !== undefined) {
+      const vIdx = visualIndices.indexOf(c);
+      if (isCellInSelection(r, c, vIdx >= 0 ? vIdx : undefined)) {
+        cell.classList.add('sqlight-cell-selected');
+      } else {
+        cell.classList.remove('sqlight-cell-selected');
+      }
     } else {
       cell.classList.remove('sqlight-cell-selected');
     }
@@ -586,8 +621,13 @@ function updateSelectionHighlight() {
   headerCells.forEach((hCell) => {
     const cId = hCell.getAttribute('col-id');
     const c = getColIndex(cId);
-    if (c !== undefined && isColumnSelected(c)) {
-      hCell.classList.add('sqlight-header-selected');
+    if (c !== undefined) {
+      const vIdx = visualIndices.indexOf(c);
+      if (isColumnSelected(c, vIdx >= 0 ? vIdx : undefined)) {
+        hCell.classList.add('sqlight-header-selected');
+      } else {
+        hCell.classList.remove('sqlight-header-selected');
+      }
     } else {
       hCell.classList.remove('sqlight-header-selected');
     }
@@ -597,14 +637,11 @@ function updateSelectionHighlight() {
 function clearCellSelection() {
   cellDragStart.value = null;
   cellDragEnd.value = null;
-  headerDragStartCol.value = null;
-  headerDragEndCol.value = null;
   rowDragStart.value = null;
   selectionRange.value = null;
   selectedColSet.value.clear();
   selectionStats.value = null;
   isCellDragging.value = false;
-  isHeaderDragging.value = false;
   isRowDragging.value = false;
   updateSelectionHighlight();
 }
@@ -612,11 +649,12 @@ function clearCellSelection() {
 function selectAll() {
   if (rows.value.length === 0 || columns.value.length === 0) return;
   selectedColSet.value.clear();
+  const visualIndices = getVisualDataColIndices();
   selectionRange.value = {
     minRow: 0,
     maxRow: rows.value.length - 1,
     minCol: 0,
-    maxCol: columns.value.length - 1,
+    maxCol: visualIndices.length - 1,
   };
   computeSelectionStats();
   updateSelectionHighlight();
@@ -641,50 +679,19 @@ function onGridMouseDown(e: MouseEvent) {
     const colIdx = getColIndex(cId);
     if (colIdx === undefined) return;
 
-    e.preventDefault();
+    // Track mousedown to distinguish drag (column reorder) from click (column select)
+    headerMouseDownInfo = {
+      x: e.clientX,
+      y: e.clientY,
+      time: Date.now(),
+      colId: cId,
+    };
 
-    const rowCount = rows.value.length;
-    if (rowCount === 0) return;
-
-    // A. Ctrl + Click on Header: Toggle multi-column selection
-    if (e.ctrlKey || e.metaKey) {
-      if (selectedColSet.value.size === 0 && selectionRange.value) {
-        for (let c = selectionRange.value.minCol; c <= selectionRange.value.maxCol; c++) {
-          selectedColSet.value.add(c);
-        }
-        selectionRange.value = null;
-      }
-      if (selectedColSet.value.has(colIdx)) {
-        selectedColSet.value.delete(colIdx);
-      } else {
-        selectedColSet.value.add(colIdx);
-      }
-      lastAnchorHeaderCol.value = colIdx;
-      computeSelectionStats();
-      updateSelectionHighlight();
-      return;
+    // If Shift or Ctrl/Cmd is held, prevent AG Grid's default multi-sort
+    if (e.shiftKey || e.ctrlKey || e.metaKey) {
+      e.preventDefault();
     }
-
-    // B. Shift + Click on Header: Select range of columns
-    if (e.shiftKey && lastAnchorHeaderCol.value !== null) {
-      selectedColSet.value.clear();
-      const start = Math.min(lastAnchorHeaderCol.value, colIdx);
-      const end = Math.max(lastAnchorHeaderCol.value, colIdx);
-      selectionRange.value = { minRow: 0, maxRow: rowCount - 1, minCol: start, maxCol: end };
-      computeSelectionStats();
-      updateSelectionHighlight();
-      return;
-    }
-
-    // C. Normal Header Click: Start Header Drag Selection across columns
-    selectedColSet.value.clear();
-    lastAnchorHeaderCol.value = colIdx;
-    headerDragStartCol.value = colIdx;
-    headerDragEndCol.value = colIdx;
-    isHeaderDragging.value = true;
-    selectionRange.value = { minRow: 0, maxRow: rowCount - 1, minCol: colIdx, maxCol: colIdx };
-    computeSelectionStats();
-    updateSelectionHighlight();
+    // For normal click/drag, DO NOT preventDefault so AG Grid can initiate column reorder drag
     return;
   }
 
@@ -703,6 +710,8 @@ function onGridMouseDown(e: MouseEvent) {
   if (isNaN(r)) return;
 
   const colCount = columns.value.length;
+  const visualIndices = getVisualDataColIndices();
+  const maxVCol = visualIndices.length > 0 ? visualIndices.length - 1 : colCount - 1;
 
   // Clicked on '#' row number column -> Select entire row
   if (!cId || cId === 'row_index' || cId === '#') {
@@ -712,12 +721,12 @@ function onGridMouseDown(e: MouseEvent) {
     if (e.shiftKey && lastAnchorRow.value !== null) {
       const minRow = Math.min(lastAnchorRow.value, r);
       const maxRow = Math.max(lastAnchorRow.value, r);
-      selectionRange.value = { minRow, maxRow, minCol: 0, maxCol: colCount - 1 };
+      selectionRange.value = { minRow, maxRow, minCol: 0, maxCol: maxVCol };
     } else {
       lastAnchorRow.value = r;
       rowDragStart.value = r;
       isRowDragging.value = true;
-      selectionRange.value = { minRow: r, maxRow: r, minCol: 0, maxCol: colCount - 1 };
+      selectionRange.value = { minRow: r, maxRow: r, minCol: 0, maxCol: maxVCol };
     }
     computeSelectionStats();
     updateSelectionHighlight();
@@ -730,12 +739,15 @@ function onGridMouseDown(e: MouseEvent) {
   e.preventDefault();
   selectedColSet.value.clear();
 
+  const vIdx = visualIndices.indexOf(colIdx);
+  const startVCol = vIdx >= 0 ? vIdx : colIdx;
+
   // Shift + Click on Cell: Rectangular Range Selection from Anchor
   if (e.shiftKey && lastAnchorCell.value) {
     const minRow = Math.min(lastAnchorCell.value.rowIndex, r);
     const maxRow = Math.max(lastAnchorCell.value.rowIndex, r);
-    const minCol = Math.min(lastAnchorCell.value.colIndex, colIdx);
-    const maxCol = Math.max(lastAnchorCell.value.colIndex, colIdx);
+    const minCol = Math.min(lastAnchorCell.value.colIndex, startVCol);
+    const maxCol = Math.max(lastAnchorCell.value.colIndex, startVCol);
     selectionRange.value = { minRow, maxRow, minCol, maxCol };
     computeSelectionStats();
     updateSelectionHighlight();
@@ -743,43 +755,106 @@ function onGridMouseDown(e: MouseEvent) {
   }
 
   // Normal Cell Click: Start Cell Drag Selection
-  lastAnchorCell.value = { rowIndex: r, colIndex: colIdx };
-  cellDragStart.value = { rowIndex: r, colIndex: colIdx };
-  cellDragEnd.value = { rowIndex: r, colIndex: colIdx };
+  lastAnchorCell.value = { rowIndex: r, colIndex: startVCol };
+  cellDragStart.value = { rowIndex: r, colIndex: startVCol };
+  cellDragEnd.value = { rowIndex: r, colIndex: startVCol };
   isCellDragging.value = true;
-  selectionRange.value = { minRow: r, maxRow: r, minCol: colIdx, maxCol: colIdx };
+  selectionRange.value = { minRow: r, maxRow: r, minCol: startVCol, maxCol: startVCol };
   computeSelectionStats();
   updateSelectionHighlight();
+}
+
+function onGridClick(e: MouseEvent) {
+  if (e.button !== 0 || rows.value.length === 0) return;
+  const target = e.target as HTMLElement;
+
+  const headerCell = target.closest('.ag-header-cell');
+  if (!headerCell) return;
+
+  const cId = headerCell.getAttribute('col-id');
+  if (!cId || cId === 'row_index' || cId === '#') return;
+
+  // If user moved mouse > 5px, it was a column reorder drag, NOT a click!
+  if (headerMouseDownInfo && headerMouseDownInfo.colId === cId) {
+    const dist = Math.hypot(e.clientX - headerMouseDownInfo.x, e.clientY - headerMouseDownInfo.y);
+    if (dist > 5) {
+      headerMouseDownInfo = null;
+      return;
+    }
+  }
+  headerMouseDownInfo = null;
+
+  const colIdx = getColIndex(cId);
+  if (colIdx === undefined) return;
+
+  const rowCount = rows.value.length;
+  if (rowCount === 0) return;
+
+  // A. Ctrl + Click on Header: Toggle multi-column selection
+  if (e.ctrlKey || e.metaKey) {
+    e.stopPropagation();
+    if (selectedColSet.value.size === 0 && selectionRange.value) {
+      const { minCol, maxCol } = selectionRange.value;
+      const visualIndices = getVisualDataColIndices();
+      visualIndices.forEach((c, vIdx) => {
+        if (vIdx >= minCol && vIdx <= maxCol) selectedColSet.value.add(c);
+      });
+      selectionRange.value = null;
+    }
+    if (selectedColSet.value.has(colIdx)) {
+      selectedColSet.value.delete(colIdx);
+    } else {
+      selectedColSet.value.add(colIdx);
+    }
+    lastAnchorHeaderCol.value = colIdx;
+    computeSelectionStats();
+    updateSelectionHighlight();
+    return;
+  }
+
+  // B. Shift + Click on Header: Select range of columns in visual order
+  if (e.shiftKey && lastAnchorHeaderCol.value !== null) {
+    e.stopPropagation();
+    selectedColSet.value.clear();
+    selectionRange.value = null;
+
+    const visualIndices = getVisualDataColIndices();
+    let vStart = visualIndices.indexOf(lastAnchorHeaderCol.value);
+    let vEnd = visualIndices.indexOf(colIdx);
+    if (vStart === -1) vStart = 0;
+    if (vEnd === -1) vEnd = visualIndices.length - 1;
+
+    const minV = Math.min(vStart, vEnd);
+    const maxV = Math.max(vStart, vEnd);
+
+    for (let v = minV; v <= maxV; v++) {
+      const c = visualIndices[v];
+      if (c !== undefined) selectedColSet.value.add(c);
+    }
+    computeSelectionStats();
+    updateSelectionHighlight();
+    return;
+  }
+
+  // C. Normal Header Click: Select single column
+  selectedColSet.value.clear();
+  selectedColSet.value.add(colIdx);
+  lastAnchorHeaderCol.value = colIdx;
+  selectionRange.value = null;
+  computeSelectionStats();
+  updateSelectionHighlight();
+}
+
+function onColumnMoved(event: ColumnMovedEvent) {
+  if (event.finished) {
+    updateSelectionHighlight();
+  }
 }
 
 function handleGlobalMouseMove(e: MouseEvent) {
   if (!gridContainerRef.value || rows.value.length === 0) return;
 
-  // 1. Header Dragging across columns
-  if (isHeaderDragging.value && headerDragStartCol.value !== null) {
-    const el = document.elementFromPoint(e.clientX, e.clientY);
-    const headerCell = el?.closest('.ag-header-cell');
-    const cellEl = el?.closest('.ag-cell');
-    const cId = headerCell?.getAttribute('col-id') || cellEl?.getAttribute('col-id');
-    const c = getColIndex(cId);
-
-    if (c !== undefined && c !== headerDragEndCol.value) {
-      headerDragEndCol.value = c;
-      const start = Math.min(headerDragStartCol.value, c);
-      const end = Math.max(headerDragStartCol.value, c);
-      selectionRange.value = {
-        minRow: 0,
-        maxRow: rows.value.length - 1,
-        minCol: start,
-        maxCol: end,
-      };
-      computeSelectionStats();
-      updateSelectionHighlight();
-    }
-    return;
-  }
-
-  // 2. Row Dragging across rows
+  // 1. Row Dragging across rows
   if (isRowDragging.value && rowDragStart.value !== null) {
     const el = document.elementFromPoint(e.clientX, e.clientY);
     const cellEl = el?.closest('.ag-cell');
@@ -789,11 +864,12 @@ function handleGlobalMouseMove(e: MouseEvent) {
       if (!isNaN(r)) {
         const minRow = Math.min(rowDragStart.value, r);
         const maxRow = Math.max(rowDragStart.value, r);
+        const visualIndices = getVisualDataColIndices();
         selectionRange.value = {
           minRow,
           maxRow,
           minCol: 0,
-          maxCol: columns.value.length - 1,
+          maxCol: visualIndices.length > 0 ? visualIndices.length - 1 : columns.value.length - 1,
         };
         computeSelectionStats();
         updateSelectionHighlight();
@@ -802,7 +878,7 @@ function handleGlobalMouseMove(e: MouseEvent) {
     return;
   }
 
-  // 3. Cell Dragging across rows and columns
+  // 2. Cell Dragging across rows and columns
   if (isCellDragging.value && cellDragStart.value !== null) {
     const el = document.elementFromPoint(e.clientX, e.clientY);
     const cellEl = el?.closest('.ag-cell');
@@ -816,12 +892,16 @@ function handleGlobalMouseMove(e: MouseEvent) {
     const c = getColIndex(cId);
     if (isNaN(r) || c === undefined) return;
 
-    if (cellDragEnd.value?.rowIndex !== r || cellDragEnd.value?.colIndex !== c) {
-      cellDragEnd.value = { rowIndex: r, colIndex: c };
+    const visualIndices = getVisualDataColIndices();
+    const vIdx = visualIndices.indexOf(c);
+    if (vIdx === -1) return;
+
+    if (cellDragEnd.value?.rowIndex !== r || cellDragEnd.value?.colIndex !== vIdx) {
+      cellDragEnd.value = { rowIndex: r, colIndex: vIdx };
       const minRow = Math.min(cellDragStart.value.rowIndex, r);
       const maxRow = Math.max(cellDragStart.value.rowIndex, r);
-      const minCol = Math.min(cellDragStart.value.colIndex, c);
-      const maxCol = Math.max(cellDragStart.value.colIndex, c);
+      const minCol = Math.min(cellDragStart.value.colIndex, vIdx);
+      const maxCol = Math.max(cellDragStart.value.colIndex, vIdx);
       selectionRange.value = { minRow, maxRow, minCol, maxCol };
       computeSelectionStats();
       updateSelectionHighlight();
@@ -830,7 +910,6 @@ function handleGlobalMouseMove(e: MouseEvent) {
 }
 
 function handleGlobalMouseUp() {
-  if (isHeaderDragging.value) isHeaderDragging.value = false;
   if (isCellDragging.value) isCellDragging.value = false;
   if (isRowDragging.value) isRowDragging.value = false;
 }
@@ -962,6 +1041,7 @@ const columnDefs = computed<ColDef[]>(() => {
     width: indexWidth,
     minWidth: 48,
     suppressMovable: true,
+    lockPosition: 'left',
     sortable: false,
     filter: false,
     resizable: true,
@@ -983,9 +1063,9 @@ const columnDefs = computed<ColDef[]>(() => {
       headerName: col.name,
       width: colWidth,
       minWidth: 70,
-      suppressMovable: true,
+      suppressMovable: false, // Allows dragging column headers to reorder
       tooltipShowMode: 'whenTruncated',
-      headerTooltip: `型別 (Type): ${col.dataType}${col.nullable ? ' | 可為 NULL' : ' | NOT NULL'} (拖曳或 Shift 點選多欄)`,
+      headerTooltip: `型別 (Type): ${col.dataType}${col.nullable ? ' | 可為 NULL' : ' | NOT NULL'} (拖曳表頭調整順序，點擊或 Shift 點選)`,
       tooltipValueGetter: (params) => {
         const val = params.value;
         if (val === null || val === undefined) return 'NULL';
@@ -1158,26 +1238,28 @@ function copySelectedCells() {
   if (!rows.value.length || !hasSelection.value) return;
 
   const lines: string[] = [];
+  const visualIndices = getVisualDataColIndices();
 
   if (selectedColSet.value.size > 0) {
-    const colIndices = Array.from(selectedColSet.value).sort((a, b) => a - b);
-    lines.push(colIndices.map((cIdx) => columns.value[cIdx]?.name || '').join('\t'));
+    const activeIndices = visualIndices.filter((cIdx) => selectedColSet.value.has(cIdx));
+    lines.push(activeIndices.map((cIdx) => columns.value[cIdx]?.name || '').join('\t'));
     for (let r = 0; r < rows.value.length; r++) {
       const row = rows.value[r];
       if (!row) continue;
-      lines.push(colIndices.map((cIdx) => formatCellForExport(row[cIdx])).join('\t'));
+      lines.push(activeIndices.map((cIdx) => formatCellForExport(row[cIdx])).join('\t'));
     }
   } else if (selectionRange.value) {
     const { minRow, maxRow, minCol, maxCol } = selectionRange.value;
+    const rangeIndices = visualIndices.filter((_, vIdx) => vIdx >= minCol && vIdx <= maxCol);
     if (minRow === 0 && maxRow === rows.value.length - 1) {
-      lines.push(columns.value.slice(minCol, maxCol + 1).map((c) => c.name).join('\t'));
+      lines.push(rangeIndices.map((cIdx) => columns.value[cIdx]?.name || '').join('\t'));
     }
     for (let r = minRow; r <= maxRow; r++) {
       const row = rows.value[r];
       if (!row) continue;
       const rowCells: string[] = [];
-      for (let c = minCol; c <= maxCol; c++) {
-        rowCells.push(formatCellForExport(row[c]));
+      for (const cIdx of rangeIndices) {
+        rowCells.push(formatCellForExport(row[cIdx]));
       }
       lines.push(rowCells.join('\t'));
     }
@@ -1193,17 +1275,19 @@ function copySelectedAsJson() {
 
   let cols: { name: string }[] = [];
   let rowsData: unknown[][] = [];
+  const visualIndices = getVisualDataColIndices();
 
   if (selectedColSet.value.size > 0) {
-    const colIndices = Array.from(selectedColSet.value).sort((a, b) => a - b);
-    cols = colIndices.map((cIdx) => ({ name: columns.value[cIdx]?.name || '' }));
-    rowsData = rows.value.map((r) => colIndices.map((cIdx) => r[cIdx]));
+    const activeIndices = visualIndices.filter((cIdx) => selectedColSet.value.has(cIdx));
+    cols = activeIndices.map((cIdx) => ({ name: columns.value[cIdx]?.name || '' }));
+    rowsData = rows.value.map((r) => activeIndices.map((cIdx) => r[cIdx]));
   } else if (selectionRange.value) {
     const { minRow, maxRow, minCol, maxCol } = selectionRange.value;
-    cols = columns.value.slice(minCol, maxCol + 1).map((c) => ({ name: c.name }));
+    const rangeIndices = visualIndices.filter((_, vIdx) => vIdx >= minCol && vIdx <= maxCol);
+    cols = rangeIndices.map((cIdx) => ({ name: columns.value[cIdx]?.name || '' }));
     rowsData = rows.value
       .slice(minRow, maxRow + 1)
-      .map((r) => r.slice(minCol, maxCol + 1));
+      .map((r) => rangeIndices.map((cIdx) => r[cIdx]));
   }
 
   const jsonStr = exportRowsAsJson(cols, rowsData);
@@ -1232,9 +1316,10 @@ function formatCellForExport(cell: CellValue | undefined): string {
 
 function copyAsTsv() {
   if (!rows.value.length) return;
-  const headers = columns.value.map((c) => c.name).join('\t');
+  const visualIndices = getVisualDataColIndices();
+  const headers = visualIndices.map((cIdx) => columns.value[cIdx]?.name || '').join('\t');
   const rowsText = rows.value
-    .map((row) => row.map(formatCellForExport).join('\t'))
+    .map((row) => visualIndices.map((cIdx) => formatCellForExport(row[cIdx])).join('\t'))
     .join('\n');
   const fullText = `${headers}\n${rowsText}`;
 
@@ -1250,7 +1335,10 @@ function copyAsTsv() {
 
 function copyAsJson() {
   if (!rows.value.length) return;
-  const jsonStr = exportRowsAsJson(columns.value, rows.value);
+  const visualIndices = getVisualDataColIndices();
+  const cols = visualIndices.map((cIdx) => ({ name: columns.value[cIdx]?.name || '' }));
+  const rowsData = rows.value.map((r) => visualIndices.map((cIdx) => r[cIdx]));
+  const jsonStr = exportRowsAsJson(cols, rowsData);
   navigator.clipboard.writeText(jsonStr).then(() => {
     workspaceStore.showToast(`已複製全表為 JSON 物件陣列 (${rows.value.length} 筆)`, 'success', 2000);
   });
@@ -1259,7 +1347,10 @@ function copyAsJson() {
 
 function copyAsMarkdown() {
   if (!rows.value.length) return;
-  const mdStr = exportRowsAsMarkdown(columns.value, rows.value);
+  const visualIndices = getVisualDataColIndices();
+  const cols = visualIndices.map((cIdx) => ({ name: columns.value[cIdx]?.name || '' }));
+  const rowsData = rows.value.map((r) => visualIndices.map((cIdx) => r[cIdx]));
+  const mdStr = exportRowsAsMarkdown(cols, rowsData);
   navigator.clipboard.writeText(mdStr).then(() => {
     workspaceStore.showToast(`已複製全表為 Markdown 表格`, 'success', 2000);
   });
