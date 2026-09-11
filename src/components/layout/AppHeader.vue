@@ -9,21 +9,6 @@
 
     <!-- Left: App Branding & Connection / DB Pickers -->
     <div class="flex items-center space-x-2.5 z-50">
-      <!-- Toggle Sidebar Button (Top-Left) -->
-      <button
-        type="button"
-        @click="workspaceStore.toggleSidebar()"
-        :class="[
-          'p-1.5 rounded transition-colors border cursor-pointer',
-          workspaceStore.isSidebarOpen
-            ? 'bg-dark-800 text-dark-300 hover:text-dark-100 hover:bg-dark-750 border-dark-700'
-            : 'bg-brand-500/20 text-brand-400 border-brand-500/40'
-        ]"
-        title="切換左方側邊欄 (Toggle Left Sidebar)"
-      >
-        <PanelLeft class="w-3.5 h-3.5" />
-      </button>
-
       <!-- App Brand -->
       <div class="flex items-center space-x-2 font-bold text-dark-100 tracking-wide pr-2 border-r border-dark-700">
         <div class="w-5 h-5 rounded bg-brand-500/20 text-brand-500 flex items-center justify-center font-mono text-xs font-black">
