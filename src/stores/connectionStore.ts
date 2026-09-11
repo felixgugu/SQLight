@@ -6,6 +6,9 @@ import { schemaService } from '@/services/schemaService';
 import { useSchemaStore } from './schemaStore';
 
 const STORAGE_DATABASES_KEY = 'sqlight_cached_databases';
+const STORAGE_LAST_CONNECTION_KEY = 'sqlight_last_connection_id';
+const STORAGE_LAST_DATABASE_KEY = 'sqlight_last_database';
+const STORAGE_LAST_DB_BY_CONN_KEY = 'sqlight_last_database_by_conn';
 
 function loadDatabasesCache(): Record<string, string[]> {
   try {
@@ -22,6 +25,29 @@ function loadDatabasesCache(): Record<string, string[]> {
   return {};
 }
 
+function loadLastDbByConn(): Record<string, string> {
+  try {
+    const raw = localStorage.getItem(STORAGE_LAST_DB_BY_CONN_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (parsed && typeof parsed === 'object') {
+        return parsed;
+      }
+    }
+  } catch (e) {
+    console.warn('Failed to parse last database by conn:', e);
+  }
+  return {};
+}
+
+function saveLastDbByConn(map: Record<string, string>) {
+  try {
+    localStorage.setItem(STORAGE_LAST_DB_BY_CONN_KEY, JSON.stringify(map));
+  } catch (e) {
+    console.warn('Failed to save last database by conn:', e);
+  }
+}
+
 export const useConnectionStore = defineStore('connection', () => {
   const connections = ref<ConnectionProfile[]>([]);
   const activeConnectionId = ref<string | null>(null);
@@ -29,8 +55,29 @@ export const useConnectionStore = defineStore('connection', () => {
   const activeDatabase = ref<string>('master');
   const availableDatabases = ref<string[]>(['master', 'tempdb', 'model', 'msdb']);
   const databasesByConn = reactive<Record<string, string[]>>(loadDatabasesCache());
+  const lastDbByConn = reactive<Record<string, string>>(loadLastDbByConn());
   const isLoading = ref<boolean>(false);
   const errorMessage = ref<string | null>(null);
+
+  function recordLastConnection(connId: string) {
+    try {
+      localStorage.setItem(STORAGE_LAST_CONNECTION_KEY, connId);
+    } catch (e) {
+      console.warn('Failed to save last connection id:', e);
+    }
+  }
+
+  function recordLastDatabase(connId: string | null, dbName: string) {
+    try {
+      localStorage.setItem(STORAGE_LAST_DATABASE_KEY, dbName);
+      if (connId) {
+        lastDbByConn[connId] = dbName;
+        saveLastDbByConn(lastDbByConn);
+      }
+    } catch (e) {
+      console.warn('Failed to save last database:', e);
+    }
+  }
 
   function saveDatabasesCache() {
     try {
@@ -70,16 +117,22 @@ export const useConnectionStore = defineStore('connection', () => {
     try {
       connections.value = await connectionService.getConnections();
       if (connections.value.length > 0 && !activeConnectionId.value) {
-        const first = connections.value[0];
-        if (first) {
-          activeConnectionId.value = first.id;
-          activeDatabase.value = first.database || 'master';
-          const cachedDbs = databasesByConn[first.id];
+        const savedConnId = localStorage.getItem(STORAGE_LAST_CONNECTION_KEY);
+        const target = (savedConnId && connections.value.find((c) => c.id === savedConnId)) || connections.value[0];
+        if (target) {
+          activeConnectionId.value = target.id;
+          const targetDb = lastDbByConn[target.id] || localStorage.getItem(STORAGE_LAST_DATABASE_KEY) || target.database || 'master';
+          activeDatabase.value = targetDb;
+
+          const cachedDbs = databasesByConn[target.id];
           if (cachedDbs && cachedDbs.length > 0) {
-            availableDatabases.value = cachedDbs;
+            availableDatabases.value = cachedDbs.includes(targetDb) ? cachedDbs : [targetDb, ...cachedDbs];
+          } else {
+            availableDatabases.value = Array.from(new Set([targetDb, 'master', 'tempdb', 'model', 'msdb']));
           }
+
           try {
-            await connect(first.id);
+            await connect(target.id, targetDb);
           } catch (e) {
             console.warn('Auto-connect on startup deferred:', e);
             status.value = 'disconnected';
@@ -147,6 +200,13 @@ export const useConnectionStore = defineStore('connection', () => {
     delete databasesByConn[id];
     saveDatabasesCache();
 
+    delete lastDbByConn[id];
+    saveLastDbByConn(lastDbByConn);
+
+    if (localStorage.getItem(STORAGE_LAST_CONNECTION_KEY) === id) {
+      localStorage.removeItem(STORAGE_LAST_CONNECTION_KEY);
+    }
+
     await connectionService.deleteConnection(id);
     await loadConnections();
 
@@ -168,18 +228,31 @@ export const useConnectionStore = defineStore('connection', () => {
     return connectionService.testConnection(payload);
   }
 
-  async function connect(id: string): Promise<void> {
+  async function connect(id: string, preferredDatabase?: string): Promise<void> {
     status.value = 'connecting';
     errorMessage.value = null;
     try {
       await connectionService.connect(id);
       activeConnectionId.value = id;
+      recordLastConnection(id);
+
       const profile = connections.value.find((c) => c.id === id);
-      if (profile) {
-        activeDatabase.value = profile.database || 'master';
-      }
+      const targetDb = preferredDatabase || lastDbByConn[id] || profile?.database || 'master';
+      activeDatabase.value = targetDb;
+      recordLastDatabase(id, targetDb);
+
       status.value = 'connected';
       await refreshDatabases(id);
+
+      // Ensure backend session switches to the target database
+      if (activeDatabase.value) {
+        try {
+          await schemaService.switchDatabase(id, activeDatabase.value);
+        } catch (err) {
+          console.warn('Post-connect switch database error:', err);
+        }
+      }
+
       // Preload schema in background for instant auto-completion
       useSchemaStore().loadDatabaseSchema(id, activeDatabase.value).catch(() => {});
     } catch (err: unknown) {
@@ -232,6 +305,7 @@ export const useConnectionStore = defineStore('connection', () => {
           availableDatabases.value = names;
           if (!names.includes(activeDatabase.value)) {
             activeDatabase.value = names.includes('master') ? 'master' : names[0] || 'master';
+            recordLastDatabase(targetId, activeDatabase.value);
           }
         }
       }
@@ -251,10 +325,12 @@ export const useConnectionStore = defineStore('connection', () => {
         console.warn('Switch database error:', err);
       }
       activeDatabase.value = dbName;
+      recordLastDatabase(activeConnectionId.value, dbName);
       // Preload schema in background for instant auto-completion
       useSchemaStore().loadDatabaseSchema(activeConnectionId.value, dbName).catch(() => {});
     } else {
       activeDatabase.value = dbName;
+      recordLastDatabase(null, dbName);
     }
   }
 

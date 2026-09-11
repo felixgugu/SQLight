@@ -62,20 +62,6 @@
             @format="formatCode"
           />
         </div>
-
-        <!-- Editor Toolbar & Shortcut Hints -->
-        <div class="h-6 bg-dark-850 border-t border-dark-750 flex items-center justify-between px-3 text-xxs text-dark-400 select-none">
-          <div class="flex items-center space-x-3">
-            <span>Dialect: <strong class="text-brand-400 font-semibold">T-SQL</strong></span>
-            <span>Run: <kbd class="bg-dark-750 px-1 py-0.5 rounded text-dark-300 font-mono">Ctrl + Enter</kbd></span>
-            <span>Run All: <kbd class="bg-dark-750 px-1 py-0.5 rounded text-dark-300 font-mono">Ctrl + Shift + Enter</kbd></span>
-            <span>Format: <kbd class="bg-dark-750 px-1 py-0.5 rounded text-dark-300 font-mono">Shift + Alt + F</kbd></span>
-          </div>
-          <div class="flex items-center space-x-3 font-mono">
-            <span v-if="queryStore.isExecuting" class="text-amber-400 animate-pulse font-medium">Executing...</span>
-            <span>UTF-8</span>
-          </div>
-        </div>
       </div>
 
       <!-- Table Data Browser Tab -->

@@ -196,11 +196,12 @@
             </p>
           </div>
 
+          <!-- Keyboard Shortcuts -->
           <div>
             <div class="font-semibold text-dark-200 mb-2">常用快捷鍵 (Keyboard Shortcuts)</div>
             <div class="grid grid-cols-2 gap-2 text-xxs font-mono">
               <div class="bg-dark-900 p-2 rounded border border-dark-800 flex justify-between items-center">
-                <span class="text-dark-300">執行當前游標 SQL</span>
+                <span class="text-dark-300">執行當前游標 SQL (或選取)</span>
                 <kbd class="bg-dark-800 px-1.5 py-0.5 rounded text-emerald-400 border border-dark-700">Ctrl + Enter</kbd>
               </div>
               <div class="bg-dark-900 p-2 rounded border border-dark-800 flex justify-between items-center">
@@ -208,12 +209,82 @@
                 <kbd class="bg-dark-800 px-1.5 py-0.5 rounded text-emerald-400 border border-dark-700">Ctrl+Shift+Enter</kbd>
               </div>
               <div class="bg-dark-900 p-2 rounded border border-dark-800 flex justify-between items-center">
-                <span class="text-dark-300">格式化 SQL (Format)</span>
+                <span class="text-dark-300">向下快速複製 (行/選取塊)</span>
+                <kbd class="bg-dark-800 px-1.5 py-0.5 rounded text-dark-200 border border-dark-700">Ctrl + D</kbd>
+              </div>
+              <div class="bg-dark-900 p-2 rounded border border-dark-800 flex justify-between items-center">
+                <span class="text-dark-300">格式化 SQL (選取/當前語句)</span>
                 <kbd class="bg-dark-800 px-1.5 py-0.5 rounded text-dark-200 border border-dark-700">Shift+Alt+F</kbd>
               </div>
               <div class="bg-dark-900 p-2 rounded border border-dark-800 flex justify-between items-center">
-                <span class="text-dark-300">程式碼智慧補全</span>
+                <span class="text-dark-300">程式碼智慧自動補全</span>
                 <kbd class="bg-dark-800 px-1.5 py-0.5 rounded text-dark-200 border border-dark-700">Ctrl + Space</kbd>
+              </div>
+            </div>
+          </div>
+
+          <!-- Code Snippets / Templates -->
+          <div>
+            <div class="font-semibold text-dark-200 mb-1.5 flex items-center justify-between">
+              <span>快速代碼範本 (SQL Code Snippets)</span>
+              <span class="text-xxs text-dark-400 font-normal">輸入前綴後按 <kbd class="bg-dark-800 px-1 py-0.2 rounded border border-dark-700 font-mono text-dark-300">Tab</kbd> 或 <kbd class="bg-dark-800 px-1 py-0.2 rounded border border-dark-700 font-mono text-dark-300">Enter</kbd> 展開</span>
+            </div>
+            <div class="grid grid-cols-2 gap-2 text-xxs font-mono">
+              <div class="bg-dark-900 p-2 rounded border border-dark-800 flex items-center justify-between">
+                <div class="flex items-center space-x-1.5">
+                  <span class="text-brand-400 font-bold bg-brand-500/10 px-1.5 py-0.5 rounded border border-brand-500/20">sel</span>
+                  <span class="text-dark-300">SELECT 基礎查詢</span>
+                </div>
+                <span class="text-dark-500 text-xxs truncate max-w-[120px]">SELECT * FROM...</span>
+              </div>
+              <div class="bg-dark-900 p-2 rounded border border-dark-800 flex items-center justify-between">
+                <div class="flex items-center space-x-1.5">
+                  <span class="text-brand-400 font-bold bg-brand-500/10 px-1.5 py-0.5 rounded border border-brand-500/20">seltop</span>
+                  <span class="text-dark-300">TOP N 查詢</span>
+                </div>
+                <span class="text-dark-500 text-xxs truncate max-w-[120px]">SELECT TOP 100...</span>
+              </div>
+              <div class="bg-dark-900 p-2 rounded border border-dark-800 flex items-center justify-between">
+                <div class="flex items-center space-x-1.5">
+                  <span class="text-brand-400 font-bold bg-brand-500/10 px-1.5 py-0.5 rounded border border-brand-500/20">ins</span>
+                  <span class="text-dark-300">INSERT 新增資料</span>
+                </div>
+                <span class="text-dark-500 text-xxs truncate max-w-[120px]">INSERT INTO...</span>
+              </div>
+              <div class="bg-dark-900 p-2 rounded border border-dark-800 flex items-center justify-between">
+                <div class="flex items-center space-x-1.5">
+                  <span class="text-brand-400 font-bold bg-brand-500/10 px-1.5 py-0.5 rounded border border-brand-500/20">upd</span>
+                  <span class="text-dark-300">UPDATE 更新資料</span>
+                </div>
+                <span class="text-dark-500 text-xxs truncate max-w-[120px]">UPDATE SET...</span>
+              </div>
+              <div class="bg-dark-900 p-2 rounded border border-dark-800 flex items-center justify-between">
+                <div class="flex items-center space-x-1.5">
+                  <span class="text-brand-400 font-bold bg-brand-500/10 px-1.5 py-0.5 rounded border border-brand-500/20">del</span>
+                  <span class="text-dark-300">DELETE 刪除資料</span>
+                </div>
+                <span class="text-dark-500 text-xxs truncate max-w-[120px]">DELETE FROM...</span>
+              </div>
+              <div class="bg-dark-900 p-2 rounded border border-dark-800 flex items-center justify-between">
+                <div class="flex items-center space-x-1.5">
+                  <span class="text-brand-400 font-bold bg-brand-500/10 px-1.5 py-0.5 rounded border border-brand-500/20">join</span>
+                  <span class="text-dark-300">INNER JOIN 關聯</span>
+                </div>
+                <span class="text-dark-500 text-xxs truncate max-w-[120px]">JOIN ON...</span>
+              </div>
+              <div class="bg-dark-900 p-2 rounded border border-dark-800 flex items-center justify-between">
+                <div class="flex items-center space-x-1.5">
+                  <span class="text-brand-400 font-bold bg-brand-500/10 px-1.5 py-0.5 rounded border border-brand-500/20">leftjoin</span>
+                  <span class="text-dark-300">LEFT JOIN 關聯</span>
+                </div>
+                <span class="text-dark-500 text-xxs truncate max-w-[120px]">LEFT JOIN ON...</span>
+              </div>
+              <div class="bg-dark-900 p-2 rounded border border-dark-800 flex items-center justify-between">
+                <div class="flex items-center space-x-1.5">
+                  <span class="text-brand-400 font-bold bg-brand-500/10 px-1.5 py-0.5 rounded border border-brand-500/20">cte</span>
+                  <span class="text-dark-300">WITH CTE 運算式</span>
+                </div>
+                <span class="text-dark-500 text-xxs truncate max-w-[120px]">WITH CTE AS...</span>
               </div>
             </div>
           </div>
