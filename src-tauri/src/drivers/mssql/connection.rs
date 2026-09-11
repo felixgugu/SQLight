@@ -152,6 +152,39 @@ impl SqlServerConnection {
             is_truncated,
         }
     }
+
+    fn col_str<'a>(row: &'a Row, idx: usize) -> Option<&'a str> {
+        row.try_get::<&'a str, _>(idx).ok().flatten()
+    }
+
+    fn col_i32(row: &Row, idx: usize) -> Option<i32> {
+        if let Ok(Some(v)) = row.try_get::<i32, _>(idx) {
+            return Some(v);
+        }
+        if let Ok(Some(v)) = row.try_get::<u8, _>(idx) {
+            return Some(v as i32);
+        }
+        if let Ok(Some(v)) = row.try_get::<i16, _>(idx) {
+            return Some(v as i32);
+        }
+        if let Ok(Some(v)) = row.try_get::<i64, _>(idx) {
+            return Some(v as i32);
+        }
+        None
+    }
+
+    fn col_bool(row: &Row, idx: usize) -> Option<bool> {
+        if let Ok(Some(b)) = row.try_get::<bool, _>(idx) {
+            return Some(b);
+        }
+        if let Some(num) = Self::col_i32(row, idx) {
+            return Some(num != 0);
+        }
+        if let Some(s) = Self::col_str(row, idx) {
+            return Some(s.eq_ignore_ascii_case("yes") || s == "1" || s.eq_ignore_ascii_case("true"));
+        }
+        None
+    }
 }
 
 #[async_trait]
@@ -268,7 +301,7 @@ impl DatabaseConnection for SqlServerConnection {
 
         if let Some(rows) = results.first() {
             for row in rows {
-                if let Some(name) = row.get::<&str, _>(0) {
+                if let Some(name) = Self::col_str(row, 0) {
                     dbs.push(DatabaseItem {
                         name: name.to_string(),
                     });
@@ -292,7 +325,7 @@ impl DatabaseConnection for SqlServerConnection {
 
         if let Some(rows) = results.first() {
             for row in rows {
-                if let Some(name) = row.get::<&str, _>(0) {
+                if let Some(name) = Self::col_str(row, 0) {
                     schemas.push(SchemaItem {
                         name: name.to_string(),
                     });
@@ -323,9 +356,9 @@ impl DatabaseConnection for SqlServerConnection {
 
         if let Some(rows) = results.first() {
             for row in rows {
-                let schema = row.get::<&str, _>(0).unwrap_or("dbo").to_string();
-                let name = row.get::<&str, _>(1).unwrap_or("").to_string();
-                let kind = row.get::<&str, _>(2).unwrap_or("BASE TABLE").to_string();
+                let schema = Self::col_str(row, 0).unwrap_or("dbo").to_string();
+                let name = Self::col_str(row, 1).unwrap_or("").to_string();
+                let kind = Self::col_str(row, 2).unwrap_or("BASE TABLE").to_string();
                 if !name.is_empty() {
                     tables.push(TableItem { schema, name, kind });
                 }
@@ -346,12 +379,12 @@ impl DatabaseConnection for SqlServerConnection {
             SELECT 
                 c.COLUMN_NAME,
                 c.DATA_TYPE,
-                c.CHARACTER_MAXIMUM_LENGTH,
-                c.NUMERIC_PRECISION,
-                c.NUMERIC_SCALE,
+                CAST(c.CHARACTER_MAXIMUM_LENGTH AS INT) AS CHARACTER_MAXIMUM_LENGTH,
+                CAST(c.NUMERIC_PRECISION AS INT) AS NUMERIC_PRECISION,
+                CAST(c.NUMERIC_SCALE AS INT) AS NUMERIC_SCALE,
                 CASE WHEN c.IS_NULLABLE = 'YES' THEN 1 ELSE 0 END AS IS_NULLABLE,
                 CASE WHEN pk.COLUMN_NAME IS NOT NULL THEN 1 ELSE 0 END AS IS_PRIMARY_KEY,
-                COLUMNPROPERTY(OBJECT_ID(c.TABLE_SCHEMA + '.' + c.TABLE_NAME), c.COLUMN_NAME, 'IsIdentity') AS IS_IDENTITY
+                CAST(ISNULL(COLUMNPROPERTY(OBJECT_ID(c.TABLE_SCHEMA + '.' + c.TABLE_NAME), c.COLUMN_NAME, 'IsIdentity'), 0) AS INT) AS IS_IDENTITY
             FROM INFORMATION_SCHEMA.COLUMNS c
             LEFT JOIN (
                 SELECT ku.TABLE_SCHEMA, ku.TABLE_NAME, ku.COLUMN_NAME
@@ -376,25 +409,27 @@ impl DatabaseConnection for SqlServerConnection {
 
         if let Some(rows) = results.first() {
             for row in rows {
-                let name = row.get::<&str, _>(0).unwrap_or("").to_string();
-                let data_type = row.get::<&str, _>(1).unwrap_or("").to_string();
-                let max_length = row.get::<i32, _>(2);
-                let precision = row.get::<u8, _>(3);
-                let scale = row.get::<u8, _>(4);
-                let is_nullable = row.get::<i32, _>(5).map(|v| v == 1).unwrap_or(true);
-                let is_primary_key = row.get::<i32, _>(6).map(|v| v == 1).unwrap_or(false);
-                let is_identity = row.get::<i32, _>(7).map(|v| v == 1).unwrap_or(false);
+                let name = Self::col_str(row, 0).unwrap_or("").to_string();
+                let data_type = Self::col_str(row, 1).unwrap_or("").to_string();
+                let max_length = Self::col_i32(row, 2);
+                let precision = Self::col_i32(row, 3);
+                let scale = Self::col_i32(row, 4);
+                let is_nullable = Self::col_bool(row, 5).unwrap_or(true);
+                let is_primary_key = Self::col_bool(row, 6).unwrap_or(false);
+                let is_identity = Self::col_bool(row, 7).unwrap_or(false);
 
-                columns.push(ColumnItem {
-                    name,
-                    data_type,
-                    max_length,
-                    precision,
-                    scale,
-                    is_nullable,
-                    is_primary_key,
-                    is_identity,
-                });
+                if !name.is_empty() {
+                    columns.push(ColumnItem {
+                        name,
+                        data_type,
+                        max_length,
+                        precision,
+                        scale,
+                        is_nullable,
+                        is_primary_key,
+                        is_identity,
+                    });
+                }
             }
         }
         Ok(columns)

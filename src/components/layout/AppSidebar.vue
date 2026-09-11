@@ -247,7 +247,26 @@
                   v-if="isTableExpanded(conn.id, db, table.schema, table.name)"
                   class="pl-3.5 border-l border-dark-750 ml-2 space-y-0.5"
                 >
+                  <!-- Loading state -->
                   <div
+                    v-if="loadingColumns[tableKey(conn.id, db, table.schema, table.name)]"
+                    class="py-0.5 px-1 text-xxs text-dark-400 flex items-center space-x-1.5"
+                  >
+                    <RotateCw class="w-2.5 h-2.5 animate-spin text-brand-400" />
+                    <span>載入欄位中...</span>
+                  </div>
+
+                  <!-- Empty state -->
+                  <div
+                    v-else-if="getTableColumns(conn.id, db, table.schema, table.name).length === 0"
+                    class="py-0.5 px-1 text-xxs text-dark-500 italic"
+                  >
+                    無欄位資訊 (No columns)
+                  </div>
+
+                  <!-- Columns items -->
+                  <div
+                    v-else
                     v-for="col in getTableColumns(conn.id, db, table.schema, table.name)"
                     :key="col.name"
                     class="flex items-center space-x-1.5 px-1 py-0.2 text-xxs text-dark-400 hover:text-dark-200"
@@ -409,6 +428,7 @@ const expandedTables = reactive<Record<string, boolean>>({});
 const loadedColumns = reactive<Record<string, ColumnItem[]>>({});
 const tablesByDb = reactive<Record<string, TableItem[]>>({});
 const loadingTablesByDb = reactive<Record<string, boolean>>({});
+const loadingColumns = reactive<Record<string, boolean>>({});
 
 function getFilteredTables(connId: string, db: string): TableItem[] {
   const key = `${connId}:${db}`;
@@ -669,6 +689,7 @@ async function toggleTable(connId: string, db: string, schema: string, tableName
   expandedTables[key] = !expandedTables[key];
 
   if (expandedTables[key] && !loadedColumns[key]) {
+    loadingColumns[key] = true;
     try {
       const cols = await schemaService.getColumns(
         connId,
@@ -677,8 +698,12 @@ async function toggleTable(connId: string, db: string, schema: string, tableName
         db
       );
       loadedColumns[key] = cols;
-    } catch (err) {
-      console.warn('Failed to load columns:', err);
+    } catch (err: unknown) {
+      console.error('Failed to load columns:', err);
+      alert(`載入資料表 [${schema}.${tableName}] 欄位失敗: ${err instanceof Error ? err.message : String(err)}`);
+      expandedTables[key] = false;
+    } finally {
+      loadingColumns[key] = false;
     }
   }
 }
