@@ -1,0 +1,26 @@
+[package]
+name = "sqlight"
+version = "0.1.0"
+description = "Lightweight desktop SQL client for Microsoft SQL Server"
+authors = ["SQLight Team"]
+edition = "2021"
+
+[lib]
+name = "sqlight_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2.0", features = [] }
+
+[dependencies]
+tauri = { version = "2.0", features = [] }
+tauri-plugin-shell = "2.0"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+tokio = { version = "1.40", features = ["full"] }
+tokio-util = { version = "0.7", features = ["compat"] }
+thiserror = "2.0"
+chrono = { version = "0.4", features = ["serde"] }
+uuid = { version = "1.10", features = ["v4", "serde"] }
+keyring = "3.0"
+tiberius = { version = "0.12", features = ["chrono", "tds73"] }
