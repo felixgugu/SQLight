@@ -63,35 +63,28 @@
         <!-- Results History Tabs Bar (Latest at leftmost, rightwards older) -->
         <div
           v-if="queryStore.resultTabs.length > 0"
+          ref="resultsTabsBarRef"
           @wheel="handleResultTabsWheel"
-          @dragover.prevent="onContainerDragOver"
           class="h-7 bg-dark-850 border-b border-dark-750 flex items-center px-1.5 space-x-1.5 overflow-x-auto select-none flex-shrink-0"
         >
           <div
             v-for="(rtab, idx) in queryStore.resultTabs"
             :key="rtab.id"
-            draggable="true"
-            @dragstart="onDragStart($event, idx)"
-            @dragenter.prevent="onDragEnter($event, idx)"
-            @dragover.prevent="onDragOver($event, idx)"
-            @dragleave="onDragLeave($event, idx)"
-            @drop.prevent="onDrop($event, idx)"
-            @dragend="onDragEnd"
-            @click="queryStore.selectResultTab(rtab.id)"
+            @pointerdown="onTabPointerDown($event, idx)"
+            @click="handleTabClick(rtab.id)"
             :class="[
-              'h-5.5 px-2 flex items-center space-x-1.5 text-xxs rounded cursor-grab active:cursor-grabbing transition-all duration-100 group max-w-[220px] border flex-shrink-0 select-none',
+              'result-tab-item h-5.5 px-2 flex items-center space-x-1.5 text-xxs rounded cursor-grab active:cursor-grabbing transition-all duration-100 group max-w-[220px] border flex-shrink-0 select-none touch-none',
               queryStore.activeResultTabId === rtab.id
                 ? 'bg-dark-750 text-dark-100 border-dark-600 font-medium shadow-xs'
                 : 'bg-dark-800/80 text-dark-400 hover:text-dark-200 border-transparent hover:bg-dark-800',
-              draggedTabIndex === idx ? 'opacity-30 border-dashed border-brand-400' : '',
-              dragOverTabIndex === idx ? 'border-brand-400 bg-brand-500/25 ring-1 ring-brand-400' : ''
+              isPointerDragging && dragSourceIndex === idx ? 'opacity-35 border-dashed border-brand-400 scale-95' : '',
+              dropHoverIndex === idx && isPointerDragging && dropHoverIndex !== dragSourceIndex ? 'border-brand-400 bg-brand-500/25 ring-1 ring-brand-400 scale-102' : ''
             ]"
             :title="`${rtab.title}\n執行時間: ${rtab.executedAt} (${rtab.durationMs}ms)\n筆數: ${rtab.rowCount} rows\n\nSQL 語句:\n${rtab.sql}`"
           >
             <!-- Pin / Unpin Button -->
             <button
               type="button"
-              @dragstart.stop.prevent
               @click.stop="queryStore.togglePinTab(rtab.id)"
               :class="[
                 'p-0.5 rounded transition-colors cursor-pointer',
@@ -122,7 +115,6 @@
             <!-- Delete Tab Button (Disabled on the last remaining result tab) -->
             <button
               type="button"
-              @dragstart.stop.prevent
               @click.stop="queryStore.deleteResultTab(rtab.id)"
               :disabled="queryStore.resultTabs.length <= 1"
               :class="[
@@ -164,7 +156,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue';
+import { ref, computed, onBeforeUnmount } from 'vue';
 import { TableProperties, MessageSquare, History, Minimize2, Pin, X } from 'lucide-vue-next';
 import { useWorkspaceStore } from '@/stores/workspaceStore';
 import { useQueryStore } from '@/stores/queryStore';
@@ -176,68 +168,118 @@ import type { BottomPanelTab } from '@/types/workspace';
 const workspaceStore = useWorkspaceStore();
 const queryStore = useQueryStore();
 
-const draggedTabIndex = ref<number | null>(null);
-const dragOverTabIndex = ref<number | null>(null);
+const resultsTabsBarRef = ref<HTMLDivElement | null>(null);
+const dragSourceIndex = ref<number | null>(null);
+const dropHoverIndex = ref<number | null>(null);
+const isPointerDragging = ref<boolean>(false);
 
-function onDragStart(e: DragEvent, index: number) {
-  draggedTabIndex.value = index;
-  if (e.dataTransfer) {
-    e.dataTransfer.effectAllowed = 'move';
-    e.dataTransfer.dropEffect = 'move';
-    e.dataTransfer.setData('text/plain', String(index));
-  }
-}
+let startPointerX = 0;
+let hasMovedBeyondThreshold = false;
 
-function onDragEnter(e: DragEvent, index: number) {
-  if (e.dataTransfer) {
-    e.dataTransfer.dropEffect = 'move';
-  }
-  if (draggedTabIndex.value !== null && draggedTabIndex.value !== index) {
-    dragOverTabIndex.value = index;
-  }
-}
+function onTabPointerDown(e: PointerEvent, index: number) {
+  // Only respond to left mouse button
+  if (e.button !== 0) return;
 
-function onDragOver(e: DragEvent, index: number) {
-  if (e.dataTransfer) {
-    e.dataTransfer.dropEffect = 'move';
-  }
-  if (draggedTabIndex.value !== null && draggedTabIndex.value !== index) {
-    dragOverTabIndex.value = index;
-  }
-}
-
-function onDragLeave(e: DragEvent, index: number) {
-  const currentTarget = e.currentTarget as HTMLElement | null;
-  const relatedTarget = e.relatedTarget as Node | null;
-  if (currentTarget && relatedTarget && currentTarget.contains(relatedTarget)) {
+  // Don't initiate drag if clicking on buttons (Pin / Close)
+  const target = e.target as HTMLElement | null;
+  if (target?.closest('button')) {
     return;
   }
-  if (dragOverTabIndex.value === index) {
-    dragOverTabIndex.value = null;
+
+  dragSourceIndex.value = index;
+  dropHoverIndex.value = index;
+  startPointerX = e.clientX;
+  hasMovedBeyondThreshold = false;
+
+  window.addEventListener('pointermove', onDocumentPointerMove);
+  window.addEventListener('pointerup', onDocumentPointerUp);
+  window.addEventListener('pointercancel', onDocumentPointerUp);
+}
+
+function onDocumentPointerMove(e: PointerEvent) {
+  if (dragSourceIndex.value === null) return;
+
+  const dx = Math.abs(e.clientX - startPointerX);
+  if (!hasMovedBeyondThreshold && dx > 4) {
+    hasMovedBeyondThreshold = true;
+    isPointerDragging.value = true;
+    document.body.style.cursor = 'grabbing';
+    document.body.style.userSelect = 'none';
+  }
+
+  if (!isPointerDragging.value) return;
+
+  // Find which tab is hovered
+  if (!resultsTabsBarRef.value) return;
+  const tabElements = resultsTabsBarRef.value.querySelectorAll('.result-tab-item');
+  let targetIndex: number | null = null;
+
+  for (let i = 0; i < tabElements.length; i++) {
+    const el = tabElements[i];
+    if (el) {
+      const rect = el.getBoundingClientRect();
+      if (e.clientX >= rect.left && e.clientX <= rect.right) {
+        targetIndex = i;
+        break;
+      }
+    }
+  }
+
+  if (targetIndex === null && tabElements.length > 0) {
+    const firstEl = tabElements[0];
+    const lastEl = tabElements[tabElements.length - 1];
+    if (firstEl && e.clientX < firstEl.getBoundingClientRect().left) {
+      targetIndex = 0;
+    } else if (lastEl && e.clientX > lastEl.getBoundingClientRect().right) {
+      targetIndex = tabElements.length - 1;
+    }
+  }
+
+  if (targetIndex !== null) {
+    dropHoverIndex.value = targetIndex;
   }
 }
 
-function onDrop(e: DragEvent, index: number) {
-  if (e.dataTransfer) {
-    e.dataTransfer.dropEffect = 'move';
+function onDocumentPointerUp() {
+  window.removeEventListener('pointermove', onDocumentPointerMove);
+  window.removeEventListener('pointerup', onDocumentPointerUp);
+  window.removeEventListener('pointercancel', onDocumentPointerUp);
+
+  document.body.style.cursor = '';
+  document.body.style.userSelect = '';
+
+  if (
+    isPointerDragging.value &&
+    dragSourceIndex.value !== null &&
+    dropHoverIndex.value !== null &&
+    dragSourceIndex.value !== dropHoverIndex.value
+  ) {
+    queryStore.reorderResultTabs(dragSourceIndex.value, dropHoverIndex.value);
   }
-  if (draggedTabIndex.value !== null && draggedTabIndex.value !== index) {
-    queryStore.reorderResultTabs(draggedTabIndex.value, index);
-  }
-  draggedTabIndex.value = null;
-  dragOverTabIndex.value = null;
+
+  dragSourceIndex.value = null;
+  dropHoverIndex.value = null;
+
+  setTimeout(() => {
+    isPointerDragging.value = false;
+    hasMovedBeyondThreshold = false;
+  }, 50);
 }
 
-function onDragEnd() {
-  draggedTabIndex.value = null;
-  dragOverTabIndex.value = null;
+function handleTabClick(tabId: string) {
+  if (hasMovedBeyondThreshold || isPointerDragging.value) {
+    return;
+  }
+  queryStore.selectResultTab(tabId);
 }
 
-function onContainerDragOver(e: DragEvent) {
-  if (e.dataTransfer) {
-    e.dataTransfer.dropEffect = 'move';
-  }
-}
+onBeforeUnmount(() => {
+  window.removeEventListener('pointermove', onDocumentPointerMove);
+  window.removeEventListener('pointerup', onDocumentPointerUp);
+  window.removeEventListener('pointercancel', onDocumentPointerUp);
+  document.body.style.cursor = '';
+  document.body.style.userSelect = '';
+});
 
 const hasErrorMessages = computed(() => {
   return queryStore.activeResult?.messages.some((m) => m.level === 'error') ?? false;
