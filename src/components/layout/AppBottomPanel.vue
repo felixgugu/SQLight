@@ -67,14 +67,22 @@
           class="h-7 bg-dark-850 border-b border-dark-750 flex items-center px-1.5 space-x-1.5 overflow-x-auto select-none flex-shrink-0"
         >
           <div
-            v-for="rtab in queryStore.resultTabs"
+            v-for="(rtab, idx) in queryStore.resultTabs"
             :key="rtab.id"
+            draggable="true"
+            @dragstart="onDragStart($event, idx)"
+            @dragover.prevent="onDragOver($event, idx)"
+            @dragleave="onDragLeave($event, idx)"
+            @drop="onDrop($event, idx)"
+            @dragend="onDragEnd"
             @click="queryStore.selectResultTab(rtab.id)"
             :class="[
-              'h-5.5 px-2 flex items-center space-x-1.5 text-xxs rounded cursor-pointer transition-all duration-100 group max-w-[220px] border flex-shrink-0',
+              'h-5.5 px-2 flex items-center space-x-1.5 text-xxs rounded cursor-pointer transition-all duration-100 group max-w-[220px] border flex-shrink-0 select-none',
               queryStore.activeResultTabId === rtab.id
                 ? 'bg-dark-750 text-dark-100 border-dark-600 font-medium shadow-xs'
-                : 'bg-dark-800/80 text-dark-400 hover:text-dark-200 border-transparent hover:bg-dark-800'
+                : 'bg-dark-800/80 text-dark-400 hover:text-dark-200 border-transparent hover:bg-dark-800',
+              draggedTabIndex === idx ? 'opacity-35 scale-95 border-dashed border-dark-500' : '',
+              dragOverTabIndex === idx ? 'border-brand-400 bg-brand-500/20 ring-1 ring-brand-400' : ''
             ]"
             :title="`${rtab.title}\n執行時間: ${rtab.executedAt} (${rtab.durationMs}ms)\n筆數: ${rtab.rowCount} rows\n\nSQL 語句:\n${rtab.sql}`"
           >
@@ -152,7 +160,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue';
+import { ref, computed } from 'vue';
 import { TableProperties, MessageSquare, History, Minimize2, Pin, X } from 'lucide-vue-next';
 import { useWorkspaceStore } from '@/stores/workspaceStore';
 import { useQueryStore } from '@/stores/queryStore';
@@ -163,6 +171,43 @@ import type { BottomPanelTab } from '@/types/workspace';
 
 const workspaceStore = useWorkspaceStore();
 const queryStore = useQueryStore();
+
+const draggedTabIndex = ref<number | null>(null);
+const dragOverTabIndex = ref<number | null>(null);
+
+function onDragStart(e: DragEvent, index: number) {
+  draggedTabIndex.value = index;
+  if (e.dataTransfer) {
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', String(index));
+  }
+}
+
+function onDragOver(_e: DragEvent, index: number) {
+  if (draggedTabIndex.value !== null && draggedTabIndex.value !== index) {
+    dragOverTabIndex.value = index;
+  }
+}
+
+function onDragLeave(_e: DragEvent, index: number) {
+  if (dragOverTabIndex.value === index) {
+    dragOverTabIndex.value = null;
+  }
+}
+
+function onDrop(e: DragEvent, index: number) {
+  e.preventDefault();
+  if (draggedTabIndex.value !== null && draggedTabIndex.value !== index) {
+    queryStore.reorderResultTabs(draggedTabIndex.value, index);
+  }
+  draggedTabIndex.value = null;
+  dragOverTabIndex.value = null;
+}
+
+function onDragEnd() {
+  draggedTabIndex.value = null;
+  dragOverTabIndex.value = null;
+}
 
 const hasErrorMessages = computed(() => {
   return queryStore.activeResult?.messages.some((m) => m.level === 'error') ?? false;

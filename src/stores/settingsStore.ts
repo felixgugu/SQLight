@@ -8,6 +8,7 @@ export interface AppSettings {
   editorTabSize: number;
   maxResultTabs: number;
   defaultMaxRows: number | null;
+  editorHighlightColor: string;
 }
 
 const STORAGE_KEY = 'sqlight_app_settings';
@@ -19,6 +20,7 @@ const DEFAULT_SETTINGS: AppSettings = {
   editorTabSize: 2,
   maxResultTabs: 10,
   defaultMaxRows: 10000,
+  editorHighlightColor: '#feffe0',
 };
 
 function loadSettings(): AppSettings {
@@ -43,6 +45,7 @@ export const useSettingsStore = defineStore('settings', () => {
   const editorTabSize = ref<number>(initial.editorTabSize);
   const maxResultTabs = ref<number>(initial.maxResultTabs);
   const defaultMaxRows = ref<number | null>(initial.defaultMaxRows);
+  const editorHighlightColor = ref<string>(initial.editorHighlightColor || '#feffe0');
 
   function saveSettings() {
     const data: AppSettings = {
@@ -52,6 +55,7 @@ export const useSettingsStore = defineStore('settings', () => {
       editorTabSize: editorTabSize.value,
       maxResultTabs: maxResultTabs.value,
       defaultMaxRows: defaultMaxRows.value,
+      editorHighlightColor: editorHighlightColor.value,
     };
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
@@ -69,6 +73,7 @@ export const useSettingsStore = defineStore('settings', () => {
       editorTabSize,
       maxResultTabs,
       defaultMaxRows,
+      editorHighlightColor,
     ],
     () => {
       saveSettings();
@@ -82,6 +87,7 @@ export const useSettingsStore = defineStore('settings', () => {
     editorTabSize.value = DEFAULT_SETTINGS.editorTabSize;
     maxResultTabs.value = DEFAULT_SETTINGS.maxResultTabs;
     defaultMaxRows.value = DEFAULT_SETTINGS.defaultMaxRows;
+    editorHighlightColor.value = DEFAULT_SETTINGS.editorHighlightColor;
   }
 
   return {
@@ -91,6 +97,7 @@ export const useSettingsStore = defineStore('settings', () => {
     editorTabSize,
     maxResultTabs,
     defaultMaxRows,
+    editorHighlightColor,
     resetToDefaults,
   };
 });

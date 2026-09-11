@@ -112,6 +112,28 @@
               <option :value="4">4 空格</option>
             </select>
           </div>
+
+          <!-- Highlight Color -->
+          <div class="flex items-center justify-between pt-2 border-t border-dark-800">
+            <div>
+              <label class="font-medium text-dark-100 block">執行暫態高亮顏色 (Highlight Color)</label>
+              <span class="text-xxs text-dark-400">Ctrl + Enter 執行或格式化語句時的閃爍高亮顏色</span>
+            </div>
+            <div class="flex items-center space-x-2">
+              <input
+                type="color"
+                v-model="settingsStore.editorHighlightColor"
+                class="w-7 h-7 rounded border border-dark-700 bg-dark-900 cursor-pointer p-0.5"
+                title="選擇高亮顏色"
+              />
+              <input
+                type="text"
+                v-model="settingsStore.editorHighlightColor"
+                class="w-20 bg-dark-900 border border-dark-700 rounded px-2 py-1 text-xs text-dark-100 font-mono focus:border-brand-500 focus:outline-none text-center uppercase"
+                placeholder="#feffe0"
+              />
+            </div>
+          </div>
         </div>
 
         <!-- Tab 2: Query & Results Settings -->

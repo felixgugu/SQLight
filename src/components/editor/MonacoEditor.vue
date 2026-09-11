@@ -26,19 +26,52 @@ const editorContainer = ref<HTMLDivElement | null>(null);
 let editorInstance: monaco.editor.IStandaloneCodeEditor | null = null;
 let highlightDecorations: monaco.editor.IEditorDecorationsCollection | null = null;
 
-// Eye-friendly soft warm amber/yellow highlight (non-glaring)
+function hexToRgba(hex: string, alpha: number): string {
+  let cleanHex = hex.replace('#', '');
+  if (cleanHex.length === 3) {
+    cleanHex = cleanHex.split('').map((c) => c + c).join('');
+  }
+  const num = parseInt(cleanHex, 16);
+  if (isNaN(num)) return `rgba(254, 255, 224, ${alpha})`;
+  const r = (num >> 16) & 255;
+  const g = (num >> 8) & 255;
+  const b = num & 255;
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
+function updateHighlightStyle() {
+  const styleId = 'sqlight-editor-highlight-style';
+  let styleEl = document.getElementById(styleId) as HTMLStyleElement | null;
+  if (!styleEl) {
+    styleEl = document.createElement('style');
+    styleEl.id = styleId;
+    document.head.appendChild(styleEl);
+  }
+  const color = settingsStore.editorHighlightColor || '#feffe0';
+  const bg = hexToRgba(color, 0.22);
+  const border = hexToRgba(color, 0.85);
+  styleEl.textContent = `
+    .sqlight-custom-highlight {
+      background-color: ${bg} !important;
+      border-left: 2px solid ${border} !important;
+    }
+  `;
+}
+
+// Configurable eye-friendly soft highlight (default #feffe0)
 function highlightRange(range: { startLineNumber: number; endLineNumber: number }) {
   if (!editorInstance) return;
   if (highlightDecorations) {
     highlightDecorations.clear();
   }
+  updateHighlightStyle();
   const monacoRange = new monaco.Range(range.startLineNumber, 1, range.endLineNumber, 1);
   highlightDecorations = editorInstance.createDecorationsCollection([
     {
       range: monacoRange,
       options: {
         isWholeLine: true,
-        className: 'bg-amber-400/15 border-l-2 border-amber-400/60',
+        className: 'sqlight-custom-highlight',
       },
     },
   ]);
@@ -90,7 +123,7 @@ function getExecutableQuery(mode: 'current' | 'all' = 'current'): string {
 }
 
 /**
- * Duplicate line downwards if no selection, or duplicate selected block downwards if selection exists.
+ * Duplicate line downwards if no selection, or duplicate selected block downwards with blank line separation if selection exists.
  */
 function duplicateLineOrSelection() {
   if (!editorInstance) return;
@@ -100,27 +133,32 @@ function duplicateLineOrSelection() {
   if (!model || !position) return;
 
   if (selection && !selection.isEmpty()) {
-    // Has selection: duplicate selected block downwards
+    // Has selection: duplicate selected block downwards with a blank line separator
     const selectedText = model.getValueInRange(selection);
     const endPos = selection.getEndPosition();
+
+    // Automatically add a blank line above the duplicated content so blocks don't merge together
+    const textToInsert = '\n\n' + selectedText;
 
     editorInstance.executeEdits('duplicate-selection', [
       {
         range: new monaco.Range(endPos.lineNumber, endPos.column, endPos.lineNumber, endPos.column),
-        text: selectedText,
+        text: textToInsert,
         forceMoveMarkers: true,
       },
     ]);
 
-    // Select newly inserted duplicate block
+    // Select the newly duplicated block (offset by the 2 added newlines)
     const lines = selectedText.split(/\r?\n/);
     const addedLines = lines.length - 1;
     const lastLineLength = lines[lines.length - 1]?.length ?? 0;
-    const newEndLine = endPos.lineNumber + addedLines;
-    const newEndCol = addedLines === 0 ? endPos.column + lastLineLength : 1 + lastLineLength;
+    const startLine = endPos.lineNumber + 2;
+    const startCol = 1;
+    const newEndLine = startLine + addedLines;
+    const newEndCol = addedLines === 0 ? startCol + lastLineLength : 1 + lastLineLength;
 
     editorInstance.setSelection(
-      new monaco.Selection(endPos.lineNumber, endPos.column, newEndLine, newEndCol)
+      new monaco.Selection(startLine, startCol, newEndLine, newEndCol)
     );
   } else {
     // No selection: duplicate cursor line downwards
