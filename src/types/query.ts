@@ -41,3 +41,14 @@ export interface QueryHistoryItem {
   affectedRows?: number;
   errorMessage?: string;
 }
+
+export interface QueryResultTab {
+  id: string;
+  title: string;
+  sql: string;
+  result: QueryResult;
+  executedAt: string;
+  isPinned: boolean;
+  durationMs: number;
+  rowCount: number;
+}

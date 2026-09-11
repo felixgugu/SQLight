@@ -4,6 +4,7 @@
     <AppHeader
       @run-query="handleRunQuery"
       @open-connection-modal="handleOpenNewConnection"
+      @open-settings-modal="isSettingsModalOpen = true"
     />
 
     <!-- Center Resizable Body (Sidebar + Workspace/Results) -->
@@ -60,6 +61,12 @@
       :edit-profile="editingProfile"
       @close="handleCloseConnectionModal"
     />
+
+    <!-- Settings Management Modal -->
+    <SettingsModal
+      :is-open="isSettingsModalOpen"
+      @close="isSettingsModalOpen = false"
+    />
   </div>
 </template>
 
@@ -72,12 +79,14 @@ import AppBottomPanel from '@/components/layout/AppBottomPanel.vue';
 import AppStatusBar from '@/components/layout/AppStatusBar.vue';
 import ResizableSplitter from '@/components/common/ResizableSplitter.vue';
 import ConnectionModal from '@/components/modals/ConnectionModal.vue';
+import SettingsModal from '@/components/modals/SettingsModal.vue';
 import { useSplitter } from '@/composables/useSplitter';
 import { useWorkspaceStore } from '@/stores/workspaceStore';
 import type { ConnectionProfile } from '@/types/connection';
 
 const workspaceStore = useWorkspaceStore();
 const isConnectionModalOpen = ref(false);
+const isSettingsModalOpen = ref(false);
 const editingProfile = ref<ConnectionProfile | null>(null);
 const mainWorkspaceRef = ref<InstanceType<typeof AppMain> | null>(null);
 
@@ -113,15 +122,23 @@ const bottomSplitter = useSplitter({
   reverse: true,
 });
 
-function handleRunQuery() {
-  mainWorkspaceRef.value?.runQuery();
+function handleRunQuery(mode: 'current' | 'all' = 'current') {
+  mainWorkspaceRef.value?.runQuery(mode);
 }
 
 function handleGlobalKeydown(e: KeyboardEvent) {
-  // Ctrl/Cmd + Enter to run query
-  if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+  // Ctrl/Cmd + Shift + Enter -> Run All
+  if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'Enter') {
     e.preventDefault();
-    handleRunQuery();
+    handleRunQuery('all');
+    return;
+  }
+
+  // Ctrl/Cmd + Enter -> Run Current Statement / Selected
+  if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key === 'Enter') {
+    e.preventDefault();
+    handleRunQuery('current');
+    return;
   }
 
   // Shift + Alt + F to format SQL

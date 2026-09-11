@@ -131,93 +131,114 @@
       </div>
     </div>
 
-    <!-- Center: Main Action Toolbar (Run, Stop, Format, New Tab) -->
-    <div class="flex items-center space-x-1">
-      <!-- Run Button -->
-      <button
-        @click="$emit('run-query')"
-        :disabled="queryStore.isExecuting"
-        class="flex items-center space-x-1.5 bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white px-2.5 py-1 rounded font-medium shadow-xs transition-colors group disabled:opacity-50"
-        title="Execute Query (Ctrl + Enter)"
-      >
-        <RotateCw v-if="queryStore.isExecuting" class="w-3.5 h-3.5 animate-spin" />
-        <Play v-else class="w-3.5 h-3.5 fill-current" />
-        <span>{{ queryStore.isExecuting ? 'Running...' : 'Run' }}</span>
-        <span class="text-xxs text-emerald-200 font-mono bg-emerald-700/60 px-1 py-0.2 rounded">^↵</span>
-      </button>
+    <!-- Middle Spacer to push action controls to the right -->
+    <div class="flex-1 min-w-4" />
 
-      <!-- Stop Button -->
-      <button
-        class="flex items-center space-x-1 bg-dark-800 hover:bg-dark-750 text-dark-400 hover:text-dark-200 px-2 py-1 rounded border border-dark-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-        :disabled="!queryStore.isExecuting"
-        title="Cancel Execution"
-      >
-        <Square class="w-3 h-3" />
-        <span>Stop</span>
-      </button>
-
-      <div class="h-4 w-px bg-dark-700 mx-1"></div>
-
-      <!-- Format SQL Button -->
-      <button
-        @click="workspaceStore.formatActiveQuery()"
-        class="flex items-center space-x-1 bg-dark-800 hover:bg-dark-750 text-dark-300 hover:text-dark-100 px-2 py-1 rounded border border-dark-700 transition-colors"
-        title="Format SQL (Shift + Alt + F)"
-      >
-        <AlignLeft class="w-3.5 h-3.5 text-dark-400" />
-        <span>Format</span>
-      </button>
-
-      <!-- New Query Tab Button -->
-      <button
-        @click="workspaceStore.addSqlTab()"
-        class="flex items-center space-x-1 bg-dark-800 hover:bg-dark-750 text-dark-300 hover:text-dark-100 px-2 py-1 rounded border border-dark-700 transition-colors"
-        title="New SQL Query Tab"
-      >
-        <Plus class="w-3.5 h-3.5 text-brand-500" />
-        <span>New Tab</span>
-      </button>
-
-      <!-- Max Rows Limit Selector -->
-      <div class="flex items-center space-x-1 pl-1.5 border-l border-dark-750 text-dark-400 text-xxs font-mono">
-        <span title="查詢回傳最大筆數限制 (超過時自動截斷以保護效能)">Limit:</span>
-        <select
-          :value="queryStore.maxRows ?? 'none'"
-          @change="onMaxRowsChange"
-          class="bg-dark-800 hover:bg-dark-750 text-dark-200 font-mono px-1.5 py-0.5 rounded border border-dark-700 text-xxs focus:outline-none focus:border-brand-500 cursor-pointer"
-          title="Max Rows Limit (預設 10,000 筆，防止大量資料使介面崩潰)"
+    <!-- Right: Actions Toolbar & Settings -->
+    <div class="flex items-center space-x-2 z-10">
+      <!-- Main Action Toolbar (Run, Run All, Stop, Format, New Tab, Limit) -->
+      <div class="flex items-center space-x-1">
+        <!-- Run Current Statement / Selected Button -->
+        <button
+          @click="$emit('run-query', 'current')"
+          :disabled="queryStore.isExecuting"
+          class="flex items-center space-x-1.5 bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white px-2.5 py-1 rounded font-medium shadow-xs transition-colors group disabled:opacity-50 cursor-pointer"
+          title="執行單一語句或選取內容 (Ctrl + Enter)"
         >
-          <option value="1000">1,000</option>
-          <option value="5000">5,000</option>
-          <option value="10000">10,000</option>
-          <option value="50000">50,000</option>
-          <option value="none">No Limit</option>
-        </select>
+          <RotateCw v-if="queryStore.isExecuting" class="w-3.5 h-3.5 animate-spin" />
+          <Play v-else class="w-3.5 h-3.5 fill-current" />
+          <span>Run</span>
+          <span class="text-xxs text-emerald-200 font-mono bg-emerald-700/60 px-1 py-0.2 rounded">^↵</span>
+        </button>
+
+        <!-- Run All Statements Button -->
+        <button
+          @click="$emit('run-query', 'all')"
+          :disabled="queryStore.isExecuting"
+          class="flex items-center space-x-1.5 bg-emerald-700/80 hover:bg-emerald-600 active:bg-emerald-800 text-emerald-100 hover:text-white px-2.5 py-1 rounded font-medium shadow-xs transition-colors group disabled:opacity-50 cursor-pointer"
+          title="無條件執行整頁全部內容 (Ctrl + Shift + Enter)"
+        >
+          <PlaySquare class="w-3.5 h-3.5" />
+          <span>Run All</span>
+          <span class="text-xxs text-emerald-300 font-mono bg-emerald-800/80 px-1 py-0.2 rounded">^+↵</span>
+        </button>
+
+        <!-- Stop Button -->
+        <button
+          class="flex items-center space-x-1 bg-dark-800 hover:bg-dark-750 text-dark-400 hover:text-dark-200 px-2 py-1 rounded border border-dark-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+          :disabled="!queryStore.isExecuting"
+          title="Cancel Execution"
+        >
+          <Square class="w-3 h-3" />
+          <span>Stop</span>
+        </button>
+
+        <div class="h-4 w-px bg-dark-700 mx-1"></div>
+
+        <!-- Format SQL Button -->
+        <button
+          @click="workspaceStore.formatActiveQuery()"
+          class="flex items-center space-x-1 bg-dark-800 hover:bg-dark-750 text-dark-300 hover:text-dark-100 px-2 py-1 rounded border border-dark-700 transition-colors cursor-pointer"
+          title="Format SQL (Shift + Alt + F)"
+        >
+          <AlignLeft class="w-3.5 h-3.5 text-dark-400" />
+          <span>Format</span>
+        </button>
+
+        <!-- New Query Tab Button -->
+        <button
+          @click="workspaceStore.addSqlTab()"
+          class="flex items-center space-x-1 bg-dark-800 hover:bg-dark-750 text-dark-300 hover:text-dark-100 px-2 py-1 rounded border border-dark-700 transition-colors cursor-pointer"
+          title="New SQL Query Tab"
+        >
+          <Plus class="w-3.5 h-3.5 text-brand-500" />
+          <span>New Tab</span>
+        </button>
+
+        <!-- Max Rows Limit Selector -->
+        <div class="flex items-center space-x-1 pl-1.5 border-l border-dark-750 text-dark-400 text-xxs font-mono">
+          <span title="查詢回傳最大筆數限制 (超過時自動截斷以保護效能)">Limit:</span>
+          <select
+            :value="queryStore.maxRows ?? 'none'"
+            @change="onMaxRowsChange"
+            class="bg-dark-800 hover:bg-dark-750 text-dark-200 font-mono px-1.5 py-0.5 rounded border border-dark-700 text-xxs focus:outline-none focus:border-brand-500 cursor-pointer"
+            title="Max Rows Limit (預設 10,000 筆，防止大量資料使介面崩潰)"
+          >
+            <option value="1000">1,000</option>
+            <option value="5000">5,000</option>
+            <option value="10000">10,000</option>
+            <option value="50000">50,000</option>
+            <option value="none">No Limit</option>
+          </select>
+        </div>
       </div>
-    </div>
 
-    <!-- Right: Settings & Window Controls -->
-    <div class="flex items-center space-x-2">
-      <button
-        @click="workspaceStore.toggleBottomPanel()"
-        :class="[
-          'p-1.5 rounded transition-colors border',
-          workspaceStore.isBottomPanelOpen
-            ? 'bg-brand-500/20 text-brand-400 border-brand-500/40'
-            : 'bg-dark-800 text-dark-400 hover:text-dark-200 border-dark-700'
-        ]"
-        title="Toggle Results Dock"
-      >
-        <PanelBottom class="w-3.5 h-3.5" />
-      </button>
+      <div class="h-4 w-px bg-dark-700 mx-0.5"></div>
 
-      <button
-        @click="$emit('open-connection-modal')"
-        class="p-1.5 rounded bg-dark-800 hover:bg-dark-750 text-dark-400 hover:text-dark-200 border border-dark-700 transition-colors"
-        title="Connection Settings"
-      >
-        <Settings class="w-3.5 h-3.5" />
-      </button>
+      <!-- Right Controls: Toggle Results Dock & Settings Center -->
+      <div class="flex items-center space-x-1.5">
+        <button
+          @click="workspaceStore.toggleBottomPanel()"
+          :class="[
+            'p-1.5 rounded transition-colors border cursor-pointer',
+            workspaceStore.isBottomPanelOpen
+              ? 'bg-brand-500/20 text-brand-400 border-brand-500/40'
+              : 'bg-dark-800 text-dark-400 hover:text-dark-200 border-dark-700'
+          ]"
+          title="Toggle Results Dock"
+        >
+          <PanelBottom class="w-3.5 h-3.5" />
+        </button>
+
+        <!-- Real Settings Modal Trigger -->
+        <button
+          @click="$emit('open-settings-modal')"
+          class="p-1.5 rounded bg-dark-800 hover:bg-dark-750 text-dark-400 hover:text-dark-200 border border-dark-700 transition-colors cursor-pointer"
+          title="偏好與系統設定 (Settings)"
+        >
+          <Settings class="w-3.5 h-3.5" />
+        </button>
+      </div>
     </div>
   </header>
 </template>
@@ -228,6 +249,7 @@ import {
   Server,
   ChevronDown,
   Play,
+  PlaySquare,
   Square,
   AlignLeft,
   Plus,
@@ -247,8 +269,9 @@ const queryStore = useQueryStore();
 const isConnDropdownOpen = ref(false);
 
 const emit = defineEmits<{
-  (e: 'run-query'): void;
+  (e: 'run-query', mode?: 'current' | 'all'): void;
   (e: 'open-connection-modal'): void;
+  (e: 'open-settings-modal'): void;
 }>();
 
 async function handleSelectConnection(connId: string) {
