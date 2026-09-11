@@ -11,6 +11,8 @@ export interface ResultSet {
   columns: ColumnDef[];
   rows: CellValue[][];
   rowCount: number;
+  totalCount?: number;
+  isTruncated?: boolean;
 }
 
 export interface QueryMessage {

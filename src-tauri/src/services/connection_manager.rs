@@ -179,13 +179,18 @@ impl ConnectionManager {
         Ok(())
     }
 
-    pub async fn execute_query(&self, id: &str, sql: &str) -> AppResult<QueryResult> {
+    pub async fn execute_query(
+        &self,
+        id: &str,
+        sql: &str,
+        max_rows: Option<usize>,
+    ) -> AppResult<QueryResult> {
         let mut conns = self.active_connections.lock().await;
         let conn = conns.get_mut(id).ok_or_else(|| AppError::Connection {
             message: format!("Not connected to connection '{}'", id),
         })?;
 
-        conn.execute_query(sql).await
+        conn.execute_query(sql, max_rows).await
     }
 
     pub async fn get_databases(&self, id: &str) -> AppResult<Vec<DatabaseItem>> {

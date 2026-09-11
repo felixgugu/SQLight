@@ -3,9 +3,9 @@ use crate::error::AppResult;
 use crate::models::query::{CellValue, ColumnDef, QueryMessage, QueryResult, ResultSet};
 use crate::models::schema::{ColumnItem, DatabaseItem, SchemaItem, TableItem};
 use async_trait::async_trait;
-use chrono::Utc;
+use chrono::{NaiveDate, NaiveDateTime, NaiveTime, Timelike, Utc};
 use std::time::Instant;
-use tiberius::{Client, Column, ColumnData, Row};
+use tiberius::{Client, Column, ColumnData, FromSql, Row};
 use tokio::net::TcpStream;
 use tokio_util::compat::Compat;
 
@@ -40,18 +40,84 @@ impl SqlServerConnection {
                 length: b.len(),
             },
             ColumnData::Numeric(Some(n)) => CellValue::String(n.to_string()),
-            ColumnData::DateTime(Some(dt)) => CellValue::String(format!("{:?}", dt)),
-            ColumnData::SmallDateTime(Some(dt)) => CellValue::String(format!("{:?}", dt)),
-            ColumnData::Time(Some(t)) => CellValue::String(format!("{:?}", t)),
-            ColumnData::Date(Some(d)) => CellValue::String(format!("{:?}", d)),
-            ColumnData::DateTime2(Some(dt)) => CellValue::String(format!("{:?}", dt)),
-            ColumnData::DateTimeOffset(Some(dto)) => CellValue::String(format!("{:?}", dto)),
+            ColumnData::DateTime(Some(dt)) => {
+                let col = ColumnData::DateTime(Some(*dt));
+                match NaiveDateTime::from_sql(&col) {
+                    Ok(Some(dt_val)) => {
+                        if dt_val.nanosecond() > 0 {
+                            CellValue::String(dt_val.format("%Y-%m-%d %H:%M:%S%.3f").to_string())
+                        } else {
+                            CellValue::String(dt_val.format("%Y-%m-%d %H:%M:%S").to_string())
+                        }
+                    }
+                    _ => CellValue::Null,
+                }
+            }
+            ColumnData::SmallDateTime(Some(dt)) => {
+                let col = ColumnData::SmallDateTime(Some(*dt));
+                match NaiveDateTime::from_sql(&col) {
+                    Ok(Some(dt_val)) => CellValue::String(dt_val.format("%Y-%m-%d %H:%M:%S").to_string()),
+                    _ => CellValue::Null,
+                }
+            }
+            ColumnData::DateTime2(Some(dt)) => {
+                let col = ColumnData::DateTime2(Some(*dt));
+                match NaiveDateTime::from_sql(&col) {
+                    Ok(Some(dt_val)) => {
+                        if dt_val.nanosecond() > 0 {
+                            CellValue::String(dt_val.format("%Y-%m-%d %H:%M:%S%.3f").to_string())
+                        } else {
+                            CellValue::String(dt_val.format("%Y-%m-%d %H:%M:%S").to_string())
+                        }
+                    }
+                    _ => CellValue::Null,
+                }
+            }
+            ColumnData::Date(Some(d)) => {
+                let col = ColumnData::Date(Some(*d));
+                match NaiveDate::from_sql(&col) {
+                    Ok(Some(d_val)) => CellValue::String(d_val.format("%Y-%m-%d").to_string()),
+                    _ => CellValue::Null,
+                }
+            }
+            ColumnData::Time(Some(t)) => {
+                let col = ColumnData::Time(Some(*t));
+                match NaiveTime::from_sql(&col) {
+                    Ok(Some(t_val)) => CellValue::String(t_val.format("%H:%M:%S%.3f").to_string()),
+                    _ => CellValue::Null,
+                }
+            }
+            ColumnData::DateTimeOffset(Some(dto)) => {
+                let col = ColumnData::DateTime2(Some(dto.datetime2()));
+                match NaiveDateTime::from_sql(&col) {
+                    Ok(Some(dt)) => {
+                        let offset_mins = dto.offset();
+                        let hours = offset_mins / 60;
+                        let mins = (offset_mins % 60).abs();
+                        CellValue::String(format!(
+                            "{} {:+03}:{:02}",
+                            if dt.nanosecond() > 0 {
+                                dt.format("%Y-%m-%d %H:%M:%S%.3f").to_string()
+                            } else {
+                                dt.format("%Y-%m-%d %H:%M:%S").to_string()
+                            },
+                            hours,
+                            mins
+                        ))
+                    }
+                    _ => CellValue::Null,
+                }
+            }
             ColumnData::Xml(Some(xml)) => CellValue::String(xml.to_string()),
             _ => CellValue::Null,
         }
     }
 
-    fn build_result_set(columns: &[Column], rows: &[Row]) -> ResultSet {
+    fn build_result_set(
+        columns: &[Column],
+        rows: &[Row],
+        max_rows: Option<usize>,
+    ) -> ResultSet {
         let col_defs: Vec<ColumnDef> = columns
             .iter()
             .enumerate()
@@ -63,8 +129,13 @@ impl SqlServerConnection {
             })
             .collect();
 
-        let mut data_rows = Vec::with_capacity(rows.len());
-        for row in rows {
+        let total_count = rows.len();
+        let limit = max_rows.unwrap_or(usize::MAX);
+        let is_truncated = total_count > limit;
+        let effective_rows = if is_truncated { &rows[..limit] } else { rows };
+
+        let mut data_rows = Vec::with_capacity(effective_rows.len());
+        for row in effective_rows {
             let mut row_values = Vec::with_capacity(columns.len());
             for (_, cell_data) in row.cells() {
                 row_values.push(Self::column_data_to_cell(cell_data));
@@ -77,13 +148,15 @@ impl SqlServerConnection {
             columns: col_defs,
             rows: data_rows,
             row_count: count,
+            total_count,
+            is_truncated,
         }
     }
 }
 
 #[async_trait]
 impl DatabaseConnection for SqlServerConnection {
-    async fn execute_query(&mut self, sql: &str) -> AppResult<QueryResult> {
+    async fn execute_query(&mut self, sql: &str, max_rows: Option<usize>) -> AppResult<QueryResult> {
         let start = Instant::now();
 
         let stream = match self.client.simple_query(sql).await {
@@ -135,31 +208,53 @@ impl DatabaseConnection for SqlServerConnection {
         let elapsed = start.elapsed().as_millis() as u64;
         let mut result_sets = Vec::new();
         let mut total_rows = 0;
+        let mut has_truncated = false;
 
         for rows in result_sets_raw {
             if let Some(first_row) = rows.first() {
                 let columns = first_row.columns();
-                let rs = Self::build_result_set(columns, &rows);
+                let rs = Self::build_result_set(columns, &rows, max_rows);
+                if rs.is_truncated {
+                    has_truncated = true;
+                }
                 total_rows += rs.row_count as u64;
                 result_sets.push(rs);
             }
         }
 
+        let mut messages = Vec::new();
+
+        if has_truncated {
+            let limit_num = max_rows.unwrap_or(0);
+            messages.push(QueryMessage {
+                level: "warning".to_string(),
+                message: format!(
+                    "查詢結果已達最大限制 {} 筆，其餘資料已自動截斷以保護系統效能。",
+                    limit_num
+                ),
+                code: None,
+                line_number: None,
+                timestamp: Utc::now().to_rfc3339(),
+            });
+        }
+
         let message = format!(
-            "Query completed successfully. {} result set(s), {} rows affected.",
+            "Query completed successfully. {} result set(s), {} rows returned.",
             result_sets.len(),
             total_rows
         );
 
+        messages.push(QueryMessage {
+            level: "info".to_string(),
+            message,
+            code: None,
+            line_number: None,
+            timestamp: Utc::now().to_rfc3339(),
+        });
+
         Ok(QueryResult {
             result_sets,
-            messages: vec![QueryMessage {
-                level: "info".to_string(),
-                message,
-                code: None,
-                line_number: None,
-                timestamp: Utc::now().to_rfc3339(),
-            }],
+            messages,
             affected_rows: total_rows,
             execution_time_ms: elapsed,
         })

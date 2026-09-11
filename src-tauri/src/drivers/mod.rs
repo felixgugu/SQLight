@@ -8,7 +8,7 @@ pub mod mssql;
 
 #[async_trait]
 pub trait DatabaseConnection: Send + Sync {
-    async fn execute_query(&mut self, sql: &str) -> AppResult<QueryResult>;
+    async fn execute_query(&mut self, sql: &str, max_rows: Option<usize>) -> AppResult<QueryResult>;
     async fn get_databases(&mut self) -> AppResult<Vec<DatabaseItem>>;
     async fn get_schemas(&mut self, database: Option<&str>) -> AppResult<Vec<SchemaItem>>;
     async fn get_tables(&mut self, database: Option<&str>, schema: Option<&str>) -> AppResult<Vec<TableItem>>;

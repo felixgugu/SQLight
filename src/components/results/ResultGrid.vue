@@ -1,23 +1,88 @@
 <template>
-  <div class="w-full h-full flex flex-col bg-dark-900 overflow-hidden font-mono text-xs">
-    <!-- Multiple Result Sets Tabs (if more than 1 result set) -->
-    <div
-      v-if="resultSets.length > 1"
-      class="h-7 bg-dark-850 border-b border-dark-700 flex items-center px-2 space-x-1 flex-shrink-0"
-    >
-      <button
-        v-for="(_, idx) in resultSets"
-        :key="idx"
-        @click="activeSetIndex = idx"
-        :class="[
-          'h-5 px-2 rounded text-xxs font-medium transition-colors',
-          activeSetIndex === idx
-            ? 'bg-dark-750 text-brand-300 font-semibold shadow-xs'
-            : 'text-dark-400 hover:text-dark-200 hover:bg-dark-800'
-        ]"
-      >
-        Result Set #{{ idx + 1 }} ({{ resultSets[idx]?.rowCount ?? 0 }})
-      </button>
+  <div class="w-full h-full flex flex-col bg-dark-900 overflow-hidden font-mono text-xs select-none">
+    <!-- Subheader Toolbar: Result Set Tabs, Quick Filter, Warnings, Actions -->
+    <div class="h-8 bg-dark-850 border-b border-dark-700 flex items-center justify-between px-2 flex-shrink-0 space-x-2">
+      <!-- Left: Result Sets Tabs & Quick Filter -->
+      <div class="flex items-center space-x-2 min-w-0">
+        <!-- Multiple Result Sets Tabs -->
+        <div v-if="resultSets.length > 1" class="flex items-center space-x-1 flex-shrink-0">
+          <button
+            v-for="(_, idx) in resultSets"
+            :key="idx"
+            @click="activeSetIndex = idx"
+            :class="[
+              'h-5 px-2 rounded text-xxs font-medium transition-colors',
+              activeSetIndex === idx
+                ? 'bg-dark-750 text-brand-300 font-semibold shadow-xs'
+                : 'text-dark-400 hover:text-dark-200 hover:bg-dark-800'
+            ]"
+          >
+            Result Set #{{ idx + 1 }} ({{ resultSets[idx]?.rowCount ?? 0 }})
+          </button>
+          <div class="h-3.5 w-px bg-dark-750 mx-1"></div>
+        </div>
+
+        <!-- Quick Filter Input -->
+        <div class="relative flex items-center w-48 sm:w-60">
+          <Search class="w-3 h-3 text-dark-500 absolute left-2 pointer-events-none" />
+          <input
+            v-model="quickFilter"
+            type="text"
+            placeholder="Search grid results..."
+            class="w-full bg-dark-900 border border-dark-700 rounded px-2 py-0.5 pl-7 pr-6 text-xs text-dark-100 placeholder-dark-500 focus:outline-none focus:border-brand-500 font-mono transition-colors"
+          />
+          <button
+            v-if="quickFilter"
+            @click="quickFilter = ''"
+            class="absolute right-1.5 text-dark-400 hover:text-dark-200 p-0.5"
+            title="Clear filter"
+          >
+            <X class="w-2.5 h-2.5" />
+          </button>
+        </div>
+
+        <!-- Truncation Warning Badge (when max rows limit reached) -->
+        <div
+          v-if="currentSet?.isTruncated"
+          class="hidden md:flex items-center space-x-1 bg-amber-950/60 text-amber-300 border border-amber-800/60 px-2 py-0.5 rounded text-xxs font-sans truncate"
+          :title="`查詢結果筆數超過上限，已自動截斷至 ${currentSet.rowCount.toLocaleString()} 筆以保護記憶體效能`"
+        >
+          <AlertTriangle class="w-3 h-3 text-amber-400 flex-shrink-0" />
+          <span>已達上限 {{ currentSet.rowCount.toLocaleString() }} 筆（共 {{ (currentSet.totalCount ?? currentSet.rowCount).toLocaleString() }} 筆，其餘已截斷）</span>
+        </div>
+      </div>
+
+      <!-- Right: Copy Tools & Row Stats -->
+      <div class="flex items-center space-x-1.5 flex-shrink-0">
+        <!-- Copy to TSV (Excel friendly) -->
+        <button
+          @click="copyAsTsv"
+          class="flex items-center space-x-1 px-2 py-0.5 bg-dark-800 hover:bg-dark-750 text-dark-300 hover:text-dark-100 rounded border border-dark-700 text-xxs transition-colors"
+          title="複製全部為 TSV (相容 Excel 貼上)"
+        >
+          <Check v-if="copiedTsv" class="w-2.5 h-2.5 text-emerald-400" />
+          <FileSpreadsheet v-else class="w-2.5 h-2.5 text-emerald-400" />
+          <span>{{ copiedTsv ? 'Copied!' : 'Copy TSV' }}</span>
+        </button>
+
+        <!-- Copy to CSV -->
+        <button
+          @click="copyAsCsv"
+          class="flex items-center space-x-1 px-2 py-0.5 bg-dark-800 hover:bg-dark-750 text-dark-300 hover:text-dark-100 rounded border border-dark-700 text-xxs transition-colors"
+          title="複製為 CSV 格式"
+        >
+          <Check v-if="copiedCsv" class="w-2.5 h-2.5 text-brand-400" />
+          <FileText v-else class="w-2.5 h-2.5 text-brand-400" />
+          <span>{{ copiedCsv ? 'Copied!' : 'CSV' }}</span>
+        </button>
+
+        <div class="h-3.5 w-px bg-dark-750 mx-0.5"></div>
+
+        <!-- Row Count Indicator -->
+        <span class="text-xxs text-dark-400 font-mono">
+          <strong class="text-dark-200">{{ currentSet?.rows.length.toLocaleString() ?? 0 }}</strong> rows
+        </span>
+      </div>
     </div>
 
     <!-- Empty State -->
@@ -29,122 +94,288 @@
       <span>No rows returned</span>
     </div>
 
-    <!-- Table Grid Area -->
-    <div v-else class="flex-1 overflow-auto relative">
-      <table class="w-full text-left border-collapse font-mono text-xs select-text">
-        <thead class="bg-dark-850 sticky top-0 z-10 border-b border-dark-700 text-dark-300 text-xxs uppercase tracking-wider select-none">
-          <tr>
-            <!-- Row Index Column Header -->
-            <th class="p-2 w-12 text-center text-dark-500 border-r border-dark-750 bg-dark-850 sticky left-0 z-20">
-              #
-            </th>
+    <!-- AG Grid Area -->
+    <div v-else class="flex-1 w-full overflow-hidden relative">
+      <AgGridVue
+        class="w-full h-full"
+        :theme="sqlightGridTheme"
+        :row-data="currentSet.rows"
+        :column-defs="columnDefs"
+        :quick-filter-text="quickFilter"
+        :enable-cell-text-selection="true"
+        :ensure-dom-order="true"
+        :tooltip-show-delay="100"
+        :tooltip-hide-delay="5000"
+        :suppress-row-hover-highlight="false"
+        @grid-ready="onGridReady"
+        @cell-context-menu="onCellContextMenu"
+      />
+    </div>
 
-            <!-- Data Column Headers with Resizing -->
-            <th
-              v-for="(col, colIdx) in currentSet.columns"
-              :key="col.name + colIdx"
-              :style="{ width: columnWidths[col.name] ? `${columnWidths[col.name]}px` : undefined }"
-              class="p-2 border-r border-dark-750 font-semibold text-dark-200 relative group truncate max-w-[320px]"
-            >
-              <div class="flex items-center justify-between space-x-1">
-                <span class="truncate">{{ col.name }}</span>
-                <span class="text-dark-500 font-normal font-sans lowercase text-xxs flex-shrink-0">
-                  {{ col.dataType }}
-                </span>
-              </div>
+    <!-- Custom Context Menu for Cells & Column Pinning -->
+    <div
+      v-if="contextMenu.visible"
+      :style="{ top: `${contextMenu.y}px`, left: `${contextMenu.x}px` }"
+      class="fixed z-50 bg-dark-800 border border-dark-700 rounded shadow-xl py-1 w-48 text-xs font-sans text-dark-200 select-none"
+      @click="contextMenu.visible = false"
+    >
+      <div class="px-2.5 py-1 text-xxs text-dark-400 border-b border-dark-750 font-mono truncate">
+        {{ contextMenu.colName }}: {{ String(contextMenu.cellValue ?? 'NULL') }}
+      </div>
 
-              <!-- Column Resizer Handle -->
-              <div
-                @pointerdown="startColResize($event, col.name)"
-                class="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-brand-500/60 z-30"
-              />
-            </th>
-          </tr>
-        </thead>
+      <button
+        @click="copyCellValue"
+        class="w-full text-left px-2.5 py-1.5 hover:bg-dark-750 hover:text-dark-100 flex items-center space-x-2 transition-colors"
+      >
+        <Copy class="w-3.5 h-3.5 text-brand-400" />
+        <span>複製儲存格值 (Copy Cell)</span>
+      </button>
 
-        <tbody class="divide-y divide-dark-800 text-dark-200">
-          <tr
-            v-for="(row, rIdx) in currentSet.rows"
-            :key="rIdx"
-            class="hover:bg-dark-800/60 transition-colors"
-          >
-            <!-- Row Index Number -->
-            <td class="p-2 text-center text-dark-500 bg-dark-850/40 border-r border-dark-800 sticky left-0 font-mono text-xxs">
-              {{ rIdx + 1 }}
-            </td>
+      <button
+        @click="copyCurrentRow"
+        class="w-full text-left px-2.5 py-1.5 hover:bg-dark-750 hover:text-dark-100 flex items-center space-x-2 transition-colors"
+      >
+        <FileText class="w-3.5 h-3.5 text-emerald-400" />
+        <span>複製整列資料 (Copy Row)</span>
+      </button>
 
-            <!-- Row Cells -->
-            <td
-              v-for="(cell, cIdx) in row"
-              :key="cIdx"
-              class="p-2 border-r border-dark-800 truncate max-w-[320px]"
-            >
-              <!-- NULL Value Display -->
-              <span v-if="cell === null" class="italic text-dark-500 font-mono text-xxs">
-                NULL
-              </span>
+      <div class="my-1 border-t border-dark-750"></div>
 
-              <!-- Binary Data Value Display -->
-              <span
-                v-else-if="typeof cell === 'object' && 'type' in cell && cell.type === 'binary'"
-                class="bg-indigo-950/60 text-indigo-300 px-1.5 py-0.5 rounded text-xxs font-sans font-medium border border-indigo-800/50"
-              >
-                [Binary {{ cell.length }} B]
-              </span>
+      <button
+        @click="togglePinColumn"
+        class="w-full text-left px-2.5 py-1.5 hover:bg-dark-750 hover:text-dark-100 flex items-center space-x-2 transition-colors"
+      >
+        <PinOff v-if="isColPinned" class="w-3.5 h-3.5 text-amber-400" />
+        <Pin v-else class="w-3.5 h-3.5 text-amber-400" />
+        <span>{{ isColPinned ? '取消凍結此欄 (Unpin)' : '凍結此欄於左側 (Pin Left)' }}</span>
+      </button>
 
-              <!-- Boolean Display -->
-              <span
-                v-else-if="typeof cell === 'boolean'"
-                :class="cell ? 'text-emerald-400' : 'text-rose-400'"
-                class="font-semibold text-xxs"
-              >
-                {{ cell ? 'TRUE' : 'FALSE' }}
-              </span>
-
-              <!-- Standard / Text / Number / Date Display -->
-              <span v-else>{{ cell }}</span>
-            </td>
-          </tr>
-        </tbody>
-      </table>
+      <button
+        @click="copyAsTsv"
+        class="w-full text-left px-2.5 py-1.5 hover:bg-dark-750 hover:text-dark-100 flex items-center space-x-2 transition-colors border-t border-dark-750"
+      >
+        <FileSpreadsheet class="w-3.5 h-3.5 text-indigo-400" />
+        <span>複製全表為 TSV (Excel)</span>
+      </button>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue';
-import { Inbox } from 'lucide-vue-next';
-import type { ResultSet } from '@/types/query';
+import { ref, computed, reactive } from 'vue';
+import {
+  Inbox,
+  Search,
+  X,
+  Copy,
+  Check,
+  AlertTriangle,
+  Pin,
+  PinOff,
+  FileSpreadsheet,
+  FileText,
+} from 'lucide-vue-next';
+import { AgGridVue } from 'ag-grid-vue3';
+import {
+  AllCommunityModule,
+  ModuleRegistry,
+  type GridApi,
+  type GridReadyEvent,
+  type ColDef,
+  type CellContextMenuEvent,
+  type ICellRendererParams,
+} from 'ag-grid-community';
+import { sqlightGridTheme } from '@/styles/gridTheme';
+import type { ResultSet, CellValue } from '@/types/query';
+
+// Register AG Grid Community Modules
+ModuleRegistry.registerModules([AllCommunityModule]);
 
 const props = defineProps<{
   resultSets: ResultSet[];
 }>();
 
 const activeSetIndex = ref(0);
-const columnWidths = ref<Record<string, number>>({});
+const quickFilter = ref('');
+const gridApi = ref<GridApi | null>(null);
+const copiedTsv = ref(false);
+const copiedCsv = ref(false);
 
 const currentSet = computed(() => {
   return props.resultSets[activeSetIndex.value] ?? props.resultSets[0] ?? null;
 });
 
-function startColResize(event: PointerEvent, colName: string) {
-  event.preventDefault();
-  event.stopPropagation();
+// Custom cell context menu state
+const contextMenu = reactive<{
+  visible: boolean;
+  x: number;
+  y: number;
+  colName: string;
+  cellValue: unknown;
+  rowIndex: number;
+}>({
+  visible: false,
+  x: 0,
+  y: 0,
+  colName: '',
+  cellValue: null,
+  rowIndex: -1,
+});
 
-  const startX = event.clientX;
-  const currentWidth = columnWidths.value[colName] || 150;
+const isColPinned = computed(() => {
+  if (!gridApi.value || !contextMenu.colName) return false;
+  const col = gridApi.value.getColumn(contextMenu.colName);
+  return col ? col.isPinned() : false;
+});
 
-  function onPointerMove(e: PointerEvent) {
-    const delta = e.clientX - startX;
-    columnWidths.value[colName] = Math.max(60, currentWidth + delta);
+function onGridReady(params: GridReadyEvent) {
+  gridApi.value = params.api;
+}
+
+// AG Grid Column Definitions
+const columnDefs = computed<ColDef[]>(() => {
+  if (!currentSet.value) return [];
+
+  // 1. Pinned Row Index Column (#)
+  const indexCol: ColDef = {
+    headerName: '#',
+    pinned: 'left',
+    width: 55,
+    minWidth: 45,
+    maxWidth: 75,
+    suppressMovable: true,
+    sortable: false,
+    filter: false,
+    resizable: false,
+    valueGetter: (params) => (params.node?.rowIndex != null ? params.node.rowIndex + 1 : ''),
+    cellClass: 'text-dark-500 bg-dark-850/40 text-center font-mono text-xxs select-none',
+  };
+
+  // 2. Dynamic Data Columns
+  const dataCols: ColDef[] = currentSet.value.columns.map((col, colIdx) => ({
+    colId: col.name,
+    field: `col_${colIdx}`,
+    headerName: col.name,
+    // Floating tooltip on hover (clean header without inline type text)
+    headerTooltip: `型別 (Type): ${col.dataType}${col.nullable ? ' | 可為 NULL' : ' | NOT NULL'}`,
+    sortable: true,
+    filter: true,
+    resizable: true,
+    suppressMovable: false,
+    valueGetter: (params) => params.data?.[colIdx],
+    cellRenderer: (params: ICellRendererParams) => {
+      const val = params.value;
+      if (val === null || val === undefined) {
+        return '<span class="italic text-dark-500 font-mono text-xxs">NULL</span>';
+      }
+      if (typeof val === 'object' && val !== null && 'type' in val && val.type === 'binary') {
+        return `<span class="bg-indigo-950/60 text-indigo-300 px-1.5 py-0.5 rounded text-xxs font-sans font-medium border border-indigo-800/50">[Binary ${val.length} B]</span>`;
+      }
+      if (typeof val === 'boolean') {
+        const color = val ? 'text-emerald-400' : 'text-rose-400';
+        return `<span class="${color} font-semibold text-xxs">${val ? 'TRUE' : 'FALSE'}</span>`;
+      }
+      return String(val);
+    },
+  }));
+
+  return [indexCol, ...dataCols];
+});
+
+function onCellContextMenu(event: CellContextMenuEvent) {
+  event.event?.preventDefault();
+  if (!event.event) return;
+
+  contextMenu.visible = true;
+  contextMenu.x = (event.event as MouseEvent).clientX;
+  contextMenu.y = (event.event as MouseEvent).clientY;
+  contextMenu.colName = event.column?.getColId() || '';
+  contextMenu.cellValue = event.value;
+  contextMenu.rowIndex = event.node?.rowIndex ?? -1;
+
+  function closeMenu() {
+    contextMenu.visible = false;
+    document.removeEventListener('click', closeMenu);
   }
+  setTimeout(() => {
+    document.addEventListener('click', closeMenu);
+  }, 0);
+}
 
-  function onPointerUp() {
-    document.removeEventListener('pointermove', onPointerMove);
-    document.removeEventListener('pointerup', onPointerUp);
+function copyCellValue() {
+  if (contextMenu.cellValue !== null && contextMenu.cellValue !== undefined) {
+    navigator.clipboard.writeText(String(contextMenu.cellValue));
+  } else {
+    navigator.clipboard.writeText('NULL');
   }
+  contextMenu.visible = false;
+}
 
-  document.addEventListener('pointermove', onPointerMove);
-  document.addEventListener('pointerup', onPointerUp);
+function copyCurrentRow() {
+  if (contextMenu.rowIndex >= 0 && currentSet.value) {
+    const row = currentSet.value.rows[contextMenu.rowIndex];
+    if (row) {
+      const rowStr = row.map(formatCellForExport).join('\t');
+      navigator.clipboard.writeText(rowStr);
+    }
+  }
+  contextMenu.visible = false;
+}
+
+function togglePinColumn() {
+  if (!gridApi.value || !contextMenu.colName) return;
+  const col = gridApi.value.getColumn(contextMenu.colName);
+  if (!col) return;
+
+  const newPinState = col.isPinned() ? null : 'left';
+  gridApi.value.setColumnsPinned([contextMenu.colName], newPinState);
+  contextMenu.visible = false;
+}
+
+function formatCellForExport(cell: CellValue): string {
+  if (cell === null || cell === undefined) return 'NULL';
+  if (typeof cell === 'object' && 'type' in cell && cell.type === 'binary') {
+    return `[Binary ${cell.length}B]`;
+  }
+  return String(cell);
+}
+
+function copyAsTsv() {
+  if (!currentSet.value) return;
+  const headers = currentSet.value.columns.map((c) => c.name).join('\t');
+  const rows = currentSet.value.rows
+    .map((row) => row.map(formatCellForExport).join('\t'))
+    .join('\n');
+  const fullText = `${headers}\n${rows}`;
+
+  navigator.clipboard.writeText(fullText).then(() => {
+    copiedTsv.value = true;
+    setTimeout(() => {
+      copiedTsv.value = false;
+    }, 2000);
+  });
+}
+
+function copyAsCsv() {
+  if (!currentSet.value) return;
+  const escapeCsv = (val: string) => {
+    if (val.includes(',') || val.includes('"') || val.includes('\n')) {
+      return `"${val.replace(/"/g, '""')}"`;
+    }
+    return val;
+  };
+
+  const headers = currentSet.value.columns.map((c) => escapeCsv(c.name)).join(',');
+  const rows = currentSet.value.rows
+    .map((row) => row.map((cell) => escapeCsv(formatCellForExport(cell))).join(','))
+    .join('\n');
+  const fullText = `${headers}\n${rows}`;
+
+  navigator.clipboard.writeText(fullText).then(() => {
+    copiedCsv.value = true;
+    setTimeout(() => {
+      copiedCsv.value = false;
+    }, 2000);
+  });
 }
 </script>

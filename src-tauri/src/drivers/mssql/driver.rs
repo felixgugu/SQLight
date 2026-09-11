@@ -59,7 +59,7 @@ impl DatabaseDriver for SqlServerDriver {
 
     async fn test_connection(&self, profile: &ConnectionProfile, password: &str) -> AppResult<()> {
         let mut conn = self.connect(profile, password).await?;
-        let _ = conn.execute_query("SELECT 1;").await?;
+        let _ = conn.execute_query("SELECT 1;", Some(1)).await?;
         Ok(())
     }
 }

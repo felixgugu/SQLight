@@ -88,6 +88,23 @@
         <Plus class="w-3.5 h-3.5 text-brand-500" />
         <span>New Tab</span>
       </button>
+
+      <!-- Max Rows Limit Selector -->
+      <div class="flex items-center space-x-1 pl-1.5 border-l border-dark-750 text-dark-400 text-xxs font-mono">
+        <span title="查詢回傳最大筆數限制 (超過時自動截斷以保護效能)">Limit:</span>
+        <select
+          :value="queryStore.maxRows ?? 'none'"
+          @change="onMaxRowsChange"
+          class="bg-dark-800 hover:bg-dark-750 text-dark-200 font-mono px-1.5 py-0.5 rounded border border-dark-700 text-xxs focus:outline-none focus:border-brand-500 cursor-pointer"
+          title="Max Rows Limit (預設 10,000 筆，防止大量資料使介面崩潰)"
+        >
+          <option value="1000">1,000</option>
+          <option value="5000">5,000</option>
+          <option value="10000">10,000</option>
+          <option value="50000">50,000</option>
+          <option value="none">No Limit</option>
+        </select>
+      </div>
     </div>
 
     <!-- Right: Settings & Window Controls -->
@@ -144,5 +161,10 @@ defineEmits<{
 function onDatabaseChange(e: Event) {
   const target = e.target as HTMLSelectElement;
   connectionStore.switchDatabase(target.value);
+}
+
+function onMaxRowsChange(e: Event) {
+  const target = e.target as HTMLSelectElement;
+  queryStore.maxRows = target.value === 'none' ? null : parseInt(target.value, 10);
 }
 </script>

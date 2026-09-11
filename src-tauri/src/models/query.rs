@@ -30,6 +30,8 @@ pub struct ResultSet {
     pub columns: Vec<ColumnDef>,
     pub rows: Vec<Vec<CellValue>>,
     pub row_count: usize,
+    pub total_count: usize,
+    pub is_truncated: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

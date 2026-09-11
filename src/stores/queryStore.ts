@@ -8,8 +8,14 @@ export const useQueryStore = defineStore('query', () => {
   const isExecuting = ref<boolean>(false);
   const executionError = ref<string | null>(null);
   const history = ref<QueryHistoryItem[]>([]);
+  const maxRows = ref<number | null>(10000);
 
-  async function execute(connectionId: string, database: string, sql: string): Promise<QueryResult | null> {
+  async function execute(
+    connectionId: string,
+    database: string,
+    sql: string,
+    limitOverride?: number | null
+  ): Promise<QueryResult | null> {
     if (!sql.trim()) return null;
 
     isExecuting.value = true;
@@ -17,7 +23,8 @@ export const useQueryStore = defineStore('query', () => {
     const startTime = Date.now();
 
     try {
-      const result = await queryService.executeQuery(connectionId, sql);
+      const limit = limitOverride !== undefined ? limitOverride : maxRows.value;
+      const result = await queryService.executeQuery(connectionId, sql, limit);
       activeResult.value = result;
 
       const duration = result.executionTimeMs || (Date.now() - startTime);
@@ -86,6 +93,7 @@ export const useQueryStore = defineStore('query', () => {
     isExecuting,
     executionError,
     history,
+    maxRows,
     execute,
     clearResults,
     clearHistory,
