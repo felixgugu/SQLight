@@ -39,6 +39,25 @@ impl ConnectionManager {
 
         let id = req.id.unwrap_or_else(|| Uuid::new_v4().to_string());
 
+        let trimmed_name = req.name.trim();
+        if trimmed_name.is_empty() {
+            return Err(AppError::Connection {
+                message: "Connection name cannot be empty".to_string(),
+            });
+        }
+
+        if profiles
+            .iter()
+            .any(|p| p.id != id && p.name.trim().eq_ignore_ascii_case(trimmed_name))
+        {
+            return Err(AppError::Connection {
+                message: format!(
+                    "A connection named '{}' already exists. Please choose a different name.",
+                    trimmed_name
+                ),
+            });
+        }
+
         if let Some(ref password) = req.password {
             if !password.is_empty() {
                 let _ = self.credential_store.save_password(&id, password);
@@ -50,7 +69,7 @@ impl ConnectionManager {
 
         let profile = ConnectionProfile {
             id: id.clone(),
-            name: req.name,
+            name: trimmed_name.to_string(),
             engine: req.engine,
             host: req.host,
             port: req.port,

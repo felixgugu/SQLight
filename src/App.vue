@@ -3,7 +3,7 @@
     <!-- Top Toolbar Header -->
     <AppHeader
       @run-query="handleRunQuery"
-      @open-connection-modal="isConnectionModalOpen = true"
+      @open-connection-modal="handleOpenNewConnection"
     />
 
     <!-- Center Resizable Body (Sidebar + Workspace/Results) -->
@@ -14,7 +14,8 @@
         class="h-full flex-shrink-0 overflow-hidden"
       >
         <AppSidebar
-          @open-connection-modal="isConnectionModalOpen = true"
+          @open-connection-modal="handleOpenNewConnection"
+          @edit-connection="handleEditConnection"
         />
       </div>
 
@@ -56,7 +57,8 @@
     <!-- Connection Management Modal -->
     <ConnectionModal
       :is-open="isConnectionModalOpen"
-      @close="isConnectionModalOpen = false"
+      :edit-profile="editingProfile"
+      @close="handleCloseConnectionModal"
     />
   </div>
 </template>
@@ -72,10 +74,27 @@ import ResizableSplitter from '@/components/common/ResizableSplitter.vue';
 import ConnectionModal from '@/components/modals/ConnectionModal.vue';
 import { useSplitter } from '@/composables/useSplitter';
 import { useWorkspaceStore } from '@/stores/workspaceStore';
+import type { ConnectionProfile } from '@/types/connection';
 
 const workspaceStore = useWorkspaceStore();
 const isConnectionModalOpen = ref(false);
+const editingProfile = ref<ConnectionProfile | null>(null);
 const mainWorkspaceRef = ref<InstanceType<typeof AppMain> | null>(null);
+
+function handleOpenNewConnection() {
+  editingProfile.value = null;
+  isConnectionModalOpen.value = true;
+}
+
+function handleEditConnection(profile: ConnectionProfile) {
+  editingProfile.value = profile;
+  isConnectionModalOpen.value = true;
+}
+
+function handleCloseConnectionModal() {
+  isConnectionModalOpen.value = false;
+  editingProfile.value = null;
+}
 
 // Resizable sidebar (width: min 180px, max 500px, initial 260px)
 const sidebarSplitter = useSplitter({

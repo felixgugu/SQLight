@@ -26,13 +26,23 @@
       <form @submit.prevent="handleSave" class="p-5 space-y-4 text-xs">
         <!-- Connection Name -->
         <div>
-          <label class="block text-dark-300 font-medium mb-1">Connection Name</label>
+          <div class="flex items-center justify-between mb-1">
+            <label class="block text-dark-300 font-medium">連線名稱 (Connection Name)</label>
+            <span v-if="isDuplicateName" class="text-rose-400 text-xxs font-medium">
+              * 此名稱已被使用，請更換名稱
+            </span>
+          </div>
           <input
             v-model="form.name"
             type="text"
             required
             placeholder="e.g. Local Development MSSQL"
-            class="w-full bg-dark-900 border border-dark-700 rounded px-3 py-1.5 text-dark-100 focus:outline-none focus:border-brand-500 transition-colors"
+            :class="[
+              'w-full bg-dark-900 border rounded px-3 py-1.5 text-dark-100 focus:outline-none transition-colors',
+              isDuplicateName
+                ? 'border-rose-500 focus:border-rose-400'
+                : 'border-dark-700 focus:border-brand-500'
+            ]"
           />
         </div>
 
@@ -146,8 +156,8 @@
             </button>
             <button
               type="submit"
-              :disabled="isSaving"
-              class="flex items-center space-x-1 px-4 py-1.5 bg-brand-600 hover:bg-brand-500 text-white font-medium rounded shadow-sm transition-colors disabled:opacity-50"
+              :disabled="isSaving || isDuplicateName || !form.name.trim()"
+              class="flex items-center space-x-1 px-4 py-1.5 bg-brand-600 hover:bg-brand-500 text-white font-medium rounded shadow-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <span>{{ isSaving ? 'Saving...' : 'Save & Connect' }}</span>
             </button>
@@ -159,7 +169,7 @@
 </template>
 
 <script setup lang="ts">
-import { reactive, ref, watch } from 'vue';
+import { reactive, ref, watch, computed } from 'vue';
 import { Database, X, RotateCw, CheckCircle2, AlertCircle } from 'lucide-vue-next';
 import type { ConnectionProfile } from '@/types/connection';
 import { useConnectionStore } from '@/stores/connectionStore';
@@ -190,6 +200,10 @@ const form = reactive({
 const isTesting = ref(false);
 const isSaving = ref(false);
 const testResult = ref<{ success: boolean; message?: string } | null>(null);
+
+const isDuplicateName = computed(() => {
+  return connectionStore.isNameDuplicate(form.name, props.editProfile?.id);
+});
 
 watch(
   () => props.editProfile,

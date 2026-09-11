@@ -17,6 +17,14 @@ export const useConnectionStore = defineStore('connection', () => {
     return connections.value.find((c) => c.id === activeConnectionId.value) ?? null;
   });
 
+  function isNameDuplicate(name: string, excludeId?: string): boolean {
+    const trimmed = name.trim().toLowerCase();
+    if (!trimmed) return false;
+    return connections.value.some(
+      (c) => c.id !== excludeId && c.name.trim().toLowerCase() === trimmed
+    );
+  }
+
   async function loadConnections() {
     isLoading.value = true;
     try {
@@ -38,18 +46,71 @@ export const useConnectionStore = defineStore('connection', () => {
   }
 
   async function saveConnection(payload: SaveConnectionPayload): Promise<ConnectionProfile> {
-    const saved = await connectionService.saveConnection(payload);
+    const trimmed = payload.name.trim();
+    if (!trimmed) {
+      throw new Error('連線名稱不可為空');
+    }
+    if (isNameDuplicate(trimmed, payload.id)) {
+      throw new Error(`連線名稱 '${trimmed}' 已存在，請使用不同名稱`);
+    }
+
+    const saved = await connectionService.saveConnection({
+      ...payload,
+      name: trimmed,
+    });
     await loadConnections();
     return saved;
   }
 
-  async function deleteConnection(id: string): Promise<void> {
-    await connectionService.deleteConnection(id);
-    if (activeConnectionId.value === id) {
-      activeConnectionId.value = null;
-      status.value = 'disconnected';
+  async function renameConnection(id: string, newName: string): Promise<ConnectionProfile> {
+    const trimmed = newName.trim();
+    if (!trimmed) {
+      throw new Error('連線名稱不可為空');
     }
+    if (isNameDuplicate(trimmed, id)) {
+      throw new Error(`連線名稱 '${trimmed}' 已存在，請使用不同名稱`);
+    }
+    const existing = connections.value.find((c) => c.id === id);
+    if (!existing) {
+      throw new Error('找不到該連線設定');
+    }
+
+    const updated = await connectionService.saveConnection({
+      id: existing.id,
+      name: trimmed,
+      engine: existing.engine,
+      host: existing.host,
+      port: existing.port,
+      database: existing.database,
+      username: existing.username,
+      encrypt: existing.encrypt,
+      trustServerCertificate: existing.trustServerCertificate,
+    });
     await loadConnections();
+    return updated;
+  }
+
+  async function deleteConnection(id: string): Promise<void> {
+    const wasActive = activeConnectionId.value === id;
+    if (wasActive) {
+      await disconnect();
+    }
+
+    await connectionService.deleteConnection(id);
+    await loadConnections();
+
+    if (wasActive) {
+      if (connections.value.length > 0) {
+        const next = connections.value[0];
+        if (next) {
+          await connect(next.id);
+        }
+      } else {
+        activeConnectionId.value = null;
+        status.value = 'disconnected';
+        availableDatabases.value = [];
+      }
+    }
   }
 
   async function testConnection(payload: SaveConnectionPayload): Promise<void> {
@@ -119,8 +180,10 @@ export const useConnectionStore = defineStore('connection', () => {
     availableDatabases,
     isLoading,
     errorMessage,
+    isNameDuplicate,
     loadConnections,
     saveConnection,
+    renameConnection,
     deleteConnection,
     testConnection,
     connect,
