@@ -177,7 +177,7 @@
 
         <!-- Format SQL Button -->
         <button
-          @click="workspaceStore.formatActiveQuery()"
+          @click="$emit('format-sql')"
           class="flex items-center space-x-1 bg-dark-800 hover:bg-dark-750 text-dark-300 hover:text-dark-100 px-2 py-1 rounded border border-dark-700 transition-colors cursor-pointer"
           title="Format SQL (Shift + Alt + F)"
         >
@@ -270,6 +270,7 @@ const isConnDropdownOpen = ref(false);
 
 const emit = defineEmits<{
   (e: 'run-query', mode?: 'current' | 'all'): void;
+  (e: 'format-sql'): void;
   (e: 'open-connection-modal'): void;
   (e: 'open-settings-modal'): void;
 }>();

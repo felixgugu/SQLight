@@ -63,6 +63,7 @@
         <!-- Results History Tabs Bar (Latest at leftmost, rightwards older) -->
         <div
           v-if="queryStore.resultTabs.length > 0"
+          @wheel="handleResultTabsWheel"
           class="h-7 bg-dark-850 border-b border-dark-750 flex items-center px-1.5 space-x-1.5 overflow-x-auto select-none flex-shrink-0"
         >
           <div
@@ -187,6 +188,15 @@ const panelTabs = computed<{ id: BottomPanelTab; label: string; icon: typeof Tab
     badge: queryStore.history.length,
   },
 ]);
+
+function handleResultTabsWheel(e: WheelEvent) {
+  const container = e.currentTarget as HTMLElement;
+  if (!container) return;
+  if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
+    e.preventDefault();
+    container.scrollLeft += e.deltaY;
+  }
+}
 
 function onSelectHistory(sql: string) {
   workspaceStore.addSqlTab(sql);

@@ -5,7 +5,7 @@
     @click.self="$emit('close')"
   >
     <div
-      class="bg-dark-850 border border-dark-700 rounded-lg shadow-2xl w-full max-w-xl overflow-hidden flex flex-col max-h-[85vh] animate-in fade-in zoom-in-95 duration-150"
+      class="bg-dark-850 border border-dark-700 rounded-lg shadow-2xl w-[620px] h-[520px] max-w-[95vw] max-h-[90vh] overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-150"
     >
       <!-- Modal Header -->
       <div class="px-5 py-3.5 border-b border-dark-750 flex items-center justify-between flex-shrink-0 bg-dark-800">

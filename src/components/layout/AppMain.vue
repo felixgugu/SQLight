@@ -1,7 +1,10 @@
 <template>
   <main class="h-full flex flex-col bg-dark-900 overflow-hidden">
     <!-- Workspace Tab Bar -->
-    <div class="h-9 bg-dark-850 border-b border-dark-700 flex items-center px-1 space-x-1 overflow-x-auto select-none flex-shrink-0">
+    <div
+      @wheel="handleTabsWheel"
+      class="h-9 bg-dark-850 border-b border-dark-700 flex items-center px-1 space-x-1 overflow-x-auto select-none flex-shrink-0"
+    >
       <!-- Tabs List -->
       <div
         v-for="tab in workspaceStore.tabs"
@@ -56,7 +59,7 @@
             :key="workspaceStore.activeTab.id"
             v-model="(workspaceStore.activeTab as SqlEditorTab).query"
             @execute="(sql, mode) => runQuery(mode || 'current', sql)"
-            @format="workspaceStore.formatActiveQuery()"
+            @format="formatCode"
           />
         </div>
 
@@ -105,6 +108,23 @@ const queryStore = useQueryStore();
 
 const monacoRef = ref<InstanceType<typeof MonacoEditor> | null>(null);
 
+function handleTabsWheel(e: WheelEvent) {
+  const container = e.currentTarget as HTMLElement;
+  if (!container) return;
+  if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
+    e.preventDefault();
+    container.scrollLeft += e.deltaY;
+  }
+}
+
+function formatCode() {
+  if (monacoRef.value) {
+    monacoRef.value.formatCode();
+  } else if (workspaceStore.activeTab?.type === 'sql_editor') {
+    workspaceStore.formatActiveQuery();
+  }
+}
+
 async function runQuery(mode: 'current' | 'all' = 'current', queryOverride?: string) {
   let targetSql = queryOverride;
   if (!targetSql && monacoRef.value) {
@@ -131,5 +151,6 @@ async function runQuery(mode: 'current' | 'all' = 'current', queryOverride?: str
 
 defineExpose({
   runQuery,
+  formatCode,
 });
 </script>

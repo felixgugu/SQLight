@@ -3,6 +3,7 @@
     <!-- Top Toolbar Header -->
     <AppHeader
       @run-query="handleRunQuery"
+      @format-sql="handleFormatSql"
       @open-connection-modal="handleOpenNewConnection"
       @open-settings-modal="isSettingsModalOpen = true"
     />
@@ -126,6 +127,14 @@ function handleRunQuery(mode: 'current' | 'all' = 'current') {
   mainWorkspaceRef.value?.runQuery(mode);
 }
 
+function handleFormatSql() {
+  if (mainWorkspaceRef.value) {
+    mainWorkspaceRef.value.formatCode();
+  } else {
+    workspaceStore.formatActiveQuery();
+  }
+}
+
 function handleGlobalKeydown(e: KeyboardEvent) {
   // Ctrl/Cmd + Shift + Enter -> Run All
   if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'Enter') {
@@ -144,7 +153,7 @@ function handleGlobalKeydown(e: KeyboardEvent) {
   // Shift + Alt + F to format SQL
   if (e.shiftKey && e.altKey && (e.key === 'F' || e.key === 'f')) {
     e.preventDefault();
-    workspaceStore.formatActiveQuery();
+    handleFormatSql();
   }
 }
 
