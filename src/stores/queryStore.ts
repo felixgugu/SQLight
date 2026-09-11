@@ -108,16 +108,20 @@ export const useQueryStore = defineStore('query', () => {
       const hasError = result.messages.some((m) => m.level === 'error');
       const rowCount = result.resultSets[0]?.rowCount ?? result.affectedRows ?? 0;
       const timeStr = new Date().toLocaleTimeString();
+      const tableName = extractFirstTableName(sql);
 
       const newTab: QueryResultTab = {
         id: `tab-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
-        title: extractFirstTableName(sql),
+        title: tableName,
         sql,
         result,
         executedAt: timeStr,
         isPinned: false,
         durationMs: duration,
         rowCount,
+        connectionId,
+        database,
+        tableName,
       };
 
       insertNewTab(newTab);

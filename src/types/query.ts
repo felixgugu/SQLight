@@ -51,4 +51,7 @@ export interface QueryResultTab {
   isPinned: boolean;
   durationMs: number;
   rowCount: number;
+  connectionId?: string;
+  database?: string;
+  tableName?: string;
 }

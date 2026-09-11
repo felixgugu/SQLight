@@ -115,6 +115,33 @@
 
       <div class="my-1 border-t border-dark-750"></div>
 
+      <!-- DML SQL Generation Options -->
+      <button
+        @click="handleGenerateDml('INSERT')"
+        class="w-full text-left px-2.5 py-1.5 hover:bg-dark-750 hover:text-dark-100 flex items-center space-x-2 transition-colors"
+      >
+        <PlusCircle class="w-3.5 h-3.5 text-sky-400" />
+        <span>建立 INSERT 語法</span>
+      </button>
+
+      <button
+        @click="handleGenerateDml('UPDATE')"
+        class="w-full text-left px-2.5 py-1.5 hover:bg-dark-750 hover:text-dark-100 flex items-center space-x-2 transition-colors"
+      >
+        <Edit3 class="w-3.5 h-3.5 text-amber-400" />
+        <span>建立 UPDATE 語法</span>
+      </button>
+
+      <button
+        @click="handleGenerateDml('DELETE')"
+        class="w-full text-left px-2.5 py-1.5 hover:bg-dark-750 hover:text-dark-100 flex items-center space-x-2 transition-colors"
+      >
+        <Trash2 class="w-3.5 h-3.5 text-rose-400" />
+        <span>建立 DELETE 語法</span>
+      </button>
+
+      <div class="my-1 border-t border-dark-750"></div>
+
       <button
         @click="togglePinColumn"
         class="w-full text-left px-2.5 py-1.5 hover:bg-dark-750 hover:text-dark-100 flex items-center space-x-2 transition-colors"
@@ -140,6 +167,9 @@ import {
   Copy,
   Pin,
   PinOff,
+  PlusCircle,
+  Edit3,
+  Trash2,
 } from 'lucide-vue-next';
 import { AgGridVue } from 'ag-grid-vue3';
 import {
@@ -155,6 +185,14 @@ import { sqlightGridTheme } from '@/styles/gridTheme';
 import { queryService } from '@/services/queryService';
 import { useConnectionStore } from '@/stores/connectionStore';
 import { useQueryStore } from '@/stores/queryStore';
+import { useWorkspaceStore } from '@/stores/workspaceStore';
+import { useSchemaStore } from '@/stores/schemaStore';
+import {
+  generateInsertStatement,
+  generateUpdateStatement,
+  generateDeleteStatement,
+  type ColumnInfo,
+} from '@/utils/sqlGenerator';
 import type { ColumnDef, CellValue } from '@/types/query';
 
 // Register AG Grid Community Modules
@@ -167,6 +205,8 @@ const props = defineProps<{
 
 const connectionStore = useConnectionStore();
 const queryStore = useQueryStore();
+const workspaceStore = useWorkspaceStore();
+const schemaStore = useSchemaStore();
 const isLoading = ref(false);
 const error = ref<string | null>(null);
 const columns = ref<ColumnDef[]>([]);
@@ -328,9 +368,9 @@ function onCellContextMenu(event: CellContextMenuEvent) {
   const mouseEvent = event.event as MouseEvent | undefined;
   if (!mouseEvent) return;
 
-  // Viewport clamping (menu width is 192px / w-48, approximate height ~200px)
-  const menuWidth = 200;
-  const menuHeight = 200;
+  // Viewport clamping (menu width is 220px, approximate height ~320px)
+  const menuWidth = 220;
+  const menuHeight = 320;
   const x = Math.min(mouseEvent.clientX, Math.max(0, window.innerWidth - menuWidth - 8));
   const y = Math.min(mouseEvent.clientY, Math.max(0, window.innerHeight - menuHeight - 8));
 
@@ -348,6 +388,72 @@ function onCellContextMenu(event: CellContextMenuEvent) {
   setTimeout(() => {
     document.addEventListener('click', closeMenu);
   }, 0);
+}
+
+function handleGenerateDml(type: 'INSERT' | 'UPDATE' | 'DELETE') {
+  if (contextMenu.rowIndex < 0 || rows.value.length <= contextMenu.rowIndex) {
+    contextMenu.visible = false;
+    return;
+  }
+  const row = rows.value[contextMenu.rowIndex];
+  if (!row) {
+    contextMenu.visible = false;
+    return;
+  }
+
+  const tableName = props.tableName;
+  const schema = props.schema;
+  const connId = connectionStore.activeConnectionId || undefined;
+  const db = connectionStore.activeDatabase || undefined;
+
+  // Resolve PKs from schemaStore
+  const tableSchema = connId && db ? schemaStore.getTable(tableName, connId, db) : undefined;
+  const pkColNames = new Set(
+    tableSchema?.columns
+      .filter((c) => c.isPrimaryKey)
+      .map((c) => c.name.toLowerCase()) ?? []
+  );
+
+  const columnInfos: ColumnInfo[] = columns.value.map((col) => ({
+    name: col.name,
+    dataType: col.dataType,
+    isPrimaryKey: pkColNames.has(col.name.toLowerCase()),
+  }));
+
+  let generated = '';
+  if (type === 'INSERT') {
+    generated = generateInsertStatement({
+      tableName,
+      schema,
+      columns: columnInfos,
+      row,
+    });
+  } else if (type === 'UPDATE') {
+    generated = generateUpdateStatement({
+      tableName,
+      schema,
+      columns: columnInfos,
+      row,
+    });
+  } else if (type === 'DELETE') {
+    generated = generateDeleteStatement({
+      tableName,
+      schema,
+      columns: columnInfos,
+      row,
+    });
+  }
+
+  try {
+    navigator.clipboard?.writeText(generated);
+  } catch (err) {
+    // Ignore clipboard error
+  }
+
+  workspaceStore.addSqlTab(generated, `${type}: ${tableName}`);
+  workspaceStore.showToast(`已建立 ${type} 語法並開啟新分頁（已複製至剪貼簿）`, 'success', 2500);
+
+  contextMenu.visible = false;
 }
 
 function copyCellValue() {

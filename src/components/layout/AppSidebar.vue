@@ -269,15 +269,28 @@
                     v-else
                     v-for="col in getTableColumns(conn.id, db, table.schema, table.name)"
                     :key="col.name"
-                    class="flex items-center space-x-1.5 px-1 py-0.2 text-xxs text-dark-400 hover:text-dark-200"
+                    @dblclick.stop="handleColumnDoubleClick(col)"
+                    class="flex items-center space-x-1.5 px-1.5 py-0.5 text-xxs rounded cursor-pointer select-none transition-colors group"
+                    :class="[
+                      isPendingColumn(col.name)
+                        ? 'bg-brand-500/25 text-brand-200 border border-brand-500/40 shadow-xs'
+                        : 'text-dark-400 hover:text-dark-100 hover:bg-dark-750/70'
+                    ]"
+                    :title="`雙擊記住此欄位 (${col.name})，點擊編輯區游標處即可貼上`"
                   >
                     <Key v-if="col.isPrimaryKey" class="w-2.5 h-2.5 text-amber-400 flex-shrink-0" />
-                    <Columns v-else class="w-2.5 h-2.5 text-dark-500 flex-shrink-0" />
-                    <span :class="[col.isPrimaryKey ? 'text-amber-300 font-semibold' : 'text-dark-300']" class="truncate">
+                    <Columns v-else class="w-2.5 h-2.5 text-dark-500 group-hover:text-dark-300 flex-shrink-0" />
+                    <span :class="[col.isPrimaryKey ? 'text-amber-300 font-semibold' : 'text-dark-300 group-hover:text-dark-100']" class="truncate flex-1">
                       {{ col.name }}
                     </span>
                     <span class="text-dark-500 lowercase font-sans text-xxs flex-shrink-0">
                       {{ col.dataType }}
+                    </span>
+                    <span
+                      v-if="isPendingColumn(col.name)"
+                      class="text-xxs px-1 py-0.2 bg-brand-500/30 text-brand-300 font-medium rounded text-[9px] border border-brand-400/40 flex-shrink-0 animate-pulse"
+                    >
+                      待貼上
                     </span>
                   </div>
                 </div>
@@ -409,6 +422,7 @@ import { useConnectionStore } from '@/stores/connectionStore';
 import { useWorkspaceStore } from '@/stores/workspaceStore';
 import { useSchemaStore } from '@/stores/schemaStore';
 import { schemaService } from '@/services/schemaService';
+import { wrapIdentifierIfNeeded } from '@/utils/sqlParser';
 import type { TableItem, ColumnItem } from '@/types/schema';
 import type { ConnectionProfile } from '@/types/connection';
 
@@ -420,6 +434,26 @@ const emit = defineEmits<{
 const connectionStore = useConnectionStore();
 const workspaceStore = useWorkspaceStore();
 const schemaStore = useSchemaStore();
+
+function isPendingColumn(colName: string): boolean {
+  if (!workspaceStore.pendingColumnToInsert) return false;
+  const wrapped = wrapIdentifierIfNeeded(colName);
+  return (
+    workspaceStore.pendingColumnToInsert === wrapped ||
+    workspaceStore.pendingColumnToInsert === colName
+  );
+}
+
+function handleColumnDoubleClick(col: ColumnItem) {
+  const colText = wrapIdentifierIfNeeded(col.name);
+  workspaceStore.setPendingColumnToInsert(colText);
+  try {
+    navigator.clipboard?.writeText(colText);
+  } catch (err) {
+    // Ignore clipboard access errors
+  }
+  workspaceStore.showToast(`已記住欄位 ${colText}，點擊編輯區游標處即可貼上`, 'info', 2500);
+}
 
 const filterQuery = ref('');
 const isRefreshing = ref(false);

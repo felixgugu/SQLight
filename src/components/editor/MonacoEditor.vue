@@ -7,6 +7,7 @@ import { ref, onMounted, onBeforeUnmount, watch } from 'vue';
 import { monaco } from '@/utils/monaco';
 import { setupSqlCompletionProvider } from '@/utils/sqlCompletionProvider';
 import { useSettingsStore } from '@/stores/settingsStore';
+import { useWorkspaceStore } from '@/stores/workspaceStore';
 import { extractStatementAtCursor, type ExtractedStatement } from '@/utils/sqlStatementExtractor';
 import { format as formatSql } from 'sql-formatter';
 
@@ -22,6 +23,7 @@ const emit = defineEmits<{
 }>();
 
 const settingsStore = useSettingsStore();
+const workspaceStore = useWorkspaceStore();
 const editorContainer = ref<HTMLDivElement | null>(null);
 let editorInstance: monaco.editor.IStandaloneCodeEditor | null = null;
 let highlightDecorations: monaco.editor.IEditorDecorationsCollection | null = null;
@@ -360,6 +362,56 @@ onMounted(() => {
       formatCode();
     }
   );
+
+  // Smart Column Paste: Insert pending column name at cursor position upon clicking editor
+  editorInstance.onMouseUp(() => {
+    if (!workspaceStore.pendingColumnToInsert) return;
+    const colText = workspaceStore.consumePendingColumnToInsert();
+    if (!colText) return;
+
+    setTimeout(() => {
+      if (!editorInstance) return;
+      const selection = editorInstance.getSelection();
+      const position = editorInstance.getPosition();
+
+      if (selection && !selection.isEmpty()) {
+        editorInstance.executeEdits('smart-paste-column', [
+          {
+            range: selection,
+            text: colText,
+            forceMoveMarkers: true,
+          },
+        ]);
+        const endCol = selection.startColumn + colText.length;
+        editorInstance.setPosition(new monaco.Position(selection.startLineNumber, endCol));
+      } else if (position) {
+        editorInstance.executeEdits('smart-paste-column', [
+          {
+            range: new monaco.Range(
+              position.lineNumber,
+              position.column,
+              position.lineNumber,
+              position.column
+            ),
+            text: colText,
+            forceMoveMarkers: true,
+          },
+        ]);
+        editorInstance.setPosition(
+          new monaco.Position(position.lineNumber, position.column + colText.length)
+        );
+      }
+      editorInstance.focus();
+      workspaceStore.showToast(`已於游標處貼上欄位 ${colText}`, 'success', 2000);
+    }, 15);
+  });
+
+  // Clear pending column if user presses Escape
+  editorInstance.onKeyDown((e) => {
+    if (e.keyCode === monaco.KeyCode.Escape && workspaceStore.pendingColumnToInsert) {
+      workspaceStore.clearPendingColumnToInsert();
+    }
+  });
 });
 
 // Sync editor options when settingsStore changes

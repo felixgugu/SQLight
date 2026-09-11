@@ -143,6 +143,33 @@
 
       <div class="my-1 border-t border-dark-750"></div>
 
+      <!-- DML SQL Generation Options -->
+      <button
+        @click="handleGenerateDml('INSERT')"
+        class="w-full text-left px-2.5 py-1.5 hover:bg-dark-750 hover:text-dark-100 flex items-center space-x-2 transition-colors"
+      >
+        <PlusCircle class="w-3.5 h-3.5 text-sky-400" />
+        <span>建立 INSERT 語法</span>
+      </button>
+
+      <button
+        @click="handleGenerateDml('UPDATE')"
+        class="w-full text-left px-2.5 py-1.5 hover:bg-dark-750 hover:text-dark-100 flex items-center space-x-2 transition-colors"
+      >
+        <Edit3 class="w-3.5 h-3.5 text-amber-400" />
+        <span>建立 UPDATE 語法</span>
+      </button>
+
+      <button
+        @click="handleGenerateDml('DELETE')"
+        class="w-full text-left px-2.5 py-1.5 hover:bg-dark-750 hover:text-dark-100 flex items-center space-x-2 transition-colors"
+      >
+        <Trash2 class="w-3.5 h-3.5 text-rose-400" />
+        <span>建立 DELETE 語法</span>
+      </button>
+
+      <div class="my-1 border-t border-dark-750"></div>
+
       <button
         @click="togglePinColumn"
         class="w-full text-left px-2.5 py-1.5 hover:bg-dark-750 hover:text-dark-100 flex items-center space-x-2 transition-colors"
@@ -176,6 +203,9 @@ import {
   PinOff,
   FileSpreadsheet,
   FileText,
+  PlusCircle,
+  Edit3,
+  Trash2,
 } from 'lucide-vue-next';
 import { AgGridVue } from 'ag-grid-vue3';
 import {
@@ -188,6 +218,17 @@ import {
   type ICellRendererParams,
 } from 'ag-grid-community';
 import { sqlightGridTheme } from '@/styles/gridTheme';
+import { useQueryStore } from '@/stores/queryStore';
+import { useWorkspaceStore } from '@/stores/workspaceStore';
+import { useConnectionStore } from '@/stores/connectionStore';
+import { useSchemaStore } from '@/stores/schemaStore';
+import {
+  generateInsertStatement,
+  generateUpdateStatement,
+  generateDeleteStatement,
+  parseTargetTableFromSql,
+  type ColumnInfo,
+} from '@/utils/sqlGenerator';
 import type { ResultSet, CellValue } from '@/types/query';
 
 // Register AG Grid Community Modules
@@ -196,6 +237,11 @@ ModuleRegistry.registerModules([AllCommunityModule]);
 const props = defineProps<{
   resultSets: ResultSet[];
 }>();
+
+const queryStore = useQueryStore();
+const workspaceStore = useWorkspaceStore();
+const connectionStore = useConnectionStore();
+const schemaStore = useSchemaStore();
 
 const activeSetIndex = ref(0);
 const quickFilter = ref('');
@@ -364,9 +410,9 @@ function onCellContextMenu(event: CellContextMenuEvent) {
   const mouseEvent = event.event as MouseEvent | undefined;
   if (!mouseEvent) return;
 
-  // Viewport clamping (menu width is 192px / w-48, approximate height ~200px)
-  const menuWidth = 200;
-  const menuHeight = 200;
+  // Viewport clamping (menu width is 220px, approximate height ~320px)
+  const menuWidth = 220;
+  const menuHeight = 320;
   const x = Math.min(mouseEvent.clientX, Math.max(0, window.innerWidth - menuWidth - 8));
   const y = Math.min(mouseEvent.clientY, Math.max(0, window.innerHeight - menuHeight - 8));
 
@@ -384,6 +430,77 @@ function onCellContextMenu(event: CellContextMenuEvent) {
   setTimeout(() => {
     document.addEventListener('click', closeMenu);
   }, 0);
+}
+
+function handleGenerateDml(type: 'INSERT' | 'UPDATE' | 'DELETE') {
+  if (contextMenu.rowIndex < 0 || !currentSet.value) {
+    contextMenu.visible = false;
+    return;
+  }
+  const row = currentSet.value.rows[contextMenu.rowIndex];
+  if (!row) {
+    contextMenu.visible = false;
+    return;
+  }
+
+  const tab = queryStore.activeResultTab;
+  const sql = tab?.sql || '';
+  const parsedTarget = parseTargetTableFromSql(sql);
+
+  const tableName = parsedTarget?.tableName || tab?.tableName || tab?.title || 'TargetTable';
+  const schema = parsedTarget?.schema;
+
+  const connId = tab?.connectionId || connectionStore.activeConnectionId || undefined;
+  const db = tab?.database || connectionStore.activeDatabase || undefined;
+
+  // Resolve PKs from schemaStore if available
+  const tableSchema = connId && db ? schemaStore.getTable(tableName, connId, db) : undefined;
+  const pkColNames = new Set(
+    tableSchema?.columns
+      .filter((c) => c.isPrimaryKey)
+      .map((c) => c.name.toLowerCase()) ?? []
+  );
+
+  const columns: ColumnInfo[] = currentSet.value.columns.map((col) => ({
+    name: col.name,
+    dataType: col.dataType,
+    isPrimaryKey: pkColNames.has(col.name.toLowerCase()),
+  }));
+
+  let generated = '';
+  if (type === 'INSERT') {
+    generated = generateInsertStatement({
+      tableName,
+      schema,
+      columns,
+      row,
+    });
+  } else if (type === 'UPDATE') {
+    generated = generateUpdateStatement({
+      tableName,
+      schema,
+      columns,
+      row,
+    });
+  } else if (type === 'DELETE') {
+    generated = generateDeleteStatement({
+      tableName,
+      schema,
+      columns,
+      row,
+    });
+  }
+
+  try {
+    navigator.clipboard?.writeText(generated);
+  } catch (err) {
+    // Ignore clipboard error
+  }
+
+  workspaceStore.addSqlTab(generated, `${type}: ${tableName}`);
+  workspaceStore.showToast(`已建立 ${type} 語法並開啟新分頁（已複製至剪貼簿）`, 'success', 2500);
+
+  contextMenu.visible = false;
 }
 
 function copyCellValue() {

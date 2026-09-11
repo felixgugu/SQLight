@@ -99,6 +99,12 @@ function saveActiveTabIdToStorage(id: string) {
   }
 }
 
+export interface ToastMessage {
+  id: string;
+  message: string;
+  type: 'info' | 'success' | 'warning' | 'error';
+}
+
 export const useWorkspaceStore = defineStore('workspace', () => {
   const initialTabs = loadSavedTabs();
   const tabs = ref<WorkspaceTab[]>(initialTabs);
@@ -106,6 +112,9 @@ export const useWorkspaceStore = defineStore('workspace', () => {
   const bottomPanelTab = ref<BottomPanelTab>('results');
   const isBottomPanelOpen = ref<boolean>(true);
   const isSidebarOpen = ref<boolean>(loadSavedSidebarState());
+  const pendingColumnToInsert = ref<string | null>(null);
+  const activeToast = ref<ToastMessage | null>(null);
+  let toastTimer: ReturnType<typeof setTimeout> | null = null;
 
   // Watchers to auto-persist changes
   watch(
@@ -260,6 +269,39 @@ export const useWorkspaceStore = defineStore('workspace', () => {
     activeTabId.value = tabId;
   }
 
+  function setPendingColumnToInsert(colName: string) {
+    pendingColumnToInsert.value = colName;
+  }
+
+  function consumePendingColumnToInsert(): string | null {
+    const val = pendingColumnToInsert.value;
+    pendingColumnToInsert.value = null;
+    return val;
+  }
+
+  function clearPendingColumnToInsert() {
+    pendingColumnToInsert.value = null;
+  }
+
+  function showToast(
+    message: string,
+    type: 'info' | 'success' | 'warning' | 'error' = 'info',
+    duration = 2500
+  ) {
+    if (toastTimer) {
+      clearTimeout(toastTimer);
+    }
+    activeToast.value = {
+      id: String(Date.now()),
+      message,
+      type,
+    };
+    toastTimer = setTimeout(() => {
+      activeToast.value = null;
+      toastTimer = null;
+    }, duration);
+  }
+
   return {
     tabs,
     activeTabId,
@@ -267,6 +309,8 @@ export const useWorkspaceStore = defineStore('workspace', () => {
     bottomPanelTab,
     isBottomPanelOpen,
     isSidebarOpen,
+    pendingColumnToInsert,
+    activeToast,
     setActiveTab,
     addSqlTab,
     addTableDataTab,
@@ -280,5 +324,9 @@ export const useWorkspaceStore = defineStore('workspace', () => {
     toggleBottomPanel,
     toggleSidebar,
     setSidebarOpen,
+    setPendingColumnToInsert,
+    consumePendingColumnToInsert,
+    clearPendingColumnToInsert,
+    showToast,
   };
 });
