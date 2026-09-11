@@ -9,6 +9,7 @@ import { setupSqlCompletionProvider } from '@/utils/sqlCompletionProvider';
 import { useSettingsStore } from '@/stores/settingsStore';
 import { useWorkspaceStore } from '@/stores/workspaceStore';
 import { extractStatementAtCursor, type ExtractedStatement } from '@/utils/sqlStatementExtractor';
+import { analyzeSmartPasteContext } from '@/utils/sqlSmartPaste';
 import { format as formatSql } from 'sql-formatter';
 
 const props = defineProps<{
@@ -363,7 +364,7 @@ onMounted(() => {
     }
   );
 
-  // Smart Column Paste: Insert pending column name at cursor position upon clicking editor
+  // Smart Column Paste: Insert pending column name at cursor position with context awareness
   editorInstance.onMouseUp(() => {
     if (!workspaceStore.pendingColumnToInsert) return;
     const colText = workspaceStore.consumePendingColumnToInsert();
@@ -371,20 +372,30 @@ onMounted(() => {
 
     setTimeout(() => {
       if (!editorInstance) return;
+      const model = editorInstance.getModel();
+      if (!model) return;
+
       const selection = editorInstance.getSelection();
       const position = editorInstance.getPosition();
+      if (!position) return;
+
+      const fullSql = model.getValue();
+      const cursorOffset = model.getOffsetAt(position);
+
+      const smartResult = analyzeSmartPasteContext(fullSql, cursorOffset, colText);
+      const textToInsert = smartResult.textToInsert;
 
       if (selection && !selection.isEmpty()) {
         editorInstance.executeEdits('smart-paste-column', [
           {
             range: selection,
-            text: colText,
+            text: textToInsert,
             forceMoveMarkers: true,
           },
         ]);
-        const endCol = selection.startColumn + colText.length;
+        const endCol = selection.startColumn + textToInsert.length;
         editorInstance.setPosition(new monaco.Position(selection.startLineNumber, endCol));
-      } else if (position) {
+      } else {
         editorInstance.executeEdits('smart-paste-column', [
           {
             range: new monaco.Range(
@@ -393,16 +404,31 @@ onMounted(() => {
               position.lineNumber,
               position.column
             ),
-            text: colText,
+            text: textToInsert,
             forceMoveMarkers: true,
           },
         ]);
-        editorInstance.setPosition(
-          new monaco.Position(position.lineNumber, position.column + colText.length)
-        );
+
+        if (
+          smartResult.selectPlaceholder &&
+          smartResult.placeholderOffset !== undefined &&
+          smartResult.placeholderLength !== undefined
+        ) {
+          // Highlight the '?' placeholder so user can immediately type their value to replace it
+          const startCol = position.column + smartResult.placeholderOffset;
+          const endCol = startCol + smartResult.placeholderLength;
+          editorInstance.setSelection(
+            new monaco.Selection(position.lineNumber, startCol, position.lineNumber, endCol)
+          );
+        } else {
+          editorInstance.setPosition(
+            new monaco.Position(position.lineNumber, position.column + textToInsert.length)
+          );
+        }
       }
+
       editorInstance.focus();
-      workspaceStore.showToast(`已於游標處貼上欄位 ${colText}`, 'success', 2000);
+      workspaceStore.showToast(`已智慧貼上欄位：${textToInsert.trim()}`, 'success', 2200);
     }, 15);
   });
 
