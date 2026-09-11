@@ -64,6 +64,7 @@
         <div
           v-if="queryStore.resultTabs.length > 0"
           @wheel="handleResultTabsWheel"
+          @dragover.prevent="onContainerDragOver"
           class="h-7 bg-dark-850 border-b border-dark-750 flex items-center px-1.5 space-x-1.5 overflow-x-auto select-none flex-shrink-0"
         >
           <div
@@ -71,27 +72,29 @@
             :key="rtab.id"
             draggable="true"
             @dragstart="onDragStart($event, idx)"
+            @dragenter.prevent="onDragEnter($event, idx)"
             @dragover.prevent="onDragOver($event, idx)"
             @dragleave="onDragLeave($event, idx)"
-            @drop="onDrop($event, idx)"
+            @drop.prevent="onDrop($event, idx)"
             @dragend="onDragEnd"
             @click="queryStore.selectResultTab(rtab.id)"
             :class="[
-              'h-5.5 px-2 flex items-center space-x-1.5 text-xxs rounded cursor-pointer transition-all duration-100 group max-w-[220px] border flex-shrink-0 select-none',
+              'h-5.5 px-2 flex items-center space-x-1.5 text-xxs rounded cursor-grab active:cursor-grabbing transition-all duration-100 group max-w-[220px] border flex-shrink-0 select-none',
               queryStore.activeResultTabId === rtab.id
                 ? 'bg-dark-750 text-dark-100 border-dark-600 font-medium shadow-xs'
                 : 'bg-dark-800/80 text-dark-400 hover:text-dark-200 border-transparent hover:bg-dark-800',
-              draggedTabIndex === idx ? 'opacity-35 scale-95 border-dashed border-dark-500' : '',
-              dragOverTabIndex === idx ? 'border-brand-400 bg-brand-500/20 ring-1 ring-brand-400' : ''
+              draggedTabIndex === idx ? 'opacity-30 border-dashed border-brand-400' : '',
+              dragOverTabIndex === idx ? 'border-brand-400 bg-brand-500/25 ring-1 ring-brand-400' : ''
             ]"
             :title="`${rtab.title}\n執行時間: ${rtab.executedAt} (${rtab.durationMs}ms)\n筆數: ${rtab.rowCount} rows\n\nSQL 語句:\n${rtab.sql}`"
           >
             <!-- Pin / Unpin Button -->
             <button
               type="button"
+              @dragstart.stop.prevent
               @click.stop="queryStore.togglePinTab(rtab.id)"
               :class="[
-                'p-0.5 rounded transition-colors',
+                'p-0.5 rounded transition-colors cursor-pointer',
                 rtab.isPinned
                   ? 'text-amber-400 hover:text-amber-300'
                   : 'text-dark-500 hover:text-dark-300 opacity-60 group-hover:opacity-100'
@@ -102,12 +105,12 @@
             </button>
 
             <!-- Tab Title -->
-            <span class="truncate flex-1">{{ rtab.title }}</span>
+            <span class="truncate flex-1 pointer-events-none">{{ rtab.title }}</span>
 
             <!-- Row Count or Status Badge -->
             <span
               :class="[
-                'text-xxs px-1 py-0.2 rounded font-mono flex-shrink-0',
+                'text-xxs px-1 py-0.2 rounded font-mono flex-shrink-0 pointer-events-none',
                 rtab.result.messages.some((m) => m.level === 'error')
                   ? 'bg-rose-900/80 text-rose-300'
                   : 'bg-dark-700 text-dark-300'
@@ -119,13 +122,14 @@
             <!-- Delete Tab Button (Disabled on the last remaining result tab) -->
             <button
               type="button"
+              @dragstart.stop.prevent
               @click.stop="queryStore.deleteResultTab(rtab.id)"
               :disabled="queryStore.resultTabs.length <= 1"
               :class="[
                 'p-0.5 rounded transition-opacity flex-shrink-0',
                 queryStore.resultTabs.length <= 1
                   ? 'opacity-20 cursor-not-allowed text-dark-600'
-                  : 'text-dark-500 hover:text-dark-200 hover:bg-dark-700 opacity-0 group-hover:opacity-100'
+                  : 'text-dark-500 hover:text-dark-200 hover:bg-dark-700 opacity-0 group-hover:opacity-100 cursor-pointer'
               ]"
               :title="queryStore.resultTabs.length <= 1 ? '最後一個查詢結果不可刪除' : '關閉此結果'"
             >
@@ -179,24 +183,44 @@ function onDragStart(e: DragEvent, index: number) {
   draggedTabIndex.value = index;
   if (e.dataTransfer) {
     e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.dropEffect = 'move';
     e.dataTransfer.setData('text/plain', String(index));
   }
 }
 
-function onDragOver(_e: DragEvent, index: number) {
+function onDragEnter(e: DragEvent, index: number) {
+  if (e.dataTransfer) {
+    e.dataTransfer.dropEffect = 'move';
+  }
   if (draggedTabIndex.value !== null && draggedTabIndex.value !== index) {
     dragOverTabIndex.value = index;
   }
 }
 
-function onDragLeave(_e: DragEvent, index: number) {
+function onDragOver(e: DragEvent, index: number) {
+  if (e.dataTransfer) {
+    e.dataTransfer.dropEffect = 'move';
+  }
+  if (draggedTabIndex.value !== null && draggedTabIndex.value !== index) {
+    dragOverTabIndex.value = index;
+  }
+}
+
+function onDragLeave(e: DragEvent, index: number) {
+  const currentTarget = e.currentTarget as HTMLElement | null;
+  const relatedTarget = e.relatedTarget as Node | null;
+  if (currentTarget && relatedTarget && currentTarget.contains(relatedTarget)) {
+    return;
+  }
   if (dragOverTabIndex.value === index) {
     dragOverTabIndex.value = null;
   }
 }
 
 function onDrop(e: DragEvent, index: number) {
-  e.preventDefault();
+  if (e.dataTransfer) {
+    e.dataTransfer.dropEffect = 'move';
+  }
   if (draggedTabIndex.value !== null && draggedTabIndex.value !== index) {
     queryStore.reorderResultTabs(draggedTabIndex.value, index);
   }
@@ -207,6 +231,12 @@ function onDrop(e: DragEvent, index: number) {
 function onDragEnd() {
   draggedTabIndex.value = null;
   dragOverTabIndex.value = null;
+}
+
+function onContainerDragOver(e: DragEvent) {
+  if (e.dataTransfer) {
+    e.dataTransfer.dropEffect = 'move';
+  }
 }
 
 const hasErrorMessages = computed(() => {
