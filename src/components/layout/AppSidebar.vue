@@ -31,7 +31,7 @@
         <input
           v-model="filterQuery"
           type="text"
-          placeholder="Filter tables & views..."
+          placeholder="Filter tables, views & procs..."
           class="w-full bg-dark-900 border border-dark-700 rounded px-2 py-1 pl-7 text-xs text-dark-100 placeholder-dark-500 focus:outline-none focus:border-brand-500 font-mono transition-colors"
         />
       </div>
@@ -188,7 +188,7 @@
                 type="button"
                 @click.stop="toggleDatabaseExpand(conn.id, db)"
                 class="p-0.5 hover:bg-dark-700 text-dark-500 hover:text-dark-200 rounded transition-colors flex-shrink-0 flex items-center justify-center"
-                title="展開/收合資料表 (Expand/Collapse Tables)"
+                title="展開/收合資料表 (Expand/Collapse Objects)"
               >
                 <component
                   :is="expandedDbs[`${conn.id}:${db}`] ? ChevronDown : ChevronRight"
@@ -199,99 +199,312 @@
               <span class="truncate flex-1">{{ db }}</span>
             </div>
 
-            <!-- Database Tables & Views List -->
-            <div v-if="expandedDbs[`${conn.id}:${db}`]" class="pl-3.5 border-l border-dark-750 ml-2 space-y-0.5">
+            <!-- Database Categories & Object Tree -->
+            <div v-if="expandedDbs[`${conn.id}:${db}`]" class="pl-3.5 border-l border-dark-750 ml-2 space-y-1">
               <!-- Loading state -->
               <div
-                v-if="loadingTablesByDb[`${conn.id}:${db}`]"
+                v-if="loadingTablesByDb[`${conn.id}:${db}`] || schemaStore.loadingRoutinesByDb[`${conn.id}:${db}`]"
                 class="py-1 px-1.5 text-xxs text-dark-400 flex items-center space-x-1.5"
               >
                 <RotateCw class="w-3 h-3 animate-spin text-brand-400" />
                 <span>載入物件中...</span>
               </div>
 
-              <!-- Empty state -->
-              <div
-                v-else-if="getFilteredTables(conn.id, db).length === 0"
-                class="py-1 px-1.5 text-xxs text-dark-500 italic"
-              >
-                無資料表或檢視表 (No tables or views)
-              </div>
+              <div v-else class="space-y-1">
+                <!-- 1. 資料表 (Tables) -->
+                <div class="space-y-0.5">
+                  <div
+                    @click="toggleFolder(conn.id, db, 'tables')"
+                    class="flex items-center space-x-1 px-1.5 py-0.5 rounded cursor-pointer text-dark-400 hover:text-dark-200 hover:bg-dark-750 transition-colors"
+                  >
+                    <component
+                      :is="isFolderExpanded(conn.id, db, 'tables') ? ChevronDown : ChevronRight"
+                      class="w-2.5 h-2.5 text-dark-500"
+                    />
+                    <component
+                      :is="isFolderExpanded(conn.id, db, 'tables') ? FolderOpen : Folder"
+                      class="w-3 h-3 text-brand-400"
+                    />
+                    <span class="font-sans font-medium text-dark-200">資料表</span>
+                    <span class="text-xxs text-dark-500 font-mono">({{ getFilteredTables(conn.id, db).length }})</span>
+                  </div>
 
-              <!-- Tables & Views List -->
-              <div
-                v-else
-                v-for="table in getFilteredTables(conn.id, db)"
-                :key="`${conn.id}:${db}:${table.schema}.${table.name}`"
-                class="space-y-0.5"
-              >
-                <!-- Table Item with Right Click Context Menu -->
-                <div
-                  @click="toggleTable(conn.id, db, table.schema, table.name)"
-                  @contextmenu.prevent="openContextMenu($event, conn.id, db, table.schema, table.name)"
-                  class="flex items-center space-x-1 px-1.5 py-0.5 rounded hover:bg-dark-750 cursor-pointer text-dark-300 hover:text-dark-100 group"
-                  :title="`${table.schema}.${table.name} (${table.kind}) - Right click for actions`"
-                >
-                  <component
-                    :is="isTableExpanded(conn.id, db, table.schema, table.name) ? ChevronDown : ChevronRight"
-                    class="w-2.5 h-2.5 text-dark-500 group-hover:text-dark-300 flex-shrink-0"
-                  />
-                  <Table2 v-if="table.kind === 'BASE TABLE'" class="w-3 h-3 text-brand-400 flex-shrink-0" />
-                  <FileText v-else class="w-3 h-3 text-purple-400 flex-shrink-0" />
-                  <span class="text-dark-400 text-xxs flex-shrink-0">{{ table.schema }}.</span>
-                  <span class="truncate flex-1 font-medium">{{ table.name }}</span>
+                  <!-- Tables List -->
+                  <div
+                    v-if="isFolderExpanded(conn.id, db, 'tables')"
+                    class="pl-3.5 border-l border-dark-750 ml-2 space-y-0.5"
+                  >
+                    <div
+                      v-if="getFilteredTables(conn.id, db).length === 0"
+                      class="py-0.5 px-1.5 text-xxs text-dark-500 italic"
+                    >
+                      無資料表 (No tables)
+                    </div>
+
+                    <div
+                      v-else
+                      v-for="table in getFilteredTables(conn.id, db)"
+                      :key="`${conn.id}:${db}:${table.schema}.${table.name}`"
+                      class="space-y-0.5"
+                    >
+                      <!-- Table Item -->
+                      <div
+                        @click="toggleTable(conn.id, db, table.schema, table.name)"
+                        @contextmenu.prevent="openContextMenu($event, conn.id, db, table.schema, table.name, 'TABLE')"
+                        class="flex items-center space-x-1 px-1.5 py-0.5 rounded hover:bg-dark-750 cursor-pointer text-dark-300 hover:text-dark-100 group"
+                        :title="`${table.schema}.${table.name} (Table) - 右鍵開啟選單 (Open Data / DDL)`"
+                      >
+                        <component
+                          :is="isTableExpanded(conn.id, db, table.schema, table.name) ? ChevronDown : ChevronRight"
+                          class="w-2.5 h-2.5 text-dark-500 group-hover:text-dark-300 flex-shrink-0"
+                        />
+                        <Table2 class="w-3 h-3 text-brand-400 flex-shrink-0" />
+                        <span class="text-dark-400 text-xxs flex-shrink-0">{{ table.schema }}.</span>
+                        <span class="truncate flex-1 font-medium">{{ table.name }}</span>
+                      </div>
+
+                      <!-- Columns List -->
+                      <div
+                        v-if="isTableExpanded(conn.id, db, table.schema, table.name)"
+                        class="pl-3.5 border-l border-dark-750 ml-2 space-y-0.5"
+                      >
+                        <div
+                          v-if="loadingColumns[tableKey(conn.id, db, table.schema, table.name)]"
+                          class="py-0.5 px-1 text-xxs text-dark-400 flex items-center space-x-1.5"
+                        >
+                          <RotateCw class="w-2.5 h-2.5 animate-spin text-brand-400" />
+                          <span>載入欄位中...</span>
+                        </div>
+
+                        <div
+                          v-else-if="getTableColumns(conn.id, db, table.schema, table.name).length === 0"
+                          class="py-0.5 px-1 text-xxs text-dark-500 italic"
+                        >
+                          無欄位資訊
+                        </div>
+
+                        <div
+                          v-else
+                          v-for="col in getTableColumns(conn.id, db, table.schema, table.name)"
+                          :key="col.name"
+                          @dblclick.stop="handleColumnDoubleClick(col)"
+                          class="flex items-center space-x-1.5 px-1.5 py-0.5 text-xxs rounded cursor-pointer select-none transition-colors group"
+                          :class="[
+                            isPendingColumn(col.name)
+                              ? 'bg-brand-500/25 text-brand-200 border border-brand-500/40 shadow-xs'
+                              : 'text-dark-400 hover:text-dark-100 hover:bg-dark-750/70'
+                          ]"
+                          :title="`雙擊記住此欄位 (${col.name})，點擊編輯區游標處即可貼上`"
+                        >
+                          <Key v-if="col.isPrimaryKey" class="w-2.5 h-2.5 text-amber-400 flex-shrink-0" />
+                          <Columns v-else class="w-2.5 h-2.5 text-dark-500 group-hover:text-dark-300 flex-shrink-0" />
+                          <span :class="[col.isPrimaryKey ? 'text-amber-300 font-semibold' : 'text-dark-300 group-hover:text-dark-100']" class="truncate flex-1">
+                            {{ col.name }}
+                          </span>
+                          <span class="text-dark-500 lowercase font-sans text-xxs flex-shrink-0">
+                            {{ col.dataType }}
+                          </span>
+                          <span
+                            v-if="isPendingColumn(col.name)"
+                            class="text-xxs px-1 py-0.2 bg-brand-500/30 text-brand-300 font-medium rounded text-[9px] border border-brand-400/40 flex-shrink-0 animate-pulse"
+                          >
+                            待貼上
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
 
-                <!-- Columns List -->
-                <div
-                  v-if="isTableExpanded(conn.id, db, table.schema, table.name)"
-                  class="pl-3.5 border-l border-dark-750 ml-2 space-y-0.5"
-                >
-                  <!-- Loading state -->
+                <!-- 2. 檢視表 (Views) -->
+                <div class="space-y-0.5">
                   <div
-                    v-if="loadingColumns[tableKey(conn.id, db, table.schema, table.name)]"
-                    class="py-0.5 px-1 text-xxs text-dark-400 flex items-center space-x-1.5"
+                    @click="toggleFolder(conn.id, db, 'views')"
+                    class="flex items-center space-x-1 px-1.5 py-0.5 rounded cursor-pointer text-dark-400 hover:text-dark-200 hover:bg-dark-750 transition-colors"
                   >
-                    <RotateCw class="w-2.5 h-2.5 animate-spin text-brand-400" />
-                    <span>載入欄位中...</span>
+                    <component
+                      :is="isFolderExpanded(conn.id, db, 'views') ? ChevronDown : ChevronRight"
+                      class="w-2.5 h-2.5 text-dark-500"
+                    />
+                    <component
+                      :is="isFolderExpanded(conn.id, db, 'views') ? FolderOpen : Folder"
+                      class="w-3 h-3 text-purple-400"
+                    />
+                    <span class="font-sans font-medium text-dark-200">檢視表</span>
+                    <span class="text-xxs text-dark-500 font-mono">({{ getFilteredViews(conn.id, db).length }})</span>
                   </div>
 
-                  <!-- Empty state -->
+                  <!-- Views List -->
                   <div
-                    v-else-if="getTableColumns(conn.id, db, table.schema, table.name).length === 0"
-                    class="py-0.5 px-1 text-xxs text-dark-500 italic"
+                    v-if="isFolderExpanded(conn.id, db, 'views')"
+                    class="pl-3.5 border-l border-dark-750 ml-2 space-y-0.5"
                   >
-                    無欄位資訊 (No columns)
-                  </div>
-
-                  <!-- Columns items -->
-                  <div
-                    v-else
-                    v-for="col in getTableColumns(conn.id, db, table.schema, table.name)"
-                    :key="col.name"
-                    @dblclick.stop="handleColumnDoubleClick(col)"
-                    class="flex items-center space-x-1.5 px-1.5 py-0.5 text-xxs rounded cursor-pointer select-none transition-colors group"
-                    :class="[
-                      isPendingColumn(col.name)
-                        ? 'bg-brand-500/25 text-brand-200 border border-brand-500/40 shadow-xs'
-                        : 'text-dark-400 hover:text-dark-100 hover:bg-dark-750/70'
-                    ]"
-                    :title="`雙擊記住此欄位 (${col.name})，點擊編輯區游標處即可貼上`"
-                  >
-                    <Key v-if="col.isPrimaryKey" class="w-2.5 h-2.5 text-amber-400 flex-shrink-0" />
-                    <Columns v-else class="w-2.5 h-2.5 text-dark-500 group-hover:text-dark-300 flex-shrink-0" />
-                    <span :class="[col.isPrimaryKey ? 'text-amber-300 font-semibold' : 'text-dark-300 group-hover:text-dark-100']" class="truncate flex-1">
-                      {{ col.name }}
-                    </span>
-                    <span class="text-dark-500 lowercase font-sans text-xxs flex-shrink-0">
-                      {{ col.dataType }}
-                    </span>
-                    <span
-                      v-if="isPendingColumn(col.name)"
-                      class="text-xxs px-1 py-0.2 bg-brand-500/30 text-brand-300 font-medium rounded text-[9px] border border-brand-400/40 flex-shrink-0 animate-pulse"
+                    <div
+                      v-if="getFilteredViews(conn.id, db).length === 0"
+                      class="py-0.5 px-1.5 text-xxs text-dark-500 italic"
                     >
-                      待貼上
-                    </span>
+                      無檢視表 (No views)
+                    </div>
+
+                    <div
+                      v-else
+                      v-for="view in getFilteredViews(conn.id, db)"
+                      :key="`${conn.id}:${db}:${view.schema}.${view.name}`"
+                      class="space-y-0.5"
+                    >
+                      <!-- View Item -->
+                      <div
+                        @click="toggleTable(conn.id, db, view.schema, view.name)"
+                        @contextmenu.prevent="openContextMenu($event, conn.id, db, view.schema, view.name, 'VIEW')"
+                        class="flex items-center space-x-1 px-1.5 py-0.5 rounded hover:bg-dark-750 cursor-pointer text-dark-300 hover:text-dark-100 group"
+                        :title="`${view.schema}.${view.name} (View) - 右鍵檢視定義或查詢`"
+                      >
+                        <component
+                          :is="isTableExpanded(conn.id, db, view.schema, view.name) ? ChevronDown : ChevronRight"
+                          class="w-2.5 h-2.5 text-dark-500 group-hover:text-dark-300 flex-shrink-0"
+                        />
+                        <FileText class="w-3 h-3 text-purple-400 flex-shrink-0" />
+                        <span class="text-dark-400 text-xxs flex-shrink-0">{{ view.schema }}.</span>
+                        <span class="truncate flex-1 font-medium">{{ view.name }}</span>
+                      </div>
+
+                      <!-- View Columns -->
+                      <div
+                        v-if="isTableExpanded(conn.id, db, view.schema, view.name)"
+                        class="pl-3.5 border-l border-dark-750 ml-2 space-y-0.5"
+                      >
+                        <div
+                          v-if="loadingColumns[tableKey(conn.id, db, view.schema, view.name)]"
+                          class="py-0.5 px-1 text-xxs text-dark-400 flex items-center space-x-1.5"
+                        >
+                          <RotateCw class="w-2.5 h-2.5 animate-spin text-brand-400" />
+                          <span>載入欄位中...</span>
+                        </div>
+
+                        <div
+                          v-else-if="getTableColumns(conn.id, db, view.schema, view.name).length === 0"
+                          class="py-0.5 px-1 text-xxs text-dark-500 italic"
+                        >
+                          無欄位資訊
+                        </div>
+
+                        <div
+                          v-else
+                          v-for="col in getTableColumns(conn.id, db, view.schema, view.name)"
+                          :key="col.name"
+                          @dblclick.stop="handleColumnDoubleClick(col)"
+                          class="flex items-center space-x-1.5 px-1.5 py-0.5 text-xxs rounded cursor-pointer select-none transition-colors group"
+                          :class="[
+                            isPendingColumn(col.name)
+                              ? 'bg-brand-500/25 text-brand-200 border border-brand-500/40 shadow-xs'
+                              : 'text-dark-400 hover:text-dark-100 hover:bg-dark-750/70'
+                          ]"
+                          :title="`雙擊記住此欄位 (${col.name})，點擊編輯區游標處即可貼上`"
+                        >
+                          <Columns class="w-2.5 h-2.5 text-dark-500 group-hover:text-dark-300 flex-shrink-0" />
+                          <span class="text-dark-300 group-hover:text-dark-100 truncate flex-1">
+                            {{ col.name }}
+                          </span>
+                          <span class="text-dark-500 lowercase font-sans text-xxs flex-shrink-0">
+                            {{ col.dataType }}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- 3. 預存程序 (Stored Procedures) -->
+                <div class="space-y-0.5">
+                  <div
+                    @click="toggleFolder(conn.id, db, 'procs')"
+                    class="flex items-center space-x-1 px-1.5 py-0.5 rounded cursor-pointer text-dark-400 hover:text-dark-200 hover:bg-dark-750 transition-colors"
+                  >
+                    <component
+                      :is="isFolderExpanded(conn.id, db, 'procs') ? ChevronDown : ChevronRight"
+                      class="w-2.5 h-2.5 text-dark-500"
+                    />
+                    <component
+                      :is="isFolderExpanded(conn.id, db, 'procs') ? FolderOpen : Folder"
+                      class="w-3 h-3 text-amber-400"
+                    />
+                    <span class="font-sans font-medium text-dark-200">預存程序</span>
+                    <span class="text-xxs text-dark-500 font-mono">({{ getFilteredProcedures(conn.id, db).length }})</span>
+                  </div>
+
+                  <!-- Procedures List -->
+                  <div
+                    v-if="isFolderExpanded(conn.id, db, 'procs')"
+                    class="pl-3.5 border-l border-dark-750 ml-2 space-y-0.5"
+                  >
+                    <div
+                      v-if="getFilteredProcedures(conn.id, db).length === 0"
+                      class="py-0.5 px-1.5 text-xxs text-dark-500 italic"
+                    >
+                      無預存程序 (No stored procedures)
+                    </div>
+
+                    <div
+                      v-else
+                      v-for="proc in getFilteredProcedures(conn.id, db)"
+                      :key="`${conn.id}:${db}:${proc.schema}.${proc.name}`"
+                      @click="selectDatabase(conn.id, db)"
+                      @contextmenu.prevent="openContextMenu($event, conn.id, db, proc.schema, proc.name, 'PROCEDURE')"
+                      @dblclick="handleViewDefinition(conn.id, db, proc.schema, proc.name)"
+                      class="flex items-center space-x-1 px-1.5 py-0.5 rounded hover:bg-dark-750 cursor-pointer text-dark-300 hover:text-dark-100 group"
+                      :title="`${proc.schema}.${proc.name} (Stored Procedure) - 雙擊檢視定義，右鍵開啟選單`"
+                    >
+                      <Cog class="w-3 h-3 text-amber-400 flex-shrink-0" />
+                      <span class="text-dark-400 text-xxs flex-shrink-0">{{ proc.schema }}.</span>
+                      <span class="truncate flex-1 font-medium">{{ proc.name }}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- 4. 函數 (Functions) -->
+                <div class="space-y-0.5">
+                  <div
+                    @click="toggleFolder(conn.id, db, 'funcs')"
+                    class="flex items-center space-x-1 px-1.5 py-0.5 rounded cursor-pointer text-dark-400 hover:text-dark-200 hover:bg-dark-750 transition-colors"
+                  >
+                    <component
+                      :is="isFolderExpanded(conn.id, db, 'funcs') ? ChevronDown : ChevronRight"
+                      class="w-2.5 h-2.5 text-dark-500"
+                    />
+                    <component
+                      :is="isFolderExpanded(conn.id, db, 'funcs') ? FolderOpen : Folder"
+                      class="w-3 h-3 text-sky-400"
+                    />
+                    <span class="font-sans font-medium text-dark-200">函數</span>
+                    <span class="text-xxs text-dark-500 font-mono">({{ getFilteredFunctions(conn.id, db).length }})</span>
+                  </div>
+
+                  <!-- Functions List -->
+                  <div
+                    v-if="isFolderExpanded(conn.id, db, 'funcs')"
+                    class="pl-3.5 border-l border-dark-750 ml-2 space-y-0.5"
+                  >
+                    <div
+                      v-if="getFilteredFunctions(conn.id, db).length === 0"
+                      class="py-0.5 px-1.5 text-xxs text-dark-500 italic"
+                    >
+                      無函數 (No functions)
+                    </div>
+
+                    <div
+                      v-else
+                      v-for="func in getFilteredFunctions(conn.id, db)"
+                      :key="`${conn.id}:${db}:${func.schema}.${func.name}`"
+                      @click="selectDatabase(conn.id, db)"
+                      @contextmenu.prevent="openContextMenu($event, conn.id, db, func.schema, func.name, 'FUNCTION')"
+                      @dblclick="handleViewDefinition(conn.id, db, func.schema, func.name)"
+                      class="flex items-center space-x-1 px-1.5 py-0.5 rounded hover:bg-dark-750 cursor-pointer text-dark-300 hover:text-dark-100 group"
+                      :title="`${func.schema}.${func.name} (Function) - 雙擊檢視定義，右鍵開啟選單`"
+                    >
+                      <Code2 class="w-3 h-3 text-sky-400 flex-shrink-0" />
+                      <span class="text-dark-400 text-xxs flex-shrink-0">{{ func.schema }}.</span>
+                      <span class="truncate flex-1 font-medium">{{ func.name }}</span>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -301,29 +514,75 @@
       </div>
     </div>
 
-    <!-- Table Context Menu Popover -->
+    <!-- Object Context Menu Popover (Tables, Views, Procedures, Functions) -->
     <div
       v-if="contextMenu.visible"
       :style="{ top: `${contextMenu.y}px`, left: `${contextMenu.x}px` }"
-      class="fixed z-50 bg-dark-800 border border-dark-700 rounded shadow-xl py-1 w-44 text-xs font-sans text-dark-200 select-none"
+      class="fixed z-50 bg-dark-800 border border-dark-700 rounded shadow-xl py-1 w-52 text-xs font-sans text-dark-200 select-none"
       @click="contextMenu.visible = false"
     >
       <div class="px-2.5 py-1 text-xxs text-dark-400 border-b border-dark-750 font-mono truncate">
-        {{ contextMenu.schema }}.{{ contextMenu.tableName }}
+        {{ contextMenu.schema }}.{{ contextMenu.tableName }} ({{ contextMenu.objectType }})
       </div>
+
+      <!-- Tables & Views: Open Data -->
       <button
+        v-if="contextMenu.objectType === 'TABLE' || contextMenu.objectType === 'VIEW'"
         @click="handleOpenData"
         class="w-full text-left px-2.5 py-1.5 hover:bg-dark-750 hover:text-dark-100 flex items-center space-x-2 transition-colors"
       >
         <Table2 class="w-3.5 h-3.5 text-emerald-400" />
-        <span>Open Data</span>
+        <span>{{ contextMenu.objectType === 'TABLE' ? '開啟資料表 (Open Data)' : '開啟檢視表資料' }}</span>
       </button>
+
+      <!-- Tables & Views: Generate SELECT -->
       <button
+        v-if="contextMenu.objectType === 'TABLE' || contextMenu.objectType === 'VIEW'"
         @click="handleGenerateSelect"
         class="w-full text-left px-2.5 py-1.5 hover:bg-dark-750 hover:text-dark-100 flex items-center space-x-2 transition-colors"
       >
         <FileCode class="w-3.5 h-3.5 text-brand-400" />
-        <span>Generate SELECT</span>
+        <span>產生 SELECT 語法</span>
+      </button>
+
+      <!-- Table Only: Generate CREATE TABLE DDL -->
+      <button
+        v-if="contextMenu.objectType === 'TABLE'"
+        @click="handleGenerateCreateTableDdl"
+        class="w-full text-left px-2.5 py-1.5 hover:bg-dark-750 hover:text-dark-100 flex items-center space-x-2 transition-colors text-amber-300"
+      >
+        <FileText class="w-3.5 h-3.5 text-amber-400" />
+        <span>產生 CREATE TABLE 腳本</span>
+      </button>
+
+      <!-- Views, Procedures, Functions: View Definition -->
+      <button
+        v-if="contextMenu.objectType === 'VIEW' || contextMenu.objectType === 'PROCEDURE' || contextMenu.objectType === 'FUNCTION'"
+        @click="handleViewDefinition(contextMenu.connId, contextMenu.database, contextMenu.schema, contextMenu.tableName)"
+        class="w-full text-left px-2.5 py-1.5 hover:bg-dark-750 hover:text-dark-100 flex items-center space-x-2 transition-colors text-cyan-300"
+      >
+        <Code2 class="w-3.5 h-3.5 text-cyan-400" />
+        <span>檢視定義 (View Definition)</span>
+      </button>
+
+      <!-- Procedures: Generate EXEC Template -->
+      <button
+        v-if="contextMenu.objectType === 'PROCEDURE'"
+        @click="handleGenerateExec"
+        class="w-full text-left px-2.5 py-1.5 hover:bg-dark-750 hover:text-dark-100 flex items-center space-x-2 transition-colors"
+      >
+        <Play class="w-3.5 h-3.5 text-emerald-400" />
+        <span>產生 EXEC 呼叫樣板</span>
+      </button>
+
+      <!-- Functions: Generate SELECT Template -->
+      <button
+        v-if="contextMenu.objectType === 'FUNCTION'"
+        @click="handleGenerateFuncSelect"
+        class="w-full text-left px-2.5 py-1.5 hover:bg-dark-750 hover:text-dark-100 flex items-center space-x-2 transition-colors"
+      >
+        <FileCode class="w-3.5 h-3.5 text-sky-400" />
+        <span>產生 SELECT 呼叫樣板</span>
       </button>
     </div>
 
@@ -416,6 +675,11 @@ import {
   Check,
   X,
   Unplug,
+  Folder,
+  FolderOpen,
+  Cog,
+  Code2,
+  Play,
 } from 'lucide-vue-next';
 import ConfirmModal from '@/components/common/ConfirmModal.vue';
 import { useConnectionStore } from '@/stores/connectionStore';
@@ -423,7 +687,8 @@ import { useWorkspaceStore } from '@/stores/workspaceStore';
 import { useSchemaStore } from '@/stores/schemaStore';
 import { schemaService } from '@/services/schemaService';
 import { wrapIdentifierIfNeeded } from '@/utils/sqlParser';
-import type { TableItem, ColumnItem } from '@/types/schema';
+import { generateCreateTableDdl } from '@/utils/ddlGenerator';
+import type { TableItem, ColumnItem, RoutineItem } from '@/types/schema';
 import type { ConnectionProfile } from '@/types/connection';
 
 const emit = defineEmits<{
@@ -460,19 +725,66 @@ const isRefreshing = ref(false);
 const refreshingConnId = ref<string | null>(null);
 const expandedConns = reactive<Record<string, boolean>>({});
 const expandedDbs = reactive<Record<string, boolean>>({});
+const expandedFolders = reactive<Record<string, boolean>>({});
 const expandedTables = reactive<Record<string, boolean>>({});
 const loadedColumns = reactive<Record<string, ColumnItem[]>>({});
 const tablesByDb = reactive<Record<string, TableItem[]>>({});
 const loadingTablesByDb = reactive<Record<string, boolean>>({});
 const loadingColumns = reactive<Record<string, boolean>>({});
 
+function isFolderExpanded(connId: string, db: string, folder: 'tables' | 'views' | 'procs' | 'funcs'): boolean {
+  if (filterQuery.value.trim()) {
+    return true;
+  }
+  const key = `${connId}:${db}:${folder}`;
+  if (expandedFolders[key] === undefined) {
+    return folder === 'tables';
+  }
+  return !!expandedFolders[key];
+}
+
+function toggleFolder(connId: string, db: string, folder: 'tables' | 'views' | 'procs' | 'funcs') {
+  const key = `${connId}:${db}:${folder}`;
+  expandedFolders[key] = !isFolderExpanded(connId, db, folder);
+}
+
 function getFilteredTables(connId: string, db: string): TableItem[] {
   const key = `${connId}:${db}`;
-  const list = tablesByDb[key] || [];
+  const list = (tablesByDb[key] || []).filter((t) => t.kind === 'BASE TABLE');
   const q = filterQuery.value.trim().toLowerCase();
   if (!q) return list;
   return list.filter(
     (t) => t.name.toLowerCase().includes(q) || t.schema.toLowerCase().includes(q)
+  );
+}
+
+function getFilteredViews(connId: string, db: string): TableItem[] {
+  const key = `${connId}:${db}`;
+  const list = (tablesByDb[key] || []).filter((t) => t.kind === 'VIEW');
+  const q = filterQuery.value.trim().toLowerCase();
+  if (!q) return list;
+  return list.filter(
+    (t) => t.name.toLowerCase().includes(q) || t.schema.toLowerCase().includes(q)
+  );
+}
+
+function getFilteredProcedures(connId: string, db: string): RoutineItem[] {
+  const key = `${connId}:${db}`;
+  const list = (schemaStore.routinesByDb[key] || []).filter((r) => r.kind === 'PROCEDURE');
+  const q = filterQuery.value.trim().toLowerCase();
+  if (!q) return list;
+  return list.filter(
+    (r) => r.name.toLowerCase().includes(q) || r.schema.toLowerCase().includes(q)
+  );
+}
+
+function getFilteredFunctions(connId: string, db: string): RoutineItem[] {
+  const key = `${connId}:${db}`;
+  const list = (schemaStore.routinesByDb[key] || []).filter((r) => r.kind === 'FUNCTION');
+  const q = filterQuery.value.trim().toLowerCase();
+  if (!q) return list;
+  return list.filter(
+    (r) => r.name.toLowerCase().includes(q) || r.schema.toLowerCase().includes(q)
   );
 }
 
@@ -564,8 +876,17 @@ function cancelDelete() {
   isDeleteModalOpen.value = false;
 }
 
-// Table Context Menu
-const contextMenu = reactive({
+// Object Context Menu
+const contextMenu = reactive<{
+  visible: boolean;
+  x: number;
+  y: number;
+  connId: string;
+  database: string;
+  schema: string;
+  tableName: string;
+  objectType: 'TABLE' | 'VIEW' | 'PROCEDURE' | 'FUNCTION';
+}>({
   visible: false,
   x: 0,
   y: 0,
@@ -573,6 +894,7 @@ const contextMenu = reactive({
   database: '',
   schema: '',
   tableName: '',
+  objectType: 'TABLE',
 });
 
 // Connection Context Menu
@@ -609,11 +931,14 @@ async function loadDatabaseTables(connId: string, db: string, force = false) {
     if (connectionStore.activeConnectionId !== connId || connectionStore.status !== 'connected') {
       await connectionStore.connect(connId);
     }
-    const tables = await schemaService.getTables(connId, db);
+    const [tables] = await Promise.all([
+      schemaService.getTables(connId, db),
+      schemaStore.loadDatabaseRoutines(connId, db, force),
+    ]);
     tablesByDb[dbKey] = tables;
   } catch (err: unknown) {
     console.error(`Failed to load tables for ${dbKey}:`, err);
-    alert(`載入資料庫 [${db}] 的資料表失敗: ${err instanceof Error ? err.message : String(err)}`);
+    alert(`載入資料庫 [${db}] 的物件失敗: ${err instanceof Error ? err.message : String(err)}`);
   } finally {
     loadingTablesByDb[dbKey] = false;
   }
@@ -625,6 +950,7 @@ async function refreshCurrent() {
     await connectionStore.refreshDatabases();
     if (connectionStore.activeConnectionId && connectionStore.activeDatabase) {
       schemaStore.loadDatabaseSchema(connectionStore.activeConnectionId, connectionStore.activeDatabase, true).catch(() => {});
+      schemaStore.loadDatabaseRoutines(connectionStore.activeConnectionId, connectionStore.activeDatabase, true).catch(() => {});
       await loadDatabaseTables(connectionStore.activeConnectionId, connectionStore.activeDatabase, true);
     }
   } catch (err: unknown) {
@@ -652,6 +978,7 @@ async function handleRefreshConn(conn: ConnectionProfile) {
       const dbKey = `${conn.id}:${db}`;
       if (expandedDbs[dbKey]) {
         schemaStore.loadDatabaseSchema(conn.id, db, true).catch(() => {});
+        schemaStore.loadDatabaseRoutines(conn.id, db, true).catch(() => {});
         await loadDatabaseTables(conn.id, db, true);
       }
     }
@@ -738,7 +1065,7 @@ async function toggleTable(connId: string, db: string, schema: string, tableName
       loadedColumns[key] = cols;
     } catch (err: unknown) {
       console.error('Failed to load columns:', err);
-      alert(`載入資料表 [${schema}.${tableName}] 欄位失敗: ${err instanceof Error ? err.message : String(err)}`);
+      alert(`載入欄位失敗: ${err instanceof Error ? err.message : String(err)}`);
       expandedTables[key] = false;
     } finally {
       loadingColumns[key] = false;
@@ -750,7 +1077,14 @@ function getTableColumns(connId: string, db: string, schema: string, tableName: 
   return loadedColumns[tableKey(connId, db, schema, tableName)] ?? [];
 }
 
-function openContextMenu(event: MouseEvent, connId: string, db: string, schema: string, tableName: string) {
+function openContextMenu(
+  event: MouseEvent,
+  connId: string,
+  db: string,
+  schema: string,
+  tableName: string,
+  objectType: 'TABLE' | 'VIEW' | 'PROCEDURE' | 'FUNCTION' = 'TABLE'
+) {
   connContextMenu.visible = false;
   contextMenu.visible = true;
   contextMenu.x = event.clientX;
@@ -759,6 +1093,7 @@ function openContextMenu(event: MouseEvent, connId: string, db: string, schema: 
   contextMenu.database = db;
   contextMenu.schema = schema;
   contextMenu.tableName = tableName;
+  contextMenu.objectType = objectType;
 
   function closeMenu() {
     contextMenu.visible = false;
@@ -822,6 +1157,103 @@ async function handleGenerateSelect() {
   const dbPrefix = contextMenu.database ? `[${contextMenu.database}].` : '';
   const sql = `SELECT TOP 1000\n  *\nFROM ${dbPrefix}[${contextMenu.schema}].[${contextMenu.tableName}];\n`;
   workspaceStore.addSqlTab(sql, `${contextMenu.tableName}.sql`);
+  contextMenu.visible = false;
+}
+
+async function handleGenerateCreateTableDdl() {
+  const { connId, database, schema, tableName } = contextMenu;
+  const key = tableKey(connId, database, schema, tableName);
+  let cols = loadedColumns[key];
+  if (!cols || cols.length === 0) {
+    try {
+      cols = await schemaService.getColumns(connId, schema, tableName, database);
+      loadedColumns[key] = cols;
+    } catch (err) {
+      console.error('Failed to get columns for DDL:', err);
+    }
+  }
+
+  const ddl = generateCreateTableDdl({
+    tableName,
+    schema,
+    database,
+    columns: cols || [],
+  });
+
+  workspaceStore.addSqlTab(ddl, `${tableName}_ddl.sql`);
+  workspaceStore.showToast(`已產生 [${schema}].[${tableName}] 之 CREATE TABLE 腳本`, 'success', 2500);
+  contextMenu.visible = false;
+}
+
+async function handleViewDefinition(connId: string, database: string, schema: string, name: string) {
+  try {
+    if (connectionStore.activeConnectionId !== connId) {
+      await connectionStore.connect(connId);
+    }
+    const def = await schemaStore.getObjectDefinition(connId, database, schema, name);
+    if (def) {
+      workspaceStore.addSqlTab(def, `${schema}.${name}.sql`);
+      workspaceStore.showToast(`已載入 [${schema}].[${name}] 之 SQL 定義`, 'success', 2500);
+    } else {
+      const fallback = `-- 提示：未能直接讀取到 OBJECT_DEFINITION（可能為加密物件或缺少 VIEW DEFINITION 權限）
+USE [${database}];
+GO
+
+SELECT OBJECT_DEFINITION(OBJECT_ID(N'[${schema}].[${name}]')) AS [Definition];
+GO
+`;
+      workspaceStore.addSqlTab(fallback, `${schema}.${name}.sql`);
+      workspaceStore.showToast(`未能直接讀取到定義，已開啟查詢語句`, 'info', 2500);
+    }
+  } catch (err) {
+    console.error('Failed to load object definition:', err);
+  }
+  contextMenu.visible = false;
+}
+
+function handleGenerateExec() {
+  const { database, schema, tableName } = contextMenu;
+  const sql = `-- ============================================================
+-- 執行預存程序: [${schema}].[${tableName}]
+-- 產生時間: ${new Date().toLocaleString()}
+-- ============================================================
+USE [${database}];
+GO
+
+DECLARE @RC int;
+-- TODO: 如有參數請在此宣告與傳入：
+-- DECLARE @Param1 int;
+
+EXECUTE @RC = [${schema}].[${tableName}]
+  -- @Param1 = @Param1
+;
+
+SELECT @RC AS [Return Code];
+GO
+`;
+  workspaceStore.addSqlTab(sql, `EXEC_${tableName}.sql`);
+  workspaceStore.showToast(`已產生 [${schema}].[${tableName}] 之 EXEC 呼叫樣板`, 'success', 2500);
+  contextMenu.visible = false;
+}
+
+function handleGenerateFuncSelect() {
+  const { database, schema, tableName } = contextMenu;
+  const sql = `-- ============================================================
+-- 呼叫函數: [${schema}].[${tableName}]
+-- 產生時間: ${new Date().toLocaleString()}
+-- ============================================================
+USE [${database}];
+GO
+
+-- 若為純量函數 (Scalar Function):
+SELECT [${schema}].[${tableName}]() AS [Result];
+
+-- 若為資料表值函數 (Table-valued Function):
+-- SELECT * FROM [${schema}].[${tableName}]();
+GO
+`;
+  workspaceStore.addSqlTab(sql, `SELECT_${tableName}.sql`);
+  workspaceStore.showToast(`已產生 [${schema}].[${tableName}] 之呼叫樣板`, 'success', 2500);
   contextMenu.visible = false;
 }
 </script>

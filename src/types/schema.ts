@@ -14,6 +14,12 @@ export interface TableItem {
   kind: string; // 'BASE TABLE' | 'VIEW'
 }
 
+export interface RoutineItem {
+  schema: string;
+  name: string;
+  kind: 'PROCEDURE' | 'FUNCTION';
+}
+
 export interface ColumnItem {
   name: string;
   dataType: string;

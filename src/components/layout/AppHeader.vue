@@ -1,10 +1,10 @@
 <template>
   <header class="h-10 bg-dark-850 border-b border-dark-700 flex items-center justify-between px-3 text-xs select-none flex-shrink-0 relative">
-    <!-- Click Outside Backdrop for Connection Dropdown -->
+    <!-- Click Outside Backdrop for Connection & DBA Dropdown -->
     <div
-      v-if="isConnDropdownOpen"
+      v-if="isConnDropdownOpen || isDbaDropdownOpen"
       class="fixed inset-0 z-40"
-      @click="isConnDropdownOpen = false"
+      @click="isConnDropdownOpen = false; isDbaDropdownOpen = false"
     />
 
     <!-- Left: App Branding & Connection / DB Pickers -->
@@ -195,6 +195,61 @@
           <span>New Tab</span>
         </button>
 
+        <!-- DBA Diagnostics Toolbox Button & Dropdown -->
+        <div class="relative">
+          <button
+            type="button"
+            @click="isDbaDropdownOpen = !isDbaDropdownOpen"
+            :class="[
+              'flex items-center space-x-1 px-2 py-1 rounded border transition-colors cursor-pointer text-xs font-medium',
+              isDbaDropdownOpen
+                ? 'bg-rose-500/20 text-rose-300 border-rose-500/50'
+                : 'bg-dark-800 hover:bg-dark-750 text-dark-300 hover:text-dark-100 border-dark-700'
+            ]"
+            title="DBA 常用診斷維護工具箱 (SQL Server 排查與監控指令庫)"
+          >
+            <Activity class="w-3.5 h-3.5 text-rose-400" />
+            <span>DBA 工具箱</span>
+            <ChevronDown :class="['w-3 h-3 text-dark-400 transition-transform duration-150', isDbaDropdownOpen ? 'rotate-180 text-rose-400' : '']" />
+          </button>
+
+          <!-- Dropdown Menu -->
+          <div
+            v-if="isDbaDropdownOpen"
+            class="absolute top-full right-0 mt-1.5 w-80 bg-dark-850 border border-dark-700 rounded-md shadow-2xl z-50 py-1 font-sans text-xs select-none"
+          >
+            <div class="px-3 py-1.5 text-xxs font-semibold uppercase tracking-wider text-dark-400 flex items-center justify-between border-b border-dark-750 mb-1">
+              <div class="flex items-center space-x-1.5">
+                <Activity class="w-3 h-3 text-rose-400" />
+                <span>DBA 常用診斷與維護指令庫</span>
+              </div>
+              <span class="text-dark-500 font-mono">{{ DBA_QUERIES.length }} 項</span>
+            </div>
+
+            <div class="max-h-96 overflow-y-auto space-y-0.5 px-1">
+              <button
+                v-for="query in DBA_QUERIES"
+                :key="query.id"
+                type="button"
+                @click="openDbaQuery(query)"
+                class="w-full text-left px-2.5 py-2 rounded hover:bg-dark-750 text-dark-200 transition-colors flex flex-col space-y-0.5 cursor-pointer group"
+              >
+                <div class="flex items-center justify-between w-full">
+                  <span class="font-medium text-dark-100 group-hover:text-rose-300 transition-colors">
+                    {{ query.title }}
+                  </span>
+                  <span :class="['text-[9px] px-1.5 py-0.2 rounded border font-mono', query.badgeColor]">
+                    {{ query.badge }}
+                  </span>
+                </div>
+                <span class="text-xxs text-dark-400 leading-tight">
+                  {{ query.description }}
+                </span>
+              </button>
+            </div>
+          </div>
+        </div>
+
         <!-- Max Rows Limit Selector -->
         <div class="flex items-center space-x-1 pl-1.5 border-l border-dark-750 text-dark-400 text-xxs font-mono">
           <span title="查詢回傳最大筆數限制 (超過時自動截斷以保護效能)">Limit:</span>
@@ -271,16 +326,25 @@ import {
   Settings,
   RotateCw,
   Check,
+  Activity,
 } from 'lucide-vue-next';
 import { useWorkspaceStore } from '@/stores/workspaceStore';
 import { useConnectionStore } from '@/stores/connectionStore';
 import { useQueryStore } from '@/stores/queryStore';
+import { DBA_QUERIES, type DbaQueryItem } from '@/utils/dbaQueries';
 
 const workspaceStore = useWorkspaceStore();
 const connectionStore = useConnectionStore();
 const queryStore = useQueryStore();
 
 const isConnDropdownOpen = ref(false);
+const isDbaDropdownOpen = ref(false);
+
+function openDbaQuery(query: DbaQueryItem) {
+  isDbaDropdownOpen.value = false;
+  workspaceStore.addSqlTab(query.sql, `${query.title}.sql`);
+  workspaceStore.showToast(`已載入「${query.title}」診斷指令，按下 Run 即可執行`, 'info', 2500);
+}
 
 const emit = defineEmits<{
   (e: 'run-query', mode?: 'current' | 'all'): void;

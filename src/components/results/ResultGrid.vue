@@ -76,6 +76,26 @@
           <span>{{ copiedCsv ? 'Copied!' : 'CSV' }}</span>
         </button>
 
+        <!-- Copy as JSON -->
+        <button
+          @click="copyAsJson"
+          class="flex items-center space-x-1 px-2 py-0.5 bg-dark-800 hover:bg-dark-750 text-dark-300 hover:text-dark-100 rounded border border-dark-700 text-xxs transition-colors"
+          title="複製全表為 JSON 物件陣列"
+        >
+          <Braces class="w-2.5 h-2.5 text-cyan-400" />
+          <span>JSON</span>
+        </button>
+
+        <!-- Copy as Markdown -->
+        <button
+          @click="copyAsMarkdown"
+          class="flex items-center space-x-1 px-2 py-0.5 bg-dark-800 hover:bg-dark-750 text-dark-300 hover:text-dark-100 rounded border border-dark-700 text-xxs transition-colors"
+          title="複製全表為 Markdown 表格 (貼入 GitHub / Notion)"
+        >
+          <Table class="w-2.5 h-2.5 text-pink-400" />
+          <span>MD</span>
+        </button>
+
         <div class="h-3.5 w-px bg-dark-750 mx-0.5"></div>
 
         <!-- Row Count Indicator -->
@@ -95,14 +115,20 @@
     </div>
 
     <!-- AG Grid Area -->
-    <div v-else class="flex-1 w-full overflow-hidden relative" @contextmenu.prevent>
+    <div
+      v-else
+      ref="gridContainerRef"
+      class="flex-1 w-full overflow-hidden relative"
+      @contextmenu.prevent
+      @mousedown="onGridMouseDown"
+    >
       <AgGridVue
         class="w-full h-full"
         :theme="sqlightGridTheme"
         :row-data="currentSet.rows"
         :column-defs="columnDefs"
         :quick-filter-text="quickFilter"
-        :enable-cell-text-selection="true"
+        :enable-cell-text-selection="false"
         :ensure-dom-order="true"
         :prevent-default-on-context-menu="true"
         :tooltip-show-mode="'whenTruncated'"
@@ -111,14 +137,87 @@
         :suppress-row-hover-highlight="false"
         @grid-ready="onGridReady"
         @cell-context-menu="onCellContextMenu"
+        @body-scroll="onBodyScroll"
       />
+    </div>
+
+    <!-- Excel-Grade Live Aggregate Bar -->
+    <div class="h-6 bg-dark-850 border-t border-dark-700 flex items-center justify-between px-3 text-xxs font-sans text-dark-300 flex-shrink-0 select-none">
+      <!-- Left: Statistics or Default Summary -->
+      <div class="flex items-center space-x-2.5 overflow-x-auto min-w-0">
+        <template v-if="selectionStats">
+          <div class="flex items-center space-x-1 font-semibold text-brand-300 flex-shrink-0">
+            <span>選取:</span>
+            <span class="font-mono text-dark-100">{{ selectionStats.totalCells.toLocaleString() }} 格</span>
+            <span v-if="selectionStats.numericCount > 0" class="text-dark-400 font-mono text-[10px]">
+              ({{ selectionStats.numericCount.toLocaleString() }} 數值)
+            </span>
+          </div>
+
+          <template v-if="selectionStats.numericCount > 0">
+            <span class="text-dark-600 flex-shrink-0">|</span>
+            <div class="flex-shrink-0">
+              總和 (Sum): <strong class="font-mono text-emerald-400">{{ formatAggregateNumber(selectionStats.sum) }}</strong>
+            </div>
+            <span class="text-dark-600 flex-shrink-0">|</span>
+            <div class="flex-shrink-0">
+              平均 (Avg): <strong class="font-mono text-sky-400">{{ formatAggregateNumber(selectionStats.avg) }}</strong>
+            </div>
+            <span class="text-dark-600 flex-shrink-0">|</span>
+            <div class="flex-shrink-0">
+              最小值 (Min): <strong class="font-mono text-amber-400">{{ formatAggregateNumber(selectionStats.min) }}</strong>
+            </div>
+            <span class="text-dark-600 flex-shrink-0">|</span>
+            <div class="flex-shrink-0">
+              最大值 (Max): <strong class="font-mono text-purple-400">{{ formatAggregateNumber(selectionStats.max) }}</strong>
+            </div>
+          </template>
+
+          <span class="text-dark-600 flex-shrink-0">|</span>
+          <div class="flex-shrink-0">
+            非重複計數: <strong class="font-mono text-dark-100">{{ selectionStats.distinctCount.toLocaleString() }}</strong>
+          </div>
+
+          <button
+            type="button"
+            @click="clearCellSelection"
+            class="ml-1 text-dark-400 hover:text-dark-200 underline text-[10px] cursor-pointer flex-shrink-0"
+            title="清除選取 (Esc)"
+          >
+            清除
+          </button>
+        </template>
+
+        <template v-else>
+          <div class="flex items-center space-x-2 text-dark-400">
+            <span>共 <strong class="font-mono text-dark-200">{{ currentSet?.rows.length.toLocaleString() ?? 0 }}</strong> 列</span>
+            <span class="text-dark-600">|</span>
+            <span><strong class="font-mono text-dark-200">{{ currentSet?.columns.length ?? 0 }}</strong> 個欄位</span>
+            <span class="text-dark-600">|</span>
+            <span class="text-dark-500 italic text-[10px]">提示：滑鼠框選儲存格可查看即時統計 (Sum / Avg / Min / Max)</span>
+          </div>
+        </template>
+      </div>
+
+      <!-- Right: Copy Selection Button -->
+      <div v-if="selectionStats" class="flex items-center space-x-1 flex-shrink-0 ml-2">
+        <button
+          type="button"
+          @click="copySelectedCells"
+          class="flex items-center space-x-1 px-1.5 py-0.5 bg-brand-500/20 hover:bg-brand-500/30 text-brand-300 rounded border border-brand-500/40 text-[10px] transition-colors cursor-pointer"
+          title="複製選取區域內容 (Ctrl+C)"
+        >
+          <Copy class="w-2.5 h-2.5" />
+          <span>複製選取</span>
+        </button>
+      </div>
     </div>
 
     <!-- Custom Context Menu for Cells & Column Pinning -->
     <div
       v-if="contextMenu.visible"
       :style="{ top: `${contextMenu.y}px`, left: `${contextMenu.x}px` }"
-      class="fixed z-50 bg-dark-800 border border-dark-700 rounded shadow-xl py-1 w-48 text-xs font-sans text-dark-200 select-none"
+      class="fixed z-50 bg-dark-800 border border-dark-700 rounded shadow-xl py-1 w-52 text-xs font-sans text-dark-200 select-none"
       @click="contextMenu.visible = false"
     >
       <div class="px-2.5 py-1 text-xxs text-dark-400 border-b border-dark-750 font-mono truncate">
@@ -141,7 +240,34 @@
         <span>複製整列資料 (Copy Row)</span>
       </button>
 
+      <button
+        @click="copyCurrentRowAsJson"
+        class="w-full text-left px-2.5 py-1.5 hover:bg-dark-750 hover:text-dark-100 flex items-center space-x-2 transition-colors"
+      >
+        <Braces class="w-3.5 h-3.5 text-teal-400" />
+        <span>複製整列為 JSON (Row JSON)</span>
+      </button>
+
       <div class="my-1 border-t border-dark-750"></div>
+
+      <!-- Selection Copy (if range active) -->
+      <button
+        v-if="selectionRange"
+        @click="copySelectedCells"
+        class="w-full text-left px-2.5 py-1.5 hover:bg-dark-750 hover:text-dark-100 flex items-center space-x-2 transition-colors"
+      >
+        <Copy class="w-3.5 h-3.5 text-brand-300" />
+        <span>複製選取區域 ({{ selectionStats?.totalCells }} 格)</span>
+      </button>
+
+      <button
+        v-if="selectionRange"
+        @click="copySelectedAsJson"
+        class="w-full text-left px-2.5 py-1.5 hover:bg-dark-750 hover:text-dark-100 flex items-center space-x-2 transition-colors"
+      >
+        <Braces class="w-3.5 h-3.5 text-cyan-400" />
+        <span>複製選取為 JSON 物件陣列</span>
+      </button>
 
       <!-- DML SQL Generation Options -->
       <button
@@ -179,19 +305,37 @@
         <span>{{ isColPinned ? '取消凍結此欄 (Unpin)' : '凍結此欄於左側 (Pin Left)' }}</span>
       </button>
 
+      <div class="my-1 border-t border-dark-750"></div>
+
       <button
         @click="copyAsTsv"
-        class="w-full text-left px-2.5 py-1.5 hover:bg-dark-750 hover:text-dark-100 flex items-center space-x-2 transition-colors border-t border-dark-750"
+        class="w-full text-left px-2.5 py-1.5 hover:bg-dark-750 hover:text-dark-100 flex items-center space-x-2 transition-colors"
       >
         <FileSpreadsheet class="w-3.5 h-3.5 text-indigo-400" />
         <span>複製全表為 TSV (Excel)</span>
+      </button>
+
+      <button
+        @click="copyAsJson"
+        class="w-full text-left px-2.5 py-1.5 hover:bg-dark-750 hover:text-dark-100 flex items-center space-x-2 transition-colors"
+      >
+        <Braces class="w-3.5 h-3.5 text-cyan-400" />
+        <span>複製全表為 JSON</span>
+      </button>
+
+      <button
+        @click="copyAsMarkdown"
+        class="w-full text-left px-2.5 py-1.5 hover:bg-dark-750 hover:text-dark-100 flex items-center space-x-2 transition-colors"
+      >
+        <Table class="w-3.5 h-3.5 text-pink-400" />
+        <span>複製全表為 Markdown 表格</span>
       </button>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, reactive } from 'vue';
+import { ref, computed, reactive, onMounted, onUnmounted } from 'vue';
 import {
   Inbox,
   Search,
@@ -206,6 +350,8 @@ import {
   PlusCircle,
   Edit3,
   Trash2,
+  Braces,
+  Table,
 } from 'lucide-vue-next';
 import { AgGridVue } from 'ag-grid-vue3';
 import {
@@ -222,6 +368,11 @@ import { useQueryStore } from '@/stores/queryStore';
 import { useWorkspaceStore } from '@/stores/workspaceStore';
 import { useConnectionStore } from '@/stores/connectionStore';
 import { useSchemaStore } from '@/stores/schemaStore';
+import {
+  exportRowAsJson,
+  exportRowsAsJson,
+  exportRowsAsMarkdown,
+} from '@/utils/exportFormatters';
 import {
   generateInsertStatement,
   generateUpdateStatement,
@@ -246,11 +397,268 @@ const schemaStore = useSchemaStore();
 const activeSetIndex = ref(0);
 const quickFilter = ref('');
 const gridApi = ref<GridApi | null>(null);
+const gridContainerRef = ref<HTMLDivElement | null>(null);
 const copiedTsv = ref(false);
 const copiedCsv = ref(false);
 
 const currentSet = computed(() => {
   return props.resultSets[activeSetIndex.value] ?? props.resultSets[0] ?? null;
+});
+
+// Mapping column name to index
+const colNameToIndex = computed(() => {
+  const map = new Map<string, number>();
+  if (currentSet.value) {
+    currentSet.value.columns.forEach((c, idx) => {
+      map.set(c.name, idx);
+    });
+  }
+  return map;
+});
+
+// Cell Selection & Aggregates State
+interface CellCoord {
+  rowIndex: number;
+  colIndex: number;
+}
+
+interface SelectionRange {
+  minRow: number;
+  maxRow: number;
+  minCol: number;
+  maxCol: number;
+}
+
+interface SelectionStats {
+  totalCells: number;
+  numericCount: number;
+  sum: number;
+  avg: number;
+  min: number;
+  max: number;
+  distinctCount: number;
+}
+
+const isSelecting = ref(false);
+const dragStart = ref<CellCoord | null>(null);
+const dragEnd = ref<CellCoord | null>(null);
+const selectionRange = ref<SelectionRange | null>(null);
+const selectionStats = ref<SelectionStats | null>(null);
+
+function formatAggregateNumber(num: number): string {
+  if (Number.isInteger(num)) {
+    return num.toLocaleString();
+  }
+  return num.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 4 });
+}
+
+function computeSelectionStats() {
+  if (!dragStart.value || !dragEnd.value || !currentSet.value) {
+    selectionRange.value = null;
+    selectionStats.value = null;
+    return;
+  }
+
+  const minRow = Math.max(0, Math.min(dragStart.value.rowIndex, dragEnd.value.rowIndex));
+  const maxRow = Math.min(currentSet.value.rows.length - 1, Math.max(dragStart.value.rowIndex, dragEnd.value.rowIndex));
+  const minCol = Math.max(0, Math.min(dragStart.value.colIndex, dragEnd.value.colIndex));
+  const maxCol = Math.min(currentSet.value.columns.length - 1, Math.max(dragStart.value.colIndex, dragEnd.value.colIndex));
+
+  selectionRange.value = { minRow, maxRow, minCol, maxCol };
+
+  const totalCells = (maxRow - minRow + 1) * (maxCol - minCol + 1);
+  const distinctValues = new Set<string>();
+  const numericValues: number[] = [];
+
+  for (let r = minRow; r <= maxRow; r++) {
+    const row = currentSet.value.rows[r];
+    if (!row) continue;
+    for (let c = minCol; c <= maxCol; c++) {
+      const val = row[c];
+      distinctValues.add(val === null || val === undefined ? 'NULL' : String(val));
+
+      if (val !== null && val !== undefined && val !== '' && typeof val !== 'boolean') {
+        const num = typeof val === 'number' ? val : Number(val);
+        if (!isNaN(num)) {
+          numericValues.push(num);
+        }
+      }
+    }
+  }
+
+  let sum = 0;
+  let min = 0;
+  let max = 0;
+  let avg = 0;
+
+  if (numericValues.length > 0) {
+    sum = numericValues.reduce((acc, curr) => acc + curr, 0);
+    min = Math.min(...numericValues);
+    max = Math.max(...numericValues);
+    avg = sum / numericValues.length;
+  }
+
+  selectionStats.value = {
+    totalCells,
+    numericCount: numericValues.length,
+    sum,
+    avg,
+    min,
+    max,
+    distinctCount: distinctValues.size,
+  };
+}
+
+function updateSelectionHighlight() {
+  const container = gridContainerRef.value;
+  if (!container) return;
+
+  const range = selectionRange.value;
+  const cells = container.querySelectorAll('.ag-cell');
+
+  cells.forEach((cell) => {
+    if (!range) {
+      cell.classList.remove('sqlight-cell-selected');
+      return;
+    }
+    const rStr = cell.getAttribute('row-index');
+    const cId = cell.getAttribute('col-id');
+    if (rStr == null || !cId) {
+      cell.classList.remove('sqlight-cell-selected');
+      return;
+    }
+    const r = parseInt(rStr, 10);
+    const c = colNameToIndex.value.get(cId);
+    if (c != null && r >= range.minRow && r <= range.maxRow && c >= range.minCol && c <= range.maxCol) {
+      cell.classList.add('sqlight-cell-selected');
+    } else {
+      cell.classList.remove('sqlight-cell-selected');
+    }
+  });
+}
+
+function clearCellSelection() {
+  dragStart.value = null;
+  dragEnd.value = null;
+  selectionRange.value = null;
+  selectionStats.value = null;
+  isSelecting.value = false;
+  updateSelectionHighlight();
+}
+
+function onGridMouseDown(e: MouseEvent) {
+  if (e.button !== 0) return; // Only track left click
+  const target = e.target as HTMLElement;
+
+  // Check if clicked inside column header -> Select whole column
+  const headerCell = target.closest('.ag-header-cell');
+  if (headerCell && currentSet.value) {
+    const cId = headerCell.getAttribute('col-id');
+    if (cId && colNameToIndex.value.has(cId)) {
+      const colIdx = colNameToIndex.value.get(cId)!;
+      dragStart.value = { rowIndex: 0, colIndex: colIdx };
+      dragEnd.value = { rowIndex: currentSet.value.rows.length - 1, colIndex: colIdx };
+      computeSelectionStats();
+      updateSelectionHighlight();
+      return;
+    }
+  }
+
+  const cellEl = target.closest('.ag-cell');
+  if (!cellEl) {
+    clearCellSelection();
+    return;
+  }
+
+  const rStr = cellEl.getAttribute('row-index');
+  const cId = cellEl.getAttribute('col-id');
+  if (rStr == null) return;
+
+  const r = parseInt(rStr, 10);
+  if (isNaN(r)) return;
+
+  // If clicked on '#' index column -> Select whole row
+  if (!cId || cId === '#') {
+    if (currentSet.value) {
+      dragStart.value = { rowIndex: r, colIndex: 0 };
+      dragEnd.value = { rowIndex: r, colIndex: currentSet.value.columns.length - 1 };
+      computeSelectionStats();
+      updateSelectionHighlight();
+    }
+    return;
+  }
+
+  const colIdx = colNameToIndex.value.get(cId);
+  if (colIdx === undefined) return;
+
+  // Prevent default to prevent native text selection
+  e.preventDefault();
+
+  isSelecting.value = true;
+  dragStart.value = { rowIndex: r, colIndex: colIdx };
+  dragEnd.value = { rowIndex: r, colIndex: colIdx };
+  computeSelectionStats();
+  updateSelectionHighlight();
+}
+
+function handleGlobalMouseMove(e: MouseEvent) {
+  if (!isSelecting.value || !gridContainerRef.value) return;
+
+  const target = e.target as HTMLElement;
+  const cellEl = target.closest('.ag-cell');
+  if (!cellEl) return;
+
+  const rStr = cellEl.getAttribute('row-index');
+  const cId = cellEl.getAttribute('col-id');
+  if (rStr == null || !cId) return;
+
+  const r = parseInt(rStr, 10);
+  const colIdx = colNameToIndex.value.get(cId);
+  if (isNaN(r) || colIdx === undefined) return;
+
+  if (dragEnd.value?.rowIndex !== r || dragEnd.value?.colIndex !== colIdx) {
+    dragEnd.value = { rowIndex: r, colIndex: colIdx };
+    computeSelectionStats();
+    updateSelectionHighlight();
+  }
+}
+
+function handleGlobalMouseUp() {
+  if (isSelecting.value) {
+    isSelecting.value = false;
+  }
+}
+
+function handleGlobalKeyDown(e: KeyboardEvent) {
+  if (e.key === 'Escape') {
+    clearCellSelection();
+    return;
+  }
+
+  // Ctrl+C / Cmd+C when range is selected
+  if ((e.ctrlKey || e.metaKey) && e.key === 'c' && selectionRange.value) {
+    const active = document.activeElement;
+    if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA')) {
+      return;
+    }
+    copySelectedCells();
+  }
+}
+
+function onBodyScroll() {
+  updateSelectionHighlight();
+}
+
+onMounted(() => {
+  window.addEventListener('mousemove', handleGlobalMouseMove);
+  window.addEventListener('mouseup', handleGlobalMouseUp);
+  window.addEventListener('keydown', handleGlobalKeyDown);
+});
+
+onUnmounted(() => {
+  window.removeEventListener('mousemove', handleGlobalMouseMove);
+  window.removeEventListener('mouseup', handleGlobalMouseUp);
+  window.removeEventListener('keydown', handleGlobalKeyDown);
 });
 
 // Custom cell context menu state
@@ -312,18 +720,12 @@ function estimateTextWidth(text: string, isMono = true): number {
 function calculateColumnWidth(headerName: string, firstRowVal: unknown): number {
   const firstRowStr = firstRowVal !== undefined ? formatValueForDisplay(firstRowVal) : '';
   
-  // Header: text width + padding + sort icon (~18px) + filter icon (~18px)
   const headerWidth = Math.ceil(estimateTextWidth(headerName, false) + 48);
-
-  // First row: text width + cell left/right padding (~28px)
   const firstRowWidth = firstRowVal !== undefined && firstRowStr.length > 0
     ? Math.ceil(estimateTextWidth(firstRowStr, true) + 28)
     : 0;
 
-  // Decide width based on first row length (at least large enough for header)
   const calculated = Math.max(headerWidth, firstRowWidth);
-
-  // Keep within reasonable bounds: min 75px, max 600px
   return Math.min(Math.max(calculated, 75), 600);
 }
 
@@ -347,12 +749,12 @@ const columnDefs = computed<ColDef[]>(() => {
     resizable: true,
     valueGetter: (params) => (params.node?.rowIndex != null ? params.node.rowIndex + 1 : ''),
     cellClass: 'text-dark-500 bg-dark-850/40 text-center font-mono text-xxs select-none !px-1',
-    headerClass: 'text-center !px-1',
+    headerClass: 'text-center !px-1 cursor-pointer',
   };
 
   const firstRow = currentSet.value.rows[0];
 
-  // 2. Dynamic Data Columns sized by the first row
+  // 2. Dynamic Data Columns
   const dataCols: ColDef[] = currentSet.value.columns.map((col, colIdx) => {
     const firstVal = firstRow ? firstRow[colIdx] : undefined;
     const colWidth = calculateColumnWidth(col.name, firstVal);
@@ -364,8 +766,7 @@ const columnDefs = computed<ColDef[]>(() => {
       width: colWidth,
       minWidth: 70,
       tooltipShowMode: 'whenTruncated',
-      // Floating tooltip on hover (clean header without inline type text)
-      headerTooltip: `型別 (Type): ${col.dataType}${col.nullable ? ' | 可為 NULL' : ' | NOT NULL'}`,
+      headerTooltip: `型別 (Type): ${col.dataType}${col.nullable ? ' | 可為 NULL' : ' | NOT NULL'} (點選標題選取整欄)`,
       tooltipValueGetter: (params) => {
         const val = params.value;
         if (val === null || val === undefined) return 'NULL';
@@ -410,9 +811,8 @@ function onCellContextMenu(event: CellContextMenuEvent) {
   const mouseEvent = event.event as MouseEvent | undefined;
   if (!mouseEvent) return;
 
-  // Viewport clamping (menu width is 220px, approximate height ~320px)
   const menuWidth = 220;
-  const menuHeight = 320;
+  const menuHeight = 360;
   const x = Math.min(mouseEvent.clientX, Math.max(0, window.innerWidth - menuWidth - 8));
   const y = Math.min(mouseEvent.clientY, Math.max(0, window.innerHeight - menuHeight - 8));
 
@@ -518,8 +918,55 @@ function copyCurrentRow() {
     if (row) {
       const rowStr = row.map(formatCellForExport).join('\t');
       navigator.clipboard.writeText(rowStr);
+      workspaceStore.showToast('已複製整列資料至剪貼簿 (TSV)', 'success', 2000);
     }
   }
+  contextMenu.visible = false;
+}
+
+function copyCurrentRowAsJson() {
+  if (contextMenu.rowIndex >= 0 && currentSet.value) {
+    const row = currentSet.value.rows[contextMenu.rowIndex];
+    if (row) {
+      const jsonStr = exportRowAsJson(currentSet.value.columns, row);
+      navigator.clipboard.writeText(jsonStr);
+      workspaceStore.showToast('已複製目前列為 JSON 物件', 'success', 2000);
+    }
+  }
+  contextMenu.visible = false;
+}
+
+function copySelectedCells() {
+  if (!selectionRange.value || !currentSet.value) return;
+  const { minRow, maxRow, minCol, maxCol } = selectionRange.value;
+
+  const lines: string[] = [];
+  for (let r = minRow; r <= maxRow; r++) {
+    const row = currentSet.value.rows[r];
+    if (!row) continue;
+    const rowCells: string[] = [];
+    for (let c = minCol; c <= maxCol; c++) {
+      rowCells.push(formatCellForExport(row[c]));
+    }
+    lines.push(rowCells.join('\t'));
+  }
+
+  navigator.clipboard.writeText(lines.join('\n'));
+  workspaceStore.showToast(`已複製選取區域 (${selectionStats.value?.totalCells} 格) 至剪貼簿`, 'success', 2000);
+  contextMenu.visible = false;
+}
+
+function copySelectedAsJson() {
+  if (!selectionRange.value || !currentSet.value) return;
+  const { minRow, maxRow, minCol, maxCol } = selectionRange.value;
+  const cols = currentSet.value.columns.slice(minCol, maxCol + 1);
+  const rows = currentSet.value.rows
+    .slice(minRow, maxRow + 1)
+    .map((r) => r.slice(minCol, maxCol + 1));
+
+  const jsonStr = exportRowsAsJson(cols, rows);
+  navigator.clipboard.writeText(jsonStr);
+  workspaceStore.showToast(`已複製選取區域為 JSON 物件陣列 (${rows.length} 筆)`, 'success', 2000);
   contextMenu.visible = false;
 }
 
@@ -533,7 +980,7 @@ function togglePinColumn() {
   contextMenu.visible = false;
 }
 
-function formatCellForExport(cell: CellValue): string {
+function formatCellForExport(cell: CellValue | undefined): string {
   if (cell === null || cell === undefined) return 'NULL';
   if (typeof cell === 'object' && 'type' in cell && cell.type === 'binary') {
     return `[Binary ${cell.length}B]`;
@@ -551,10 +998,12 @@ function copyAsTsv() {
 
   navigator.clipboard.writeText(fullText).then(() => {
     copiedTsv.value = true;
+    workspaceStore.showToast(`已複製全表為 TSV (${currentSet.value?.rows.length} 筆)`, 'success', 2000);
     setTimeout(() => {
       copiedTsv.value = false;
     }, 2000);
   });
+  contextMenu.visible = false;
 }
 
 function copyAsCsv() {
@@ -574,9 +1023,36 @@ function copyAsCsv() {
 
   navigator.clipboard.writeText(fullText).then(() => {
     copiedCsv.value = true;
+    workspaceStore.showToast(`已複製全表為 CSV (${currentSet.value?.rows.length} 筆)`, 'success', 2000);
     setTimeout(() => {
       copiedCsv.value = false;
     }, 2000);
   });
+  contextMenu.visible = false;
+}
+
+function copyAsJson() {
+  if (!currentSet.value) return;
+  const jsonStr = exportRowsAsJson(currentSet.value.columns, currentSet.value.rows);
+  navigator.clipboard.writeText(jsonStr).then(() => {
+    workspaceStore.showToast(`已複製全表為 JSON 物件陣列 (${currentSet.value?.rows.length} 筆)`, 'success', 2000);
+  });
+  contextMenu.visible = false;
+}
+
+function copyAsMarkdown() {
+  if (!currentSet.value) return;
+  const mdStr = exportRowsAsMarkdown(currentSet.value.columns, currentSet.value.rows);
+  navigator.clipboard.writeText(mdStr).then(() => {
+    workspaceStore.showToast(`已複製全表為 Markdown 表格`, 'success', 2000);
+  });
+  contextMenu.visible = false;
 }
 </script>
+
+<style scoped>
+:deep(.sqlight-cell-selected) {
+  background-color: rgba(59, 130, 246, 0.22) !important;
+  box-shadow: inset 0 0 0 1px #3b82f6 !important;
+}
+</style>

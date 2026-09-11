@@ -1,0 +1,109 @@
+import type { ColumnItem } from '@/types/schema';
+
+export interface DdlOptions {
+  tableName: string;
+  schema?: string;
+  database?: string;
+  columns: ColumnItem[];
+}
+
+/**
+ * Format column data type according to SQL Server standards
+ */
+export function formatColumnDataType(col: ColumnItem): string {
+  const dt = col.dataType.toLowerCase();
+
+  if (dt === 'varchar' || dt === 'char') {
+    if (col.maxLength === -1) {
+      return `[${dt}](MAX)`;
+    }
+    if (col.maxLength && col.maxLength > 0) {
+      return `[${dt}](${col.maxLength})`;
+    }
+    return `[${dt}]`;
+  }
+
+  if (dt === 'nvarchar' || dt === 'nchar') {
+    if (col.maxLength === -1) {
+      return `[${dt}](MAX)`;
+    }
+    if (col.maxLength && col.maxLength > 0) {
+      return `[${dt}](${col.maxLength})`;
+    }
+    return `[${dt}]`;
+  }
+
+  if (dt === 'varbinary' || dt === 'binary') {
+    if (col.maxLength === -1) {
+      return `[${dt}](MAX)`;
+    }
+    if (col.maxLength && col.maxLength > 0) {
+      return `[${dt}](${col.maxLength})`;
+    }
+    return `[${dt}]`;
+  }
+
+  if (dt === 'decimal' || dt === 'numeric') {
+    if (col.precision != null) {
+      const scale = col.scale != null ? col.scale : 0;
+      return `[${dt}](${col.precision}, ${scale})`;
+    }
+    return `[${dt}](18, 2)`;
+  }
+
+  if (dt === 'datetime2' || dt === 'time' || dt === 'datetimeoffset') {
+    if (col.scale != null && col.scale !== 7) {
+      return `[${dt}](${col.scale})`;
+    }
+    return `[${dt}]`;
+  }
+
+  return `[${dt}]`;
+}
+
+/**
+ * Generate a clean, standard CREATE TABLE DDL script for SQL Server
+ */
+export function generateCreateTableDdl(options: DdlOptions): string {
+  const schema = options.schema || 'dbo';
+  const table = options.tableName;
+  const nowStr = new Date().toLocaleString();
+
+  const lines: string[] = [];
+
+  options.columns.forEach((col) => {
+    const colName = `[${col.name.replace(/[\[\]]/g, '')}]`;
+    const dataType = formatColumnDataType(col);
+    const identity = col.isIdentity ? ' IDENTITY(1,1)' : '';
+    const nullable = col.isNullable ? 'NULL' : 'NOT NULL';
+
+    lines.push(`    ${colName.padEnd(28)} ${dataType.padEnd(16)}${identity} ${nullable}`);
+  });
+
+  // Extract Primary Key columns
+  const pkCols = options.columns.filter((c) => c.isPrimaryKey);
+  if (pkCols.length > 0) {
+    const pkConstraintName = `PK_${table.replace(/[\[\]]/g, '')}`;
+    const pkColList = pkCols
+      .map((c) => `[${c.name.replace(/[\[\]]/g, '')}] ASC`)
+      .join(', ');
+    lines.push(`    CONSTRAINT [${pkConstraintName}] PRIMARY KEY CLUSTERED (${pkColList})`);
+  }
+
+  const columnsSql = lines.join(',\n');
+
+  return `-- ============================================================
+-- 資料表結構 DDL 腳本: [${schema}].[${table}]
+-- 產生時間: ${nowStr}
+-- ============================================================
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+
+CREATE TABLE [${schema}].[${table}] (
+${columnsSql}
+);
+GO
+`;
+}
