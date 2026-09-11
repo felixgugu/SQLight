@@ -1,14 +1,34 @@
-// Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
-#[tauri::command]
-fn greet(name: &str) -> String {
-    format!("Hello, {}! You've been greeted from Rust!", name)
-}
+pub mod commands;
+pub mod drivers;
+pub mod error;
+pub mod models;
+pub mod services;
+
+use commands::connection_commands::*;
+use commands::query_commands::*;
+use commands::schema_commands::*;
+use services::ConnectionManager;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    let connection_manager = ConnectionManager::new();
+
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
-        .invoke_handler(tauri::generate_handler![greet])
+        .manage(connection_manager)
+        .invoke_handler(tauri::generate_handler![
+            get_connections,
+            save_connection,
+            delete_connection,
+            test_connection,
+            connect,
+            disconnect,
+            execute_query,
+            get_databases,
+            get_tables,
+            get_columns,
+            switch_database,
+        ])
         .run(tauri::generate_context!())
-        .expect("error while running tauri application");
+        .expect("error while running SQLight application");
 }

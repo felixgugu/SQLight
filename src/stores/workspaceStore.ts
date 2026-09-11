@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
-import type { WorkspaceTab, BottomPanelTab, SqlEditorTab } from '@/types/workspace';
+import type { WorkspaceTab, BottomPanelTab, SqlEditorTab, TableDataTab } from '@/types/workspace';
+import { format as formatSql } from 'sql-formatter';
 
 export const useWorkspaceStore = defineStore('workspace', () => {
   const tabs = ref<WorkspaceTab[]>([
@@ -8,7 +9,17 @@ export const useWorkspaceStore = defineStore('workspace', () => {
       id: 'tab-initial-sql-1',
       type: 'sql_editor',
       title: 'Query 1.sql',
-      query: '-- Welcome to SQLight!\n-- Press Ctrl+Enter to execute queries.\n\nSELECT @@VERSION AS [SQL Server Version];\n',
+      query: `-- Welcome to SQLight!
+-- Press Ctrl+Enter to execute selected query or entire editor.
+-- Press Shift+Alt+F to format SQL.
+
+SELECT 
+    name AS DatabaseName,
+    database_id,
+    create_date
+FROM sys.databases
+ORDER BY name;
+`,
       isDirty: false,
     } as SqlEditorTab,
   ]);
@@ -32,7 +43,29 @@ export const useWorkspaceStore = defineStore('workspace', () => {
       id: tabId,
       type: 'sql_editor',
       title: title ?? `Query ${nextNum}.sql`,
-      query: initialQuery,
+      query: initialQuery || `SELECT TOP 100 * FROM sys.tables;`,
+      isDirty: false,
+    };
+    tabs.value.push(newTab);
+    activeTabId.value = tabId;
+  }
+
+  function addTableDataTab(schema: string, tableName: string) {
+    const existing = tabs.value.find(
+      (t) => t.type === 'table_data' && (t as TableDataTab).schema === schema && (t as TableDataTab).tableName === tableName
+    );
+    if (existing) {
+      activeTabId.value = existing.id;
+      return;
+    }
+
+    const tabId = `tab-data-${Date.now()}`;
+    const newTab: TableDataTab = {
+      id: tabId,
+      type: 'table_data',
+      title: `${schema}.${tableName} (Data)`,
+      schema,
+      tableName,
       isDirty: false,
     };
     tabs.value.push(newTab);
@@ -45,7 +78,6 @@ export const useWorkspaceStore = defineStore('workspace', () => {
 
     tabs.value.splice(index, 1);
 
-    // If active tab was closed, select adjacent tab
     if (activeTabId.value === tabId) {
       if (tabs.value.length > 0) {
         const nextIndex = Math.min(index, tabs.value.length - 1);
@@ -54,7 +86,6 @@ export const useWorkspaceStore = defineStore('workspace', () => {
           activeTabId.value = nextTab.id;
         }
       } else {
-        // If no tabs remain, auto-open a fresh query tab
         addSqlTab();
       }
     }
@@ -65,6 +96,23 @@ export const useWorkspaceStore = defineStore('workspace', () => {
     if (tab && tab.type === 'sql_editor') {
       tab.query = query;
       tab.isDirty = true;
+    }
+  }
+
+  function formatActiveQuery(): void {
+    const current = activeTab.value;
+    if (current && current.type === 'sql_editor') {
+      try {
+        const formatted = formatSql(current.query, {
+          language: 'tsql',
+          keywordCase: 'upper',
+          tabWidth: 2,
+        });
+        current.query = formatted;
+        current.isDirty = true;
+      } catch (err) {
+        console.warn('Failed to format SQL:', err);
+      }
     }
   }
 
@@ -85,8 +133,10 @@ export const useWorkspaceStore = defineStore('workspace', () => {
     isBottomPanelOpen,
     setActiveTab,
     addSqlTab,
+    addTableDataTab,
     closeTab,
     updateTabContent,
+    formatActiveQuery,
     setBottomPanelTab,
     toggleBottomPanel,
   };

@@ -1,7 +1,10 @@
 <template>
   <div class="w-full h-full flex flex-col bg-dark-900 text-dark-100 overflow-hidden font-sans">
     <!-- Top Toolbar Header -->
-    <AppHeader />
+    <AppHeader
+      @run-query="handleRunQuery"
+      @open-connection-modal="isConnectionModalOpen = true"
+    />
 
     <!-- Center Resizable Body (Sidebar + Workspace/Results) -->
     <div class="flex-1 flex overflow-hidden relative">
@@ -10,7 +13,9 @@
         :style="{ width: `${sidebarSplitter.size.value}px` }"
         class="h-full flex-shrink-0 overflow-hidden"
       >
-        <AppSidebar />
+        <AppSidebar
+          @open-connection-modal="isConnectionModalOpen = true"
+        />
       </div>
 
       <!-- Horizontal Splitter Handle (Resize Sidebar Width) -->
@@ -24,7 +29,7 @@
       <div class="flex-1 flex flex-col overflow-hidden min-w-0">
         <!-- Main SQL Workspace Area -->
         <div class="flex-1 overflow-hidden min-h-0">
-          <AppMain />
+          <AppMain ref="mainWorkspaceRef" />
         </div>
 
         <!-- Vertical Splitter & Bottom Results Dock -->
@@ -47,20 +52,30 @@
 
     <!-- Bottom Status Bar -->
     <AppStatusBar />
+
+    <!-- Connection Management Modal -->
+    <ConnectionModal
+      :is-open="isConnectionModalOpen"
+      @close="isConnectionModalOpen = false"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
+import { ref, onMounted, onBeforeUnmount } from 'vue';
 import AppHeader from '@/components/layout/AppHeader.vue';
 import AppSidebar from '@/components/layout/AppSidebar.vue';
 import AppMain from '@/components/layout/AppMain.vue';
 import AppBottomPanel from '@/components/layout/AppBottomPanel.vue';
 import AppStatusBar from '@/components/layout/AppStatusBar.vue';
 import ResizableSplitter from '@/components/common/ResizableSplitter.vue';
+import ConnectionModal from '@/components/modals/ConnectionModal.vue';
 import { useSplitter } from '@/composables/useSplitter';
 import { useWorkspaceStore } from '@/stores/workspaceStore';
 
 const workspaceStore = useWorkspaceStore();
+const isConnectionModalOpen = ref(false);
+const mainWorkspaceRef = ref<InstanceType<typeof AppMain> | null>(null);
 
 // Resizable sidebar (width: min 180px, max 500px, initial 260px)
 const sidebarSplitter = useSplitter({
@@ -77,5 +92,31 @@ const bottomSplitter = useSplitter({
   minSize: 120,
   maxSize: 550,
   reverse: true,
+});
+
+function handleRunQuery() {
+  mainWorkspaceRef.value?.runQuery();
+}
+
+function handleGlobalKeydown(e: KeyboardEvent) {
+  // Ctrl/Cmd + Enter to run query
+  if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+    e.preventDefault();
+    handleRunQuery();
+  }
+
+  // Shift + Alt + F to format SQL
+  if (e.shiftKey && e.altKey && (e.key === 'F' || e.key === 'f')) {
+    e.preventDefault();
+    workspaceStore.formatActiveQuery();
+  }
+}
+
+onMounted(() => {
+  window.addEventListener('keydown', handleGlobalKeydown);
+});
+
+onBeforeUnmount(() => {
+  window.removeEventListener('keydown', handleGlobalKeydown);
 });
 </script>

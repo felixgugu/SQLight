@@ -10,22 +10,35 @@
         <span class="text-sm font-semibold">SQLight</span>
       </div>
 
-      <!-- Active Connection Selector -->
-      <div class="flex items-center space-x-1.5 bg-dark-800 hover:bg-dark-750 px-2 py-1 rounded border border-dark-700 cursor-pointer transition-colors">
+      <!-- Active Connection Selector / Open Modal -->
+      <div
+        @click="$emit('open-connection-modal')"
+        class="flex items-center space-x-1.5 bg-dark-800 hover:bg-dark-750 px-2 py-1 rounded border border-dark-700 cursor-pointer transition-colors"
+        title="Manage Connections"
+      >
         <Database class="w-3.5 h-3.5 text-emerald-400" />
-        <span class="text-dark-200 font-medium max-w-[140px] truncate">
-          {{ connectionStore.activeConnection?.name ?? 'No Connection' }}
+        <span class="text-dark-200 font-medium max-w-[150px] truncate">
+          {{ connectionStore.activeConnection?.name ?? 'Select Connection' }}
         </span>
         <ChevronDown class="w-3 h-3 text-dark-400" />
       </div>
 
-      <!-- Active Database Selector -->
-      <div class="flex items-center space-x-1.5 bg-dark-800 hover:bg-dark-750 px-2 py-1 rounded border border-dark-700 cursor-pointer transition-colors">
-        <span class="text-dark-400">DB:</span>
-        <span class="text-dark-200 font-medium font-mono">
-          {{ connectionStore.activeDatabase }}
-        </span>
-        <ChevronDown class="w-3 h-3 text-dark-400" />
+      <!-- Active Database Selector Dropdown -->
+      <div class="relative">
+        <select
+          :value="connectionStore.activeDatabase"
+          @change="onDatabaseChange"
+          class="bg-dark-800 hover:bg-dark-750 text-dark-200 font-mono px-2 py-1 rounded border border-dark-700 text-xs focus:outline-none focus:border-brand-500 cursor-pointer appearance-none pr-6"
+        >
+          <option
+            v-for="db in connectionStore.availableDatabases"
+            :key="db"
+            :value="db"
+          >
+            {{ db }}
+          </option>
+        </select>
+        <ChevronDown class="w-3 h-3 text-dark-400 absolute right-1.5 top-1/2 -translate-y-1/2 pointer-events-none" />
       </div>
     </div>
 
@@ -33,18 +46,21 @@
     <div class="flex items-center space-x-1">
       <!-- Run Button -->
       <button
-        class="flex items-center space-x-1.5 bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white px-2.5 py-1 rounded font-medium shadow-sm transition-colors group"
+        @click="$emit('run-query')"
+        :disabled="queryStore.isExecuting"
+        class="flex items-center space-x-1.5 bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white px-2.5 py-1 rounded font-medium shadow-xs transition-colors group disabled:opacity-50"
         title="Execute Query (Ctrl + Enter)"
       >
-        <Play class="w-3.5 h-3.5 fill-current" />
-        <span>Run</span>
+        <RotateCw v-if="queryStore.isExecuting" class="w-3.5 h-3.5 animate-spin" />
+        <Play v-else class="w-3.5 h-3.5 fill-current" />
+        <span>{{ queryStore.isExecuting ? 'Running...' : 'Run' }}</span>
         <span class="text-xxs text-emerald-200 font-mono bg-emerald-700/60 px-1 py-0.2 rounded">^↵</span>
       </button>
 
       <!-- Stop Button -->
       <button
         class="flex items-center space-x-1 bg-dark-800 hover:bg-dark-750 text-dark-400 hover:text-dark-200 px-2 py-1 rounded border border-dark-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-        disabled
+        :disabled="!queryStore.isExecuting"
         title="Cancel Execution"
       >
         <Square class="w-3 h-3" />
@@ -55,6 +71,7 @@
 
       <!-- Format SQL Button -->
       <button
+        @click="workspaceStore.formatActiveQuery()"
         class="flex items-center space-x-1 bg-dark-800 hover:bg-dark-750 text-dark-300 hover:text-dark-100 px-2 py-1 rounded border border-dark-700 transition-colors"
         title="Format SQL (Shift + Alt + F)"
       >
@@ -89,8 +106,9 @@
       </button>
 
       <button
+        @click="$emit('open-connection-modal')"
         class="p-1.5 rounded bg-dark-800 hover:bg-dark-750 text-dark-400 hover:text-dark-200 border border-dark-700 transition-colors"
-        title="Application Settings"
+        title="Connection Settings"
       >
         <Settings class="w-3.5 h-3.5" />
       </button>
@@ -108,10 +126,23 @@ import {
   Plus,
   PanelBottom,
   Settings,
+  RotateCw,
 } from 'lucide-vue-next';
 import { useWorkspaceStore } from '@/stores/workspaceStore';
 import { useConnectionStore } from '@/stores/connectionStore';
+import { useQueryStore } from '@/stores/queryStore';
 
 const workspaceStore = useWorkspaceStore();
 const connectionStore = useConnectionStore();
+const queryStore = useQueryStore();
+
+defineEmits<{
+  (e: 'run-query'): void;
+  (e: 'open-connection-modal'): void;
+}>();
+
+function onDatabaseChange(e: Event) {
+  const target = e.target as HTMLSelectElement;
+  connectionStore.switchDatabase(target.value);
+}
 </script>

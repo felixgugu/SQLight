@@ -1,27 +1,28 @@
 export type SchemaObjectType = 'database' | 'schema' | 'table' | 'view' | 'column';
 
-export interface ColumnMetadata {
+export interface DatabaseItem {
+  name: string;
+}
+
+export interface SchemaItem {
+  name: string;
+}
+
+export interface TableItem {
+  schema: string;
+  name: string;
+  kind: string; // 'BASE TABLE' | 'VIEW'
+}
+
+export interface ColumnItem {
   name: string;
   dataType: string;
-  maxLength?: number;
-  precision?: number;
-  scale?: number;
+  maxLength?: number | null;
+  precision?: number | null;
+  scale?: number | null;
   isNullable: boolean;
   isPrimaryKey: boolean;
   isIdentity: boolean;
-}
-
-export interface TableMetadata {
-  schema: string;
-  name: string;
-  type: 'BASE TABLE' | 'VIEW';
-  columns?: ColumnMetadata[];
-}
-
-export interface DatabaseMetadata {
-  name: string;
-  schemas: string[];
-  tables: TableMetadata[];
 }
 
 export interface SchemaTreeNode {
