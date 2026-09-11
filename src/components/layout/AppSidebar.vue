@@ -175,45 +175,65 @@
           >
             <!-- Database Item -->
             <div
-              @click="toggleDatabase(conn.id, db)"
+              @click="selectDatabase(conn.id, db)"
               :class="[
-                'flex items-center space-x-1 px-1.5 py-0.5 rounded cursor-pointer transition-colors',
+                'flex items-center space-x-1 px-1.5 py-0.5 rounded cursor-pointer transition-colors group',
                 connectionStore.activeConnectionId === conn.id && connectionStore.activeDatabase === db
                   ? 'bg-brand-500/20 text-brand-300 font-semibold'
                   : 'text-dark-300 hover:bg-dark-750 hover:text-dark-100'
               ]"
             >
-              <component
-                :is="expandedDbs[`${conn.id}:${db}`] ? ChevronDown : ChevronRight"
-                class="w-2.5 h-2.5 text-dark-500 flex-shrink-0"
-              />
+              <!-- Direction Chevron Button -->
+              <button
+                type="button"
+                @click.stop="toggleDatabaseExpand(conn.id, db)"
+                class="p-0.5 hover:bg-dark-700 text-dark-500 hover:text-dark-200 rounded transition-colors flex-shrink-0 flex items-center justify-center"
+                title="展開/收合資料表 (Expand/Collapse Tables)"
+              >
+                <component
+                  :is="expandedDbs[`${conn.id}:${db}`] ? ChevronDown : ChevronRight"
+                  class="w-2.5 h-2.5"
+                />
+              </button>
               <Database class="w-3 h-3 text-amber-400/80 flex-shrink-0" />
               <span class="truncate flex-1">{{ db }}</span>
             </div>
 
             <!-- Database Tables & Views List -->
             <div v-if="expandedDbs[`${conn.id}:${db}`]" class="pl-3.5 border-l border-dark-750 ml-2 space-y-0.5">
+              <!-- Loading state -->
               <div
-                v-if="filteredTables.length === 0"
-                class="py-1 px-1.5 text-xxs text-dark-500 italic"
+                v-if="loadingTablesByDb[`${conn.id}:${db}`]"
+                class="py-1 px-1.5 text-xxs text-dark-400 flex items-center space-x-1.5"
               >
-                No matching tables
+                <RotateCw class="w-3 h-3 animate-spin text-brand-400" />
+                <span>載入物件中...</span>
               </div>
 
+              <!-- Empty state -->
               <div
-                v-for="table in filteredTables"
-                :key="table.schema + '.' + table.name"
+                v-else-if="getFilteredTables(conn.id, db).length === 0"
+                class="py-1 px-1.5 text-xxs text-dark-500 italic"
+              >
+                無資料表或檢視表 (No tables or views)
+              </div>
+
+              <!-- Tables & Views List -->
+              <div
+                v-else
+                v-for="table in getFilteredTables(conn.id, db)"
+                :key="`${conn.id}:${db}:${table.schema}.${table.name}`"
                 class="space-y-0.5"
               >
                 <!-- Table Item with Right Click Context Menu -->
                 <div
-                  @click="toggleTable(table.schema, table.name)"
-                  @contextmenu.prevent="openContextMenu($event, table.schema, table.name)"
+                  @click="toggleTable(conn.id, db, table.schema, table.name)"
+                  @contextmenu.prevent="openContextMenu($event, conn.id, db, table.schema, table.name)"
                   class="flex items-center space-x-1 px-1.5 py-0.5 rounded hover:bg-dark-750 cursor-pointer text-dark-300 hover:text-dark-100 group"
                   :title="`${table.schema}.${table.name} (${table.kind}) - Right click for actions`"
                 >
                   <component
-                    :is="isTableExpanded(table.schema, table.name) ? ChevronDown : ChevronRight"
+                    :is="isTableExpanded(conn.id, db, table.schema, table.name) ? ChevronDown : ChevronRight"
                     class="w-2.5 h-2.5 text-dark-500 group-hover:text-dark-300 flex-shrink-0"
                   />
                   <Table2 v-if="table.kind === 'BASE TABLE'" class="w-3 h-3 text-brand-400 flex-shrink-0" />
@@ -224,11 +244,11 @@
 
                 <!-- Columns List -->
                 <div
-                  v-if="isTableExpanded(table.schema, table.name)"
+                  v-if="isTableExpanded(conn.id, db, table.schema, table.name)"
                   class="pl-3.5 border-l border-dark-750 ml-2 space-y-0.5"
                 >
                   <div
-                    v-for="col in getTableColumns(table.schema, table.name)"
+                    v-for="col in getTableColumns(conn.id, db, table.schema, table.name)"
                     :key="col.name"
                     class="flex items-center space-x-1.5 px-1 py-0.2 text-xxs text-dark-400 hover:text-dark-200"
                   >
@@ -387,7 +407,18 @@ const expandedConns = reactive<Record<string, boolean>>({});
 const expandedDbs = reactive<Record<string, boolean>>({});
 const expandedTables = reactive<Record<string, boolean>>({});
 const loadedColumns = reactive<Record<string, ColumnItem[]>>({});
-const tablesList = ref<TableItem[]>([]);
+const tablesByDb = reactive<Record<string, TableItem[]>>({});
+const loadingTablesByDb = reactive<Record<string, boolean>>({});
+
+function getFilteredTables(connId: string, db: string): TableItem[] {
+  const key = `${connId}:${db}`;
+  const list = tablesByDb[key] || [];
+  const q = filterQuery.value.trim().toLowerCase();
+  if (!q) return list;
+  return list.filter(
+    (t) => t.name.toLowerCase().includes(q) || t.schema.toLowerCase().includes(q)
+  );
+}
 
 // Inline rename state
 const inlineEditingId = ref<string | null>(null);
@@ -482,6 +513,8 @@ const contextMenu = reactive({
   visible: false,
   x: 0,
   y: 0,
+  connId: '',
+  database: '',
   schema: '',
   tableName: '',
 });
@@ -505,20 +538,28 @@ onMounted(async () => {
     expandedConns[connectionStore.activeConnectionId] = true;
     expandedDbs[`${connectionStore.activeConnectionId}:${connectionStore.activeDatabase}`] = true;
     if (connectionStore.status === 'connected') {
-      await loadTables();
+      await loadDatabaseTables(connectionStore.activeConnectionId, connectionStore.activeDatabase);
     }
   }
 });
 
-async function loadTables() {
-  if (!connectionStore.activeConnectionId) return;
+async function loadDatabaseTables(connId: string, db: string, force = false) {
+  const dbKey = `${connId}:${db}`;
+  if (!force && tablesByDb[dbKey] !== undefined) {
+    return;
+  }
+  loadingTablesByDb[dbKey] = true;
   try {
-    tablesList.value = await schemaService.getTables(
-      connectionStore.activeConnectionId,
-      connectionStore.activeDatabase
-    );
-  } catch (err) {
-    console.warn('Failed to load tables:', err);
+    if (connectionStore.activeConnectionId !== connId || connectionStore.status !== 'connected') {
+      await connectionStore.connect(connId);
+    }
+    const tables = await schemaService.getTables(connId, db);
+    tablesByDb[dbKey] = tables;
+  } catch (err: unknown) {
+    console.error(`Failed to load tables for ${dbKey}:`, err);
+    alert(`載入資料庫 [${db}] 的資料表失敗: ${err instanceof Error ? err.message : String(err)}`);
+  } finally {
+    loadingTablesByDb[dbKey] = false;
   }
 }
 
@@ -526,7 +567,9 @@ async function refreshCurrent() {
   isRefreshing.value = true;
   try {
     await connectionStore.refreshDatabases();
-    await loadTables();
+    if (connectionStore.activeConnectionId && connectionStore.activeDatabase) {
+      await loadDatabaseTables(connectionStore.activeConnectionId, connectionStore.activeDatabase, true);
+    }
   } catch (err: unknown) {
     console.error('Refresh current failed:', err);
     alert(`重新整理失敗: ${err instanceof Error ? err.message : String(err)}`);
@@ -545,7 +588,15 @@ async function handleRefreshConn(conn: ConnectionProfile) {
     } else {
       await connectionStore.refreshDatabases(conn.id);
     }
-    await loadTables();
+
+    // Refresh all currently expanded databases for this connection
+    const dbs = connectionStore.getDatabases(conn.id);
+    for (const db of dbs) {
+      const dbKey = `${conn.id}:${db}`;
+      if (expandedDbs[dbKey]) {
+        await loadDatabaseTables(conn.id, db, true);
+      }
+    }
   } catch (err: unknown) {
     console.error('Failed to refresh connection:', err);
     alert(`連線或更新資料庫失敗: ${err instanceof Error ? err.message : String(err)}`);
@@ -568,14 +619,6 @@ async function handleDisconnect() {
   }
 }
 
-const filteredTables = computed(() => {
-  const q = filterQuery.value.trim().toLowerCase();
-  if (!q) return tablesList.value;
-  return tablesList.value.filter(
-    (t: TableItem) => t.name.toLowerCase().includes(q) || t.schema.toLowerCase().includes(q)
-  );
-});
-
 function toggleConnectionExpand(connId: string) {
   if (inlineEditingId.value === connId) return;
   expandedConns[connId] = !expandedConns[connId];
@@ -588,67 +631,69 @@ async function selectConnection(connId: string) {
   }
   try {
     await connectionStore.connect(connId);
-    await loadTables();
   } catch (err) {
     console.warn('Failed to connect on select:', err);
   }
 }
 
-async function toggleDatabase(connId: string, db: string) {
+async function toggleDatabaseExpand(connId: string, db: string) {
   const dbKey = `${connId}:${db}`;
   expandedDbs[dbKey] = !expandedDbs[dbKey];
   if (expandedDbs[dbKey]) {
-    if (connectionStore.activeConnectionId !== connId || connectionStore.status !== 'connected') {
-      try {
-        await connectionStore.connect(connId);
-      } catch (err) {
-        console.warn('Failed to connect on db toggle:', err);
-        return;
-      }
-    }
-    await connectionStore.switchDatabase(db);
-    await loadTables();
+    await loadDatabaseTables(connId, db);
   }
 }
 
-function tableKey(schema: string, tableName: string) {
-  return `${schema}.${tableName}`;
+async function selectDatabase(connId: string, db: string) {
+  if (connectionStore.activeConnectionId !== connId || connectionStore.status !== 'connected') {
+    try {
+      await connectionStore.connect(connId);
+    } catch (err) {
+      console.warn('Failed to connect on selectDatabase:', err);
+      return;
+    }
+  }
+  await connectionStore.switchDatabase(db);
 }
 
-function isTableExpanded(schema: string, tableName: string) {
-  return !!expandedTables[tableKey(schema, tableName)];
+function tableKey(connId: string, db: string, schema: string, tableName: string) {
+  return `${connId}:${db}:${schema}.${tableName}`;
 }
 
-async function toggleTable(schema: string, tableName: string) {
-  const key = tableKey(schema, tableName);
+function isTableExpanded(connId: string, db: string, schema: string, tableName: string) {
+  return !!expandedTables[tableKey(connId, db, schema, tableName)];
+}
+
+async function toggleTable(connId: string, db: string, schema: string, tableName: string) {
+  const key = tableKey(connId, db, schema, tableName);
   expandedTables[key] = !expandedTables[key];
 
   if (expandedTables[key] && !loadedColumns[key]) {
-    if (connectionStore.activeConnectionId) {
-      try {
-        const cols = await schemaService.getColumns(
-          connectionStore.activeConnectionId,
-          schema,
-          tableName,
-          connectionStore.activeDatabase
-        );
-        loadedColumns[key] = cols;
-      } catch (err) {
-        console.warn('Failed to load columns:', err);
-      }
+    try {
+      const cols = await schemaService.getColumns(
+        connId,
+        schema,
+        tableName,
+        db
+      );
+      loadedColumns[key] = cols;
+    } catch (err) {
+      console.warn('Failed to load columns:', err);
     }
   }
 }
 
-function getTableColumns(schema: string, tableName: string) {
-  return loadedColumns[tableKey(schema, tableName)] ?? [];
+function getTableColumns(connId: string, db: string, schema: string, tableName: string) {
+  return loadedColumns[tableKey(connId, db, schema, tableName)] ?? [];
 }
 
-function openContextMenu(event: MouseEvent, schema: string, tableName: string) {
+function openContextMenu(event: MouseEvent, connId: string, db: string, schema: string, tableName: string) {
   connContextMenu.visible = false;
   contextMenu.visible = true;
   contextMenu.x = event.clientX;
   contextMenu.y = event.clientY;
+  contextMenu.connId = connId;
+  contextMenu.database = db;
   contextMenu.schema = schema;
   contextMenu.tableName = tableName;
 
@@ -677,13 +722,42 @@ function openConnContextMenu(event: MouseEvent, conn: ConnectionProfile) {
   }, 0);
 }
 
-function handleOpenData() {
+async function handleOpenData() {
+  if (contextMenu.connId && connectionStore.activeConnectionId !== contextMenu.connId) {
+    try {
+      await connectionStore.connect(contextMenu.connId);
+    } catch (e) {
+      console.warn('Connect failed:', e);
+    }
+  }
+  if (contextMenu.database && connectionStore.activeDatabase !== contextMenu.database) {
+    try {
+      await connectionStore.switchDatabase(contextMenu.database);
+    } catch (e) {
+      console.warn('Switch DB failed:', e);
+    }
+  }
   workspaceStore.addTableDataTab(contextMenu.schema, contextMenu.tableName);
   contextMenu.visible = false;
 }
 
-function handleGenerateSelect() {
-  const sql = `SELECT TOP 1000\n  *\nFROM [${contextMenu.schema}].[${contextMenu.tableName}];\n`;
+async function handleGenerateSelect() {
+  if (contextMenu.connId && connectionStore.activeConnectionId !== contextMenu.connId) {
+    try {
+      await connectionStore.connect(contextMenu.connId);
+    } catch (e) {
+      console.warn('Connect failed:', e);
+    }
+  }
+  if (contextMenu.database && connectionStore.activeDatabase !== contextMenu.database) {
+    try {
+      await connectionStore.switchDatabase(contextMenu.database);
+    } catch (e) {
+      console.warn('Switch DB failed:', e);
+    }
+  }
+  const dbPrefix = contextMenu.database ? `[${contextMenu.database}].` : '';
+  const sql = `SELECT TOP 1000\n  *\nFROM ${dbPrefix}[${contextMenu.schema}].[${contextMenu.tableName}];\n`;
   workspaceStore.addSqlTab(sql, `${contextMenu.tableName}.sql`);
   contextMenu.visible = false;
 }

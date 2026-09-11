@@ -278,7 +278,13 @@ impl DatabaseConnection for SqlServerConnection {
         Ok(dbs)
     }
 
-    async fn get_schemas(&mut self, _database: Option<&str>) -> AppResult<Vec<SchemaItem>> {
+    async fn get_schemas(&mut self, database: Option<&str>) -> AppResult<Vec<SchemaItem>> {
+        if let Some(db) = database {
+            if !db.is_empty() && self.current_database != db {
+                self.switch_database(db).await?;
+            }
+        }
+
         let sql = "SELECT name FROM sys.schemas WHERE name NOT IN ('guest', 'INFORMATION_SCHEMA', 'sys') ORDER BY name;";
         let stream = self.client.simple_query(sql).await?;
         let results = stream.into_results().await?;
@@ -296,7 +302,13 @@ impl DatabaseConnection for SqlServerConnection {
         Ok(schemas)
     }
 
-    async fn get_tables(&mut self, _database: Option<&str>, schema: Option<&str>) -> AppResult<Vec<TableItem>> {
+    async fn get_tables(&mut self, database: Option<&str>, schema: Option<&str>) -> AppResult<Vec<TableItem>> {
+        if let Some(db) = database {
+            if !db.is_empty() && self.current_database != db {
+                self.switch_database(db).await?;
+            }
+        }
+
         let sql = match schema {
             Some(s) => format!(
                 "SELECT TABLE_SCHEMA, TABLE_NAME, TABLE_TYPE FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = '{}' ORDER BY TABLE_NAME;",
@@ -322,7 +334,13 @@ impl DatabaseConnection for SqlServerConnection {
         Ok(tables)
     }
 
-    async fn get_columns(&mut self, _database: Option<&str>, schema: &str, table: &str) -> AppResult<Vec<ColumnItem>> {
+    async fn get_columns(&mut self, database: Option<&str>, schema: &str, table: &str) -> AppResult<Vec<ColumnItem>> {
+        if let Some(db) = database {
+            if !db.is_empty() && self.current_database != db {
+                self.switch_database(db).await?;
+            }
+        }
+
         let sql = format!(
             r#"
             SELECT 
@@ -384,7 +402,8 @@ impl DatabaseConnection for SqlServerConnection {
 
     async fn switch_database(&mut self, database: &str) -> AppResult<()> {
         let sql = format!("USE [{}];", database.replace(']', "]]"));
-        self.client.simple_query(sql).await?;
+        let stream = self.client.simple_query(sql).await?;
+        let _ = stream.into_results().await?;
         self.current_database = database.to_string();
         Ok(())
     }
