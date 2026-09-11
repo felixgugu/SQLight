@@ -3,6 +3,7 @@ import { ref, computed, reactive } from 'vue';
 import type { ConnectionProfile, ConnectionStatus } from '@/types/connection';
 import { connectionService, type SaveConnectionPayload } from '@/services/connectionService';
 import { schemaService } from '@/services/schemaService';
+import { useSchemaStore } from './schemaStore';
 
 const STORAGE_DATABASES_KEY = 'sqlight_cached_databases';
 
@@ -179,6 +180,8 @@ export const useConnectionStore = defineStore('connection', () => {
       }
       status.value = 'connected';
       await refreshDatabases(id);
+      // Preload schema in background for instant auto-completion
+      useSchemaStore().loadDatabaseSchema(id, activeDatabase.value).catch(() => {});
     } catch (err: unknown) {
       status.value = 'error';
       errorMessage.value = err instanceof Error ? err.message : String(err);
@@ -247,8 +250,12 @@ export const useConnectionStore = defineStore('connection', () => {
       } catch (err) {
         console.warn('Switch database error:', err);
       }
+      activeDatabase.value = dbName;
+      // Preload schema in background for instant auto-completion
+      useSchemaStore().loadDatabaseSchema(activeConnectionId.value, dbName).catch(() => {});
+    } else {
+      activeDatabase.value = dbName;
     }
-    activeDatabase.value = dbName;
   }
 
   return {

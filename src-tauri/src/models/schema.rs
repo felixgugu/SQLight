@@ -32,3 +32,12 @@ pub struct ColumnItem {
     pub is_primary_key: bool,
     pub is_identity: bool,
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TableSchema {
+    pub schema: String,
+    pub name: String,
+    pub kind: String, // 'BASE TABLE' or 'VIEW'
+    pub columns: Vec<ColumnItem>,
+}

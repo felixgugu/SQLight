@@ -25,6 +25,13 @@ export interface ColumnItem {
   isIdentity: boolean;
 }
 
+export interface TableSchema {
+  schema: string;
+  name: string;
+  kind: string; // 'BASE TABLE' | 'VIEW'
+  columns: ColumnItem[];
+}
+
 export interface SchemaTreeNode {
   id: string;
   label: string;

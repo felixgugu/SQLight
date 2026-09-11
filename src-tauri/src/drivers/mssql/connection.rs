@@ -1,7 +1,7 @@
 use crate::drivers::DatabaseConnection;
 use crate::error::AppResult;
 use crate::models::query::{CellValue, ColumnDef, QueryMessage, QueryResult, ResultSet};
-use crate::models::schema::{ColumnItem, DatabaseItem, SchemaItem, TableItem};
+use crate::models::schema::{ColumnItem, DatabaseItem, SchemaItem, TableItem, TableSchema};
 use async_trait::async_trait;
 use chrono::{NaiveDate, NaiveDateTime, NaiveTime, Timelike, Utc};
 use std::time::Instant;
@@ -433,6 +433,93 @@ impl DatabaseConnection for SqlServerConnection {
             }
         }
         Ok(columns)
+    }
+
+    async fn get_database_schema(&mut self, database: Option<&str>) -> AppResult<Vec<TableSchema>> {
+        if let Some(db) = database {
+            if !db.is_empty() && self.current_database != db {
+                self.switch_database(db).await?;
+            }
+        }
+
+        let sql = r#"
+            SELECT 
+                t.TABLE_SCHEMA,
+                t.TABLE_NAME,
+                t.TABLE_TYPE,
+                c.COLUMN_NAME,
+                c.DATA_TYPE,
+                CAST(c.CHARACTER_MAXIMUM_LENGTH AS INT) AS CHARACTER_MAXIMUM_LENGTH,
+                CAST(c.NUMERIC_PRECISION AS INT) AS NUMERIC_PRECISION,
+                CAST(c.NUMERIC_SCALE AS INT) AS NUMERIC_SCALE,
+                CASE WHEN c.IS_NULLABLE = 'YES' THEN 1 ELSE 0 END AS IS_NULLABLE,
+                CASE WHEN pk.COLUMN_NAME IS NOT NULL THEN 1 ELSE 0 END AS IS_PRIMARY_KEY,
+                CAST(ISNULL(COLUMNPROPERTY(OBJECT_ID(c.TABLE_SCHEMA + '.' + c.TABLE_NAME), c.COLUMN_NAME, 'IsIdentity'), 0) AS INT) AS IS_IDENTITY
+            FROM INFORMATION_SCHEMA.TABLES t
+            LEFT JOIN INFORMATION_SCHEMA.COLUMNS c 
+                ON t.TABLE_SCHEMA = c.TABLE_SCHEMA AND t.TABLE_NAME = c.TABLE_NAME
+            LEFT JOIN (
+                SELECT ku.TABLE_SCHEMA, ku.TABLE_NAME, ku.COLUMN_NAME
+                FROM INFORMATION_SCHEMA.TABLE_CONSTRAINTS tc
+                JOIN INFORMATION_SCHEMA.KEY_COLUMN_USAGE ku
+                    ON tc.CONSTRAINT_NAME = ku.CONSTRAINT_NAME
+                    AND tc.TABLE_SCHEMA = ku.TABLE_SCHEMA
+                WHERE tc.CONSTRAINT_TYPE = 'PRIMARY KEY'
+            ) pk ON c.TABLE_SCHEMA = pk.TABLE_SCHEMA 
+                AND c.TABLE_NAME = pk.TABLE_NAME 
+                AND c.COLUMN_NAME = pk.COLUMN_NAME
+            WHERE t.TABLE_TYPE IN ('BASE TABLE', 'VIEW')
+            ORDER BY t.TABLE_SCHEMA, t.TABLE_NAME, c.ORDINAL_POSITION;
+        "#;
+
+        let stream = self.client.simple_query(sql).await?;
+        let results = stream.into_results().await?;
+        let mut tables_map: std::collections::BTreeMap<(String, String), TableSchema> = std::collections::BTreeMap::new();
+
+        if let Some(rows) = results.first() {
+            for row in rows {
+                let schema = Self::col_str(row, 0).unwrap_or("dbo").to_string();
+                let name = Self::col_str(row, 1).unwrap_or("").to_string();
+                let kind = Self::col_str(row, 2).unwrap_or("BASE TABLE").to_string();
+
+                if name.is_empty() {
+                    continue;
+                }
+
+                let key = (schema.clone(), name.clone());
+                let entry = tables_map.entry(key).or_insert_with(|| TableSchema {
+                    schema,
+                    name,
+                    kind,
+                    columns: Vec::new(),
+                });
+
+                if let Some(col_name) = Self::col_str(row, 3) {
+                    if !col_name.is_empty() {
+                        let data_type = Self::col_str(row, 4).unwrap_or("").to_string();
+                        let max_length = Self::col_i32(row, 5);
+                        let precision = Self::col_i32(row, 6);
+                        let scale = Self::col_i32(row, 7);
+                        let is_nullable = Self::col_bool(row, 8).unwrap_or(true);
+                        let is_primary_key = Self::col_bool(row, 9).unwrap_or(false);
+                        let is_identity = Self::col_bool(row, 10).unwrap_or(false);
+
+                        entry.columns.push(ColumnItem {
+                            name: col_name.to_string(),
+                            data_type,
+                            max_length,
+                            precision,
+                            scale,
+                            is_nullable,
+                            is_primary_key,
+                            is_identity,
+                        });
+                    }
+                }
+            }
+        }
+
+        Ok(tables_map.into_values().collect())
     }
 
     async fn switch_database(&mut self, database: &str) -> AppResult<()> {

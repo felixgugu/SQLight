@@ -167,6 +167,68 @@ function mockInvoke<T>(cmd: string, args?: Record<string, unknown>): Promise<T> 
         { name: 'CreatedAt', dataType: 'datetime2', maxLength: null, precision: 27, scale: 7, isNullable: false, isPrimaryKey: false, isIdentity: false },
       ] as unknown as T);
 
+    case 'get_database_schema':
+      return Promise.resolve([
+        {
+          schema: 'dbo',
+          name: 'Users',
+          kind: 'BASE TABLE',
+          columns: [
+            { name: 'UserID', dataType: 'int', maxLength: null, precision: 10, scale: 0, isNullable: false, isPrimaryKey: true, isIdentity: true },
+            { name: 'Username', dataType: 'nvarchar', maxLength: 50, precision: null, scale: null, isNullable: false, isPrimaryKey: false, isIdentity: false },
+            { name: 'Email', dataType: 'nvarchar', maxLength: 100, precision: null, scale: null, isNullable: true, isPrimaryKey: false, isIdentity: false },
+            { name: 'Department', dataType: 'nvarchar', maxLength: 50, precision: null, scale: null, isNullable: true, isPrimaryKey: false, isIdentity: false },
+            { name: 'IsActive', dataType: 'bit', maxLength: null, precision: 1, scale: 0, isNullable: false, isPrimaryKey: false, isIdentity: false },
+            { name: 'CreatedAt', dataType: 'datetime2', maxLength: null, precision: 27, scale: 7, isNullable: false, isPrimaryKey: false, isIdentity: false },
+          ],
+        },
+        {
+          schema: 'dbo',
+          name: 'Orders',
+          kind: 'BASE TABLE',
+          columns: [
+            { name: 'OrderID', dataType: 'int', maxLength: null, precision: 10, scale: 0, isNullable: false, isPrimaryKey: true, isIdentity: true },
+            { name: 'UserID', dataType: 'int', maxLength: null, precision: 10, scale: 0, isNullable: false, isPrimaryKey: false, isIdentity: false },
+            { name: 'OrderDate', dataType: 'datetime2', maxLength: null, precision: 27, scale: 7, isNullable: false, isPrimaryKey: false, isIdentity: false },
+            { name: 'TotalAmount', dataType: 'decimal', maxLength: null, precision: 18, scale: 2, isNullable: false, isPrimaryKey: false, isIdentity: false },
+            { name: 'Status', dataType: 'nvarchar', maxLength: 20, precision: null, scale: null, isNullable: false, isPrimaryKey: false, isIdentity: false },
+          ],
+        },
+        {
+          schema: 'dbo',
+          name: 'OrderItems',
+          kind: 'BASE TABLE',
+          columns: [
+            { name: 'OrderItemID', dataType: 'int', maxLength: null, precision: 10, scale: 0, isNullable: false, isPrimaryKey: true, isIdentity: true },
+            { name: 'OrderID', dataType: 'int', maxLength: null, precision: 10, scale: 0, isNullable: false, isPrimaryKey: false, isIdentity: false },
+            { name: 'ProductID', dataType: 'int', maxLength: null, precision: 10, scale: 0, isNullable: false, isPrimaryKey: false, isIdentity: false },
+            { name: 'Quantity', dataType: 'int', maxLength: null, precision: 10, scale: 0, isNullable: false, isPrimaryKey: false, isIdentity: false },
+            { name: 'UnitPrice', dataType: 'decimal', maxLength: null, precision: 18, scale: 2, isNullable: false, isPrimaryKey: false, isIdentity: false },
+          ],
+        },
+        {
+          schema: 'dbo',
+          name: 'Products',
+          kind: 'BASE TABLE',
+          columns: [
+            { name: 'ProductID', dataType: 'int', maxLength: null, precision: 10, scale: 0, isNullable: false, isPrimaryKey: true, isIdentity: true },
+            { name: 'ProductName', dataType: 'nvarchar', maxLength: 100, precision: null, scale: null, isNullable: false, isPrimaryKey: false, isIdentity: false },
+            { name: 'Price', dataType: 'decimal', maxLength: null, precision: 18, scale: 2, isNullable: false, isPrimaryKey: false, isIdentity: false },
+            { name: 'Stock', dataType: 'int', maxLength: null, precision: 10, scale: 0, isNullable: false, isPrimaryKey: false, isIdentity: false },
+          ],
+        },
+        {
+          schema: 'dbo',
+          name: 'v_ActiveUsers',
+          kind: 'VIEW',
+          columns: [
+            { name: 'UserID', dataType: 'int', maxLength: null, precision: 10, scale: 0, isNullable: false, isPrimaryKey: false, isIdentity: false },
+            { name: 'Username', dataType: 'nvarchar', maxLength: 50, precision: null, scale: null, isNullable: false, isPrimaryKey: false, isIdentity: false },
+            { name: 'Email', dataType: 'nvarchar', maxLength: 100, precision: null, scale: null, isNullable: true, isPrimaryKey: false, isIdentity: false },
+          ],
+        },
+      ] as unknown as T);
+
     default:
       return Promise.reject(new Error(`Unknown command '${cmd}'`));
   }

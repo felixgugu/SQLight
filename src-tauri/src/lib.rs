@@ -27,6 +27,7 @@ pub fn run() {
             get_databases,
             get_tables,
             get_columns,
+            get_database_schema,
             switch_database,
         ])
         .run(tauri::generate_context!())

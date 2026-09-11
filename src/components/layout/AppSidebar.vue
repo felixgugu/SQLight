@@ -407,6 +407,7 @@ import {
 import ConfirmModal from '@/components/common/ConfirmModal.vue';
 import { useConnectionStore } from '@/stores/connectionStore';
 import { useWorkspaceStore } from '@/stores/workspaceStore';
+import { useSchemaStore } from '@/stores/schemaStore';
 import { schemaService } from '@/services/schemaService';
 import type { TableItem, ColumnItem } from '@/types/schema';
 import type { ConnectionProfile } from '@/types/connection';
@@ -418,6 +419,7 @@ const emit = defineEmits<{
 
 const connectionStore = useConnectionStore();
 const workspaceStore = useWorkspaceStore();
+const schemaStore = useSchemaStore();
 
 const filterQuery = ref('');
 const isRefreshing = ref(false);
@@ -588,6 +590,7 @@ async function refreshCurrent() {
   try {
     await connectionStore.refreshDatabases();
     if (connectionStore.activeConnectionId && connectionStore.activeDatabase) {
+      schemaStore.loadDatabaseSchema(connectionStore.activeConnectionId, connectionStore.activeDatabase, true).catch(() => {});
       await loadDatabaseTables(connectionStore.activeConnectionId, connectionStore.activeDatabase, true);
     }
   } catch (err: unknown) {
@@ -614,6 +617,7 @@ async function handleRefreshConn(conn: ConnectionProfile) {
     for (const db of dbs) {
       const dbKey = `${conn.id}:${db}`;
       if (expandedDbs[dbKey]) {
+        schemaStore.loadDatabaseSchema(conn.id, db, true).catch(() => {});
         await loadDatabaseTables(conn.id, db, true);
       }
     }

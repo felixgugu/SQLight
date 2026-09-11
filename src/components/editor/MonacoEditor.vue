@@ -5,6 +5,7 @@
 <script setup lang="ts">
 import { ref, onMounted, onBeforeUnmount, watch } from 'vue';
 import { monaco } from '@/utils/monaco';
+import { setupSqlCompletionProvider } from '@/utils/sqlCompletionProvider';
 
 const props = defineProps<{
   modelValue: string;
@@ -62,7 +63,26 @@ onMounted(() => {
     readOnly: props.readOnly ?? false,
     cursorBlinking: 'smooth',
     wordWrap: 'on',
+    suggestOnTriggerCharacters: true,
+    quickSuggestions: {
+      other: true,
+      comments: false,
+      strings: false,
+    },
+    acceptSuggestionOnCommitCharacter: true,
+    acceptSuggestionOnEnter: 'on',
+    tabCompletion: 'on',
+    suggest: {
+      showFields: true,
+      showClasses: true,
+      showFunctions: true,
+      showKeywords: true,
+      showSnippets: true,
+      preview: true,
+    },
   });
+
+  setupSqlCompletionProvider();
 
   editorInstance.onDidChangeModelContent(() => {
     if (editorInstance) {

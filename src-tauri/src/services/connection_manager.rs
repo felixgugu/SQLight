@@ -3,7 +3,7 @@ use crate::drivers::{DatabaseConnection, DatabaseDriver};
 use crate::error::{AppError, AppResult};
 use crate::models::connection::{ConnectionProfile, SaveConnectionRequest};
 use crate::models::query::QueryResult;
-use crate::models::schema::{ColumnItem, DatabaseItem, TableItem};
+use crate::models::schema::{ColumnItem, DatabaseItem, TableItem, TableSchema};
 use crate::services::credential_store::CredentialStore;
 use crate::services::storage_service::StorageService;
 use chrono::Utc;
@@ -229,6 +229,19 @@ impl ConnectionManager {
         })?;
 
         conn.get_columns(database, schema, table).await
+    }
+
+    pub async fn get_database_schema(
+        &self,
+        id: &str,
+        database: Option<&str>,
+    ) -> AppResult<Vec<TableSchema>> {
+        let mut conns = self.active_connections.lock().await;
+        let conn = conns.get_mut(id).ok_or_else(|| AppError::Connection {
+            message: format!("Not connected to connection '{}'", id),
+        })?;
+
+        conn.get_database_schema(database).await
     }
 
     pub async fn switch_database(&self, id: &str, database: &str) -> AppResult<()> {

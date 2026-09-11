@@ -1,5 +1,5 @@
 import { invokeCommand } from './api';
-import type { DatabaseItem, TableItem, ColumnItem } from '@/types/schema';
+import type { DatabaseItem, TableItem, ColumnItem, TableSchema } from '@/types/schema';
 
 export const schemaService = {
   async getDatabases(connectionId: string): Promise<DatabaseItem[]> {
@@ -28,6 +28,16 @@ export const schemaService = {
       connectionId,
       schema,
       table,
+      database,
+    });
+  },
+
+  async getDatabaseSchema(
+    connectionId: string,
+    database?: string
+  ): Promise<TableSchema[]> {
+    return invokeCommand<TableSchema[]>('get_database_schema', {
+      connectionId,
       database,
     });
   },
