@@ -4,6 +4,8 @@
     <AppHeader
       @run-query="handleRunQuery"
       @format-sql="handleFormatSql"
+      @open-sql-file="handleOpenSqlFile"
+      @save-sql-file="handleSaveSqlFile"
       @open-connection-modal="handleOpenNewConnection"
       @open-settings-modal="isSettingsModalOpen = true"
     />
@@ -165,6 +167,14 @@ function handleFormatSql() {
   }
 }
 
+function handleOpenSqlFile() {
+  mainWorkspaceRef.value?.openSqlFile();
+}
+
+function handleSaveSqlFile() {
+  mainWorkspaceRef.value?.saveActiveTab();
+}
+
 function handleGlobalKeydown(e: KeyboardEvent) {
   // Ctrl/Cmd + Shift + Enter -> Run All
   if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'Enter') {
@@ -177,6 +187,20 @@ function handleGlobalKeydown(e: KeyboardEvent) {
   if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key === 'Enter') {
     e.preventDefault();
     handleRunQuery('current');
+    return;
+  }
+
+  // Ctrl/Cmd + S -> Save SQL File
+  if ((e.ctrlKey || e.metaKey) && !e.shiftKey && (e.key === 's' || e.key === 'S')) {
+    e.preventDefault();
+    handleSaveSqlFile();
+    return;
+  }
+
+  // Ctrl/Cmd + O -> Open SQL File
+  if ((e.ctrlKey || e.metaKey) && !e.shiftKey && (e.key === 'o' || e.key === 'O')) {
+    e.preventDefault();
+    handleOpenSqlFile();
     return;
   }
 

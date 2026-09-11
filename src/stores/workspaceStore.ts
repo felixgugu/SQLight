@@ -2,6 +2,7 @@ import { defineStore } from 'pinia';
 import { ref, computed, watch } from 'vue';
 import type { WorkspaceTab, BottomPanelTab, SqlEditorTab, TableDataTab } from '@/types/workspace';
 import { format as formatSql } from 'sql-formatter';
+import { useConnectionStore } from './connectionStore';
 
 const STORAGE_TABS_KEY = 'sqlight_workspace_tabs';
 const STORAGE_ACTIVE_TAB_KEY = 'sqlight_active_tab_id';
@@ -137,11 +138,85 @@ export const useWorkspaceStore = defineStore('workspace', () => {
     return tabs.value.find((t) => t.id === activeTabId.value) ?? tabs.value[0] ?? null;
   });
 
-  function setActiveTab(id: string) {
-    activeTabId.value = id;
+  async function syncTabConnectionAndDatabase(tab: WorkspaceTab) {
+    const connectionStore = useConnectionStore();
+
+    // If tab has no connection recorded, bind current active connection and db
+    if (!tab.connectionId) {
+      if (connectionStore.activeConnectionId) {
+        tab.connectionId = connectionStore.activeConnectionId;
+        tab.database = connectionStore.activeDatabase || 'master';
+      }
+      return;
+    }
+
+    // 1. Connection differs: switch connection and db
+    if (tab.connectionId !== connectionStore.activeConnectionId) {
+      const exists = connectionStore.connections.some((c) => c.id === tab.connectionId);
+      if (exists) {
+        try {
+          await connectionStore.connect(tab.connectionId, tab.database);
+        } catch (err) {
+          console.warn(`[WorkspaceStore] Auto-switching connection to '${tab.connectionId}' failed:`, err);
+        }
+      } else {
+        if (connectionStore.activeConnectionId) {
+          tab.connectionId = connectionStore.activeConnectionId;
+          tab.database = connectionStore.activeDatabase;
+        }
+      }
+    } else if (tab.database && tab.database !== connectionStore.activeDatabase) {
+      // 2. Same connection, but different database: switch database
+      try {
+        await connectionStore.switchDatabase(tab.database);
+      } catch (err) {
+        console.warn(`[WorkspaceStore] Auto-switching database to '${tab.database}' failed:`, err);
+      }
+    }
   }
 
-  function addSqlTab(initialQuery = '', title?: string) {
+  function setActiveTab(id: string) {
+    activeTabId.value = id;
+    const targetTab = tabs.value.find((t) => t.id === id);
+    if (targetTab) {
+      syncTabConnectionAndDatabase(targetTab).catch((err) => {
+        console.warn('Sync connection for tab error:', err);
+      });
+    }
+  }
+
+  function updateActiveTabConnection(connId: string, database?: string) {
+    if (activeTab.value) {
+      activeTab.value.connectionId = connId;
+      if (database) {
+        activeTab.value.database = database;
+      }
+    }
+  }
+
+  function updateActiveTabDatabase(database: string) {
+    if (activeTab.value) {
+      activeTab.value.database = database;
+    }
+  }
+
+  function markTabSaved(tabId: string, newTitle?: string) {
+    const tab = tabs.value.find((t) => t.id === tabId);
+    if (tab) {
+      tab.isDirty = false;
+      if (newTitle) {
+        tab.title = newTitle;
+      }
+    }
+  }
+
+  function addSqlTab(
+    initialQuery = '',
+    title?: string,
+    connectionId?: string,
+    database?: string
+  ) {
+    const connectionStore = useConnectionStore();
     const existingNums = tabs.value
       .filter((t) => t.type === 'sql_editor')
       .map((t) => {
@@ -150,23 +225,42 @@ export const useWorkspaceStore = defineStore('workspace', () => {
       });
     const nextNum = existingNums.length > 0 ? Math.max(...existingNums) + 1 : 1;
     const tabId = `tab-sql-${Date.now()}`;
+    const effectiveConnId = connectionId || connectionStore.activeConnectionId || undefined;
+    const effectiveDb = database || connectionStore.activeDatabase || 'master';
+
     const newTab: SqlEditorTab = {
       id: tabId,
       type: 'sql_editor',
       title: title ?? `Query ${nextNum}.sql`,
       query: initialQuery || `SELECT TOP 100 * FROM sys.tables;`,
+      connectionId: effectiveConnId,
+      database: effectiveDb,
       isDirty: false,
     };
     tabs.value.push(newTab);
     activeTabId.value = tabId;
   }
 
-  function addTableDataTab(schema: string, tableName: string) {
+  function addTableDataTab(
+    schema: string,
+    tableName: string,
+    connectionId?: string,
+    database?: string
+  ) {
+    const connectionStore = useConnectionStore();
+    const effectiveConnId = connectionId || connectionStore.activeConnectionId || undefined;
+    const effectiveDb = database || connectionStore.activeDatabase || 'master';
+
     const existing = tabs.value.find(
-      (t) => t.type === 'table_data' && (t as TableDataTab).schema === schema && (t as TableDataTab).tableName === tableName
+      (t) =>
+        t.type === 'table_data' &&
+        (t as TableDataTab).schema === schema &&
+        (t as TableDataTab).tableName === tableName &&
+        (!t.connectionId || t.connectionId === effectiveConnId) &&
+        (!t.database || t.database === effectiveDb)
     );
     if (existing) {
-      activeTabId.value = existing.id;
+      setActiveTab(existing.id);
       return;
     }
 
@@ -177,6 +271,8 @@ export const useWorkspaceStore = defineStore('workspace', () => {
       title: `${schema}.${tableName} (Data)`,
       schema,
       tableName,
+      connectionId: effectiveConnId,
+      database: effectiveDb,
       isDirty: false,
     };
     tabs.value.push(newTab);
@@ -312,6 +408,9 @@ export const useWorkspaceStore = defineStore('workspace', () => {
     pendingColumnToInsert,
     activeToast,
     setActiveTab,
+    updateActiveTabConnection,
+    updateActiveTabDatabase,
+    markTabSaved,
     addSqlTab,
     addTableDataTab,
     closeTab,

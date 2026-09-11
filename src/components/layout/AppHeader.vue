@@ -186,6 +186,26 @@
           <span>Format</span>
         </button>
 
+        <!-- Open SQL File Button -->
+        <button
+          @click="$emit('open-sql-file')"
+          class="flex items-center space-x-1 bg-dark-800 hover:bg-dark-750 text-dark-300 hover:text-dark-100 px-2 py-1 rounded border border-dark-700 transition-colors cursor-pointer"
+          title="開啟本機 SQL 檔案 (Ctrl + O)"
+        >
+          <FolderOpen class="w-3.5 h-3.5 text-sky-400" />
+          <span>Open</span>
+        </button>
+
+        <!-- Save SQL File Button -->
+        <button
+          @click="$emit('save-sql-file')"
+          class="flex items-center space-x-1 bg-dark-800 hover:bg-dark-750 text-dark-300 hover:text-dark-100 px-2 py-1 rounded border border-dark-700 transition-colors cursor-pointer"
+          title="另存當前 SQL 至檔案 (Ctrl + S)"
+        >
+          <Save class="w-3.5 h-3.5 text-amber-400" />
+          <span>Save</span>
+        </button>
+
         <!-- New Query Tab Button -->
         <button
           @click="workspaceStore.addSqlTab()"
@@ -322,6 +342,8 @@ import {
   PlaySquare,
   Square,
   AlignLeft,
+  FolderOpen,
+  Save,
   Plus,
   PanelLeft,
   PanelBottom,
@@ -351,6 +373,8 @@ function openDbaQuery(query: DbaQueryItem) {
 const emit = defineEmits<{
   (e: 'run-query', mode?: 'current' | 'all'): void;
   (e: 'format-sql'): void;
+  (e: 'open-sql-file'): void;
+  (e: 'save-sql-file'): void;
   (e: 'open-connection-modal'): void;
   (e: 'open-settings-modal'): void;
 }>();
@@ -362,6 +386,7 @@ async function handleSelectConnection(connId: string) {
   }
   try {
     await connectionStore.connect(connId);
+    workspaceStore.updateActiveTabConnection(connId, connectionStore.activeDatabase);
   } catch (err: unknown) {
     console.error('Failed to switch connection:', err);
     alert(`切換連線失敗: ${err instanceof Error ? err.message : String(err)}`);
@@ -373,9 +398,11 @@ function handleOpenNewConnection() {
   emit('open-connection-modal');
 }
 
-function onDatabaseChange(e: Event) {
+async function onDatabaseChange(e: Event) {
   const target = e.target as HTMLSelectElement;
-  connectionStore.switchDatabase(target.value);
+  const newDb = target.value;
+  await connectionStore.switchDatabase(newDb);
+  workspaceStore.updateActiveTabDatabase(newDb);
 }
 
 function onMaxRowsChange(e: Event) {

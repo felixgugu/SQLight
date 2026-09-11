@@ -1016,6 +1016,7 @@ async function selectConnection(connId: string) {
   }
   try {
     await connectionStore.connect(connId);
+    workspaceStore.updateActiveTabConnection(connId, connectionStore.activeDatabase);
   } catch (err) {
     console.warn('Failed to connect on select:', err);
   }
@@ -1033,12 +1034,14 @@ async function selectDatabase(connId: string, db: string) {
   if (connectionStore.activeConnectionId !== connId || connectionStore.status !== 'connected') {
     try {
       await connectionStore.connect(connId);
+      workspaceStore.updateActiveTabConnection(connId, db);
     } catch (err) {
       console.warn('Failed to connect on selectDatabase:', err);
       return;
     }
   }
   await connectionStore.switchDatabase(db);
+  workspaceStore.updateActiveTabDatabase(db);
 }
 
 function tableKey(connId: string, db: string, schema: string, tableName: string) {
@@ -1135,7 +1138,12 @@ async function handleOpenData() {
       console.warn('Switch DB failed:', e);
     }
   }
-  workspaceStore.addTableDataTab(contextMenu.schema, contextMenu.tableName);
+  workspaceStore.addTableDataTab(
+    contextMenu.schema,
+    contextMenu.tableName,
+    contextMenu.connId,
+    contextMenu.database
+  );
   contextMenu.visible = false;
 }
 
@@ -1156,7 +1164,12 @@ async function handleGenerateSelect() {
   }
   const dbPrefix = contextMenu.database ? `[${contextMenu.database}].` : '';
   const sql = `SELECT TOP 1000\n  *\nFROM ${dbPrefix}[${contextMenu.schema}].[${contextMenu.tableName}];\n`;
-  workspaceStore.addSqlTab(sql, `${contextMenu.tableName}.sql`);
+  workspaceStore.addSqlTab(
+    sql,
+    `${contextMenu.tableName}.sql`,
+    contextMenu.connId,
+    contextMenu.database
+  );
   contextMenu.visible = false;
 }
 

@@ -21,6 +21,7 @@ const emit = defineEmits<{
   (e: 'update:modelValue', value: string): void;
   (e: 'execute', queryToRun: string, mode?: 'current' | 'all'): void;
   (e: 'format'): void;
+  (e: 'save'): void;
 }>();
 
 const settingsStore = useSettingsStore();
@@ -363,6 +364,11 @@ onMounted(() => {
       formatCode();
     }
   );
+
+  // Shortcut: Ctrl/Cmd + S -> Save SQL File
+  editorInstance.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => {
+    emit('save');
+  });
 
   // Smart Column Paste: Insert pending column name at cursor position with context awareness
   editorInstance.onMouseUp(() => {

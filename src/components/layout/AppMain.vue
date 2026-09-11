@@ -14,13 +14,14 @@
         @click="handleTabClick(tab.id)"
         @contextmenu.prevent="openTabContextMenu($event, tab)"
         :class="[
-          'query-tab-item h-7 px-2.5 flex items-center space-x-2 text-xs rounded-t border-t border-x cursor-grab active:cursor-grabbing transition-all duration-100 group max-w-[220px] select-none touch-none',
+          'query-tab-item h-7 px-2.5 flex items-center space-x-2 text-xs rounded-t border-t border-x cursor-grab active:cursor-grabbing transition-all duration-100 group max-w-[260px] select-none touch-none',
           workspaceStore.activeTabId === tab.id
             ? 'bg-dark-900 text-dark-100 border-dark-700 border-b-dark-900 font-medium shadow-xs'
             : 'bg-dark-800/80 text-dark-400 hover:text-dark-200 border-transparent hover:bg-dark-800',
           isPointerDragging && dragSourceIndex === idx ? 'opacity-35 border-dashed border-brand-400 scale-95' : '',
           dropHoverIndex === idx && isPointerDragging && dropHoverIndex !== dragSourceIndex ? 'border-brand-400 bg-brand-500/25 ring-1 ring-brand-400 scale-102' : ''
         ]"
+        :title="getTabTooltip(tab)"
       >
         <FileCode v-if="tab.type === 'sql_editor'" class="w-3.5 h-3.5 text-brand-400 flex-shrink-0" />
         <Table2 v-else class="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" />
@@ -37,20 +38,28 @@
           @blur="saveRenameTab(tab.id)"
           class="bg-dark-800 border border-brand-500 text-dark-100 rounded px-1.5 py-0.5 text-xs font-sans focus:outline-none w-28 flex-1 min-w-0"
         />
-        <span
+        <div
           v-else
           @dblclick.stop="startRenameTab(tab)"
-          class="truncate flex-1"
-          title="雙擊或右鍵重新命名此分頁"
+          class="flex items-center space-x-1.5 min-w-0 flex-1 truncate"
         >
-          {{ tab.title }}
-        </span>
+          <span class="truncate">
+            {{ tab.title }}
+          </span>
+          <!-- Database badge -->
+          <span
+            v-if="tab.database"
+            class="text-[10px] font-mono text-dark-400 bg-dark-850 px-1 py-0.2 rounded border border-dark-750/70 flex-shrink-0 group-hover:border-dark-650 transition-colors"
+          >
+            {{ tab.database }}
+          </span>
+        </div>
 
         <!-- Dirty Indicator -->
         <span
           v-if="tab.isDirty && editingTabId !== tab.id"
           class="w-1.5 h-1.5 rounded-full bg-amber-400 flex-shrink-0"
-          title="Unsaved changes"
+          title="未儲存變更 (Unsaved changes)"
         />
 
         <!-- Close Tab Button -->
@@ -102,6 +111,15 @@
         <span>重新命名 (Rename)</span>
       </button>
       <button
+        v-if="tabContextMenu.tab.type === 'sql_editor'"
+        type="button"
+        @click="handleContextMenuSaveAs"
+        class="w-full text-left px-3 py-1.5 hover:bg-dark-750 hover:text-dark-100 flex items-center space-x-2 cursor-pointer transition-colors text-amber-300"
+      >
+        <Save class="w-3.5 h-3.5 text-amber-400" />
+        <span>另存為 .sql 檔案...</span>
+      </button>
+      <button
         type="button"
         @click="handleContextMenuClose"
         class="w-full text-left px-3 py-1.5 hover:bg-dark-750 hover:text-dark-100 flex items-center space-x-2 cursor-pointer transition-colors"
@@ -136,6 +154,7 @@
             v-model="(workspaceStore.activeTab as SqlEditorTab).query"
             @execute="(sql, mode) => runQuery(mode || 'current', sql)"
             @format="formatCode"
+            @save="saveActiveTab"
           />
         </div>
       </div>
@@ -156,12 +175,13 @@
 
 <script setup lang="ts">
 import { ref, reactive, nextTick, onBeforeUnmount } from 'vue';
-import { FileCode, Table2, Plus, X, Edit2, Layers } from 'lucide-vue-next';
+import { FileCode, Table2, Plus, X, Edit2, Layers, Save } from 'lucide-vue-next';
 import { useWorkspaceStore } from '@/stores/workspaceStore';
 import { useConnectionStore } from '@/stores/connectionStore';
 import { useQueryStore } from '@/stores/queryStore';
 import MonacoEditor from '@/components/editor/MonacoEditor.vue';
 import TableDataViewer from '@/components/editor/TableDataViewer.vue';
+import { saveSqlToFile, openSqlFromFile } from '@/utils/fileStorage';
 import type { SqlEditorTab, TableDataTab, WorkspaceTab } from '@/types/workspace';
 
 const workspaceStore = useWorkspaceStore();
@@ -341,6 +361,14 @@ function handleContextMenuRename() {
   }
 }
 
+function handleContextMenuSaveAs() {
+  const tab = tabContextMenu.tab;
+  closeTabContextMenu();
+  if (tab) {
+    saveActiveTab(tab);
+  }
+}
+
 function handleContextMenuClose() {
   const tab = tabContextMenu.tab;
   closeTabContextMenu();
@@ -354,6 +382,56 @@ function handleContextMenuCloseOthers() {
   closeTabContextMenu();
   if (tab) {
     workspaceStore.closeOtherTabs(tab.id);
+  }
+}
+
+// ========================
+// Tooltips & File I/O
+// ========================
+function getTabTooltip(tab: WorkspaceTab): string {
+  const conn = connectionStore.connections.find((c) => c.id === tab.connectionId);
+  const connName = conn?.name || (tab.connectionId ? 'Unknown Connection' : '未指定連線');
+  const dbName = tab.database || 'master';
+  return `${tab.title}\n連線: ${connName}\n資料庫: ${dbName}\n(雙擊或右鍵重新命名此分頁)`;
+}
+
+async function saveActiveTab(tabToSave?: WorkspaceTab) {
+  const targetTab = tabToSave || workspaceStore.activeTab;
+  if (!targetTab || targetTab.type !== 'sql_editor') return;
+
+  const sqlTab = targetTab as SqlEditorTab;
+  try {
+    const defaultName = sqlTab.title.endsWith('.sql') ? sqlTab.title : `${sqlTab.title}.sql`;
+    const result = await saveSqlToFile(sqlTab.query, defaultName);
+    if (result.saved && result.fileName) {
+      workspaceStore.markTabSaved(sqlTab.id, result.fileName);
+      workspaceStore.showToast(`已儲存至檔案：${result.fileName}`, 'success', 2500);
+    }
+  } catch (err) {
+    console.error('Save SQL failed:', err);
+    workspaceStore.showToast('另存檔案失敗', 'error', 3000);
+  }
+}
+
+async function openSqlFile() {
+  try {
+    const result = await openSqlFromFile();
+    if (result.opened && result.content !== undefined) {
+      const fileName = result.fileName || 'Opened.sql';
+      workspaceStore.addSqlTab(
+        result.content,
+        fileName,
+        connectionStore.activeConnectionId || undefined,
+        connectionStore.activeDatabase || 'master'
+      );
+      if (workspaceStore.activeTab) {
+        workspaceStore.activeTab.isDirty = false;
+      }
+      workspaceStore.showToast(`已開啟 SQL 檔案：${fileName}`, 'success', 2500);
+    }
+  } catch (err) {
+    console.error('Open SQL failed:', err);
+    workspaceStore.showToast('開啟檔案失敗', 'error', 3000);
   }
 }
 
@@ -412,5 +490,7 @@ onBeforeUnmount(() => {
 defineExpose({
   runQuery,
   formatCode,
+  saveActiveTab,
+  openSqlFile,
 });
 </script>

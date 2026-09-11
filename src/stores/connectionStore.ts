@@ -117,11 +117,28 @@ export const useConnectionStore = defineStore('connection', () => {
     try {
       connections.value = await connectionService.getConnections();
       if (connections.value.length > 0 && !activeConnectionId.value) {
-        const savedConnId = localStorage.getItem(STORAGE_LAST_CONNECTION_KEY);
-        const target = (savedConnId && connections.value.find((c) => c.id === savedConnId)) || connections.value[0];
+        let tabConnId: string | undefined;
+        let tabDb: string | undefined;
+        try {
+          const workspaceStore = (await import('./workspaceStore')).useWorkspaceStore();
+          tabConnId = workspaceStore.activeTab?.connectionId;
+          tabDb = workspaceStore.activeTab?.database;
+        } catch {
+          // ignore if workspaceStore is not yet initialized
+        }
+
+        const preferredConnId = (tabConnId && connections.value.some((c) => c.id === tabConnId))
+          ? tabConnId
+          : localStorage.getItem(STORAGE_LAST_CONNECTION_KEY);
+        const target = (preferredConnId && connections.value.find((c) => c.id === preferredConnId)) || connections.value[0];
         if (target) {
           activeConnectionId.value = target.id;
-          const targetDb = lastDbByConn[target.id] || localStorage.getItem(STORAGE_LAST_DATABASE_KEY) || target.database || 'master';
+          const targetDb =
+            (tabConnId === target.id && tabDb) ||
+            lastDbByConn[target.id] ||
+            localStorage.getItem(STORAGE_LAST_DATABASE_KEY) ||
+            target.database ||
+            'master';
           activeDatabase.value = targetDb;
 
           const cachedDbs = databasesByConn[target.id];
