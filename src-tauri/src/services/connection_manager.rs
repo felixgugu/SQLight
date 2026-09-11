@@ -8,14 +8,15 @@ use crate::services::credential_store::CredentialStore;
 use crate::services::storage_service::StorageService;
 use chrono::Utc;
 use std::collections::HashMap;
-use std::sync::Arc;
-use tokio::sync::Mutex;
+use std::sync::{Arc, Mutex as StdMutex};
+use tokio::sync::Mutex as TokioMutex;
 use uuid::Uuid;
 
 pub struct ConnectionManager {
     credential_store: CredentialStore,
     storage: StorageService,
-    active_connections: Arc<Mutex<HashMap<String, Box<dyn DatabaseConnection>>>>,
+    active_connections: Arc<TokioMutex<HashMap<String, Box<dyn DatabaseConnection>>>>,
+    password_cache: Arc<StdMutex<HashMap<String, String>>>,
 }
 
 impl ConnectionManager {
@@ -23,7 +24,8 @@ impl ConnectionManager {
         Self {
             credential_store: CredentialStore::new(),
             storage: StorageService::new(),
-            active_connections: Arc::new(Mutex::new(HashMap::new())),
+            active_connections: Arc::new(TokioMutex::new(HashMap::new())),
+            password_cache: Arc::new(StdMutex::new(HashMap::new())),
         }
     }
 
@@ -37,9 +39,12 @@ impl ConnectionManager {
 
         let id = req.id.unwrap_or_else(|| Uuid::new_v4().to_string());
 
-        if let Some(password) = req.password {
+        if let Some(ref password) = req.password {
             if !password.is_empty() {
-                self.credential_store.save_password(&id, &password)?;
+                let _ = self.credential_store.save_password(&id, password);
+                if let Ok(mut cache) = self.password_cache.lock() {
+                    cache.insert(id.clone(), password.clone());
+                }
             }
         }
 
@@ -76,6 +81,9 @@ impl ConnectionManager {
         self.storage.save_profiles(&profiles)?;
 
         let _ = self.credential_store.delete_password(id);
+        if let Ok(mut cache) = self.password_cache.lock() {
+            cache.remove(id);
+        }
         let mut conns = self.active_connections.lock().await;
         conns.remove(id);
 
@@ -111,10 +119,32 @@ impl ConnectionManager {
                 message: format!("Connection profile {} not found", id),
             })?;
 
-        let password = self
-            .credential_store
-            .get_password(id)?
-            .unwrap_or_default();
+        // 1. Check in-memory password cache first
+        let cached_password = self
+            .password_cache
+            .lock()
+            .ok()
+            .and_then(|cache| cache.get(id).cloned());
+
+        // 2. Check Windows Credential Manager if not in cache
+        let password = match cached_password {
+            Some(p) if !p.is_empty() => p,
+            _ => {
+                let from_store = self
+                    .credential_store
+                    .get_password(id)
+                    .ok()
+                    .flatten()
+                    .unwrap_or_default();
+
+                if !from_store.is_empty() {
+                    if let Ok(mut cache) = self.password_cache.lock() {
+                        cache.insert(id.to_string(), from_store.clone());
+                    }
+                }
+                from_store
+            }
+        };
 
         let driver = SqlServerDriver::new();
         let conn = driver.connect(profile, &password).await?;

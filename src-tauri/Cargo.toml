@@ -22,7 +22,7 @@ tokio-util = { version = "0.7", features = ["compat"] }
 thiserror = "2.0"
 chrono = { version = "0.4", features = ["serde"] }
 uuid = { version = "1.10", features = ["v4", "serde"] }
-keyring = "3.0"
+keyring = { version = "3.0", features = ["windows-native"] }
 tiberius = { version = "0.12", features = ["chrono", "tds73"] }
 async-trait = "0.1"
 dirs-next = "2.0"
