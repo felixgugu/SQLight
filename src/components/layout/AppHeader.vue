@@ -8,7 +8,22 @@
     />
 
     <!-- Left: App Branding & Connection / DB Pickers -->
-    <div class="flex items-center space-x-3 z-50">
+    <div class="flex items-center space-x-2.5 z-50">
+      <!-- Toggle Sidebar Button (Top-Left) -->
+      <button
+        type="button"
+        @click="workspaceStore.toggleSidebar()"
+        :class="[
+          'p-1.5 rounded transition-colors border cursor-pointer',
+          workspaceStore.isSidebarOpen
+            ? 'bg-dark-800 text-dark-300 hover:text-dark-100 hover:bg-dark-750 border-dark-700'
+            : 'bg-brand-500/20 text-brand-400 border-brand-500/40'
+        ]"
+        title="切換左方側邊欄 (Toggle Left Sidebar)"
+      >
+        <PanelLeft class="w-3.5 h-3.5" />
+      </button>
+
       <!-- App Brand -->
       <div class="flex items-center space-x-2 font-bold text-dark-100 tracking-wide pr-2 border-r border-dark-700">
         <div class="w-5 h-5 rounded bg-brand-500/20 text-brand-500 flex items-center justify-center font-mono text-xs font-black">
@@ -215,8 +230,21 @@
 
       <div class="h-4 w-px bg-dark-700 mx-0.5"></div>
 
-      <!-- Right Controls: Toggle Results Dock & Settings Center -->
+      <!-- Right Controls: Toggle Sidebar, Results Dock & Settings Center -->
       <div class="flex items-center space-x-1.5">
+        <button
+          @click="workspaceStore.toggleSidebar()"
+          :class="[
+            'p-1.5 rounded transition-colors border cursor-pointer',
+            workspaceStore.isSidebarOpen
+              ? 'bg-brand-500/20 text-brand-400 border-brand-500/40'
+              : 'bg-dark-800 text-dark-400 hover:text-dark-200 border-dark-700'
+          ]"
+          title="切換左側邊欄 (Toggle Sidebar)"
+        >
+          <PanelLeft class="w-3.5 h-3.5" />
+        </button>
+
         <button
           @click="workspaceStore.toggleBottomPanel()"
           :class="[
@@ -225,7 +253,7 @@
               ? 'bg-brand-500/20 text-brand-400 border-brand-500/40'
               : 'bg-dark-800 text-dark-400 hover:text-dark-200 border-dark-700'
           ]"
-          title="Toggle Results Dock"
+          title="切換下方結果面板 (Toggle Results Dock)"
         >
           <PanelBottom class="w-3.5 h-3.5" />
         </button>
@@ -253,6 +281,7 @@ import {
   Square,
   AlignLeft,
   Plus,
+  PanelLeft,
   PanelBottom,
   Settings,
   RotateCw,

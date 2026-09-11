@@ -5,6 +5,27 @@ import { format as formatSql } from 'sql-formatter';
 
 const STORAGE_TABS_KEY = 'sqlight_workspace_tabs';
 const STORAGE_ACTIVE_TAB_KEY = 'sqlight_active_tab_id';
+const STORAGE_SIDEBAR_KEY = 'sqlight_sidebar_open';
+
+function loadSavedSidebarState(): boolean {
+  try {
+    const raw = localStorage.getItem(STORAGE_SIDEBAR_KEY);
+    if (raw !== null) {
+      return raw === 'true';
+    }
+  } catch (e) {
+    console.warn('Failed to load sidebar open state:', e);
+  }
+  return true;
+}
+
+function saveSidebarStateToStorage(isOpen: boolean) {
+  try {
+    localStorage.setItem(STORAGE_SIDEBAR_KEY, String(isOpen));
+  } catch (e) {
+    console.warn('Failed to save sidebar state to storage:', e);
+  }
+}
 
 const DEFAULT_INITIAL_TAB: SqlEditorTab = {
   id: 'tab-initial-sql-1',
@@ -84,6 +105,7 @@ export const useWorkspaceStore = defineStore('workspace', () => {
   const activeTabId = ref<string>(loadSavedActiveTabId(initialTabs));
   const bottomPanelTab = ref<BottomPanelTab>('results');
   const isBottomPanelOpen = ref<boolean>(true);
+  const isSidebarOpen = ref<boolean>(loadSavedSidebarState());
 
   // Watchers to auto-persist changes
   watch(
@@ -96,6 +118,10 @@ export const useWorkspaceStore = defineStore('workspace', () => {
 
   watch(activeTabId, (newId) => {
     saveActiveTabIdToStorage(newId);
+  });
+
+  watch(isSidebarOpen, (isOpen) => {
+    saveSidebarStateToStorage(isOpen);
   });
 
   const activeTab = computed(() => {
@@ -201,19 +227,58 @@ export const useWorkspaceStore = defineStore('workspace', () => {
     isBottomPanelOpen.value = !isBottomPanelOpen.value;
   }
 
+  function toggleSidebar() {
+    isSidebarOpen.value = !isSidebarOpen.value;
+  }
+
+  function setSidebarOpen(open: boolean) {
+    isSidebarOpen.value = open;
+  }
+
+  function reorderTabs(fromIndex: number, toIndex: number) {
+    if (fromIndex === toIndex) return;
+    if (fromIndex < 0 || fromIndex >= tabs.value.length) return;
+    if (toIndex < 0 || toIndex >= tabs.value.length) return;
+
+    const moved = tabs.value[fromIndex];
+    if (!moved) return;
+    tabs.value.splice(fromIndex, 1);
+    tabs.value.splice(toIndex, 0, moved);
+  }
+
+  function renameTab(tabId: string, newTitle: string) {
+    const trimmed = newTitle.trim();
+    if (!trimmed) return;
+    const tab = tabs.value.find((t) => t.id === tabId);
+    if (tab) {
+      tab.title = trimmed;
+    }
+  }
+
+  function closeOtherTabs(tabId: string) {
+    tabs.value = tabs.value.filter((t) => t.id === tabId);
+    activeTabId.value = tabId;
+  }
+
   return {
     tabs,
     activeTabId,
     activeTab,
     bottomPanelTab,
     isBottomPanelOpen,
+    isSidebarOpen,
     setActiveTab,
     addSqlTab,
     addTableDataTab,
     closeTab,
+    closeOtherTabs,
+    reorderTabs,
+    renameTab,
     updateTabContent,
     formatActiveQuery,
     setBottomPanelTab,
     toggleBottomPanel,
+    toggleSidebar,
+    setSidebarOpen,
   };
 });

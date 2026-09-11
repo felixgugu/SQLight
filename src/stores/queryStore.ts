@@ -248,6 +248,15 @@ export const useQueryStore = defineStore('query', () => {
     }
   }
 
+  function renameResultTab(id: string, newTitle: string) {
+    const trimmed = newTitle.trim();
+    if (!trimmed) return;
+    const tab = resultTabs.value.find((t) => t.id === id);
+    if (tab) {
+      tab.title = trimmed;
+    }
+  }
+
   function clearResults() {
     // Retain pinned tabs if any, or clear all
     resultTabs.value = resultTabs.value.filter((t) => t.isPinned);
@@ -277,6 +286,7 @@ export const useQueryStore = defineStore('query', () => {
     togglePinTab,
     reorderResultTabs,
     deleteResultTab,
+    renameResultTab,
     clearResults,
     clearHistory,
   };

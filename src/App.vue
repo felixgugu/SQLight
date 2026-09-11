@@ -12,6 +12,7 @@
     <div class="flex-1 flex overflow-hidden relative">
       <!-- Left Resizable Sidebar -->
       <div
+        v-if="workspaceStore.isSidebarOpen"
         :style="{ width: `${sidebarSplitter.size.value}px` }"
         class="h-full flex-shrink-0 overflow-hidden"
       >
@@ -23,6 +24,7 @@
 
       <!-- Horizontal Splitter Handle (Resize Sidebar Width) -->
       <ResizableSplitter
+        v-if="workspaceStore.isSidebarOpen"
         direction="horizontal"
         :is-dragging="sidebarSplitter.isDragging.value"
         @pointerdown="sidebarSplitter.onPointerDown"

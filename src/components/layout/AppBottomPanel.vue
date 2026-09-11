@@ -72,6 +72,7 @@
             :key="rtab.id"
             @pointerdown="onTabPointerDown($event, idx)"
             @click="handleTabClick(rtab.id)"
+            @contextmenu.prevent="openTabContextMenu($event, rtab)"
             :class="[
               'result-tab-item h-5.5 px-2 flex items-center space-x-1.5 text-xxs rounded cursor-grab active:cursor-grabbing transition-all duration-100 group max-w-[220px] border flex-shrink-0 select-none touch-none',
               queryStore.activeResultTabId === rtab.id
@@ -97,11 +98,30 @@
               <Pin class="w-2.5 h-2.5" :class="rtab.isPinned ? 'fill-current' : ''" />
             </button>
 
-            <!-- Tab Title -->
-            <span class="truncate flex-1 pointer-events-none">{{ rtab.title }}</span>
+            <!-- Tab Title (Normal Span OR Inline Rename Input) -->
+            <input
+              v-if="editingTabId === rtab.id"
+              ref="renameInputRef"
+              v-model="editingTabTitle"
+              @click.stop
+              @pointerdown.stop
+              @keydown.enter.stop="saveRenameTab(rtab.id)"
+              @keydown.esc.stop="cancelRenameTab"
+              @blur="saveRenameTab(rtab.id)"
+              class="bg-dark-900 border border-brand-500 text-dark-100 rounded px-1 py-0 text-xxs font-sans focus:outline-none w-20 flex-1 min-w-0"
+            />
+            <span
+              v-else
+              @dblclick.stop="startRenameTab(rtab)"
+              class="truncate flex-1 cursor-text"
+              title="雙擊或右鍵重新命名此結果分頁"
+            >
+              {{ rtab.title }}
+            </span>
 
             <!-- Row Count or Status Badge -->
             <span
+              v-if="editingTabId !== rtab.id"
               :class="[
                 'text-xxs px-1 py-0.2 rounded font-mono flex-shrink-0 pointer-events-none',
                 rtab.result.messages.some((m) => m.level === 'error')
@@ -114,6 +134,7 @@
 
             <!-- Delete Tab Button (Disabled on the last remaining result tab) -->
             <button
+              v-if="editingTabId !== rtab.id"
               type="button"
               @click.stop="queryStore.deleteResultTab(rtab.id)"
               :disabled="queryStore.resultTabs.length <= 1"
@@ -128,6 +149,55 @@
               <X class="w-2.5 h-2.5" />
             </button>
           </div>
+        </div>
+
+        <!-- Result Tab Context Menu Backdrop -->
+        <div
+          v-if="tabContextMenu.visible"
+          class="fixed inset-0 z-50"
+          @click="closeTabContextMenu"
+          @contextmenu.prevent="closeTabContextMenu"
+        />
+
+        <!-- Result Tab Context Menu Popup -->
+        <div
+          v-if="tabContextMenu.visible && tabContextMenu.tab"
+          :style="{ left: `${tabContextMenu.x}px`, top: `${tabContextMenu.y}px` }"
+          class="fixed z-50 bg-dark-850 border border-dark-700 rounded-md shadow-2xl py-1 text-xs text-dark-200 select-none min-w-[160px] animate-in fade-in zoom-in-95 duration-100 font-sans"
+        >
+          <div class="px-3 py-1 text-xxs font-mono text-dark-400 border-b border-dark-750 truncate max-w-[180px]">
+            {{ tabContextMenu.tab.title }}
+          </div>
+          <button
+            type="button"
+            @click="handleContextMenuRename"
+            class="w-full text-left px-3 py-1.5 hover:bg-dark-750 hover:text-dark-100 flex items-center space-x-2 cursor-pointer transition-colors"
+          >
+            <Edit2 class="w-3.5 h-3.5 text-dark-400" />
+            <span>重新命名 (Rename)</span>
+          </button>
+          <button
+            type="button"
+            @click="handleContextMenuPin"
+            class="w-full text-left px-3 py-1.5 hover:bg-dark-750 hover:text-dark-100 flex items-center space-x-2 cursor-pointer transition-colors"
+          >
+            <Pin class="w-3.5 h-3.5" :class="tabContextMenu.tab.isPinned ? 'fill-current text-amber-400' : 'text-dark-400'" />
+            <span>{{ tabContextMenu.tab.isPinned ? '解除釘選 (Unpin)' : '釘選此結果 (Pin)' }}</span>
+          </button>
+          <button
+            type="button"
+            @click="handleContextMenuClose"
+            :disabled="queryStore.resultTabs.length <= 1"
+            :class="[
+              'w-full text-left px-3 py-1.5 flex items-center space-x-2 transition-colors',
+              queryStore.resultTabs.length <= 1
+                ? 'opacity-40 cursor-not-allowed text-dark-500'
+                : 'hover:bg-dark-750 hover:text-dark-100 text-dark-300 cursor-pointer'
+            ]"
+          >
+            <X class="w-3.5 h-3.5 text-dark-400" />
+            <span>關閉此結果 (Close)</span>
+          </button>
         </div>
 
         <!-- Result Grid Viewer Area -->
@@ -156,14 +226,15 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onBeforeUnmount } from 'vue';
-import { TableProperties, MessageSquare, History, Minimize2, Pin, X } from 'lucide-vue-next';
+import { ref, computed, reactive, nextTick, onBeforeUnmount } from 'vue';
+import { TableProperties, MessageSquare, History, Minimize2, Pin, X, Edit2 } from 'lucide-vue-next';
 import { useWorkspaceStore } from '@/stores/workspaceStore';
 import { useQueryStore } from '@/stores/queryStore';
 import ResultGrid from '@/components/results/ResultGrid.vue';
 import ResultMessages from '@/components/results/ResultMessages.vue';
 import QueryHistory from '@/components/results/QueryHistory.vue';
 import type { BottomPanelTab } from '@/types/workspace';
+import type { QueryResultTab } from '@/types/query';
 
 const workspaceStore = useWorkspaceStore();
 const queryStore = useQueryStore();
@@ -180,9 +251,9 @@ function onTabPointerDown(e: PointerEvent, index: number) {
   // Only respond to left mouse button
   if (e.button !== 0) return;
 
-  // Don't initiate drag if clicking on buttons (Pin / Close)
+  // Don't initiate drag if clicking on buttons (Pin / Close) or input (Renaming)
   const target = e.target as HTMLElement | null;
-  if (target?.closest('button')) {
+  if (target?.closest('button') || target?.closest('input')) {
     return;
   }
 
@@ -271,6 +342,88 @@ function handleTabClick(tabId: string) {
     return;
   }
   queryStore.selectResultTab(tabId);
+}
+
+// ========================
+// Inline Tab Renaming
+// ========================
+const editingTabId = ref<string | null>(null);
+const editingTabTitle = ref<string>('');
+const renameInputRef = ref<HTMLInputElement | null>(null);
+
+function startRenameTab(rtab: QueryResultTab) {
+  editingTabId.value = rtab.id;
+  editingTabTitle.value = rtab.title;
+  nextTick(() => {
+    renameInputRef.value?.focus();
+    renameInputRef.value?.select();
+  });
+}
+
+function saveRenameTab(tabId: string) {
+  if (!editingTabId.value || editingTabId.value !== tabId) return;
+  const trimmed = editingTabTitle.value.trim();
+  if (trimmed) {
+    queryStore.renameResultTab(tabId, trimmed);
+  }
+  editingTabId.value = null;
+  editingTabTitle.value = '';
+}
+
+function cancelRenameTab() {
+  editingTabId.value = null;
+  editingTabTitle.value = '';
+}
+
+// ========================
+// Tab Context Menu
+// ========================
+const tabContextMenu = reactive<{
+  visible: boolean;
+  x: number;
+  y: number;
+  tab: QueryResultTab | null;
+}>({
+  visible: false,
+  x: 0,
+  y: 0,
+  tab: null,
+});
+
+function openTabContextMenu(e: MouseEvent, tab: QueryResultTab) {
+  tabContextMenu.visible = true;
+  tabContextMenu.x = Math.min(e.clientX, window.innerWidth - 180);
+  tabContextMenu.y = e.clientY;
+  tabContextMenu.tab = tab;
+}
+
+function closeTabContextMenu() {
+  tabContextMenu.visible = false;
+  tabContextMenu.tab = null;
+}
+
+function handleContextMenuRename() {
+  const tab = tabContextMenu.tab;
+  closeTabContextMenu();
+  if (tab) {
+    startRenameTab(tab);
+  }
+}
+
+function handleContextMenuPin() {
+  const tab = tabContextMenu.tab;
+  closeTabContextMenu();
+  if (tab) {
+    queryStore.togglePinTab(tab.id);
+  }
+}
+
+function handleContextMenuClose() {
+  const tab = tabContextMenu.tab;
+  closeTabContextMenu();
+  if (tab) {
+    queryStore.deleteResultTab(tab.id);
+  }
 }
 
 onBeforeUnmount(() => {
