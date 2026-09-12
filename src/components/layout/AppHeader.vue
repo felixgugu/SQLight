@@ -143,35 +143,30 @@
         <button
           @click="$emit('run-query', 'current')"
           :disabled="queryStore.isExecuting"
-          class="flex items-center space-x-1.5 bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white px-2.5 py-1 rounded font-medium shadow-xs transition-colors group disabled:opacity-50 cursor-pointer"
-          title="執行單一語句或選取內容 (Ctrl + Enter)"
+          class="p-1.5 bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white rounded font-medium shadow-xs transition-colors group disabled:opacity-50 cursor-pointer flex items-center justify-center"
+          title="執行當前語句或選取內容 (Ctrl + Enter)"
         >
           <RotateCw v-if="queryStore.isExecuting" class="w-3.5 h-3.5 animate-spin" />
           <Play v-else class="w-3.5 h-3.5 fill-current" />
-          <span>Run</span>
-          <span class="text-xxs text-emerald-200 font-mono bg-emerald-700/60 px-1 py-0.2 rounded">^↵</span>
         </button>
 
         <!-- Run All Statements Button -->
         <button
           @click="$emit('run-query', 'all')"
           :disabled="queryStore.isExecuting"
-          class="flex items-center space-x-1.5 bg-emerald-700/80 hover:bg-emerald-600 active:bg-emerald-800 text-emerald-100 hover:text-white px-2.5 py-1 rounded font-medium shadow-xs transition-colors group disabled:opacity-50 cursor-pointer"
+          class="p-1.5 bg-emerald-700/80 hover:bg-emerald-600 active:bg-emerald-800 text-emerald-100 hover:text-white rounded font-medium shadow-xs transition-colors group disabled:opacity-50 cursor-pointer flex items-center justify-center"
           title="無條件執行整頁全部內容 (Ctrl + Shift + Enter)"
         >
           <PlaySquare class="w-3.5 h-3.5" />
-          <span>Run All</span>
-          <span class="text-xxs text-emerald-300 font-mono bg-emerald-800/80 px-1 py-0.2 rounded">^+↵</span>
         </button>
 
         <!-- Stop Button -->
         <button
-          class="flex items-center space-x-1 bg-dark-800 hover:bg-dark-750 text-dark-400 hover:text-dark-200 px-2 py-1 rounded border border-dark-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+          class="p-1.5 bg-dark-800 hover:bg-dark-750 text-dark-400 hover:text-dark-200 rounded border border-dark-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center"
           :disabled="!queryStore.isExecuting"
-          title="Cancel Execution"
+          title="取消查詢執行 (Stop Execution)"
         >
-          <Square class="w-3 h-3" />
-          <span>Stop</span>
+          <Square class="w-3.5 h-3.5" />
         </button>
 
         <div class="h-4 w-px bg-dark-700 mx-1"></div>
@@ -179,41 +174,46 @@
         <!-- Format SQL Button -->
         <button
           @click="$emit('format-sql')"
-          class="flex items-center space-x-1 bg-dark-800 hover:bg-dark-750 text-dark-300 hover:text-dark-100 px-2 py-1 rounded border border-dark-700 transition-colors cursor-pointer"
-          title="Format SQL (Shift + Alt + F)"
+          class="p-1.5 bg-dark-800 hover:bg-dark-750 text-dark-300 hover:text-dark-100 rounded border border-dark-700 transition-colors cursor-pointer flex items-center justify-center"
+          title="格式化 SQL (Shift + Alt + F)"
         >
           <AlignLeft class="w-3.5 h-3.5 text-dark-400" />
-          <span>Format</span>
         </button>
 
         <!-- Open SQL File Button -->
         <button
           @click="$emit('open-sql-file')"
-          class="flex items-center space-x-1 bg-dark-800 hover:bg-dark-750 text-dark-300 hover:text-dark-100 px-2 py-1 rounded border border-dark-700 transition-colors cursor-pointer"
+          class="p-1.5 bg-dark-800 hover:bg-dark-750 text-dark-300 hover:text-dark-100 rounded border border-dark-700 transition-colors cursor-pointer flex items-center justify-center"
           title="開啟本機 SQL 檔案 (Ctrl + O)"
         >
           <FolderOpen class="w-3.5 h-3.5 text-sky-400" />
-          <span>Open</span>
         </button>
 
         <!-- Save SQL File Button -->
         <button
           @click="$emit('save-sql-file')"
-          class="flex items-center space-x-1 bg-dark-800 hover:bg-dark-750 text-dark-300 hover:text-dark-100 px-2 py-1 rounded border border-dark-700 transition-colors cursor-pointer"
+          class="p-1.5 bg-dark-800 hover:bg-dark-750 text-dark-300 hover:text-dark-100 rounded border border-dark-700 transition-colors cursor-pointer flex items-center justify-center"
           title="另存當前 SQL 至檔案 (Ctrl + S)"
         >
           <Save class="w-3.5 h-3.5 text-amber-400" />
-          <span>Save</span>
         </button>
 
         <!-- New Query Tab Button -->
         <button
           @click="workspaceStore.addSqlTab()"
-          class="flex items-center space-x-1 bg-dark-800 hover:bg-dark-750 text-dark-300 hover:text-dark-100 px-2 py-1 rounded border border-dark-700 transition-colors cursor-pointer"
-          title="New SQL Query Tab"
+          class="p-1.5 bg-dark-800 hover:bg-dark-750 text-dark-300 hover:text-dark-100 rounded border border-dark-700 transition-colors cursor-pointer flex items-center justify-center"
+          title="開啟新查詢分頁 (New SQL Query Tab)"
         >
           <Plus class="w-3.5 h-3.5 text-brand-500" />
-          <span>New Tab</span>
+        </button>
+
+        <!-- Quick Object Finder Button (Ctrl + P) -->
+        <button
+          @click="$emit('open-quick-finder')"
+          class="p-1.5 bg-dark-800 hover:bg-dark-750 text-dark-300 hover:text-dark-100 rounded border border-dark-700 transition-colors cursor-pointer flex items-center justify-center"
+          title="快速物件檢索器 (Ctrl + P)"
+        >
+          <Search class="w-3.5 h-3.5 text-brand-400" />
         </button>
 
         <!-- DBA Diagnostics Toolbox Button & Dropdown -->
@@ -222,7 +222,7 @@
             type="button"
             @click="isDbaDropdownOpen = !isDbaDropdownOpen"
             :class="[
-              'flex items-center space-x-1 px-2 py-1 rounded border transition-colors cursor-pointer text-xs font-medium',
+              'p-1.5 rounded border transition-colors cursor-pointer flex items-center space-x-1',
               isDbaDropdownOpen
                 ? 'bg-rose-500/20 text-rose-300 border-rose-500/50'
                 : 'bg-dark-800 hover:bg-dark-750 text-dark-300 hover:text-dark-100 border-dark-700'
@@ -230,8 +230,7 @@
             title="DBA 常用診斷維護工具箱 (SQL Server 排查與監控指令庫)"
           >
             <Activity class="w-3.5 h-3.5 text-rose-400" />
-            <span>DBA 工具箱</span>
-            <ChevronDown :class="['w-3 h-3 text-dark-400 transition-transform duration-150', isDbaDropdownOpen ? 'rotate-180 text-rose-400' : '']" />
+            <ChevronDown :class="['w-2.5 h-2.5 text-dark-400 transition-transform duration-150', isDbaDropdownOpen ? 'rotate-180 text-rose-400' : '']" />
           </button>
 
           <!-- Dropdown Menu -->
@@ -271,6 +270,63 @@
             </div>
           </div>
         </div>
+
+        <!-- Performance Analysis Checkbox (Icon-only with title) -->
+        <label
+          class="flex items-center space-x-1 px-1.5 py-1 rounded border cursor-pointer select-none transition-colors"
+          :class="[
+            queryStore.isStatsEnabled
+              ? 'bg-amber-500/20 border-amber-500/50 text-amber-300 shadow-xs'
+              : 'bg-dark-800 hover:bg-dark-750 border-dark-700 text-dark-400 hover:text-dark-200'
+          ]"
+          title="效能分析 (SET STATISTICS IO, TIME ON) — 執行時記錄 IO 與耗時，產生效能儀表板"
+        >
+          <input
+            type="checkbox"
+            :checked="queryStore.isStatsEnabled"
+            @change="queryStore.toggleStatsEnabled()"
+            class="w-3.5 h-3.5 rounded border-dark-600 bg-dark-900 text-amber-500 focus:ring-0 focus:ring-offset-0 cursor-pointer accent-amber-500"
+          />
+          <Gauge class="w-3.5 h-3.5 flex-shrink-0" :class="queryStore.isStatsEnabled ? 'text-amber-400' : 'text-dark-400'" />
+        </label>
+
+        <!-- Estimated Execution Plan Checkbox (SET SHOWPLAN_ALL ON) (Icon-only with title) -->
+        <label
+          class="flex items-center space-x-1 px-1.5 py-1 rounded border cursor-pointer select-none transition-colors"
+          :class="[
+            queryStore.isShowplanEnabled
+              ? 'bg-cyan-500/20 border-cyan-500/50 text-cyan-300 shadow-xs'
+              : 'bg-dark-800 hover:bg-dark-750 border-dark-700 text-dark-400 hover:text-dark-200'
+          ]"
+          title="預估執行計畫 (SET SHOWPLAN_ALL ON) — 以表格型態輸出估計計畫，不實際執行語句"
+        >
+          <input
+            type="checkbox"
+            :checked="queryStore.isShowplanEnabled"
+            @change="queryStore.toggleShowplanEnabled()"
+            class="w-3.5 h-3.5 rounded border-dark-600 bg-dark-900 text-cyan-500 focus:ring-0 focus:ring-offset-0 cursor-pointer accent-cyan-500"
+          />
+          <Workflow class="w-3.5 h-3.5 flex-shrink-0" :class="queryStore.isShowplanEnabled ? 'text-cyan-400' : 'text-dark-400'" />
+        </label>
+
+        <!-- Actual Execution Plan Checkbox (SET STATISTICS XML ON) (Icon-only with title) -->
+        <label
+          class="flex items-center space-x-1 px-1.5 py-1 rounded border cursor-pointer select-none transition-colors"
+          :class="[
+            queryStore.isActualPlanEnabled
+              ? 'bg-purple-500/20 border-purple-500/50 text-purple-300 shadow-xs'
+              : 'bg-dark-800 hover:bg-dark-750 border-dark-700 text-dark-400 hover:text-dark-200'
+          ]"
+          title="實際執行計畫 (SET STATISTICS XML ON) — 實際執行語句並於新分頁開啟圖形化執行計畫 (支援複製原始 XML)"
+        >
+          <input
+            type="checkbox"
+            :checked="queryStore.isActualPlanEnabled"
+            @change="queryStore.toggleActualPlanEnabled()"
+            class="w-3.5 h-3.5 rounded border-dark-600 bg-dark-900 text-purple-500 focus:ring-0 focus:ring-offset-0 cursor-pointer accent-purple-500"
+          />
+          <Network class="w-3.5 h-3.5 flex-shrink-0" :class="queryStore.isActualPlanEnabled ? 'text-purple-400' : 'text-dark-400'" />
+        </label>
 
         <!-- Max Rows Limit Selector -->
         <div class="flex items-center space-x-1 pl-1.5 border-l border-dark-750 text-dark-400 text-xxs font-mono">
@@ -351,6 +407,10 @@ import {
   RotateCw,
   Check,
   Activity,
+  Search,
+  Gauge,
+  Workflow,
+  Network,
 } from 'lucide-vue-next';
 import { useWorkspaceStore } from '@/stores/workspaceStore';
 import { useConnectionStore } from '@/stores/connectionStore';
@@ -377,6 +437,7 @@ const emit = defineEmits<{
   (e: 'save-sql-file'): void;
   (e: 'open-connection-modal'): void;
   (e: 'open-settings-modal'): void;
+  (e: 'open-quick-finder'): void;
 }>();
 
 async function handleSelectConnection(connId: string) {

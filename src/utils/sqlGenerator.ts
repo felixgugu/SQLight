@@ -1,17 +1,26 @@
 import type { CellValue } from '@/types/query';
-import { wrapIdentifierIfNeeded } from './sqlParser';
 
 export interface ColumnInfo {
   name: string;
   dataType?: string;
   isPrimaryKey?: boolean;
+  isIdentity?: boolean;
 }
 
 export interface GenerateDmlParams {
   tableName: string;
   schema?: string;
+  database?: string;
   columns: ColumnInfo[];
   row: CellValue[];
+  primaryKeyColumns?: string[];
+}
+
+/**
+ * Escapes an identifier by enclosing it in square brackets and doubling any closing brackets.
+ */
+export function escapeIdentifier(name: string): string {
+  return `[${name.replace(/\]/g, ']]')}]`;
 }
 
 /**
@@ -40,6 +49,9 @@ export function formatSqlLiteral(val: CellValue | undefined): string {
     if (Number.isNaN(val) || !Number.isFinite(val)) {
       return 'NULL';
     }
+    if (Math.abs(val) > Number.MAX_SAFE_INTEGER || (Number.isInteger(val) && !Number.isSafeInteger(val))) {
+      throw new Error(`Imprecise integer (${val}) cannot safely be formatted as a SQL literal`);
+    }
     return String(val);
   }
 
@@ -48,7 +60,7 @@ export function formatSqlLiteral(val: CellValue | undefined): string {
   }
 
   if (typeof val === 'object' && 'type' in val && val.type === 'binary') {
-    return 'NULL';
+    throw new Error('Binary placeholders cannot be safely formatted as SQL literals');
   }
 
   const str = String(val);
@@ -57,36 +69,78 @@ export function formatSqlLiteral(val: CellValue | undefined): string {
 }
 
 /**
- * Formats the full qualified table name [schema].[tableName] (defaults schema to dbo if omitted)
+ * Formats the full qualified table name [database].[schema].[tableName] (defaults schema to dbo if omitted)
  */
-export function formatTableName(tableName: string, schema?: string): string {
-  const cleanTable = tableName.replace(/[\[\]]/g, '').trim();
-  const cleanSchema = (schema || 'dbo').replace(/[\[\]]/g, '').trim();
+export function formatTableName(tableName: string, schema?: string, database?: string): string {
+  const cleanTable = tableName.trim();
+  const cleanSchema = (schema || 'dbo').trim();
+  const parts: string[] = [];
 
-  if (cleanSchema) {
-    return `${wrapIdentifierIfNeeded(cleanSchema)}.${wrapIdentifierIfNeeded(cleanTable)}`;
+  if (database && database.trim()) {
+    parts.push(escapeIdentifier(database.trim()));
   }
-  return wrapIdentifierIfNeeded(cleanTable);
+  if (cleanSchema) {
+    parts.push(escapeIdentifier(cleanSchema));
+  }
+  parts.push(escapeIdentifier(cleanTable));
+
+  return parts.join('.');
 }
 
 /**
  * Builds the WHERE clause for UPDATE / DELETE.
- * If PK columns exist and are present in columns, use PK columns.
- * Otherwise, fallback to ALL columns to prevent unintentional bulk updates/deletions.
+ * If authoritative primaryKeyColumns are provided and completely present in projected columns, use PK columns.
+ * Otherwise, fallback to ALL projected columns to prevent unintentional bulk updates/deletions.
  */
 export function buildWhereConditions(
   columns: ColumnInfo[],
-  row: CellValue[]
+  row: CellValue[],
+  primaryKeyColumns?: string[]
 ): string[] {
-  const pkColumns = columns.filter((c) => c.isPrimaryKey);
-  const targetCols = pkColumns.length > 0 ? pkColumns : columns;
+  if (!columns || columns.length === 0 || !row || row.length === 0) {
+    throw new Error('Columns and row must not be empty');
+  }
+
+  if (columns.length !== row.length) {
+    throw new Error(`Column count (${columns.length}) does not match row value count (${row.length})`);
+  }
+
+  const seenNames = new Set<string>();
+  for (const col of columns) {
+    const lower = col.name.toLowerCase();
+    if (seenNames.has(lower)) {
+      throw new Error(`Ambiguous query result contains duplicate column name: ${col.name}`);
+    }
+    seenNames.add(lower);
+  }
+
+  let targetCols: ColumnInfo[];
+
+  if (primaryKeyColumns && primaryKeyColumns.length > 0) {
+    const colMap = new Map<string, ColumnInfo>();
+    for (const col of columns) {
+      colMap.set(col.name.toLowerCase(), col);
+    }
+
+    const hasCompletePk = primaryKeyColumns.every((pk) => colMap.has(pk.toLowerCase()));
+
+    if (hasCompletePk) {
+      targetCols = primaryKeyColumns.map((pk) => colMap.get(pk.toLowerCase())!);
+    } else {
+      // Partial composite primary key falls back to all projected columns
+      targetCols = columns;
+    }
+  } else {
+    // Unknown primary key metadata never assumes a partial key is unique; falls back to all projected columns
+    targetCols = columns;
+  }
 
   const conditions: string[] = [];
 
   for (const col of targetCols) {
     const colIdx = columns.findIndex((c) => c.name.toLowerCase() === col.name.toLowerCase());
     const val = colIdx >= 0 ? row[colIdx] : null;
-    const colName = wrapIdentifierIfNeeded(col.name);
+    const colName = escapeIdentifier(col.name);
 
     if (val === null || val === undefined) {
       conditions.push(`${colName} IS NULL`);
@@ -229,12 +283,20 @@ export function extractAllTableNamesFromSql(
  * Generates an INSERT statement for a specific row
  */
 export function generateInsertStatement(params: GenerateDmlParams): string {
-  const { tableName, schema, columns, row } = params;
-  const fullTableName = formatTableName(tableName, schema);
+  const { tableName, schema, database, columns, row } = params;
+  const fullTableName = formatTableName(tableName, schema, database);
   const timeHeader = `-- 自動產生語法 時間: ${formatCurrentDateTime()}`;
 
-  const colNames = columns.map((c) => wrapIdentifierIfNeeded(c.name)).join(', ');
-  const values = columns.map((_, idx) => formatSqlLiteral(row[idx])).join(', ');
+  const insertColsWithIdx = columns
+    .map((col, idx) => ({ col, idx }))
+    .filter((item) => !item.col.isIdentity);
+
+  if (insertColsWithIdx.length === 0) {
+    return `${timeHeader}\nINSERT INTO ${fullTableName} DEFAULT VALUES;`;
+  }
+
+  const colNames = insertColsWithIdx.map((item) => escapeIdentifier(item.col.name)).join(', ');
+  const values = insertColsWithIdx.map((item) => formatSqlLiteral(row[item.idx])).join(', ');
 
   return `${timeHeader}\nINSERT INTO ${fullTableName} (${colNames})\nVALUES (${values});`;
 }
@@ -243,38 +305,85 @@ export function generateInsertStatement(params: GenerateDmlParams): string {
  * Generates an UPDATE statement for a specific row
  */
 export function generateUpdateStatement(params: GenerateDmlParams): string {
-  const { tableName, schema, columns, row } = params;
-  const fullTableName = formatTableName(tableName, schema);
+  const { tableName, schema, database, columns, row, primaryKeyColumns } = params;
+  const fullTableName = formatTableName(tableName, schema, database);
   const timeHeader = `-- 自動產生語法 時間: ${formatCurrentDateTime()}`;
 
-  const pkColumns = columns.filter((c) => c.isPrimaryKey);
-  // If PK columns exist, update only non-PK columns. If table only has PK or no PK, update all columns.
-  const setCols = pkColumns.length > 0 && pkColumns.length < columns.length
-    ? columns.filter((c) => !c.isPrimaryKey)
-    : columns;
+  // Identity columns can never be updated
+  const nonIdentityCols = columns.filter((c) => !c.isIdentity);
+
+  // Determine PK column names
+  let pkNames: Set<string>;
+  if (primaryKeyColumns && primaryKeyColumns.length > 0) {
+    const colMap = new Set(columns.map((c) => c.name.toLowerCase()));
+    const hasCompletePk = primaryKeyColumns.every((pk) => colMap.has(pk.toLowerCase()));
+    if (hasCompletePk) {
+      pkNames = new Set(primaryKeyColumns.map((pk) => pk.toLowerCase()));
+    } else {
+      pkNames = new Set();
+    }
+  } else {
+    pkNames = new Set();
+  }
+
+  // If complete PK exists, exclude PK columns from SET. Otherwise, update all non-identity columns.
+  const nonPkCols = nonIdentityCols.filter((c) => !pkNames.has(c.name.toLowerCase()));
+  const setCols = nonPkCols.length > 0 ? nonPkCols : nonIdentityCols;
+
+  if (setCols.length === 0) {
+    throw new Error('No columns available to update');
+  }
 
   const setClauses = setCols.map((c) => {
     const idx = columns.findIndex((col) => col.name.toLowerCase() === c.name.toLowerCase());
     const val = idx >= 0 ? row[idx] : null;
-    return `  ${wrapIdentifierIfNeeded(c.name)} = ${formatSqlLiteral(val)}`;
+    return `  ${escapeIdentifier(c.name)} = ${formatSqlLiteral(val)}`;
   });
 
-  const whereConditions = buildWhereConditions(columns, row);
+  const whereConditions = buildWhereConditions(columns, row, primaryKeyColumns);
   const whereClause = whereConditions.join('\n  AND ');
 
-  return `${timeHeader}\nUPDATE ${fullTableName}\nSET\n${setClauses.join(',\n')}\nWHERE ${whereClause};`;
+  return `${timeHeader}
+IF @@TRANCOUNT <> 0 THROW 50000, 'Existing transaction detected; aborting execution.', 1;
+BEGIN TRANSACTION;
+BEGIN TRY
+  UPDATE ${fullTableName}
+  SET
+  ${setClauses.join(',\n')}
+  WHERE ${whereClause};
+
+  IF @@ROWCOUNT <> 1 THROW 50001, 'Expected exactly 1 row to be affected; transaction rolled back.', 1;
+  COMMIT TRANSACTION;
+END TRY
+BEGIN CATCH
+  IF @@TRANCOUNT > 0 ROLLBACK TRANSACTION;
+  THROW;
+END CATCH;`;
 }
 
 /**
  * Generates a DELETE statement for a specific row
  */
 export function generateDeleteStatement(params: GenerateDmlParams): string {
-  const { tableName, schema, columns, row } = params;
-  const fullTableName = formatTableName(tableName, schema);
+  const { tableName, schema, database, columns, row, primaryKeyColumns } = params;
+  const fullTableName = formatTableName(tableName, schema, database);
   const timeHeader = `-- 自動產生語法 時間: ${formatCurrentDateTime()}`;
 
-  const whereConditions = buildWhereConditions(columns, row);
+  const whereConditions = buildWhereConditions(columns, row, primaryKeyColumns);
   const whereClause = whereConditions.join('\n  AND ');
 
-  return `${timeHeader}\nDELETE FROM ${fullTableName}\nWHERE ${whereClause};`;
+  return `${timeHeader}
+IF @@TRANCOUNT <> 0 THROW 50000, 'Existing transaction detected; aborting execution.', 1;
+BEGIN TRANSACTION;
+BEGIN TRY
+  DELETE FROM ${fullTableName}
+  WHERE ${whereClause};
+
+  IF @@ROWCOUNT <> 1 THROW 50001, 'Expected exactly 1 row to be affected; transaction rolled back.', 1;
+  COMMIT TRANSACTION;
+END TRY
+BEGIN CATCH
+  IF @@TRANCOUNT > 0 ROLLBACK TRANSACTION;
+  THROW;
+END CATCH;`;
 }

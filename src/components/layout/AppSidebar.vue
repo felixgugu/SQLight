@@ -535,6 +535,16 @@
         <span>{{ contextMenu.objectType === 'TABLE' ? '開啟資料表 (Open Data)' : '開啟檢視表資料' }}</span>
       </button>
 
+      <!-- Tables & Views: Table Structure -->
+      <button
+        v-if="contextMenu.objectType === 'TABLE' || contextMenu.objectType === 'VIEW'"
+        @click="handleOpenStructure"
+        class="w-full text-left px-2.5 py-1.5 hover:bg-dark-750 hover:text-dark-100 flex items-center space-x-2 transition-colors text-indigo-300"
+      >
+        <TableProperties class="w-3.5 h-3.5 text-indigo-400" />
+        <span>資料表結構 (Table Structure)</span>
+      </button>
+
       <!-- Tables & Views: Generate SELECT -->
       <button
         v-if="contextMenu.objectType === 'TABLE' || contextMenu.objectType === 'VIEW'"
@@ -666,6 +676,7 @@ import {
   ChevronRight,
   Database,
   Table2,
+  TableProperties,
   FileText,
   Key,
   Columns,
@@ -728,8 +739,8 @@ const expandedDbs = reactive<Record<string, boolean>>({});
 const expandedFolders = reactive<Record<string, boolean>>({});
 const expandedTables = reactive<Record<string, boolean>>({});
 const loadedColumns = reactive<Record<string, ColumnItem[]>>({});
-const tablesByDb = reactive<Record<string, TableItem[]>>({});
-const loadingTablesByDb = reactive<Record<string, boolean>>({});
+const tablesByDb = schemaStore.tablesByDb;
+const loadingTablesByDb = schemaStore.loadingTablesByDb;
 const loadingColumns = reactive<Record<string, boolean>>({});
 
 function isFolderExpanded(connId: string, db: string, folder: 'tables' | 'views' | 'procs' | 'funcs'): boolean {
@@ -922,25 +933,17 @@ onMounted(async () => {
 });
 
 async function loadDatabaseTables(connId: string, db: string, force = false) {
-  const dbKey = `${connId}:${db}`;
-  if (!force && tablesByDb[dbKey] !== undefined) {
-    return;
-  }
-  loadingTablesByDb[dbKey] = true;
   try {
     if (connectionStore.activeConnectionId !== connId || connectionStore.status !== 'connected') {
       await connectionStore.connect(connId);
     }
-    const [tables] = await Promise.all([
-      schemaService.getTables(connId, db),
+    await Promise.all([
+      schemaStore.loadDatabaseTables(connId, db, force),
       schemaStore.loadDatabaseRoutines(connId, db, force),
     ]);
-    tablesByDb[dbKey] = tables;
   } catch (err: unknown) {
-    console.error(`Failed to load tables for ${dbKey}:`, err);
+    console.error(`Failed to load tables for ${connId}:${db}:`, err);
     alert(`載入資料庫 [${db}] 的物件失敗: ${err instanceof Error ? err.message : String(err)}`);
-  } finally {
-    loadingTablesByDb[dbKey] = false;
   }
 }
 
@@ -1139,6 +1142,30 @@ async function handleOpenData() {
     }
   }
   workspaceStore.addTableDataTab(
+    contextMenu.schema,
+    contextMenu.tableName,
+    contextMenu.connId,
+    contextMenu.database
+  );
+  contextMenu.visible = false;
+}
+
+async function handleOpenStructure() {
+  if (contextMenu.connId && connectionStore.activeConnectionId !== contextMenu.connId) {
+    try {
+      await connectionStore.connect(contextMenu.connId);
+    } catch (e) {
+      console.warn('Connect failed:', e);
+    }
+  }
+  if (contextMenu.database && connectionStore.activeDatabase !== contextMenu.database) {
+    try {
+      await connectionStore.switchDatabase(contextMenu.database);
+    } catch (e) {
+      console.warn('Switch DB failed:', e);
+    }
+  }
+  workspaceStore.addTableStructureTab(
     contextMenu.schema,
     contextMenu.tableName,
     contextMenu.connId,

@@ -134,6 +134,94 @@
               />
             </div>
           </div>
+
+          <!-- Active SQL Tab Color -->
+          <div class="pt-3 border-t border-dark-800 space-y-3">
+            <div>
+              <label class="font-medium text-dark-100 block">當前選取分頁顏色 (Active Tab Colors)</label>
+              <span class="text-xxs text-dark-400">自訂上方 SQL 編輯分頁在選取啟用時的前景文字與背景顏色</span>
+            </div>
+
+            <!-- Color controls: Background & Foreground -->
+            <div class="grid grid-cols-2 gap-3 bg-dark-900 p-2.5 rounded border border-dark-800">
+              <!-- Background Color -->
+              <div class="space-y-1.5">
+                <span class="text-xxs text-dark-300 block font-medium">背景顏色 (Background)</span>
+                <div class="flex items-center space-x-2">
+                  <input
+                    type="color"
+                    v-model="settingsStore.activeSqlTabBgColor"
+                    class="w-7 h-7 rounded border border-dark-700 bg-dark-900 cursor-pointer p-0.5"
+                    title="選擇背景顏色"
+                  />
+                  <input
+                    type="text"
+                    v-model="settingsStore.activeSqlTabBgColor"
+                    class="w-20 bg-dark-850 border border-dark-700 rounded px-2 py-1 text-xs text-dark-100 font-mono focus:border-brand-500 focus:outline-none text-center uppercase"
+                  />
+                </div>
+              </div>
+
+              <!-- Text Color -->
+              <div class="space-y-1.5">
+                <span class="text-xxs text-dark-300 block font-medium">前景文字顏色 (Text Color)</span>
+                <div class="flex items-center space-x-2">
+                  <input
+                    type="color"
+                    v-model="settingsStore.activeSqlTabTextColor"
+                    class="w-7 h-7 rounded border border-dark-700 bg-dark-900 cursor-pointer p-0.5"
+                    title="選擇文字顏色"
+                  />
+                  <input
+                    type="text"
+                    v-model="settingsStore.activeSqlTabTextColor"
+                    class="w-20 bg-dark-850 border border-dark-700 rounded px-2 py-1 text-xs text-dark-100 font-mono focus:border-brand-500 focus:outline-none text-center uppercase"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <!-- Presets & Live Preview -->
+            <div class="flex items-center justify-between pt-1">
+              <!-- Presets -->
+              <div class="flex items-center space-x-1.5">
+                <span class="text-xxs text-dark-400">快速預設:</span>
+                <button
+                  v-for="preset in [
+                    { name: 'Royal Blue', bg: '#1e40af', text: '#ffffff' },
+                    { name: 'Ocean Sky', bg: '#0369a1', text: '#ffffff' },
+                    { name: 'Emerald', bg: '#065f46', text: '#ffffff' },
+                    { name: 'Purple', bg: '#6b21a8', text: '#ffffff' },
+                    { name: 'Amber', bg: '#92400e', text: '#ffffff' },
+                    { name: 'Rose', bg: '#9f1239', text: '#ffffff' },
+                    { name: 'Dark Slate', bg: '#374151', text: '#ffffff' },
+                  ]"
+                  :key="preset.bg"
+                  type="button"
+                  @click="settingsStore.activeSqlTabBgColor = preset.bg; settingsStore.activeSqlTabTextColor = preset.text"
+                  class="w-4 h-4 rounded-full border border-dark-600 hover:scale-110 transition-transform cursor-pointer"
+                  :style="{ backgroundColor: preset.bg }"
+                  :title="preset.name"
+                />
+              </div>
+
+              <!-- Live Preview Badge -->
+              <div class="flex items-center space-x-1.5 text-xxs">
+                <span class="text-dark-400">預覽:</span>
+                <div
+                  class="h-6 px-2.5 flex items-center space-x-1.5 rounded text-xs font-medium shadow-xs"
+                  :style="{
+                    backgroundColor: settingsStore.activeSqlTabBgColor,
+                    color: settingsStore.activeSqlTabTextColor,
+                  }"
+                >
+                  <FileCode class="w-3 h-3 text-white" />
+                  <span>Query 1.sql</span>
+                  <span class="text-[9px] font-mono px-1 rounded bg-black/25 text-white/90">master</span>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
 
         <!-- Tab 2: Query & Results Settings -->
@@ -177,6 +265,93 @@
               <option :value="50000">50,000 筆</option>
               <option :value="null">無限制 (No Limit)</option>
             </select>
+          </div>
+
+          <!-- Active Result Tab Color -->
+          <div class="pt-3 border-t border-dark-800 space-y-3">
+            <div>
+              <label class="font-medium text-dark-100 block">當前查詢結果分頁顏色 (Active Result Tab Colors)</label>
+              <span class="text-xxs text-dark-400">自訂下方查詢結果分頁在選取啟用時的前景文字與背景顏色</span>
+            </div>
+
+            <!-- Color controls: Background & Foreground -->
+            <div class="grid grid-cols-2 gap-3 bg-dark-900 p-2.5 rounded border border-dark-800">
+              <!-- Background Color -->
+              <div class="space-y-1.5">
+                <span class="text-xxs text-dark-300 block font-medium">背景顏色 (Background)</span>
+                <div class="flex items-center space-x-2">
+                  <input
+                    type="color"
+                    v-model="settingsStore.activeResultTabBgColor"
+                    class="w-7 h-7 rounded border border-dark-700 bg-dark-900 cursor-pointer p-0.5"
+                    title="選擇背景顏色"
+                  />
+                  <input
+                    type="text"
+                    v-model="settingsStore.activeResultTabBgColor"
+                    class="w-20 bg-dark-850 border border-dark-700 rounded px-2 py-1 text-xs text-dark-100 font-mono focus:border-brand-500 focus:outline-none text-center uppercase"
+                  />
+                </div>
+              </div>
+
+              <!-- Text Color -->
+              <div class="space-y-1.5">
+                <span class="text-xxs text-dark-300 block font-medium">前景文字顏色 (Text Color)</span>
+                <div class="flex items-center space-x-2">
+                  <input
+                    type="color"
+                    v-model="settingsStore.activeResultTabTextColor"
+                    class="w-7 h-7 rounded border border-dark-700 bg-dark-900 cursor-pointer p-0.5"
+                    title="選擇文字顏色"
+                  />
+                  <input
+                    type="text"
+                    v-model="settingsStore.activeResultTabTextColor"
+                    class="w-20 bg-dark-850 border border-dark-700 rounded px-2 py-1 text-xs text-dark-100 font-mono focus:border-brand-500 focus:outline-none text-center uppercase"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <!-- Presets & Live Preview -->
+            <div class="flex items-center justify-between pt-1">
+              <!-- Presets -->
+              <div class="flex items-center space-x-1.5">
+                <span class="text-xxs text-dark-400">快速預設:</span>
+                <button
+                  v-for="preset in [
+                    { name: 'Forest Emerald', bg: '#065f46', text: '#ffffff' },
+                    { name: 'Deep Teal', bg: '#0f766e', text: '#ffffff' },
+                    { name: 'Royal Blue', bg: '#1e40af', text: '#ffffff' },
+                    { name: 'Indigo Purple', bg: '#4338ca', text: '#ffffff' },
+                    { name: 'Warm Amber', bg: '#92400e', text: '#ffffff' },
+                    { name: 'Rose', bg: '#9f1239', text: '#ffffff' },
+                    { name: 'Dark Slate', bg: '#374151', text: '#ffffff' },
+                  ]"
+                  :key="preset.bg"
+                  type="button"
+                  @click="settingsStore.activeResultTabBgColor = preset.bg; settingsStore.activeResultTabTextColor = preset.text"
+                  class="w-4 h-4 rounded-full border border-dark-600 hover:scale-110 transition-transform cursor-pointer"
+                  :style="{ backgroundColor: preset.bg }"
+                  :title="preset.name"
+                />
+              </div>
+
+              <!-- Live Preview Badge -->
+              <div class="flex items-center space-x-1.5 text-xxs">
+                <span class="text-dark-400">預覽:</span>
+                <div
+                  class="h-5.5 px-2 flex items-center space-x-1.5 rounded text-xxs font-medium shadow-xs"
+                  :style="{
+                    backgroundColor: settingsStore.activeResultTabBgColor,
+                    color: settingsStore.activeResultTabTextColor,
+                  }"
+                >
+                  <Pin class="w-2.5 h-2.5 text-amber-300 fill-current" />
+                  <span>1.Users 50r</span>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -314,7 +489,7 @@
 
 <script setup lang="ts">
 import { ref } from 'vue';
-import { Settings, X, Code2, TableProperties, Info } from 'lucide-vue-next';
+import { Settings, X, Code2, TableProperties, Info, FileCode, Pin } from 'lucide-vue-next';
 import { useSettingsStore } from '@/stores/settingsStore';
 
 defineProps<{

@@ -3,11 +3,15 @@ import { reactive } from 'vue';
 import { schemaService } from '@/services/schemaService';
 import { queryService } from '@/services/queryService';
 import { useConnectionStore } from './connectionStore';
-import type { TableSchema, ColumnItem, RoutineItem } from '@/types/schema';
+import type { TableSchema, ColumnItem, RoutineItem, TableItem } from '@/types/schema';
+import type { QuickFinderItem } from '@/utils/fuzzySearch';
 
 export const useSchemaStore = defineStore('schema', () => {
   const schemasByDb = reactive<Record<string, TableSchema[]>>({});
   const loadingByDb = reactive<Record<string, boolean>>({});
+
+  const tablesByDb = reactive<Record<string, TableItem[]>>({});
+  const loadingTablesByDb = reactive<Record<string, boolean>>({});
 
   const routinesByDb = reactive<Record<string, RoutineItem[]>>({});
   const loadingRoutinesByDb = reactive<Record<string, boolean>>({});
@@ -41,6 +45,32 @@ export const useSchemaStore = defineStore('schema', () => {
     }
   }
 
+  async function loadDatabaseTables(
+    connId: string,
+    database: string,
+    force = false
+  ): Promise<TableItem[]> {
+    if (!connId || !database) return [];
+    const key = dbKey(connId, database);
+
+    if (!force && tablesByDb[key] !== undefined) {
+      return tablesByDb[key];
+    }
+
+    loadingTablesByDb[key] = true;
+    try {
+      const tables = await schemaService.getTables(connId, database);
+      tablesByDb[key] = tables;
+      return tables;
+    } catch (err) {
+      console.warn(`[schemaStore] Failed to load tables for ${key}:`, err);
+      tablesByDb[key] = [];
+      return [];
+    } finally {
+      loadingTablesByDb[key] = false;
+    }
+  }
+
   async function loadDatabaseRoutines(
     connId: string,
     database: string,
@@ -56,7 +86,7 @@ export const useSchemaStore = defineStore('schema', () => {
     loadingRoutinesByDb[key] = true;
     try {
       const sql = `SELECT ROUTINE_SCHEMA, ROUTINE_NAME, ROUTINE_TYPE FROM [${database}].INFORMATION_SCHEMA.ROUTINES ORDER BY ROUTINE_SCHEMA, ROUTINE_NAME;`;
-      const res = await queryService.executeQuery(connId, sql);
+      const res = await queryService.executeQuery(connId, database, sql);
       const rows = res.resultSets[0]?.rows || [];
       const routines: RoutineItem[] = rows.map((r) => {
         const schema = String(r[0] || 'dbo');
@@ -84,7 +114,7 @@ export const useSchemaStore = defineStore('schema', () => {
   ): Promise<string | null> {
     try {
       const sql = `USE [${database}]; SELECT OBJECT_DEFINITION(OBJECT_ID(N'[${schema}].[${name}]')) AS [def];`;
-      const res = await queryService.executeQuery(connId, sql);
+      const res = await queryService.executeQuery(connId, database, sql);
       const val = res.resultSets[0]?.rows[0]?.[0];
       if (val && typeof val === 'string') {
         return val;
@@ -131,17 +161,74 @@ export const useSchemaStore = defineStore('schema', () => {
     return schemasByDb[dbKey(connId, database)] !== undefined;
   }
 
+  function getDatabaseObjects(connId?: string, database?: string): QuickFinderItem[] {
+    const connStore = useConnectionStore();
+    const cId = connId || connStore.activeConnectionId;
+    const db = database || connStore.activeDatabase;
+    if (!cId || !db) return [];
+
+    const key = dbKey(cId, db);
+    const rawTables = tablesByDb[key] || [];
+    const rawRoutines = routinesByDb[key] || [];
+
+    const items: QuickFinderItem[] = [];
+
+    for (const t of rawTables) {
+      const isView = t.kind.toUpperCase().includes('VIEW');
+      items.push({
+        id: `${isView ? 'view' : 'table'}:${t.schema}.${t.name}`,
+        schema: t.schema,
+        name: t.name,
+        type: isView ? 'view' : 'table',
+        database: db,
+        connId: cId,
+      });
+    }
+
+    for (const r of rawRoutines) {
+      const isProc = r.kind === 'PROCEDURE';
+      items.push({
+        id: `${isProc ? 'procedure' : 'function'}:${r.schema}.${r.name}`,
+        schema: r.schema,
+        name: r.name,
+        type: isProc ? 'procedure' : 'function',
+        database: db,
+        connId: cId,
+      });
+    }
+
+    return items;
+  }
+
+  async function ensureDatabaseObjectsLoaded(
+    connId: string,
+    database: string,
+    force = false
+  ): Promise<QuickFinderItem[]> {
+    if (!connId || !database) return [];
+    await Promise.all([
+      loadDatabaseTables(connId, database, force),
+      loadDatabaseRoutines(connId, database, force),
+    ]);
+    return getDatabaseObjects(connId, database);
+  }
+
   return {
     schemasByDb,
     loadingByDb,
+    tablesByDb,
+    loadingTablesByDb,
     routinesByDb,
     loadingRoutinesByDb,
     loadDatabaseSchema,
+    loadDatabaseTables,
     loadDatabaseRoutines,
     getObjectDefinition,
     getSchema,
     getTable,
     getColumnsForTable,
     isDatabaseLoaded,
+    getDatabaseObjects,
+    ensureDatabaseObjectsLoaded,
   };
 });

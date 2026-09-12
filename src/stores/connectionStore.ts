@@ -4,6 +4,7 @@ import type { ConnectionProfile, ConnectionStatus } from '@/types/connection';
 import { connectionService, type SaveConnectionPayload } from '@/services/connectionService';
 import { schemaService } from '@/services/schemaService';
 import { useSchemaStore } from './schemaStore';
+import { useWorkspaceStore } from './workspaceStore';
 
 const STORAGE_DATABASES_KEY = 'sqlight_cached_databases';
 const STORAGE_LAST_CONNECTION_KEY = 'sqlight_last_connection_id';
@@ -120,7 +121,7 @@ export const useConnectionStore = defineStore('connection', () => {
         let tabConnId: string | undefined;
         let tabDb: string | undefined;
         try {
-          const workspaceStore = (await import('./workspaceStore')).useWorkspaceStore();
+          const workspaceStore = useWorkspaceStore();
           tabConnId = workspaceStore.activeTab?.connectionId;
           tabDb = workspaceStore.activeTab?.database;
         } catch {
@@ -245,36 +246,46 @@ export const useConnectionStore = defineStore('connection', () => {
     return connectionService.testConnection(payload);
   }
 
+  let connectEpoch = 0;
+
   async function connect(id: string, preferredDatabase?: string): Promise<void> {
+    const myEpoch = ++connectEpoch;
     status.value = 'connecting';
     errorMessage.value = null;
+
+    const prevActiveConnId = activeConnectionId.value;
+    const prevActiveDb = activeDatabase.value;
+
     try {
       await connectionService.connect(id);
-      activeConnectionId.value = id;
-      recordLastConnection(id);
+      if (myEpoch !== connectEpoch) return;
 
       const profile = connections.value.find((c) => c.id === id);
       const targetDb = preferredDatabase || lastDbByConn[id] || profile?.database || 'master';
+
+      // Ensure backend session switches to the target database before committing active targets
+      await schemaService.switchDatabase(id, targetDb);
+      if (myEpoch !== connectEpoch) return;
+
+      activeConnectionId.value = id;
+      recordLastConnection(id);
+
       activeDatabase.value = targetDb;
       recordLastDatabase(id, targetDb);
 
       status.value = 'connected';
       await refreshDatabases(id);
-
-      // Ensure backend session switches to the target database
-      if (activeDatabase.value) {
-        try {
-          await schemaService.switchDatabase(id, activeDatabase.value);
-        } catch (err) {
-          console.warn('Post-connect switch database error:', err);
-        }
-      }
+      if (myEpoch !== connectEpoch) return;
 
       // Preload schema in background for instant auto-completion
       useSchemaStore().loadDatabaseSchema(id, activeDatabase.value).catch(() => {});
     } catch (err: unknown) {
-      status.value = 'error';
-      errorMessage.value = err instanceof Error ? err.message : String(err);
+      if (myEpoch === connectEpoch) {
+        status.value = 'error';
+        errorMessage.value = err instanceof Error ? err.message : String(err);
+        activeConnectionId.value = prevActiveConnId;
+        activeDatabase.value = prevActiveDb;
+      }
       throw err;
     }
   }
@@ -336,11 +347,7 @@ export const useConnectionStore = defineStore('connection', () => {
 
   async function switchDatabase(dbName: string): Promise<void> {
     if (activeConnectionId.value) {
-      try {
-        await schemaService.switchDatabase(activeConnectionId.value, dbName);
-      } catch (err) {
-        console.warn('Switch database error:', err);
-      }
+      await schemaService.switchDatabase(activeConnectionId.value, dbName);
       activeDatabase.value = dbName;
       recordLastDatabase(activeConnectionId.value, dbName);
       // Preload schema in background for instant auto-completion

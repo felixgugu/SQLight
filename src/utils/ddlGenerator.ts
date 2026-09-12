@@ -61,6 +61,8 @@ export function formatColumnDataType(col: ColumnItem): string {
   return `[${dt}]`;
 }
 
+import { escapeIdentifier } from './sqlGenerator';
+
 /**
  * Generate a clean, standard CREATE TABLE DDL script for SQL Server
  */
@@ -72,7 +74,7 @@ export function generateCreateTableDdl(options: DdlOptions): string {
   const lines: string[] = [];
 
   options.columns.forEach((col) => {
-    const colName = `[${col.name.replace(/[\[\]]/g, '')}]`;
+    const colName = escapeIdentifier(col.name);
     const dataType = formatColumnDataType(col);
     const identity = col.isIdentity ? ' IDENTITY(1,1)' : '';
     const nullable = col.isNullable ? 'NULL' : 'NOT NULL';
@@ -83,25 +85,27 @@ export function generateCreateTableDdl(options: DdlOptions): string {
   // Extract Primary Key columns
   const pkCols = options.columns.filter((c) => c.isPrimaryKey);
   if (pkCols.length > 0) {
-    const pkConstraintName = `PK_${table.replace(/[\[\]]/g, '')}`;
+    const pkConstraintName = escapeIdentifier(`PK_${table}`);
     const pkColList = pkCols
-      .map((c) => `[${c.name.replace(/[\[\]]/g, '')}] ASC`)
+      .map((c) => `${escapeIdentifier(c.name)} ASC`)
       .join(', ');
-    lines.push(`    CONSTRAINT [${pkConstraintName}] PRIMARY KEY CLUSTERED (${pkColList})`);
+    lines.push(`    CONSTRAINT ${pkConstraintName} PRIMARY KEY CLUSTERED (${pkColList})`);
   }
 
   const columnsSql = lines.join(',\n');
+  const fullTableName = `${escapeIdentifier(schema)}.${escapeIdentifier(table)}`;
+  const useDbHeader = options.database ? `USE ${escapeIdentifier(options.database)};\nGO\n\n` : '';
 
   return `-- ============================================================
--- 資料表結構 DDL 腳本: [${schema}].[${table}]
+-- 資料表結構 DDL 腳本: ${fullTableName}
 -- 產生時間: ${nowStr}
 -- ============================================================
-SET ANSI_NULLS ON
+${useDbHeader}SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
 GO
 
-CREATE TABLE [${schema}].[${table}] (
+CREATE TABLE ${fullTableName} (
 ${columnsSql}
 );
 GO

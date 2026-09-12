@@ -1,0 +1,81 @@
+import { test, beforeEach } from 'node:test';
+import assert from 'node:assert/strict';
+import { createPinia, setActivePinia } from 'pinia';
+import { useConnectionStore } from '../src/stores/connectionStore';
+import { useWorkspaceStore } from '../src/stores/workspaceStore';
+import { schemaService } from '../src/services/schemaService';
+import { connectionService } from '../src/services/connectionService';
+import { queryService } from '../src/services/queryService';
+
+const data = new Map<string, string>();
+globalThis.localStorage = {
+  getItem: (key) => data.get(key) ?? null,
+  setItem: (key, value) => { data.set(key, String(value)); },
+  removeItem: (key) => { data.delete(key); },
+  clear: () => data.clear(), key: () => null, length: 0,
+};
+
+beforeEach(() => {
+  data.clear();
+  setActivePinia(createPinia());
+  connectionService.connect = async () => {};
+  schemaService.switchDatabase = async () => {};
+  schemaService.getDatabases = async () => [{ name: 'A' }, { name: 'B' }];
+  schemaService.getDatabaseSchema = async () => [];
+});
+
+test('database switch failure preserves the displayed and persisted database', async () => {
+  const store = useConnectionStore();
+  await store.connect('server', 'A');
+  schemaService.switchDatabase = async () => { throw new Error('access denied'); };
+  await assert.rejects(store.switchDatabase('B'), /access denied/);
+  assert.equal(store.activeDatabase, 'A');
+  assert.equal(data.get('sqlight_last_database'), 'A');
+});
+
+test('failed post-connect database selection does not publish a successful new target', async () => {
+  const store = useConnectionStore();
+  await store.connect('old', 'A');
+  schemaService.switchDatabase = async () => { throw new Error('access denied'); };
+  await assert.rejects(store.connect('new', 'B'), /access denied/);
+  assert.equal(store.activeConnectionId, 'old');
+  assert.equal(store.activeDatabase, 'A');
+  assert.equal(store.status, 'error');
+});
+
+test('late connection response cannot overwrite the most recent selection', async () => {
+  const store = useConnectionStore();
+  let release!: () => void;
+  connectionService.connect = (id) => id === 'slow'
+    ? new Promise<void>((resolve) => { release = resolve; }) : Promise.resolve();
+  const pending = store.connect('slow', 'A');
+  await store.connect('fast', 'B');
+  release();
+  await pending;
+  assert.equal(store.activeConnectionId, 'fast');
+  assert.equal(store.activeDatabase, 'B');
+});
+
+test('a tab for a deleted connection is not rebound to the active server', async () => {
+  const store = useConnectionStore();
+  await store.connect('current', 'A');
+  const workspace = useWorkspaceStore();
+  workspace.addSqlTab('DELETE FROM Orders', 'old query', 'deleted', 'B');
+  workspace.setActiveTab(workspace.activeTabId);
+  assert.equal(workspace.activeTab?.connectionId, 'deleted');
+  assert.equal(workspace.activeTab?.database, 'B');
+});
+
+test('query IPC includes the requested database, SQL and limit', async () => {
+  let sent: unknown;
+  globalThis.window = { __TAURI_INTERNALS__: {
+    invoke: async (command: string, args: unknown) => { sent = { command, args }; return {}; },
+  } } as unknown as Window & typeof globalThis;
+  try {
+    await queryService.executeQuery('server', 'B', 'SELECT 1', 10, 'request', 30);
+    assert.deepEqual(sent, { command: 'execute_query', args: {
+      connectionId: 'server', database: 'B', sql: 'SELECT 1', maxRows: 10,
+      requestId: 'request', timeoutSeconds: 30,
+    } });
+  } finally { delete (globalThis as any).window; }
+});

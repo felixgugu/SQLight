@@ -9,6 +9,10 @@ export interface AppSettings {
   maxResultTabs: number;
   defaultMaxRows: number | null;
   editorHighlightColor: string;
+  activeSqlTabBgColor: string;
+  activeSqlTabTextColor: string;
+  activeResultTabBgColor: string;
+  activeResultTabTextColor: string;
 }
 
 const STORAGE_KEY = 'sqlight_app_settings';
@@ -21,6 +25,10 @@ const DEFAULT_SETTINGS: AppSettings = {
   maxResultTabs: 10,
   defaultMaxRows: 10000,
   editorHighlightColor: '#feffe0',
+  activeSqlTabBgColor: '#1e40af',
+  activeSqlTabTextColor: '#ffffff',
+  activeResultTabBgColor: '#065f46',
+  activeResultTabTextColor: '#ffffff',
 };
 
 function loadSettings(): AppSettings {
@@ -46,6 +54,10 @@ export const useSettingsStore = defineStore('settings', () => {
   const maxResultTabs = ref<number>(initial.maxResultTabs);
   const defaultMaxRows = ref<number | null>(initial.defaultMaxRows);
   const editorHighlightColor = ref<string>(initial.editorHighlightColor || '#feffe0');
+  const activeSqlTabBgColor = ref<string>(initial.activeSqlTabBgColor || '#1e40af');
+  const activeSqlTabTextColor = ref<string>(initial.activeSqlTabTextColor || '#ffffff');
+  const activeResultTabBgColor = ref<string>(initial.activeResultTabBgColor || '#065f46');
+  const activeResultTabTextColor = ref<string>(initial.activeResultTabTextColor || '#ffffff');
 
   function saveSettings() {
     const data: AppSettings = {
@@ -56,6 +68,10 @@ export const useSettingsStore = defineStore('settings', () => {
       maxResultTabs: maxResultTabs.value,
       defaultMaxRows: defaultMaxRows.value,
       editorHighlightColor: editorHighlightColor.value,
+      activeSqlTabBgColor: activeSqlTabBgColor.value,
+      activeSqlTabTextColor: activeSqlTabTextColor.value,
+      activeResultTabBgColor: activeResultTabBgColor.value,
+      activeResultTabTextColor: activeResultTabTextColor.value,
     };
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
@@ -74,6 +90,10 @@ export const useSettingsStore = defineStore('settings', () => {
       maxResultTabs,
       defaultMaxRows,
       editorHighlightColor,
+      activeSqlTabBgColor,
+      activeSqlTabTextColor,
+      activeResultTabBgColor,
+      activeResultTabTextColor,
     ],
     () => {
       saveSettings();
@@ -88,6 +108,10 @@ export const useSettingsStore = defineStore('settings', () => {
     maxResultTabs.value = DEFAULT_SETTINGS.maxResultTabs;
     defaultMaxRows.value = DEFAULT_SETTINGS.defaultMaxRows;
     editorHighlightColor.value = DEFAULT_SETTINGS.editorHighlightColor;
+    activeSqlTabBgColor.value = DEFAULT_SETTINGS.activeSqlTabBgColor;
+    activeSqlTabTextColor.value = DEFAULT_SETTINGS.activeSqlTabTextColor;
+    activeResultTabBgColor.value = DEFAULT_SETTINGS.activeResultTabBgColor;
+    activeResultTabTextColor.value = DEFAULT_SETTINGS.activeResultTabTextColor;
   }
 
   return {
@@ -98,6 +122,10 @@ export const useSettingsStore = defineStore('settings', () => {
     maxResultTabs,
     defaultMaxRows,
     editorHighlightColor,
+    activeSqlTabBgColor,
+    activeSqlTabTextColor,
+    activeResultTabBgColor,
+    activeResultTabTextColor,
     resetToDefaults,
   };
 });

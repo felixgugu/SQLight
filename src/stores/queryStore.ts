@@ -1,9 +1,43 @@
 import { defineStore } from 'pinia';
-import { ref, computed } from 'vue';
+import { ref, computed, watch } from 'vue';
 import type { QueryResult, QueryHistoryItem, QueryResultTab } from '@/types/query';
 import { queryService } from '@/services/queryService';
 import { useSettingsStore } from './settingsStore';
+import { useWorkspaceStore } from './workspaceStore';
 import { parseTargetTableFromSql } from '@/utils/sqlGenerator';
+import {
+  buildExecutionStats,
+  wrapQueryWithPerfTelemetry,
+  type ExecutionStatsData,
+  type PerfTelemetrySummary,
+  type WaitStatItem,
+} from '@/utils/statsParser';
+import { extractShowPlanXml } from '@/utils/planXmlParser';
+
+let queryExecutionSeq = 0;
+
+export function resetQueryExecutionSeq(): void {
+  queryExecutionSeq = 0;
+}
+
+const STORAGE_STATS_ENABLED_KEY = 'sqlight_perf_stats_enabled';
+
+function loadSavedStatsSetting(): boolean {
+  try {
+    const raw = localStorage.getItem(STORAGE_STATS_ENABLED_KEY);
+    return raw === 'true'; // Default is false!
+  } catch {
+    return false;
+  }
+}
+
+function saveStatsSetting(enabled: boolean) {
+  try {
+    localStorage.setItem(STORAGE_STATS_ENABLED_KEY, String(enabled));
+  } catch {
+    // ignore storage error
+  }
+}
 
 export const useQueryStore = defineStore('query', () => {
   const resultTabs = ref<QueryResultTab[]>([]);
@@ -13,6 +47,75 @@ export const useQueryStore = defineStore('query', () => {
   const executionError = ref<string | null>(null);
   const history = ref<QueryHistoryItem[]>([]);
   const maxRows = ref<number | null>(10000);
+
+  // Performance Analysis & IO Stats State (default false)
+  const isStatsEnabled = ref<boolean>(loadSavedStatsSetting());
+  const activeExecutionStats = ref<ExecutionStatsData | null>(null);
+  const statsHistory = ref<ExecutionStatsData[]>([]);
+
+  // Estimated Execution Plan State (SET SHOWPLAN_ALL ON, default false)
+  const isShowplanEnabled = ref<boolean>(false);
+
+  // Actual Execution Plan State (SET STATISTICS XML ON, default false)
+  const isActualPlanEnabled = ref<boolean>(false);
+
+  watch(
+    isStatsEnabled,
+    (newVal) => {
+      saveStatsSetting(newVal);
+      if (newVal) {
+        if (isShowplanEnabled.value) isShowplanEnabled.value = false;
+        if (isActualPlanEnabled.value) isActualPlanEnabled.value = false;
+      }
+    },
+    { flush: 'sync' }
+  );
+
+  watch(
+    isShowplanEnabled,
+    (newVal) => {
+      if (newVal) {
+        if (isStatsEnabled.value) isStatsEnabled.value = false;
+        if (isActualPlanEnabled.value) isActualPlanEnabled.value = false;
+      }
+    },
+    { flush: 'sync' }
+  );
+
+  watch(
+    isActualPlanEnabled,
+    (newVal) => {
+      if (newVal) {
+        if (isStatsEnabled.value) isStatsEnabled.value = false;
+        if (isShowplanEnabled.value) isShowplanEnabled.value = false;
+      }
+    },
+    { flush: 'sync' }
+  );
+
+  function toggleStatsEnabled() {
+    isStatsEnabled.value = !isStatsEnabled.value;
+    if (isStatsEnabled.value) {
+      isShowplanEnabled.value = false;
+      isActualPlanEnabled.value = false;
+    }
+  }
+
+  function toggleShowplanEnabled() {
+    isShowplanEnabled.value = !isShowplanEnabled.value;
+    if (isShowplanEnabled.value) {
+      isStatsEnabled.value = false;
+      isActualPlanEnabled.value = false;
+    }
+  }
+
+  function toggleActualPlanEnabled() {
+    isActualPlanEnabled.value = !isActualPlanEnabled.value;
+    if (isActualPlanEnabled.value) {
+      isStatsEnabled.value = false;
+      isShowplanEnabled.value = false;
+    }
+  }
 
   const activeResultTab = computed<QueryResultTab | null>(() => {
     if (!resultTabs.value.length) return null;
@@ -107,8 +210,120 @@ export const useQueryStore = defineStore('query', () => {
 
     try {
       const limit = limitOverride !== undefined ? limitOverride : maxRows.value;
-      const result = await queryService.executeQuery(connectionId, sql, limit);
+      const isShowplan = isShowplanEnabled.value;
+      const isActualPlan = isActualPlanEnabled.value;
+      let result: QueryResult;
+      let actualPlanXml: string | null = null;
+
+      if (isShowplan) {
+        try {
+          await queryService.executeQuery(connectionId, database, 'SET SHOWPLAN_ALL ON;');
+          result = await queryService.executeQuery(connectionId, database, sql, limit);
+        } finally {
+          try {
+            await queryService.executeQuery(connectionId, database, 'SET SHOWPLAN_ALL OFF;');
+          } catch (offErr) {
+            console.error('Failed to turn off SET SHOWPLAN_ALL', offErr);
+          }
+        }
+      } else if (isActualPlan) {
+        try {
+          await queryService.executeQuery(connectionId, database, 'SET STATISTICS XML ON;');
+          result = await queryService.executeQuery(connectionId, database, sql, limit);
+        } finally {
+          try {
+            await queryService.executeQuery(connectionId, database, 'SET STATISTICS XML OFF;');
+          } catch (offErr) {
+            console.error('Failed to turn off SET STATISTICS XML', offErr);
+          }
+        }
+      } else {
+        const effectiveSql = isStatsEnabled.value ? wrapQueryWithPerfTelemetry(sql) : sql;
+        result = await queryService.executeQuery(connectionId, database, effectiveSql, limit);
+      }
+
       const duration = result.executionTimeMs || (Date.now() - startTime);
+
+      // If actual execution plan was enabled, extract the XML showplan
+      if (isActualPlan) {
+        const extracted = extractShowPlanXml(result.resultSets);
+        actualPlanXml = extracted.planXml;
+        result.resultSets = extracted.cleanedResultSets;
+      }
+
+      let telemetrySummary: PerfTelemetrySummary | null = null;
+      const waitStats: WaitStatItem[] = [];
+
+      // If performance analysis was enabled (and not showplan), extract telemetry payloads and remove them from user data grids
+      if (!isShowplan && isStatsEnabled.value) {
+        result.resultSets = result.resultSets.filter((rs) => {
+          const tagCol = rs.columns.find((c) => c.name === '__sqlight_tag__');
+          if (!tagCol) return true;
+
+          const tagVal = String(rs.rows[0]?.[tagCol.ordinal] || '');
+          if (tagVal === '__SQLIGHT_PERF_SUMMARY__') {
+            const row = rs.rows[0];
+            if (row) {
+              telemetrySummary = {
+                elapsedTimeMs: Number(row[1] || 0),
+                cpuTimeMs: Number(row[2] || 0),
+                logicalReads: Number(row[3] || 0),
+                physicalReads: Number(row[4] || 0),
+                physicalWrites: Number(row[5] || 0),
+              };
+            }
+            return false;
+          }
+
+          if (tagVal === '__SQLIGHT_WAIT_STATS__') {
+            for (const r of rs.rows) {
+              waitStats.push({
+                waitType: String(r[1] || ''),
+                waitingTasksCount: Number(r[2] || 0),
+                waitTimeMs: Number(r[3] || 0),
+                maxWaitTimeMs: Number(r[4] || 0),
+              });
+            }
+            return false;
+          }
+
+          return true;
+        });
+
+        const stats = buildExecutionStats({
+          messages: result.messages.map((m) => m.message),
+          telemetrySummary,
+          waitStats,
+          executionTimeMsFallback: duration,
+          querySql: sql,
+        });
+
+        activeExecutionStats.value = stats;
+        statsHistory.value.unshift(stats);
+        if (statsHistory.value.length > 50) {
+          statsHistory.value.pop();
+        }
+
+        try {
+          const workspaceStore = useWorkspaceStore();
+          workspaceStore.setBottomPanelTab('stats');
+        } catch {
+          // ignore if workspaceStore is unavailable (e.g. unit tests)
+        }
+      } else if (!isShowplan) {
+        // If not explicitly enabled, but messages have STATISTICS IO / TIME, parse it gracefully
+        const hasIoMsg = result.messages.some((m) =>
+          /Table\s+'[^']+'\.\s+Scan\s+count/i.test(m.message)
+        );
+        if (hasIoMsg) {
+          const stats = buildExecutionStats({
+            messages: result.messages.map((m) => m.message),
+            executionTimeMsFallback: duration,
+            querySql: sql,
+          });
+          activeExecutionStats.value = stats;
+        }
+      }
 
       const hasError = result.messages.some((m) => m.level === 'error');
       const rowCount = result.resultSets[0]?.rowCount ?? result.affectedRows ?? 0;
@@ -117,9 +332,15 @@ export const useQueryStore = defineStore('query', () => {
       const tableName = parsed?.tableName || extractFirstTableName(sql);
       const schema = parsed?.schema;
 
+      queryExecutionSeq++;
+      const seq = queryExecutionSeq;
+      const tabTitle = isShowplan
+        ? `${seq}.${tableName} [Plan] ${rowCount}r`
+        : `${seq}.${tableName} ${rowCount}r`;
+
       const newTab: QueryResultTab = {
         id: `tab-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
-        title: tableName,
+        title: tabTitle,
         sql,
         result,
         executedAt: timeStr,
@@ -130,9 +351,35 @@ export const useQueryStore = defineStore('query', () => {
         database,
         tableName,
         schema,
+        seq,
+        isShowplan,
       };
 
       insertNewTab(newTab);
+
+      if (isShowplan) {
+        try {
+          const workspaceStore = useWorkspaceStore();
+          workspaceStore.setBottomPanelTab('results');
+        } catch {
+          // ignore if workspaceStore is unavailable (e.g. unit tests)
+        }
+      }
+
+      if (actualPlanXml) {
+        try {
+          const workspaceStore = useWorkspaceStore();
+          workspaceStore.addExecutionPlanTab(
+            actualPlanXml,
+            sql,
+            `${tableName} (Actual Plan)`,
+            connectionId,
+            database
+          );
+        } catch {
+          // ignore if workspaceStore is unavailable (e.g. unit tests)
+        }
+      }
 
       // Add to query history
       history.value.unshift({
@@ -157,6 +404,10 @@ export const useQueryStore = defineStore('query', () => {
       const tableName = parsed?.tableName || extractFirstTableName(sql);
       const schema = parsed?.schema;
 
+      queryExecutionSeq++;
+      const seq = queryExecutionSeq;
+      const tabTitle = `${seq}.${tableName} 0r`;
+
       const errorResult: QueryResult = {
         resultSets: [],
         messages: [
@@ -172,7 +423,7 @@ export const useQueryStore = defineStore('query', () => {
 
       const newTab: QueryResultTab = {
         id: `tab-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
-        title: tableName,
+        title: tabTitle,
         sql,
         result: errorResult,
         executedAt: timeStr,
@@ -183,6 +434,7 @@ export const useQueryStore = defineStore('query', () => {
         database,
         tableName,
         schema,
+        seq,
       };
 
       insertNewTab(newTab);
@@ -291,6 +543,10 @@ export const useQueryStore = defineStore('query', () => {
     history.value = [];
   }
 
+  function clearExecutionStats() {
+    activeExecutionStats.value = null;
+  }
+
   return {
     resultTabs,
     activeResultTabId,
@@ -300,6 +556,15 @@ export const useQueryStore = defineStore('query', () => {
     executionError,
     history,
     maxRows,
+    isStatsEnabled,
+    isShowplanEnabled,
+    isActualPlanEnabled,
+    toggleStatsEnabled,
+    toggleShowplanEnabled,
+    toggleActualPlanEnabled,
+    activeExecutionStats,
+    statsHistory,
+    currentExecutionSeq: computed(() => queryExecutionSeq),
     execute,
     selectResultTab,
     togglePinTab,
@@ -308,5 +573,6 @@ export const useQueryStore = defineStore('query', () => {
     renameResultTab,
     clearResults,
     clearHistory,
+    clearExecutionStats,
   };
 });

@@ -50,6 +50,16 @@
           <AlertTriangle class="w-3 h-3 text-amber-400 flex-shrink-0" />
           <span>已達上限 {{ currentSet.rowCount.toLocaleString() }} 筆（共 {{ (currentSet.totalCount ?? currentSet.rowCount).toLocaleString() }} 筆，其餘已截斷）</span>
         </div>
+
+        <!-- Estimated Plan Badge -->
+        <div
+          v-if="queryStore.activeResultTab?.isShowplan"
+          class="hidden md:flex items-center space-x-1 bg-cyan-950/60 text-cyan-300 border border-cyan-800/60 px-2 py-0.5 rounded text-xxs font-sans truncate shadow-xs"
+          title="此結果分頁為 SET SHOWPLAN_ALL ON 預估執行計畫，未實際執行語句"
+        >
+          <Workflow class="w-3 h-3 text-cyan-400 flex-shrink-0" />
+          <span>預估執行計畫 (Estimated Plan)</span>
+        </div>
       </div>
 
       <!-- Right: Copy Tools & Row Stats -->
@@ -342,7 +352,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, reactive, onMounted, onUnmounted, watch } from 'vue';
+import { ref, computed, reactive, watch } from 'vue';
 import {
   Inbox,
   Search,
@@ -359,6 +369,7 @@ import {
   Trash2,
   Braces,
   Table,
+  Workflow,
 } from 'lucide-vue-next';
 import { AgGridVue } from 'ag-grid-vue3';
 import {
@@ -369,7 +380,6 @@ import {
   type ColDef,
   type CellContextMenuEvent,
   type ICellRendererParams,
-  type ColumnMovedEvent,
 } from 'ag-grid-community';
 import { sqlightGridTheme } from '@/styles/gridTheme';
 import { useQueryStore } from '@/stores/queryStore';
@@ -377,10 +387,11 @@ import { useWorkspaceStore } from '@/stores/workspaceStore';
 import { useConnectionStore } from '@/stores/connectionStore';
 import { useSchemaStore } from '@/stores/schemaStore';
 import {
-  exportRowAsJson,
-  exportRowsAsJson,
-  exportRowsAsMarkdown,
-} from '@/utils/exportFormatters';
+  escapeHtml,
+  calculateColumnWidth,
+} from '@/composables/useColumnAutoWidth';
+import { useGridSelection } from '@/composables/useGridSelection';
+import { useGridExport } from '@/composables/useGridExport';
 import {
   generateInsertStatement,
   generateUpdateStatement,
@@ -388,6 +399,7 @@ import {
   parseTargetTableFromSql,
   extractAllTableNamesFromSql,
   type ColumnInfo,
+  type GenerateDmlParams,
 } from '@/utils/sqlGenerator';
 import type { ResultSet, CellValue } from '@/types/query';
 
@@ -407,8 +419,6 @@ const activeSetIndex = ref(0);
 const quickFilter = ref('');
 const gridApi = ref<GridApi | null>(null);
 const gridContainerRef = ref<HTMLDivElement | null>(null);
-const copiedTsv = ref(false);
-const copiedCsv = ref(false);
 
 const currentSet = computed(() => {
   return props.resultSets[activeSetIndex.value] ?? props.resultSets[0] ?? null;
@@ -457,579 +467,31 @@ watch(
   { immediate: true }
 );
 
-// Helper to extract 0-based column index from standard colId `col_N`
-function getColIndex(colId: string | null | undefined): number | undefined {
-  if (!colId) return undefined;
-  if (colId.startsWith('col_')) {
-    const idx = parseInt(colId.substring(4), 10);
-    return isNaN(idx) ? undefined : idx;
-  }
-  return undefined;
-}
-
-// Helper to get visual display column data indices (reflecting user column drag-reordering)
-function getVisualDataColIndices(): number[] {
-  if (!gridApi.value) {
-    return currentSet.value?.columns.map((_, i) => i) ?? [];
-  }
-  const cols = gridApi.value.getAllGridColumns();
-  if (!cols || !cols.length) {
-    return currentSet.value?.columns.map((_, i) => i) ?? [];
-  }
-  return cols
-    .map((c) => c.getColId())
-    .filter((id) => id && id !== 'row_index' && id !== '#')
-    .map((id) => getColIndex(id))
-    .filter((idx): idx is number => idx !== undefined);
-}
-
-// Cell Selection & Aggregates State
-interface CellCoord {
-  rowIndex: number;
-  colIndex: number;
-}
-
-interface SelectionRange {
-  minRow: number;
-  maxRow: number;
-  minCol: number;
-  maxCol: number;
-}
-
-interface SelectionStats {
-  totalCells: number;
-  numericCount: number;
-  sum: number;
-  avg: number;
-  min: number;
-  max: number;
-  distinctCount: number;
-}
-
-// Selection states
-const isCellDragging = ref(false);
-const isRowDragging = ref(false);
-
-const cellDragStart = ref<CellCoord | null>(null);
-const cellDragEnd = ref<CellCoord | null>(null);
-const lastAnchorCell = ref<CellCoord | null>(null);
-
-const lastAnchorHeaderCol = ref<number | null>(null);
-
-const rowDragStart = ref<number | null>(null);
-const lastAnchorRow = ref<number | null>(null);
-
-const selectionRange = ref<SelectionRange | null>(null);
-const selectedColSet = ref<Set<number>>(new Set());
-const selectionStats = ref<SelectionStats | null>(null);
-
-// Tracks mousedown on column header to distinguish drag (column move) from click (column select)
-let headerMouseDownInfo: {
-  x: number;
-  y: number;
-  time: number;
-  colId: string;
-} | null = null;
-
-const hasSelection = computed(() => {
-  return selectedColSet.value.size > 0 || selectionRange.value !== null;
+// Selection composable
+const selection = useGridSelection({
+  getRows: () => currentSet.value?.rows ?? [],
+  getColumns: () => currentSet.value?.columns ?? [],
+  getGridApi: () => gridApi.value,
+  getGridContainer: () => gridContainerRef.value,
+  onCopySelected: () => gridExport.copySelectedCells(),
 });
 
-const selectedColumnsCount = computed(() => {
-  if (selectedColSet.value.size > 0) {
-    return selectedColSet.value.size;
-  }
-  if (selectionRange.value && currentSet.value) {
-    const { minRow, maxRow, minCol, maxCol } = selectionRange.value;
-    if (minRow === 0 && maxRow === currentSet.value.rows.length - 1) {
-      return maxCol - minCol + 1;
-    }
-  }
-  return 0;
-});
+const {
+  selectionStats,
+  hasSelection,
+  selectedColumnsCount,
+  getColIndex,
+  formatAggregateNumber,
+  clearCellSelection,
+  onGridMouseDown,
+  onGridClick,
+  onColumnMoved,
+  onBodyScroll,
+} = selection;
 
-function isCellInSelection(r: number, c: number, vColIdx?: number): boolean {
-  if (selectedColSet.value.size > 0) {
-    return selectedColSet.value.has(c);
-  }
-  if (selectionRange.value) {
-    const { minRow, maxRow, minCol, maxCol } = selectionRange.value;
-    const colPosition = vColIdx !== undefined ? vColIdx : c;
-    return r >= minRow && r <= maxRow && colPosition >= minCol && colPosition <= maxCol;
-  }
-  return false;
-}
-
-function isColumnSelected(c: number, vColIdx?: number): boolean {
-  if (selectedColSet.value.size > 0) {
-    return selectedColSet.value.has(c);
-  }
-  if (selectionRange.value && currentSet.value) {
-    const { minRow, maxRow, minCol, maxCol } = selectionRange.value;
-    const colPosition = vColIdx !== undefined ? vColIdx : c;
-    return (
-      minRow === 0 &&
-      maxRow === currentSet.value.rows.length - 1 &&
-      colPosition >= minCol &&
-      colPosition <= maxCol
-    );
-  }
-  return false;
-}
-
-function formatAggregateNumber(num: number): string {
-  if (Number.isInteger(num)) {
-    return num.toLocaleString();
-  }
-  return num.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 4 });
-}
-
-function computeSelectionStats() {
-  if (!currentSet.value || !hasSelection.value) {
-    selectionStats.value = null;
-    return;
-  }
-
-  const distinctValues = new Set<string>();
-  const numericValues: number[] = [];
-  let totalCells = 0;
-
-  if (selectedColSet.value.size > 0) {
-    const colIndices = Array.from(selectedColSet.value);
-    const rowCount = currentSet.value.rows.length;
-    totalCells = colIndices.length * rowCount;
-
-    for (let r = 0; r < rowCount; r++) {
-      const row = currentSet.value.rows[r];
-      if (!row) continue;
-      for (const c of colIndices) {
-        const val = row[c];
-        distinctValues.add(val === null || val === undefined ? 'NULL' : String(val));
-        if (val !== null && val !== undefined && val !== '' && typeof val !== 'boolean') {
-          const num = typeof val === 'number' ? val : Number(val);
-          if (!isNaN(num)) {
-            numericValues.push(num);
-          }
-        }
-      }
-    }
-  } else if (selectionRange.value) {
-    const { minRow, maxRow, minCol, maxCol } = selectionRange.value;
-    const visualIndices = getVisualDataColIndices();
-    const rangeCols = visualIndices.filter((_, vIdx) => vIdx >= minCol && vIdx <= maxCol);
-    totalCells = (maxRow - minRow + 1) * rangeCols.length;
-
-    for (let r = minRow; r <= maxRow; r++) {
-      const row = currentSet.value.rows[r];
-      if (!row) continue;
-      for (const c of rangeCols) {
-        const val = row[c];
-        distinctValues.add(val === null || val === undefined ? 'NULL' : String(val));
-        if (val !== null && val !== undefined && val !== '' && typeof val !== 'boolean') {
-          const num = typeof val === 'number' ? val : Number(val);
-          if (!isNaN(num)) {
-            numericValues.push(num);
-          }
-        }
-      }
-    }
-  }
-
-  let sum = 0;
-  let min = 0;
-  let max = 0;
-  let avg = 0;
-
-  if (numericValues.length > 0) {
-    sum = numericValues.reduce((acc, curr) => acc + curr, 0);
-    min = Math.min(...numericValues);
-    max = Math.max(...numericValues);
-    avg = sum / numericValues.length;
-  }
-
-  selectionStats.value = {
-    totalCells,
-    numericCount: numericValues.length,
-    sum,
-    avg,
-    min,
-    max,
-    distinctCount: distinctValues.size,
-  };
-}
-
-function updateSelectionHighlight() {
-  const container = gridContainerRef.value;
-  if (!container) return;
-
-  const visualIndices = getVisualDataColIndices();
-
-  const cells = container.querySelectorAll('.ag-cell');
-  cells.forEach((cell) => {
-    if (!hasSelection.value) {
-      cell.classList.remove('sqlight-cell-selected');
-      return;
-    }
-    const rStr = cell.getAttribute('row-index');
-    const cId = cell.getAttribute('col-id');
-    if (rStr == null || !cId) {
-      cell.classList.remove('sqlight-cell-selected');
-      return;
-    }
-    const r = parseInt(rStr, 10);
-    const c = getColIndex(cId);
-    if (c !== undefined) {
-      const vIdx = visualIndices.indexOf(c);
-      if (isCellInSelection(r, c, vIdx >= 0 ? vIdx : undefined)) {
-        cell.classList.add('sqlight-cell-selected');
-      } else {
-        cell.classList.remove('sqlight-cell-selected');
-      }
-    } else {
-      cell.classList.remove('sqlight-cell-selected');
-    }
-  });
-
-  // Highlight column headers if whole column selected
-  const headerCells = container.querySelectorAll('.ag-header-cell');
-  headerCells.forEach((hCell) => {
-    const cId = hCell.getAttribute('col-id');
-    const c = getColIndex(cId);
-    if (c !== undefined) {
-      const vIdx = visualIndices.indexOf(c);
-      if (isColumnSelected(c, vIdx >= 0 ? vIdx : undefined)) {
-        hCell.classList.add('sqlight-header-selected');
-      } else {
-        hCell.classList.remove('sqlight-header-selected');
-      }
-    } else {
-      hCell.classList.remove('sqlight-header-selected');
-    }
-  });
-}
-
-function clearCellSelection() {
-  cellDragStart.value = null;
-  cellDragEnd.value = null;
-  rowDragStart.value = null;
-  selectionRange.value = null;
-  selectedColSet.value.clear();
-  selectionStats.value = null;
-  isCellDragging.value = false;
-  isRowDragging.value = false;
-  updateSelectionHighlight();
-}
-
-function selectAll() {
-  if (!currentSet.value || currentSet.value.rows.length === 0) return;
-  selectedColSet.value.clear();
-  const visualIndices = getVisualDataColIndices();
-  selectionRange.value = {
-    minRow: 0,
-    maxRow: currentSet.value.rows.length - 1,
-    minCol: 0,
-    maxCol: visualIndices.length - 1,
-  };
-  computeSelectionStats();
-  updateSelectionHighlight();
-}
-
-function onGridMouseDown(e: MouseEvent) {
-  if (e.button !== 0 || !currentSet.value) return; // Only handle left clicks
-  const target = e.target as HTMLElement;
-
-  // 1. Check if clicked inside column header
-  const headerCell = target.closest('.ag-header-cell');
-  if (headerCell) {
-    const cId = headerCell.getAttribute('col-id');
-
-    // If clicked on '#' top-left corner header -> SELECT ALL
-    if (!cId || cId === 'row_index' || cId === '#') {
-      e.preventDefault();
-      selectAll();
-      return;
-    }
-
-    const colIdx = getColIndex(cId);
-    if (colIdx === undefined) return;
-
-    // Track mousedown to distinguish drag (column reorder) from click (column select)
-    headerMouseDownInfo = {
-      x: e.clientX,
-      y: e.clientY,
-      time: Date.now(),
-      colId: cId,
-    };
-
-    // If Shift or Ctrl/Cmd is held, prevent AG Grid's default multi-sort
-    if (e.shiftKey || e.ctrlKey || e.metaKey) {
-      e.preventDefault();
-    }
-    // For normal click/drag, DO NOT preventDefault so AG Grid can initiate column reorder drag
-    return;
-  }
-
-  // 2. Check if clicked inside a data cell
-  const cellEl = target.closest('.ag-cell');
-  if (!cellEl) {
-    clearCellSelection();
-    return;
-  }
-
-  const rStr = cellEl.getAttribute('row-index');
-  const cId = cellEl.getAttribute('col-id');
-  if (rStr == null) return;
-
-  const r = parseInt(rStr, 10);
-  if (isNaN(r)) return;
-
-  const colCount = currentSet.value.columns.length;
-  const visualIndices = getVisualDataColIndices();
-  const maxVCol = visualIndices.length > 0 ? visualIndices.length - 1 : colCount - 1;
-
-  // Clicked on '#' row number column -> Select entire row
-  if (!cId || cId === 'row_index' || cId === '#') {
-    e.preventDefault();
-    selectedColSet.value.clear();
-
-    if (e.shiftKey && lastAnchorRow.value !== null) {
-      const minRow = Math.min(lastAnchorRow.value, r);
-      const maxRow = Math.max(lastAnchorRow.value, r);
-      selectionRange.value = { minRow, maxRow, minCol: 0, maxCol: maxVCol };
-    } else {
-      lastAnchorRow.value = r;
-      rowDragStart.value = r;
-      isRowDragging.value = true;
-      selectionRange.value = { minRow: r, maxRow: r, minCol: 0, maxCol: maxVCol };
-    }
-    computeSelectionStats();
-    updateSelectionHighlight();
-    return;
-  }
-
-  const colIdx = getColIndex(cId);
-  if (colIdx === undefined) return;
-
-  e.preventDefault();
-  selectedColSet.value.clear();
-
-  const vIdx = visualIndices.indexOf(colIdx);
-  const startVCol = vIdx >= 0 ? vIdx : colIdx;
-
-  // Shift + Click on Cell: Rectangular Range Selection from Anchor
-  if (e.shiftKey && lastAnchorCell.value) {
-    const minRow = Math.min(lastAnchorCell.value.rowIndex, r);
-    const maxRow = Math.max(lastAnchorCell.value.rowIndex, r);
-    const minCol = Math.min(lastAnchorCell.value.colIndex, startVCol);
-    const maxCol = Math.max(lastAnchorCell.value.colIndex, startVCol);
-    selectionRange.value = { minRow, maxRow, minCol, maxCol };
-    computeSelectionStats();
-    updateSelectionHighlight();
-    return;
-  }
-
-  // Normal Cell Click: Start Cell Drag Selection
-  lastAnchorCell.value = { rowIndex: r, colIndex: startVCol };
-  cellDragStart.value = { rowIndex: r, colIndex: startVCol };
-  cellDragEnd.value = { rowIndex: r, colIndex: startVCol };
-  isCellDragging.value = true;
-  selectionRange.value = { minRow: r, maxRow: r, minCol: startVCol, maxCol: startVCol };
-  computeSelectionStats();
-  updateSelectionHighlight();
-}
-
-function onGridClick(e: MouseEvent) {
-  if (e.button !== 0 || !currentSet.value) return;
-  const target = e.target as HTMLElement;
-
-  const headerCell = target.closest('.ag-header-cell');
-  if (!headerCell) return;
-
-  const cId = headerCell.getAttribute('col-id');
-  if (!cId || cId === 'row_index' || cId === '#') return;
-
-  // If user moved mouse > 5px, it was a column reorder drag, NOT a click!
-  if (headerMouseDownInfo && headerMouseDownInfo.colId === cId) {
-    const dist = Math.hypot(e.clientX - headerMouseDownInfo.x, e.clientY - headerMouseDownInfo.y);
-    if (dist > 5) {
-      headerMouseDownInfo = null;
-      return;
-    }
-  }
-  headerMouseDownInfo = null;
-
-  const colIdx = getColIndex(cId);
-  if (colIdx === undefined) return;
-
-  const rowCount = currentSet.value.rows.length;
-  if (rowCount === 0) return;
-
-  // A. Ctrl + Click on Header: Toggle multi-column selection
-  if (e.ctrlKey || e.metaKey) {
-    e.stopPropagation();
-    if (selectedColSet.value.size === 0 && selectionRange.value) {
-      const { minCol, maxCol } = selectionRange.value;
-      const visualIndices = getVisualDataColIndices();
-      visualIndices.forEach((c, vIdx) => {
-        if (vIdx >= minCol && vIdx <= maxCol) selectedColSet.value.add(c);
-      });
-      selectionRange.value = null;
-    }
-    if (selectedColSet.value.has(colIdx)) {
-      selectedColSet.value.delete(colIdx);
-    } else {
-      selectedColSet.value.add(colIdx);
-    }
-    lastAnchorHeaderCol.value = colIdx;
-    computeSelectionStats();
-    updateSelectionHighlight();
-    return;
-  }
-
-  // B. Shift + Click on Header: Select range of columns in visual order
-  if (e.shiftKey && lastAnchorHeaderCol.value !== null) {
-    e.stopPropagation();
-    selectedColSet.value.clear();
-    selectionRange.value = null;
-
-    const visualIndices = getVisualDataColIndices();
-    let vStart = visualIndices.indexOf(lastAnchorHeaderCol.value);
-    let vEnd = visualIndices.indexOf(colIdx);
-    if (vStart === -1) vStart = 0;
-    if (vEnd === -1) vEnd = visualIndices.length - 1;
-
-    const minV = Math.min(vStart, vEnd);
-    const maxV = Math.max(vStart, vEnd);
-
-    for (let v = minV; v <= maxV; v++) {
-      const c = visualIndices[v];
-      if (c !== undefined) selectedColSet.value.add(c);
-    }
-    computeSelectionStats();
-    updateSelectionHighlight();
-    return;
-  }
-
-  // C. Normal Header Click: Select single column
-  selectedColSet.value.clear();
-  selectedColSet.value.add(colIdx);
-  lastAnchorHeaderCol.value = colIdx;
-  selectionRange.value = null;
-  computeSelectionStats();
-  updateSelectionHighlight();
-}
-
-function onColumnMoved(event: ColumnMovedEvent) {
-  if (event.finished) {
-    updateSelectionHighlight();
-  }
-}
-
-function handleGlobalMouseMove(e: MouseEvent) {
-  if (!gridContainerRef.value || !currentSet.value) return;
-
-  // 1. Row Dragging across rows
-  if (isRowDragging.value && rowDragStart.value !== null) {
-    const el = document.elementFromPoint(e.clientX, e.clientY);
-    const cellEl = el?.closest('.ag-cell');
-    const rStr = cellEl?.getAttribute('row-index');
-    if (rStr != null) {
-      const r = parseInt(rStr, 10);
-      if (!isNaN(r)) {
-        const minRow = Math.min(rowDragStart.value, r);
-        const maxRow = Math.max(rowDragStart.value, r);
-        const visualIndices = getVisualDataColIndices();
-        selectionRange.value = {
-          minRow,
-          maxRow,
-          minCol: 0,
-          maxCol: visualIndices.length > 0 ? visualIndices.length - 1 : currentSet.value.columns.length - 1,
-        };
-        computeSelectionStats();
-        updateSelectionHighlight();
-      }
-    }
-    return;
-  }
-
-  // 2. Cell Dragging across rows and columns
-  if (isCellDragging.value && cellDragStart.value !== null) {
-    const el = document.elementFromPoint(e.clientX, e.clientY);
-    const cellEl = el?.closest('.ag-cell');
-    if (!cellEl) return;
-
-    const rStr = cellEl.getAttribute('row-index');
-    const cId = cellEl.getAttribute('col-id');
-    if (rStr == null || !cId) return;
-
-    const r = parseInt(rStr, 10);
-    const c = getColIndex(cId);
-    if (isNaN(r) || c === undefined) return;
-
-    const visualIndices = getVisualDataColIndices();
-    const vIdx = visualIndices.indexOf(c);
-    if (vIdx === -1) return;
-
-    if (cellDragEnd.value?.rowIndex !== r || cellDragEnd.value?.colIndex !== vIdx) {
-      cellDragEnd.value = { rowIndex: r, colIndex: vIdx };
-      const minRow = Math.min(cellDragStart.value.rowIndex, r);
-      const maxRow = Math.max(cellDragStart.value.rowIndex, r);
-      const minCol = Math.min(cellDragStart.value.colIndex, vIdx);
-      const maxCol = Math.max(cellDragStart.value.colIndex, vIdx);
-      selectionRange.value = { minRow, maxRow, minCol, maxCol };
-      computeSelectionStats();
-      updateSelectionHighlight();
-    }
-  }
-}
-
-function handleGlobalMouseUp() {
-  if (isCellDragging.value) isCellDragging.value = false;
-  if (isRowDragging.value) isRowDragging.value = false;
-}
-
-function handleGlobalKeyDown(e: KeyboardEvent) {
-  const active = document.activeElement;
-  if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA')) {
-    return;
-  }
-
-  // Escape: Clear selection
-  if (e.key === 'Escape') {
-    clearCellSelection();
-    return;
-  }
-
-  // Ctrl+A / Cmd+A: Select All
-  if ((e.ctrlKey || e.metaKey) && (e.key === 'a' || e.key === 'A')) {
-    if (gridContainerRef.value && gridContainerRef.value.contains(document.activeElement || null)) {
-      e.preventDefault();
-      selectAll();
-      return;
-    }
-  }
-
-  // Ctrl+C / Cmd+C: Copy Selected Cells / Columns
-  if ((e.ctrlKey || e.metaKey) && (e.key === 'c' || e.key === 'C') && hasSelection.value) {
-    e.preventDefault();
-    copySelectedCells();
-  }
-}
-
-function onBodyScroll() {
-  updateSelectionHighlight();
-}
-
-onMounted(() => {
-  window.addEventListener('mousemove', handleGlobalMouseMove);
-  window.addEventListener('mouseup', handleGlobalMouseUp);
-  window.addEventListener('keydown', handleGlobalKeyDown);
-});
-
-onUnmounted(() => {
-  window.removeEventListener('mousemove', handleGlobalMouseMove);
-  window.removeEventListener('mouseup', handleGlobalMouseUp);
-  window.removeEventListener('keydown', handleGlobalKeyDown);
+// Clear selection when active result set tab changes
+watch(activeSetIndex, () => {
+  clearCellSelection();
 });
 
 // Custom cell context menu state
@@ -1041,6 +503,7 @@ const contextMenu = reactive<{
   colName: string;
   cellValue: unknown;
   rowIndex: number;
+  rowData: CellValue[] | null;
 }>({
   visible: false,
   x: 0,
@@ -1049,7 +512,49 @@ const contextMenu = reactive<{
   colName: '',
   cellValue: null,
   rowIndex: -1,
+  rowData: null,
 });
+
+// Export composable
+const gridExport = useGridExport({
+  getRows: () => currentSet.value?.rows ?? [],
+  getColumns: () => currentSet.value?.columns ?? [],
+  selection,
+  showToast: (msg, type, duration) => workspaceStore.showToast(msg, type, duration),
+  onMenuClose: () => {
+    contextMenu.visible = false;
+  },
+});
+
+const {
+  copiedTsv,
+  copiedCsv,
+  copyCellValue: exportCopyCellValue,
+  copyCurrentRow: exportCopyCurrentRow,
+  copyCurrentRowAsJson: exportCopyCurrentRowAsJson,
+  copySelectedCells,
+  copySelectedAsJson,
+  copyAsTsv,
+  copyAsCsv,
+  copyAsJson,
+  copyAsMarkdown,
+} = gridExport;
+
+function copyCellValue() {
+  exportCopyCellValue(contextMenu.cellValue);
+}
+
+function copyCurrentRow() {
+  const row = contextMenu.rowData || (contextMenu.rowIndex >= 0 && currentSet.value ? currentSet.value.rows[contextMenu.rowIndex] : null);
+  exportCopyCurrentRow(row);
+}
+
+function copyCurrentRowAsJson() {
+  const row = contextMenu.rowData || (contextMenu.rowIndex >= 0 && currentSet.value ? currentSet.value.rows[contextMenu.rowIndex] : null);
+  if (row && currentSet.value) {
+    exportCopyCurrentRowAsJson(currentSet.value.columns, row);
+  }
+}
 
 const isColPinned = computed(() => {
   if (!gridApi.value || !contextMenu.colId) return false;
@@ -1059,46 +564,6 @@ const isColPinned = computed(() => {
 
 function onGridReady(params: GridReadyEvent) {
   gridApi.value = params.api;
-}
-
-function escapeHtml(str: string): string {
-  return str
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#039;');
-}
-
-function formatValueForDisplay(val: unknown): string {
-  if (val === null || val === undefined) return 'NULL';
-  if (typeof val === 'object' && val !== null && 'type' in val && (val as any).type === 'binary') {
-    return `[Binary ${(val as any).length} B]`;
-  }
-  if (typeof val === 'boolean') {
-    return val ? 'TRUE' : 'FALSE';
-  }
-  return String(val);
-}
-
-function estimateTextWidth(text: string, isMono = true): number {
-  let width = 0;
-  const charWidth = isMono ? 7.8 : 7.2;
-  for (let i = 0; i < text.length; i++) {
-    width += text.charCodeAt(i) > 255 ? 15 : charWidth;
-  }
-  return width;
-}
-
-function calculateColumnWidth(headerName: string, firstRowVal: unknown, isPk = false): number {
-  const firstRowStr = firstRowVal !== undefined ? formatValueForDisplay(firstRowVal) : '';
-  const pkExtra = isPk ? 22 : 0;
-  const headerWidth = Math.ceil(estimateTextWidth(headerName, false) + 48 + pkExtra);
-  const firstRowWidth = firstRowVal !== undefined && firstRowStr.length > 0
-    ? Math.ceil(estimateTextWidth(firstRowStr, true) + 28)
-    : 0;
-  const calculated = Math.max(headerWidth, firstRowWidth);
-  return Math.min(Math.max(calculated, 75), 600);
 }
 
 // AG Grid Column Definitions
@@ -1132,16 +597,19 @@ const columnDefs = computed<ColDef[]>(() => {
   // 2. Dynamic Data Columns with standardized colId: `col_${colIdx}`
   const dataCols: ColDef[] = currentSet.value.columns.map((col, colIdx) => {
     const isPk = primaryKeyColumnNames.value.has(col.name.toLowerCase());
+    const isStmtText = col.name === 'StmtText';
     const firstVal = firstRow ? firstRow[colIdx] : undefined;
-    const colWidth = calculateColumnWidth(col.name, firstVal, isPk);
+    const baseWidth = calculateColumnWidth(col.name, firstVal, isPk);
+    const colWidth = isStmtText ? Math.max(baseWidth, 360) : baseWidth;
 
     return {
       colId: `col_${colIdx}`,
       field: `col_${colIdx}`,
       headerName: col.name,
       headerClass: isPk ? 'pk-column-header' : '',
+      cellClass: isStmtText ? '!whitespace-pre font-mono text-dark-100' : '',
       width: colWidth,
-      minWidth: 70,
+      minWidth: isStmtText ? 200 : 70,
       suppressMovable: false, // Allows dragging column headers to reorder
       tooltipShowMode: 'whenTruncated',
       headerTooltip: isPk
@@ -1173,6 +641,9 @@ const columnDefs = computed<ColDef[]>(() => {
         if (typeof val === 'boolean') {
           const color = val ? 'text-emerald-400' : 'text-rose-400';
           return `<span class="${color} font-semibold text-xxs">${val ? 'TRUE' : 'FALSE'}</span>`;
+        }
+        if (isStmtText) {
+          return `<span class="whitespace-pre font-mono text-dark-100">${escapeHtml(String(val))}</span>`;
         }
         return escapeHtml(String(val));
       },
@@ -1206,6 +677,7 @@ function onCellContextMenu(event: CellContextMenuEvent) {
   contextMenu.colName = realColName || '';
   contextMenu.cellValue = event.value;
   contextMenu.rowIndex = event.node?.rowIndex ?? -1;
+  contextMenu.rowData = (event.data as CellValue[]) || (event.node?.data as CellValue[]) || null;
 
   function closeMenu() {
     contextMenu.visible = false;
@@ -1217,12 +689,8 @@ function onCellContextMenu(event: CellContextMenuEvent) {
 }
 
 function handleGenerateDml(type: 'INSERT' | 'UPDATE' | 'DELETE') {
-  if (contextMenu.rowIndex < 0 || !currentSet.value) {
-    contextMenu.visible = false;
-    return;
-  }
-  const row = currentSet.value.rows[contextMenu.rowIndex];
-  if (!row) {
+  const row = contextMenu.rowData || (contextMenu.rowIndex >= 0 && currentSet.value ? currentSet.value.rows[contextMenu.rowIndex] : null);
+  if (!row || !currentSet.value) {
     contextMenu.visible = false;
     return;
   }
@@ -1249,9 +717,17 @@ function handleGenerateDml(type: 'INSERT' | 'UPDATE' | 'DELETE') {
     schema = 'dbo';
   }
 
+  const primaryKeyColumns = tableSchema?.columns
+    .filter((c) => c.isPrimaryKey)
+    .map((c) => c.name);
+
   const pkColNames = new Set(
+    primaryKeyColumns?.map((c) => c.toLowerCase()) ?? []
+  );
+
+  const identityColNames = new Set(
     tableSchema?.columns
-      .filter((c) => c.isPrimaryKey)
+      .filter((c) => c.isIdentity)
       .map((c) => c.name.toLowerCase()) ?? []
   );
 
@@ -1259,139 +735,42 @@ function handleGenerateDml(type: 'INSERT' | 'UPDATE' | 'DELETE') {
     name: col.name,
     dataType: col.dataType,
     isPrimaryKey: pkColNames.has(col.name.toLowerCase()),
+    isIdentity: identityColNames.has(col.name.toLowerCase()),
   }));
 
+  const dmlParams: GenerateDmlParams = {
+    tableName,
+    schema,
+    database: db,
+    columns,
+    row,
+    primaryKeyColumns,
+  };
+
   let generated = '';
-  if (type === 'INSERT') {
-    generated = generateInsertStatement({
-      tableName,
-      schema,
-      columns,
-      row,
-    });
-  } else if (type === 'UPDATE') {
-    generated = generateUpdateStatement({
-      tableName,
-      schema,
-      columns,
-      row,
-    });
-  } else if (type === 'DELETE') {
-    generated = generateDeleteStatement({
-      tableName,
-      schema,
-      columns,
-      row,
-    });
-  }
-
   try {
-    navigator.clipboard?.writeText(generated);
-  } catch (err) {
-    // Ignore clipboard error
-  }
-
-  workspaceStore.addSqlTab(generated, `${type}: [${schema}].[${tableName}]`);
-  workspaceStore.showToast(`已建立 ${type} 語法並開啟新分頁（已複製至剪貼簿）`, 'success', 2500);
-
-  contextMenu.visible = false;
-}
-
-function copyCellValue() {
-  if (contextMenu.cellValue !== null && contextMenu.cellValue !== undefined) {
-    navigator.clipboard.writeText(String(contextMenu.cellValue));
-  } else {
-    navigator.clipboard.writeText('NULL');
-  }
-  contextMenu.visible = false;
-}
-
-function copyCurrentRow() {
-  if (contextMenu.rowIndex >= 0 && currentSet.value) {
-    const row = currentSet.value.rows[contextMenu.rowIndex];
-    if (row) {
-      const rowStr = row.map(formatCellForExport).join('\t');
-      navigator.clipboard.writeText(rowStr);
-      workspaceStore.showToast('已複製整列資料至剪貼簿 (TSV)', 'success', 2000);
+    if (type === 'INSERT') {
+      generated = generateInsertStatement(dmlParams);
+    } else if (type === 'UPDATE') {
+      generated = generateUpdateStatement(dmlParams);
+    } else if (type === 'DELETE') {
+      generated = generateDeleteStatement(dmlParams);
     }
-  }
-  contextMenu.visible = false;
-}
 
-function copyCurrentRowAsJson() {
-  if (contextMenu.rowIndex >= 0 && currentSet.value) {
-    const row = currentSet.value.rows[contextMenu.rowIndex];
-    if (row) {
-      const jsonStr = exportRowAsJson(currentSet.value.columns, row);
-      navigator.clipboard.writeText(jsonStr);
-      workspaceStore.showToast('已複製目前列為 JSON 物件', 'success', 2000);
+    try {
+      navigator.clipboard?.writeText(generated);
+    } catch (err) {
+      // Ignore clipboard error
     }
-  }
-  contextMenu.visible = false;
-}
 
-function copySelectedCells() {
-  if (!currentSet.value || !hasSelection.value) return;
-
-  const lines: string[] = [];
-  const visualIndices = getVisualDataColIndices();
-
-  if (selectedColSet.value.size > 0) {
-    const activeIndices = visualIndices.filter((cIdx) => selectedColSet.value.has(cIdx));
-    lines.push(activeIndices.map((cIdx) => currentSet.value!.columns[cIdx]?.name || '').join('\t'));
-    for (let r = 0; r < currentSet.value.rows.length; r++) {
-      const row = currentSet.value.rows[r];
-      if (!row) continue;
-      lines.push(activeIndices.map((cIdx) => formatCellForExport(row[cIdx])).join('\t'));
-    }
-  } else if (selectionRange.value) {
-    const { minRow, maxRow, minCol, maxCol } = selectionRange.value;
-    const rangeIndices = visualIndices.filter((_, vIdx) => vIdx >= minCol && vIdx <= maxCol);
-    if (minRow === 0 && maxRow === currentSet.value.rows.length - 1) {
-      lines.push(rangeIndices.map((cIdx) => currentSet.value!.columns[cIdx]?.name || '').join('\t'));
-    }
-    for (let r = minRow; r <= maxRow; r++) {
-      const row = currentSet.value.rows[r];
-      if (!row) continue;
-      const rowCells: string[] = [];
-      for (const cIdx of rangeIndices) {
-        rowCells.push(formatCellForExport(row[cIdx]));
-      }
-      lines.push(rowCells.join('\t'));
-    }
+    workspaceStore.addSqlTab(generated, `${type}: [${schema}].[${tableName}]`, connId, db);
+    workspaceStore.showToast(`已建立 ${type} 語法並開啟新分頁（已複製至剪貼簿）`, 'success', 2500);
+  } catch (err: any) {
+    workspaceStore.showToast(`產生 ${type} 語法失敗: ${err?.message || err}`, 'error', 3500);
   }
 
-  navigator.clipboard.writeText(lines.join('\n'));
-  workspaceStore.showToast(`已複製選取內容 (${selectionStats.value?.totalCells} 格) 至剪貼簿`, 'success', 2000);
   contextMenu.visible = false;
 }
-
-function copySelectedAsJson() {
-  if (!currentSet.value || !hasSelection.value) return;
-
-  let cols: { name: string }[] = [];
-  let rowsData: unknown[][] = [];
-  const visualIndices = getVisualDataColIndices();
-
-  if (selectedColSet.value.size > 0) {
-    const activeIndices = visualIndices.filter((cIdx) => selectedColSet.value.has(cIdx));
-    cols = activeIndices.map((cIdx) => ({ name: currentSet.value!.columns[cIdx]?.name || '' }));
-    rowsData = currentSet.value.rows.map((r) => activeIndices.map((cIdx) => r[cIdx]));
-  } else if (selectionRange.value) {
-    const { minRow, maxRow, minCol, maxCol } = selectionRange.value;
-    const rangeIndices = visualIndices.filter((_, vIdx) => vIdx >= minCol && vIdx <= maxCol);
-    cols = rangeIndices.map((cIdx) => ({ name: currentSet.value!.columns[cIdx]?.name || '' }));
-    rowsData = currentSet.value.rows
-      .slice(minRow, maxRow + 1)
-      .map((r) => rangeIndices.map((cIdx) => r[cIdx]));
-  }
-
-  const jsonStr = exportRowsAsJson(cols, rowsData);
-  navigator.clipboard.writeText(jsonStr);
-  workspaceStore.showToast(`已複製選取為 JSON (${rowsData.length} 列 x ${cols.length} 欄)`, 'success', 2000);
-  contextMenu.visible = false;
-}
-
 function togglePinColumn() {
   if (!gridApi.value || !contextMenu.colId) return;
   const col = gridApi.value.getColumn(contextMenu.colId);
@@ -1399,83 +778,6 @@ function togglePinColumn() {
 
   const newPinState = col.isPinned() ? null : 'left';
   gridApi.value.setColumnsPinned([contextMenu.colId], newPinState);
-  contextMenu.visible = false;
-}
-
-function formatCellForExport(cell: CellValue | undefined): string {
-  if (cell === null || cell === undefined) return 'NULL';
-  if (typeof cell === 'object' && 'type' in cell && cell.type === 'binary') {
-    return `[Binary ${cell.length}B]`;
-  }
-  return String(cell);
-}
-
-function copyAsTsv() {
-  if (!currentSet.value) return;
-  const visualIndices = getVisualDataColIndices();
-  const headers = visualIndices.map((cIdx) => currentSet.value!.columns[cIdx]?.name || '').join('\t');
-  const rows = currentSet.value.rows
-    .map((row) => visualIndices.map((cIdx) => formatCellForExport(row[cIdx])).join('\t'))
-    .join('\n');
-  const fullText = `${headers}\n${rows}`;
-
-  navigator.clipboard.writeText(fullText).then(() => {
-    copiedTsv.value = true;
-    workspaceStore.showToast(`已複製全表為 TSV (${currentSet.value?.rows.length} 筆)`, 'success', 2000);
-    setTimeout(() => {
-      copiedTsv.value = false;
-    }, 2000);
-  });
-  contextMenu.visible = false;
-}
-
-function copyAsCsv() {
-  if (!currentSet.value) return;
-  const escapeCsv = (val: string) => {
-    if (val.includes(',') || val.includes('"') || val.includes('\n')) {
-      return `"${val.replace(/"/g, '""')}"`;
-    }
-    return val;
-  };
-
-  const visualIndices = getVisualDataColIndices();
-  const headers = visualIndices.map((cIdx) => escapeCsv(currentSet.value!.columns[cIdx]?.name || '')).join(',');
-  const rows = currentSet.value.rows
-    .map((row) => visualIndices.map((cIdx) => escapeCsv(formatCellForExport(row[cIdx]))).join(','))
-    .join('\n');
-  const fullText = `${headers}\n${rows}`;
-
-  navigator.clipboard.writeText(fullText).then(() => {
-    copiedCsv.value = true;
-    workspaceStore.showToast(`已複製全表為 CSV (${currentSet.value?.rows.length} 筆)`, 'success', 2000);
-    setTimeout(() => {
-      copiedCsv.value = false;
-    }, 2000);
-  });
-  contextMenu.visible = false;
-}
-
-function copyAsJson() {
-  if (!currentSet.value) return;
-  const visualIndices = getVisualDataColIndices();
-  const cols = visualIndices.map((cIdx) => ({ name: currentSet.value!.columns[cIdx]?.name || '' }));
-  const rowsData = currentSet.value.rows.map((r) => visualIndices.map((cIdx) => r[cIdx]));
-  const jsonStr = exportRowsAsJson(cols, rowsData);
-  navigator.clipboard.writeText(jsonStr).then(() => {
-    workspaceStore.showToast(`已複製全表為 JSON 物件陣列 (${currentSet.value?.rows.length} 筆)`, 'success', 2000);
-  });
-  contextMenu.visible = false;
-}
-
-function copyAsMarkdown() {
-  if (!currentSet.value) return;
-  const visualIndices = getVisualDataColIndices();
-  const cols = visualIndices.map((cIdx) => ({ name: currentSet.value!.columns[cIdx]?.name || '' }));
-  const rowsData = currentSet.value.rows.map((r) => visualIndices.map((cIdx) => r[cIdx]));
-  const mdStr = exportRowsAsMarkdown(cols, rowsData);
-  navigator.clipboard.writeText(mdStr).then(() => {
-    workspaceStore.showToast(`已複製全表為 Markdown 表格`, 'success', 2000);
-  });
   contextMenu.visible = false;
 }
 </script>

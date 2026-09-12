@@ -4,6 +4,7 @@ dist
 dist-portable
 dist-ssr
 *.local
+.test-build
 
 # Rust & Cargo
 src-tauri/target

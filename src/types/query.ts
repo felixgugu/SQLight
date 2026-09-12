@@ -55,4 +55,6 @@ export interface QueryResultTab {
   database?: string;
   tableName?: string;
   schema?: string;
+  seq?: number;
+  isShowplan?: boolean;
 }

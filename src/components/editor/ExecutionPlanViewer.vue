@@ -1,0 +1,1000 @@
+<template>
+  <div class="h-full flex flex-col bg-dark-900 overflow-hidden select-none">
+    <!-- Top Toolbar -->
+    <div class="h-10 bg-dark-850 border-b border-dark-700 px-3 flex items-center justify-between flex-shrink-0">
+      <!-- Left: Title & Info -->
+      <div class="flex items-center space-x-2 min-w-0">
+        <div class="p-1 rounded bg-purple-500/15 text-purple-400 border border-purple-500/30 flex-shrink-0">
+          <Network class="w-3.5 h-3.5" />
+        </div>
+        <span class="font-medium text-xs text-dark-100 truncate">
+          {{ tab.title }}
+        </span>
+        <span
+          v-if="tab.database"
+          class="text-[10px] font-mono px-1.5 py-0.5 rounded border border-dark-700 bg-dark-800 text-dark-400 flex-shrink-0"
+        >
+          {{ tab.database }}
+        </span>
+        <span class="text-xxs text-dark-500 font-mono flex-shrink-0">
+          {{ tab.executedAt }}
+        </span>
+
+        <!-- Toggle SQL Query Preview -->
+        <button
+          type="button"
+          @click="showSql = !showSql"
+          :class="[
+            'px-1.5 py-0.5 rounded text-xxs font-mono border transition-colors cursor-pointer flex items-center space-x-1 flex-shrink-0',
+            showSql
+              ? 'bg-brand-500/20 text-brand-300 border-brand-500/40'
+              : 'bg-dark-800 text-dark-400 hover:text-dark-200 border-dark-700 hover:bg-dark-750'
+          ]"
+          title="查看執行的 SQL 語句"
+        >
+          <Code2 class="w-3 h-3" />
+          <span>SQL</span>
+        </button>
+      </div>
+
+      <!-- Right: View Mode, Zoom Controls, Copy & Download Actions -->
+      <div class="flex items-center space-x-1.5 flex-shrink-0">
+        <!-- View Mode Segmented Buttons -->
+        <div class="flex items-center bg-dark-800 p-0.5 rounded border border-dark-700 text-xxs">
+          <button
+            type="button"
+            @click="viewMode = 'diagram'"
+            :class="[
+              'px-2 py-1 rounded transition-colors flex items-center space-x-1 cursor-pointer font-medium',
+              viewMode === 'diagram'
+                ? 'bg-purple-600 text-white shadow-xs'
+                : 'text-dark-400 hover:text-dark-200'
+            ]"
+            title="圖形化執行計畫 (Graphical Plan)"
+          >
+            <GitFork class="w-3 h-3" />
+            <span>圖形計畫</span>
+          </button>
+          <button
+            type="button"
+            @click="viewMode = 'xml'"
+            :class="[
+              'px-2 py-1 rounded transition-colors flex items-center space-x-1 cursor-pointer font-medium',
+              viewMode === 'xml'
+                ? 'bg-purple-600 text-white shadow-xs'
+                : 'text-dark-400 hover:text-dark-200'
+            ]"
+            title="原始 XML 內容 (Raw XML)"
+          >
+            <FileCode class="w-3 h-3" />
+            <span>原始 XML</span>
+          </button>
+        </div>
+
+        <!-- Zoom Controls (Only in Diagram mode) -->
+        <div v-if="viewMode === 'diagram'" class="flex items-center space-x-0.5 bg-dark-800 px-1 py-0.5 rounded border border-dark-700">
+          <button
+            type="button"
+            @click="zoomOut"
+            :disabled="zoom <= 30"
+            class="p-1 rounded text-dark-400 hover:text-dark-200 hover:bg-dark-750 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-colors"
+            title="縮小 (Zoom Out)"
+          >
+            <ZoomOut class="w-3 h-3" />
+          </button>
+          <button
+            type="button"
+            @click="resetZoom"
+            class="px-1.5 py-0.5 text-xxs font-mono text-dark-300 hover:text-white rounded hover:bg-dark-750 cursor-pointer transition-colors"
+            title="點擊重設為 100% (Reset Zoom)"
+          >
+            {{ zoom }}%
+          </button>
+          <button
+            type="button"
+            @click="zoomIn"
+            :disabled="zoom >= 250"
+            class="p-1 rounded text-dark-400 hover:text-dark-200 hover:bg-dark-750 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-colors"
+            title="放大 (Zoom In)"
+          >
+            <ZoomIn class="w-3 h-3" />
+          </button>
+          <button
+            type="button"
+            @click="resetZoom"
+            class="p-1 rounded text-dark-400 hover:text-dark-200 hover:bg-dark-750 cursor-pointer transition-colors"
+            title="重設大小 (Reset Zoom)"
+          >
+            <RotateCcw class="w-3 h-3" />
+          </button>
+        </div>
+
+        <!-- Theme Switcher (Dark / Classic Light) -->
+        <button
+          v-if="viewMode === 'diagram'"
+          type="button"
+          @click="togglePlanTheme"
+          class="px-2 py-1 rounded bg-dark-800 hover:bg-dark-750 text-dark-300 hover:text-white border border-dark-700 transition-colors flex items-center space-x-1 cursor-pointer text-xxs font-medium"
+          :title="planTheme === 'dark' ? '切換為 SSMS 經典淺色風格' : '切換為深色主題風格'"
+        >
+          <Moon v-if="planTheme === 'dark'" class="w-3 h-3 text-purple-400" />
+          <Sun v-else class="w-3 h-3 text-amber-400" />
+          <span>{{ planTheme === 'dark' ? '深色' : '淺色' }}</span>
+        </button>
+
+        <div class="h-4 w-px bg-dark-700 mx-0.5"></div>
+
+        <!-- Copy Raw XML Button -->
+        <button
+          type="button"
+          @click="copyXml"
+          class="px-2 py-1 rounded bg-dark-800 hover:bg-dark-750 text-dark-200 hover:text-white border border-dark-700 transition-colors flex items-center space-x-1.5 cursor-pointer text-xs font-medium"
+          title="一鍵複製原始 XML 執行計畫至剪貼簿"
+        >
+          <Check v-if="copied" class="w-3.5 h-3.5 text-emerald-400 animate-in fade-in" />
+          <Copy v-else class="w-3.5 h-3.5 text-dark-400 group-hover:text-dark-200" />
+          <span>{{ copied ? '已複製！' : '複製原始 XML' }}</span>
+        </button>
+
+        <!-- Save as .sqlplan File Button -->
+        <button
+          type="button"
+          @click="exportSqlPlanFile"
+          class="p-1.5 rounded bg-dark-800 hover:bg-dark-750 text-dark-300 hover:text-amber-300 border border-dark-700 transition-colors flex items-center cursor-pointer"
+          title="另存為 .sqlplan 檔案 (可直接用 SSMS / Azure Data Studio 開啟)"
+        >
+          <Download class="w-3.5 h-3.5" />
+        </button>
+      </div>
+    </div>
+
+    <!-- SQL Query Collapsible Drawer -->
+    <div
+      v-if="showSql && tab.querySql"
+      class="bg-dark-850/90 border-b border-dark-700 px-4 py-2 flex items-start justify-between space-x-4 flex-shrink-0 text-xs select-text font-mono"
+    >
+      <div class="overflow-x-auto max-h-24 flex-1 text-dark-300 whitespace-pre-wrap leading-relaxed">
+        {{ tab.querySql }}
+      </div>
+      <button
+        type="button"
+        @click="copySql"
+        class="px-2 py-1 rounded bg-dark-800 hover:bg-dark-750 border border-dark-700 text-dark-400 hover:text-dark-200 text-xxs flex items-center space-x-1 cursor-pointer flex-shrink-0"
+        title="複製 SQL 語句"
+      >
+        <Copy class="w-3 h-3" />
+        <span>複製 SQL</span>
+      </button>
+    </div>
+
+    <!-- Main Content Area -->
+    <div class="flex-1 relative overflow-hidden bg-dark-950 flex flex-col">
+      <!-- Diagram View Mode -->
+      <div
+        v-show="viewMode === 'diagram'"
+        class="w-full h-full flex flex-col relative overflow-hidden"
+      >
+        <!-- Loading State -->
+        <div
+          v-if="isRendering"
+          class="absolute inset-0 z-20 flex flex-col items-center justify-center bg-dark-900/80 backdrop-blur-xs space-y-2 text-dark-400 text-xs font-sans"
+        >
+          <RotateCw class="w-5 h-5 animate-spin text-purple-400" />
+          <span>正在渲染執行計畫圖形...</span>
+        </div>
+
+        <!-- Render Error State -->
+        <div
+          v-if="renderError"
+          class="absolute inset-0 z-20 flex flex-col items-center justify-center p-6 text-center space-y-3 bg-dark-900 text-dark-300 text-xs font-sans"
+        >
+          <div class="p-2 rounded-full bg-rose-500/20 text-rose-400">
+            <AlertTriangle class="w-6 h-6" />
+          </div>
+          <div class="max-w-md">
+            <h4 class="font-semibold text-dark-100 text-sm mb-1">圖形渲染失敗</h4>
+            <p class="text-dark-400 text-xxs font-mono break-all mb-3">{{ renderError }}</p>
+            <button
+              type="button"
+              @click="viewMode = 'xml'"
+              class="px-3 py-1.5 rounded bg-purple-600 hover:bg-purple-500 text-white font-medium cursor-pointer transition-colors"
+            >
+              切換至原始 XML 模式檢視
+            </button>
+          </div>
+        </div>
+
+        <!-- Diagram Scroll Canvas -->
+        <div
+          ref="scrollContainerRef"
+          :class="[
+            'flex-1 overflow-auto p-6 select-none plan-scroll-area',
+            planTheme === 'dark' ? 'plan-scroll-dark' : 'plan-scroll-classic'
+          ]"
+        >
+          <div
+            class="plan-canvas-wrapper inline-block min-w-full"
+            :style="{
+              transform: `scale(${zoom / 100})`,
+              transformOrigin: 'top left',
+              transition: 'transform 0.1s ease-out',
+            }"
+          >
+            <!-- Diagram injection container -->
+            <div
+              ref="diagramContainerRef"
+              :class="[
+                'plan-render-canvas p-6 rounded-lg shadow-xl inline-block min-w-[500px] transition-colors',
+                planTheme === 'dark' ? 'theme-dark' : 'theme-classic'
+              ]"
+            />
+          </div>
+        </div>
+      </div>
+
+      <!-- Raw XML View Mode -->
+      <div
+        v-show="viewMode === 'xml'"
+        class="w-full h-full flex flex-col overflow-hidden bg-dark-950 font-mono text-xs"
+      >
+        <div class="h-8 bg-dark-850 border-b border-dark-700 px-3 flex items-center justify-between text-xxs text-dark-400 flex-shrink-0">
+          <div class="flex items-center space-x-2">
+            <span>原始 ShowPlanXML 長度: {{ (tab.planXml.length / 1024).toFixed(1) }} KB</span>
+            <span class="text-dark-600">|</span>
+            <span>總行數: {{ xmlLines.length }} 行</span>
+          </div>
+          <div class="flex items-center space-x-2">
+            <label class="flex items-center space-x-1 cursor-pointer select-none text-dark-400 hover:text-dark-200">
+              <input
+                type="checkbox"
+                v-model="wordWrap"
+                class="w-3 h-3 rounded border-dark-600 bg-dark-900 text-purple-500 accent-purple-500"
+              />
+              <span>自動折行</span>
+            </label>
+          </div>
+        </div>
+
+        <div class="flex-1 overflow-auto p-4 select-text">
+          <pre
+            :class="[
+              'text-dark-200 font-mono text-xs leading-relaxed',
+              wordWrap ? 'whitespace-pre-wrap break-all' : 'whitespace-pre'
+            ]"
+          ><code>{{ formattedXmlContent }}</code></pre>
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script setup lang="ts">
+import { ref, computed, onMounted, onBeforeUnmount, watch, nextTick } from 'vue';
+import {
+  Network,
+  GitFork,
+  FileCode,
+  Copy,
+  Check,
+  Download,
+  ZoomIn,
+  ZoomOut,
+  RotateCcw,
+  RotateCw,
+  Code2,
+  AlertTriangle,
+  Moon,
+  Sun,
+} from 'lucide-vue-next';
+import type { ExecutionPlanTab } from '@/types/workspace';
+import { useWorkspaceStore } from '@/stores/workspaceStore';
+import { formatXml } from '@/utils/planXmlParser';
+import { savePlanToFile } from '@/utils/fileStorage';
+
+const props = defineProps<{
+  tab: ExecutionPlanTab;
+}>();
+
+const workspaceStore = useWorkspaceStore();
+
+const PLAN_THEME_STORAGE_KEY = 'sqlight_plan_theme';
+const planTheme = ref<'dark' | 'classic'>(
+  (localStorage.getItem(PLAN_THEME_STORAGE_KEY) as 'dark' | 'classic') || 'dark'
+);
+
+const viewMode = ref<'diagram' | 'xml'>('diagram');
+const zoom = ref<number>(100);
+const copied = ref<boolean>(false);
+const showSql = ref<boolean>(false);
+const wordWrap = ref<boolean>(true);
+const isRendering = ref<boolean>(false);
+const renderError = ref<string | null>(null);
+
+const diagramContainerRef = ref<HTMLDivElement | null>(null);
+const scrollContainerRef = ref<HTMLDivElement | null>(null);
+
+function togglePlanTheme() {
+  planTheme.value = planTheme.value === 'dark' ? 'classic' : 'dark';
+  try {
+    localStorage.setItem(PLAN_THEME_STORAGE_KEY, planTheme.value);
+  } catch {
+    // Ignore storage write errors
+  }
+  nextTick(() => {
+    if (viewMode.value === 'diagram' && isMounted) {
+      renderPlan();
+    }
+  });
+}
+
+// Formatted XML for Raw XML mode
+const formattedXmlContent = computed(() => {
+  return formatXml(props.tab.planXml);
+});
+
+const xmlLines = computed(() => {
+  return formattedXmlContent.value.split('\n');
+});
+
+// Zoom Controls
+function zoomIn() {
+  if (zoom.value < 250) {
+    zoom.value = Math.min(250, zoom.value + 15);
+  }
+}
+
+function zoomOut() {
+  if (zoom.value > 30) {
+    zoom.value = Math.max(30, zoom.value - 15);
+  }
+}
+
+function resetZoom() {
+  zoom.value = 100;
+}
+
+// Copy XML to clipboard
+async function copyXml() {
+  try {
+    await navigator.clipboard.writeText(props.tab.planXml);
+    copied.value = true;
+    workspaceStore.showToast('已複製原始 XML 執行計畫至剪貼簿', 'success', 2500);
+    setTimeout(() => {
+      copied.value = false;
+    }, 2000);
+  } catch (err) {
+    console.error('Failed to copy XML:', err);
+    workspaceStore.showToast('複製失敗，請手動選取 XML 複製', 'error');
+  }
+}
+
+// Copy SQL to clipboard
+async function copySql() {
+  if (!props.tab.querySql) return;
+  try {
+    await navigator.clipboard.writeText(props.tab.querySql);
+    workspaceStore.showToast('已複製 SQL 語句至剪貼簿', 'info', 2000);
+  } catch (err) {
+    console.error('Failed to copy SQL:', err);
+  }
+}
+
+// Export as .sqlplan file (SSMS native format via Save File Picker)
+async function exportSqlPlanFile() {
+  try {
+    const safeTitle = (props.tab.title || 'execution_plan')
+      .replace(/[^a-zA-Z0-9_\-\u4e00-\u9fa5]/g, '_');
+    const result = await savePlanToFile(props.tab.planXml, `${safeTitle}.sqlplan`);
+
+    if (result.saved && result.fileName) {
+      workspaceStore.showToast(`已成功儲存 .sqlplan 檔案至「${result.fileName}」`, 'success', 3000);
+    }
+  } catch (err) {
+    console.error('Failed to export .sqlplan file:', err);
+    workspaceStore.showToast('另存 .sqlplan 檔案失敗', 'error');
+  }
+}
+
+// Dynamic rendering and native tooltip management
+let isMounted = false;
+let activeTooltip: HTMLElement | null = null;
+let activeTarget: Element | null = null;
+let hoverTimer: number | null = null;
+const mousePos = { x: 0, y: 0 };
+
+function handleMouseMove(e: MouseEvent) {
+  mousePos.x = e.pageX;
+  mousePos.y = e.pageY;
+}
+
+function getLineTooltip(polyline: Element, container: Element): HTMLElement | null {
+  const nodeId = polyline.getAttribute('data-node-id');
+  const xml = (container as any).xml as Document | undefined;
+  if (!nodeId || !xml) return null;
+  const relOp = xml.querySelector(`RelOp[NodeId="${nodeId}"]`);
+  if (!relOp) return null;
+
+  const actualRows = relOp.querySelector('RunTimeCountersPerThread')?.getAttribute('ActualRows');
+  const actualRowsRead = relOp.querySelector('RunTimeCountersPerThread')?.getAttribute('ActualRowsRead');
+  const estimatedRows = relOp.getAttribute('EstimateRows') || relOp.getAttribute('StatementEstRows');
+  const estimatedRowSize = relOp.getAttribute('AvgRowSize');
+
+  const div = document.createElement('div');
+  div.className = 'qp-tt';
+  let rowsHtml = '';
+  if (actualRows != null) {
+    rowsHtml += `<tr><th>Actual Number of Rows</th><td>${actualRows}</td></tr>`;
+  }
+  if (actualRowsRead != null) {
+    rowsHtml += `<tr><th>Number of Rows Read</th><td>${actualRowsRead}</td></tr>`;
+  }
+  if (estimatedRows != null) {
+    rowsHtml += `<tr><th>Estimated Number of Rows</th><td>${estimatedRows}</td></tr>`;
+  }
+  if (estimatedRowSize != null) {
+    rowsHtml += `<tr><th>Estimated Row Size</th><td>${estimatedRowSize} B</td></tr>`;
+  }
+  div.innerHTML = `<div class="qp-tt-header">資料流 (Data Flow)</div><table><tbody>${rowsHtml}</tbody></table>`;
+  return div;
+}
+
+function dismissTooltip() {
+  if (hoverTimer) {
+    clearTimeout(hoverTimer);
+    hoverTimer = null;
+  }
+  if (activeTooltip) {
+    activeTooltip.remove();
+    activeTooltip = null;
+  }
+  activeTarget = null;
+  // Cleanup any lingering .qp-tt in document.body
+  const tooltips = document.querySelectorAll('body > .qp-tt');
+  tooltips.forEach((tt) => tt.remove());
+}
+
+function showNodeOrLineTooltip(target: Element) {
+  if (!diagramContainerRef.value) return;
+
+  // Dismiss any existing tooltip first
+  dismissTooltip();
+
+  let tooltip: HTMLElement | null = null;
+  if (target.classList.contains('qp-node') || target.closest('.qp-node')) {
+    const nodeEl = target.classList.contains('qp-node') ? target : target.closest('.qp-node')!;
+    const tpl = nodeEl.querySelector('.qp-tt');
+    if (tpl) {
+      tooltip = tpl.cloneNode(true) as HTMLElement;
+    }
+  } else if (target.tagName.toLowerCase() === 'polyline') {
+    tooltip = getLineTooltip(target, diagramContainerRef.value);
+  }
+
+  if (!tooltip) return;
+
+  // Inject action buttons (Copy 📋, Close ✕) into header
+  const header = tooltip.querySelector('.qp-tt-header');
+  if (header && !header.querySelector('.qp-tt-actions')) {
+    const actions = document.createElement('div');
+    actions.className = 'qp-tt-actions';
+
+    // 1. One-click copy button
+    const copyBtn = document.createElement('button');
+    copyBtn.type = 'button';
+    copyBtn.className = 'qp-tt-copy-btn';
+    copyBtn.innerHTML = '📋 複製';
+    copyBtn.title = '複製此面板所有文字 (亦可直接以滑鼠反白選取 Ctrl+C)';
+    copyBtn.setAttribute('aria-label', 'Copy tooltip content');
+    copyBtn.onclick = async (e) => {
+      e.stopPropagation();
+      try {
+        const clone = tooltip!.cloneNode(true) as HTMLElement;
+        clone.querySelector('.qp-tt-actions')?.remove();
+        const contentText = clone.innerText.trim();
+        await navigator.clipboard.writeText(contentText);
+        copyBtn.innerHTML = '✓ 已複製';
+        copyBtn.classList.add('copied');
+        setTimeout(() => {
+          if (copyBtn) {
+            copyBtn.innerHTML = '📋 複製';
+            copyBtn.classList.remove('copied');
+          }
+        }, 1800);
+      } catch (err) {
+        console.error('Failed to copy tooltip text:', err);
+      }
+    };
+    actions.appendChild(copyBtn);
+
+    // 2. Close button (✕)
+    const closeBtn = document.createElement('button');
+    closeBtn.type = 'button';
+    closeBtn.className = 'qp-tt-close-btn';
+    closeBtn.innerHTML = '&times;';
+    closeBtn.title = '關閉浮動視窗 (Esc / 點擊空白處)';
+    closeBtn.setAttribute('aria-label', 'Close tooltip');
+    closeBtn.onclick = (e) => {
+      e.stopPropagation();
+      dismissTooltip();
+    };
+    actions.appendChild(closeBtn);
+
+    header.appendChild(actions);
+  }
+
+  document.body.appendChild(tooltip);
+  activeTooltip = tooltip;
+  activeTarget = target;
+
+  // Initial positioning relative to mouse cursor
+  tooltip.style.left = `${mousePos.x + 10}px`;
+  tooltip.style.top = `${mousePos.y + 10}px`;
+
+  // Dynamic viewport edge clamping
+  requestAnimationFrame(() => {
+    if (!tooltip || !document.body.contains(tooltip)) return;
+    const rect = tooltip.getBoundingClientRect();
+    const viewportHeight = window.innerHeight;
+    const viewportWidth = window.innerWidth;
+    const padding = 16;
+
+    if (rect.bottom > viewportHeight - padding) {
+      const newTop = Math.max(padding, viewportHeight - rect.height - padding);
+      tooltip.style.top = `${newTop}px`;
+    }
+    if (rect.right > viewportWidth - padding) {
+      const newLeft = Math.max(padding, viewportWidth - rect.width - padding);
+      tooltip.style.left = `${newLeft}px`;
+    }
+  });
+}
+
+function handleContainerMouseOver(e: MouseEvent) {
+  const targetEl = e.target as Element | null;
+  if (!targetEl) return;
+  const nodeOrLine = targetEl.closest('.qp-node') || (targetEl.tagName.toLowerCase() === 'polyline' ? targetEl : targetEl.closest('polyline'));
+  if (!nodeOrLine) return;
+
+  // If already showing or scheduling this target, do nothing
+  if (activeTarget === nodeOrLine) return;
+
+  if (hoverTimer) {
+    clearTimeout(hoverTimer);
+    hoverTimer = null;
+  }
+
+  // 300ms debounce
+  hoverTimer = window.setTimeout(() => {
+    showNodeOrLineTooltip(nodeOrLine);
+  }, 300);
+}
+
+function handleContainerMouseOut(e: MouseEvent) {
+  const targetEl = e.target as Element | null;
+  if (!targetEl) return;
+  const nodeOrLine = targetEl.closest('.qp-node') || (targetEl.tagName.toLowerCase() === 'polyline' ? targetEl : targetEl.closest('polyline'));
+  if (!nodeOrLine) return;
+
+  const related = e.relatedTarget as Element | null;
+  if (related && (related === nodeOrLine || nodeOrLine.contains(related))) {
+    return;
+  }
+
+  // Cancel debounce if cursor left before 300ms
+  if (hoverTimer) {
+    clearTimeout(hoverTimer);
+    hoverTimer = null;
+  }
+
+  // Note: If tooltip has ALREADY appeared, do NOT dismiss on mouseout!
+  // It stays open until click outside, Esc, close button, or next tooltip.
+}
+
+function handleDocumentPointerDown(event: MouseEvent | PointerEvent) {
+  const target = event.target as HTMLElement | null;
+  if (!target) return;
+  // If clicking inside the active tooltip, don't dismiss (allow scrolling, selecting text, etc.)
+  if (target.closest('.qp-tt')) return;
+  // If clicking on a node or polyline, don't dismiss immediately (hover handles it)
+  if (target.closest('.qp-node') || target.closest('polyline')) return;
+  // Otherwise, dismiss active tooltip
+  dismissTooltip();
+}
+
+function handleDocumentKeyDown(event: KeyboardEvent) {
+  if (event.key === 'Escape') {
+    dismissTooltip();
+  }
+}
+
+async function renderPlan() {
+  if (!diagramContainerRef.value || !props.tab.planXml) return;
+
+  isRendering.value = true;
+  renderError.value = null;
+
+  try {
+    // Ensure window.SVG fallback is available in case of strict-mode global receiver differences
+    if (typeof window !== 'undefined' && !(window as any).SVG) {
+      (window as any).SVG = {};
+    }
+
+    // Dynamic import to prevent SSR / Node.js unit test failures
+    const qpModule = await import('html-query-plan');
+    const showPlan = qpModule.showPlan || (qpModule as any).default?.showPlan;
+
+    if (typeof showPlan !== 'function') {
+      throw new Error('html-query-plan showPlan function could not be loaded');
+    }
+
+    dismissTooltip();
+    diagramContainerRef.value.innerHTML = '';
+    // Use jsTooltips: false so ExecutionPlanViewer handles native Vue tooltips reliably
+    showPlan(diagramContainerRef.value, props.tab.planXml, { jsTooltips: false });
+  } catch (err: any) {
+    console.error('html-query-plan rendering failed:', err);
+    renderError.value = err?.message || String(err);
+  } finally {
+    isRendering.value = false;
+  }
+}
+
+watch(
+  () => props.tab.planXml,
+  () => {
+    if (viewMode.value === 'diagram' && isMounted) {
+      nextTick(() => {
+        renderPlan();
+      });
+    }
+  }
+);
+
+watch(viewMode, (newMode) => {
+  if (newMode === 'diagram') {
+    nextTick(() => {
+      if (diagramContainerRef.value && !diagramContainerRef.value.hasChildNodes()) {
+        renderPlan();
+      }
+    });
+  } else {
+    dismissTooltip();
+  }
+});
+
+onMounted(() => {
+  isMounted = true;
+  window.addEventListener('mousemove', handleMouseMove, { passive: true });
+  document.addEventListener('pointerdown', handleDocumentPointerDown);
+  document.addEventListener('keydown', handleDocumentKeyDown);
+
+  if (diagramContainerRef.value) {
+    diagramContainerRef.value.addEventListener('mouseover', handleContainerMouseOver);
+    diagramContainerRef.value.addEventListener('mouseout', handleContainerMouseOut);
+  }
+
+  nextTick(() => {
+    renderPlan();
+  });
+});
+
+onBeforeUnmount(() => {
+  isMounted = false;
+  window.removeEventListener('mousemove', handleMouseMove);
+  document.removeEventListener('pointerdown', handleDocumentPointerDown);
+  document.removeEventListener('keydown', handleDocumentKeyDown);
+
+  if (diagramContainerRef.value) {
+    diagramContainerRef.value.removeEventListener('mouseover', handleContainerMouseOver);
+    diagramContainerRef.value.removeEventListener('mouseout', handleContainerMouseOut);
+  }
+
+  dismissTooltip();
+});
+</script>
+
+<style>
+/* Import html-query-plan stylesheet */
+@import 'html-query-plan/css/qp.css';
+
+/* Ensure in-node tooltip template inside the diagram canvas is completely hidden */
+.plan-render-canvas .qp-node .qp-tt {
+  display: none !important;
+}
+
+/* Tooltip floating layer enhancement (attached directly to body) */
+body > .qp-tt,
+.qp-tt {
+  z-index: 9999 !important;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.4), 0 8px 10px -6px rgba(0, 0, 0, 0.3) !important;
+  border-radius: 6px !important;
+  border: 1px solid #475569 !important;
+  background-color: #1e293b !important;
+  color: #f1f5f9 !important;
+  padding: 10px 14px !important;
+  min-width: 340px !important;
+  max-width: min(600px, 85vw) !important;
+  width: auto !important;
+  max-height: min(520px, 75vh) !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  word-break: break-word !important;
+  overflow-wrap: anywhere !important;
+  scrollbar-width: thin;
+  scrollbar-color: #475569 transparent;
+}
+
+/* Enable mouse text selection inside tooltip (overrides body user-select: none) */
+body > .qp-tt,
+body > .qp-tt *,
+.qp-tt,
+.qp-tt * {
+  user-select: text !important;
+  -webkit-user-select: text !important;
+}
+
+/* Text containers show text selection I-beam cursor */
+body > .qp-tt td,
+body > .qp-tt th,
+body > .qp-tt div {
+  cursor: text;
+}
+
+/* Tooltip text selection highlight styling */
+body > .qp-tt ::selection,
+.qp-tt ::selection {
+  background-color: #2563eb !important;
+  color: #ffffff !important;
+}
+
+/* Tooltip custom scrollbar */
+.qp-tt::-webkit-scrollbar {
+  width: 6px;
+}
+.qp-tt::-webkit-scrollbar-track {
+  background: transparent;
+}
+.qp-tt::-webkit-scrollbar-thumb {
+  background: #475569;
+  border-radius: 3px;
+}
+.qp-tt::-webkit-scrollbar-thumb:hover {
+  background: #64748b;
+}
+
+/* Tooltip internal text and elements wrap properly */
+.qp-tt div {
+  word-break: break-word !important;
+  overflow-wrap: anywhere !important;
+  white-space: normal !important;
+}
+
+.qp-tt-header {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  color: #f8fafc !important;
+  border-bottom: 2px solid #64748b !important;
+  padding-bottom: 6px !important;
+  margin-bottom: 6px !important;
+  font-size: 13px !important;
+  font-weight: 600 !important;
+}
+
+.qp-tt-actions {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  margin-left: auto !important;
+  user-select: none !important;
+  -webkit-user-select: none !important;
+}
+
+.qp-tt-copy-btn {
+  background: #334155 !important;
+  border: 1px solid #475569 !important;
+  color: #cbd5e1 !important;
+  font-size: 11px !important;
+  line-height: 1 !important;
+  padding: 3px 6px !important;
+  border-radius: 4px !important;
+  cursor: pointer !important;
+  user-select: none !important;
+  -webkit-user-select: none !important;
+  transition: all 0.15s ease !important;
+}
+
+.qp-tt-copy-btn:hover {
+  background: #475569 !important;
+  color: #f8fafc !important;
+}
+
+.qp-tt-copy-btn.copied {
+  background: #14532d !important;
+  border-color: #22c55e !important;
+  color: #4ade80 !important;
+}
+
+.qp-tt-close-btn {
+  background: transparent !important;
+  border: none !important;
+  color: #94a3b8 !important;
+  cursor: pointer !important;
+  font-size: 16px !important;
+  line-height: 1 !important;
+  padding: 0 4px !important;
+  border-radius: 4px !important;
+  user-select: none !important;
+  -webkit-user-select: none !important;
+  transition: all 0.15s ease !important;
+}
+
+.qp-tt-close-btn:hover {
+  background: #334155 !important;
+  color: #f8fafc !important;
+}
+
+
+/* Tooltip table layout */
+.qp-tt table {
+  table-layout: fixed !important;
+  width: 100% !important;
+  margin-top: 8px !important;
+  margin-bottom: 8px !important;
+  border-collapse: collapse !important;
+}
+
+.qp-tt th,
+.qp-tt td {
+  border-bottom: 1px solid #334155 !important;
+  color: #e2e8f0 !important;
+  padding: 4px 6px !important;
+  font-size: 11px !important;
+  vertical-align: top !important;
+}
+
+.qp-tt th {
+  width: 55% !important;
+  color: #94a3b8 !important;
+  text-align: left !important;
+  word-break: break-word !important;
+  overflow-wrap: anywhere !important;
+}
+
+.qp-tt td {
+  width: 45% !important;
+  text-align: right !important;
+  word-break: break-word !important;
+  overflow-wrap: anywhere !important;
+}
+
+/* ==========================================================================
+   Execution Plan Canvas & Scroll Area Themes
+   ========================================================================== */
+
+.plan-scroll-area {
+  transition: background-color 0.2s ease;
+}
+
+.plan-scroll-dark {
+  background-color: #0b0f17;
+  background-image: radial-gradient(rgba(255, 255, 255, 0.08) 1px, transparent 1px);
+  background-size: 16px 16px;
+}
+
+.plan-scroll-classic {
+  background-color: #f1f5f9;
+  background-image: radial-gradient(rgba(0, 0, 0, 0.06) 1px, transparent 1px);
+  background-size: 16px 16px;
+}
+
+/* ==========================================================================
+   Execution Plan Dark Theme Styles
+   ========================================================================== */
+
+/* Dark canvas surface */
+.plan-render-canvas.theme-dark {
+  background-color: #18181f !important;
+  border: 1px solid #2d2d3a !important;
+  color: #f0f0f5 !important;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.4) !important;
+}
+
+/* Statement header card */
+.plan-render-canvas.theme-dark .qp-statement-header {
+  border: 1px solid #2d2d3a !important;
+  background-color: #1e1e26 !important;
+  border-radius: 6px !important;
+  color: #f0f0f5 !important;
+  padding: 8px 12px !important;
+  margin-bottom: 16px !important;
+}
+
+.plan-render-canvas.theme-dark .qp-statement-header-row {
+  color: #e2e8f0 !important;
+}
+
+.plan-render-canvas.theme-dark .missing-index {
+  color: #4ade80 !important;
+  font-weight: 500 !important;
+}
+
+/* Operator Node Cards */
+.plan-render-canvas.theme-dark div.qp-node {
+  background-color: #252532 !important;
+  border: 1px solid #3c3c4e !important;
+  border-radius: 6px !important;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.35) !important;
+  color: #f1f5f9 !important;
+  padding: 6px 10px !important;
+  transition: all 0.15s ease !important;
+}
+
+.plan-render-canvas.theme-dark div.qp-node:hover {
+  background-color: #2d2d3e !important;
+  border-color: #3b82f6 !important;
+  box-shadow: 0 0 12px rgba(59, 130, 246, 0.4) !important;
+  cursor: pointer !important;
+}
+
+/* Node internal text styling */
+.plan-render-canvas.theme-dark .qp-node > div {
+  font-family: inherit !important;
+  color: #f1f5f9 !important;
+}
+
+/* Operator Title (e.g. Clustered Index Seek) */
+.plan-render-canvas.theme-dark .qp-node > div:nth-child(2) {
+  font-weight: 600 !important;
+  color: #ffffff !important;
+  margin-top: 3px !important;
+}
+
+/* Sub-label (e.g. [PK_Users]) */
+.plan-render-canvas.theme-dark .qp-node > div:nth-child(3) {
+  color: #94a3b8 !important;
+  font-size: 10.5px !important;
+}
+
+/* Cost percentage label (e.g. Cost: 50%) */
+.plan-render-canvas.theme-dark .qp-node > div:last-of-type {
+  color: #38bdf8 !important;
+  font-weight: 600 !important;
+}
+
+/* SVG Connector Arrows / Polylines */
+.plan-render-canvas.theme-dark .qp-root svg polyline {
+  fill: #334155 !important;
+  stroke: #64748b !important;
+  stroke-width: 1px !important;
+  transition: fill 0.15s ease, stroke 0.15s ease !important;
+}
+
+.plan-render-canvas.theme-dark .qp-root svg polyline:hover {
+  fill: #3b82f6 !important;
+  stroke: #60a5fa !important;
+  cursor: pointer !important;
+}
+
+/* ==========================================================================
+   Execution Plan Classic Light Theme Styles
+   ========================================================================== */
+.plan-render-canvas.theme-classic {
+  background-color: #ffffff !important;
+  border: 1px solid #cbd5e1 !important;
+  color: #0f172a !important;
+}
+
+.plan-render-canvas.theme-classic div.qp-node {
+  background-color: #FFFFCC !important;
+  border: 1px solid black !important;
+  border-radius: 0px !important;
+  color: #000000 !important;
+}
+
+.plan-render-canvas.theme-classic .qp-statement-header {
+  border-color: black !important;
+  background-color: transparent !important;
+  color: #000000 !important;
+}
+</style>

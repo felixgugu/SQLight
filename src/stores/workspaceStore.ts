@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia';
 import { ref, computed, watch } from 'vue';
-import type { WorkspaceTab, BottomPanelTab, SqlEditorTab, TableDataTab } from '@/types/workspace';
+import type { WorkspaceTab, BottomPanelTab, SqlEditorTab, TableDataTab, TableStructureTab, ExecutionPlanTab } from '@/types/workspace';
 import { format as formatSql } from 'sql-formatter';
 import { useConnectionStore } from './connectionStore';
 
@@ -59,7 +59,10 @@ function loadSavedTabs(): WorkspaceTab[] {
             'id' in t &&
             typeof (t as { id: unknown }).id === 'string' &&
             'type' in t &&
-            ((t as { type: unknown }).type === 'sql_editor' || (t as { type: unknown }).type === 'table_data')
+            ((t as { type: unknown }).type === 'sql_editor' ||
+              (t as { type: unknown }).type === 'table_data' ||
+              (t as { type: unknown }).type === 'table_structure' ||
+              (t as { type: unknown }).type === 'execution_plan')
         );
         if (validTabs.length > 0) {
           return validTabs;
@@ -158,11 +161,6 @@ export const useWorkspaceStore = defineStore('workspace', () => {
           await connectionStore.connect(tab.connectionId, tab.database);
         } catch (err) {
           console.warn(`[WorkspaceStore] Auto-switching connection to '${tab.connectionId}' failed:`, err);
-        }
-      } else {
-        if (connectionStore.activeConnectionId) {
-          tab.connectionId = connectionStore.activeConnectionId;
-          tab.database = connectionStore.activeDatabase;
         }
       }
     } else if (tab.database && tab.database !== connectionStore.activeDatabase) {
@@ -277,6 +275,72 @@ export const useWorkspaceStore = defineStore('workspace', () => {
     };
     tabs.value.push(newTab);
     activeTabId.value = tabId;
+  }
+
+  function addTableStructureTab(
+    schema: string,
+    tableName: string,
+    connectionId?: string,
+    database?: string
+  ) {
+    const connectionStore = useConnectionStore();
+    const effectiveConnId = connectionId || connectionStore.activeConnectionId || undefined;
+    const effectiveDb = database || connectionStore.activeDatabase || 'master';
+
+    const existing = tabs.value.find(
+      (t) =>
+        t.type === 'table_structure' &&
+        (t as TableStructureTab).schema === schema &&
+        (t as TableStructureTab).tableName === tableName &&
+        (!t.connectionId || t.connectionId === effectiveConnId) &&
+        (!t.database || t.database === effectiveDb)
+    );
+    if (existing) {
+      setActiveTab(existing.id);
+      return;
+    }
+
+    const tabId = `tab-struct-${Date.now()}`;
+    const newTab: TableStructureTab = {
+      id: tabId,
+      type: 'table_structure',
+      title: `${schema}.${tableName} (Structure)`,
+      schema,
+      tableName,
+      connectionId: effectiveConnId,
+      database: effectiveDb,
+      isDirty: false,
+    };
+    tabs.value.push(newTab);
+    activeTabId.value = tabId;
+  }
+
+  function addExecutionPlanTab(
+    planXml: string,
+    querySql: string,
+    title?: string,
+    connectionId?: string,
+    database?: string
+  ): ExecutionPlanTab {
+    const connectionStore = useConnectionStore();
+    const effectiveConnId = connectionId || connectionStore.activeConnectionId || undefined;
+    const effectiveDb = database || connectionStore.activeDatabase || undefined;
+
+    const tabId = `tab-plan-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
+    const newTab: ExecutionPlanTab = {
+      id: tabId,
+      type: 'execution_plan',
+      title: title || `執行計畫 ${new Date().toLocaleTimeString()}`,
+      planXml,
+      querySql,
+      executedAt: new Date().toLocaleTimeString(),
+      connectionId: effectiveConnId,
+      database: effectiveDb,
+      isDirty: false,
+    };
+    tabs.value.push(newTab);
+    activeTabId.value = tabId;
+    return newTab;
   }
 
   function closeTab(tabId: string) {
@@ -413,6 +477,8 @@ export const useWorkspaceStore = defineStore('workspace', () => {
     markTabSaved,
     addSqlTab,
     addTableDataTab,
+    addTableStructureTab,
+    addExecutionPlanTab,
     closeTab,
     closeOtherTabs,
     reorderTabs,

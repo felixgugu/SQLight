@@ -370,6 +370,11 @@ onMounted(() => {
     emit('save');
   });
 
+  // Shortcut: Ctrl/Cmd + P -> Quick Object Finder (Spotlight)
+  editorInstance.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyP, () => {
+    window.dispatchEvent(new CustomEvent('sqlight:open-quick-finder'));
+  });
+
   // Smart Column Paste: Insert pending column name at cursor position with context awareness
   editorInstance.onMouseUp(() => {
     if (!workspaceStore.pendingColumnToInsert) return;

@@ -8,6 +8,7 @@
       @save-sql-file="handleSaveSqlFile"
       @open-connection-modal="handleOpenNewConnection"
       @open-settings-modal="isSettingsModalOpen = true"
+      @open-quick-finder="isQuickFinderOpen = true"
     />
 
     <!-- Center Resizable Body (Sidebar + Workspace/Results) -->
@@ -73,6 +74,12 @@
       @close="isSettingsModalOpen = false"
     />
 
+    <!-- Quick Object Finder (Spotlight Ctrl+P) -->
+    <QuickObjectFinderModal
+      :is-open="isQuickFinderOpen"
+      @close="isQuickFinderOpen = false"
+    />
+
     <!-- Global Floating Toast Notification -->
     <Transition
       enter-active-class="transition duration-200 ease-out"
@@ -113,6 +120,7 @@ import AppStatusBar from '@/components/layout/AppStatusBar.vue';
 import ResizableSplitter from '@/components/common/ResizableSplitter.vue';
 import ConnectionModal from '@/components/modals/ConnectionModal.vue';
 import SettingsModal from '@/components/modals/SettingsModal.vue';
+import QuickObjectFinderModal from '@/components/modals/QuickObjectFinderModal.vue';
 import { useSplitter } from '@/composables/useSplitter';
 import { useWorkspaceStore } from '@/stores/workspaceStore';
 import type { ConnectionProfile } from '@/types/connection';
@@ -120,6 +128,7 @@ import type { ConnectionProfile } from '@/types/connection';
 const workspaceStore = useWorkspaceStore();
 const isConnectionModalOpen = ref(false);
 const isSettingsModalOpen = ref(false);
+const isQuickFinderOpen = ref(false);
 const editingProfile = ref<ConnectionProfile | null>(null);
 const mainWorkspaceRef = ref<InstanceType<typeof AppMain> | null>(null);
 
@@ -208,14 +217,28 @@ function handleGlobalKeydown(e: KeyboardEvent) {
   if (e.shiftKey && e.altKey && (e.key === 'F' || e.key === 'f')) {
     e.preventDefault();
     handleFormatSql();
+    return;
   }
+
+  // Ctrl/Cmd + P -> Quick Object Finder (Spotlight)
+  if ((e.ctrlKey || e.metaKey) && !e.shiftKey && (e.key === 'p' || e.key === 'P')) {
+    e.preventDefault();
+    isQuickFinderOpen.value = !isQuickFinderOpen.value;
+    return;
+  }
+}
+
+function handleOpenQuickFinder() {
+  isQuickFinderOpen.value = true;
 }
 
 onMounted(() => {
   window.addEventListener('keydown', handleGlobalKeydown);
+  window.addEventListener('sqlight:open-quick-finder', handleOpenQuickFinder);
 });
 
 onBeforeUnmount(() => {
   window.removeEventListener('keydown', handleGlobalKeydown);
+  window.removeEventListener('sqlight:open-quick-finder', handleOpenQuickFinder);
 });
 </script>

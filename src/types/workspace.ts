@@ -1,4 +1,4 @@
-export type TabType = 'sql_editor' | 'table_data';
+export type TabType = 'sql_editor' | 'table_data' | 'table_structure' | 'execution_plan';
 
 export interface BaseTab {
   id: string;
@@ -23,6 +23,24 @@ export interface TableDataTab extends BaseTab {
   sortDirection?: 'ASC' | 'DESC';
 }
 
-export type WorkspaceTab = SqlEditorTab | TableDataTab;
+export interface TableStructureTab extends BaseTab {
+  type: 'table_structure';
+  schema: string;
+  tableName: string;
+}
 
-export type BottomPanelTab = 'results' | 'messages' | 'history';
+export interface ExecutionPlanTab extends BaseTab {
+  type: 'execution_plan';
+  planXml: string;
+  querySql: string;
+  executedAt: string;
+  durationMs?: number;
+}
+
+export type WorkspaceTab =
+  | SqlEditorTab
+  | TableDataTab
+  | TableStructureTab
+  | ExecutionPlanTab;
+
+export type BottomPanelTab = 'results' | 'messages' | 'history' | 'stats';

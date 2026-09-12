@@ -13,11 +13,13 @@
 3. [核心功能與設計細節 (Feature Deep Dive)](#-核心功能與設計細節-feature-deep-dive)
    - [連線與資料庫物件瀏覽 (Connection & Schema Explorer)](#1-連線與資料庫物件瀏覽)
    - [智慧記憶與自動復原 (Auto-Restore Last Session)](#2-智慧記憶與自動復原)
-   - [專業級 Monaco SQL 編輯器 (Monaco SQL Workspace)](#3-專業級-monaco-sql-編輯器)
-   - [多結果歷史分頁與 AG Grid (Multi-Result Tabs & AG Grid)](#4-多結果歷史分頁與-ag-grid)
+   - [專業級 Monaco SQL 編輯器 & DBA 工具箱 (Monaco SQL Workspace & DBA Diagnostics)](#3-專業級-monaco-sql-編輯器--dba-診斷工具箱)
+   - [多結果歷史分頁、AG Grid & 即時統計列 (Multi-Result Tabs, AG Grid & Live Stats)](#4-多結果歷史分頁-ag-grid--即時統計列)
    - [訊息面板與執行歷史 (Messages & Query History)](#5-訊息面板與執行歷史)
-   - [資料表資料瀏覽器 (Table Data Viewer)](#6-資料表資料瀏覽器)
-   - [個人化設定與防護 (Settings & Preferences)](#7-個人化設定與防護)
+   - [執行統計與 IO 分析器 (Execution Stats & IO Analyzer)](#6-執行統計與-io-分析器-execution-stats--io-analyzer)
+   - [資料表資料與結構瀏覽器 (Table Data & Structure Viewer)](#7-資料表資料與結構瀏覽器-table-data--structure-viewer)
+   - [實際執行計畫與 XML 視覺化檢視器 (Actual Execution Plan & XML Viewer)](#8-實際執行計畫與-xml-視覺化檢視器)
+   - [個人化設定與安全防護 (Settings & Preferences)](#9-個人化設定與安全防護-settings--preferences)
 4. [鍵盤快捷鍵與快速代碼範本 (Shortcuts & Snippets)](#-鍵盤快捷鍵與快速代碼範本-shortcuts--snippets)
 5. [安裝、開發與建置指南 (Installation & Development)](#-安裝開發與建置指南-installation--development)
 
@@ -88,6 +90,21 @@ SQLight 採用現代跨平台桌面客戶端的雙層解耦架構：
     - 📁 **預存程序 (Stored Procedures)**：列出資料庫中所有預存程序，支援右鍵檢視定義與產生 EXEC 呼叫樣板。
     - 📁 **函數 (Functions)**：列出資料庫中所有純量與資料表值函數，支援右鍵檢視定義與產生呼叫語法。
   - 支援搜尋過濾框，輸入關鍵字即時跨資料表、檢視表、預存程序與函數進行全域過濾，並動態展開包含符合項目的分類資料夾。
+- **快速物件檢索器 (Quick Object Finder / Spotlight `Ctrl + P`)**：
+  - 按下 <kbd>Ctrl</kbd> + <kbd>P</kbd>（或點擊頂部工具列「物件檢索」按鈕），立即彈出懸浮 Spotlight 檢索視窗。
+  - 支援極速**子序列模糊搜尋 (Fuzzy Search)** 與 PascalCase/縮寫匹配（如輸入 `uslog` 命中 `UserLoginLogs`），匹配字元即時高亮呈現。
+  - 物件彩標：🟩 `TABLE`、🟪 `VIEW`、🟧 `PROC`、🟦 `FUNC`，支援類型標籤頁切換或前綴過濾（如 `t: `、`v: `、`p: `、`f: `）。
+  - 鍵盤一鍵直覺操作：
+    - <kbd>↑</kbd> / <kbd>↓</kbd>：快速切換選取項目並自動平滑滾動。
+    - <kbd>Enter</kbd>：開啟資料表/檢視表資料 (`TableDataViewer`)，或檢視程序/函數定義。
+    - <kbd>Shift</kbd> + <kbd>Enter</kbd>：開啟資料表結構 (`TableStructureViewer`)。
+    - <kbd>Ctrl</kbd> + <kbd>Enter</kbd>：新分頁產生 `SELECT TOP 1000 ...` 或 `EXEC ...` 呼叫腳本。
+    - <kbd>Esc</kbd>：隨時關閉並交還編輯器焦點。
+  - 檢索器頂端支援即時切換同一連線下的其他資料庫，自動重載並同步檢索。
+- **資料表結構檢視 (Table Structure Viewer)**：
+  - 於側邊欄任何資料表或檢視表按右鍵點選「**資料表結構 (Table Structure)**」，即刻開啟專屬結構分頁。
+  - 清晰呈現欄位序號 (`#`)、主鍵標記 (`PK`)、欄位名稱、基礎型別 (`Data Type`)、完整型別與長度/精度 (`Full Type`，如 `nvarchar(50)`、`decimal(18, 2)`)、可為 NULL (`YES`/`NO`)、自動識別 (`Identity`)、預設值、最大字節長度、數值精度與小數位數、資料定序 (`Collation`)。
+  - 支援文字搜尋過濾、Excel 等級儲存格/整欄/整列選取、動態數值統計列與複製為 TSV、JSON、Markdown 表格。
 - **一鍵產生資料表結構腳本 (Generate CREATE TABLE DDL)**：
   - 於側邊欄任何資料表右鍵點選「**產生 CREATE TABLE 腳本**」，系統自動解析欄位型態、長度（如 `varchar(50)`、`nvarchar(MAX)`）、精度與小數位數（如 `decimal(18, 2)`）、Nullable、Identity(1,1) 與主鍵 (Primary Key Clustered) 條件，產出格式優美、可直接執行的標準 T-SQL DDL 腳本並在新分頁開啟。
 - **檢視表與預存程序原始定義檢視 (View Definition / Script ALTER)**：
@@ -111,6 +128,12 @@ SQLight 採用現代跨平台桌面客戶端的雙層解耦架構：
   - 下次啟動 SQLight 時，程式會自動讀取最後紀錄，**直接將左上角的「連線下拉選單」與「資料庫下拉選單」復原至上次狀態**，並在背景自動發起連線與切換，無需每次反覆點選。
 
 ### 3. 專業級 Monaco SQL 編輯器 & DBA 診斷工具箱
+- **頂部工具列極簡圖示與浮動提示 (Pure Icon-Only Toolbar with Tooltips)**：
+  - 上方所有操作按鈕與控制項全面採用**純圖示設計**（無外顯文字標籤），所有功能說明、參數與快捷鍵統一收整於浮動提示 (`title`) 中，介面極致精緻乾淨不壅擠。
+  - 整合「**效能分析 (Performance Analysis)**」核取方塊（`Gauge` 圖示，琥珀金色高亮），僅在需要深入排查或調優語句時勾選啟用，測量實際 IO 與 CPU 耗時。
+  - 整合「**預估執行計畫 (Estimated Plan `SET SHOWPLAN_ALL ON;`)**」核取方塊（`Workflow` 圖示，青空藍高亮），勾選後直接以表格型態輸出編譯期最佳化執行計畫至查詢結果分頁，不實際執行語句。
+  - 整合「**實際執行計畫 (Actual Plan `SET STATISTICS XML ON;`)**」核取方塊（`Network` 圖示，霓虹紫高亮），實際執行語句並自動擷取底層 XML Showplan，在新工作區分頁中以專業圖形化計畫呈現。
+  - 三大調優模式（效能分析／預估計畫／實際計畫）內建**三向智慧互斥保護機制**，防止同時勾選造成 T-SQL 衝突或伺服器連線狀態混亂。
 - **常用 DBA 維護與監控快速代碼庫 (Built-in DBA Diagnostics Toolbox)**：
   - 頂部工具列整合「**DBA 工具箱**」下拉選單，內建最頂級、高頻使用且經過最佳化的 SQL Server 專用排查語法：
     1. 🔒 **即時鎖定與阻塞鏈 (Locks & Blocking)**：快速抓出誰卡住了誰（Lead Blocker、SPID、等待類型與秒數、阻塞 SQL 語句）。
@@ -124,6 +147,7 @@ SQLight 採用現代跨平台桌面客戶端的雙層解耦架構：
   - 支援多開查詢分頁，各分頁擁有獨立的 SQL 內容與游標狀態。
   - 分頁列超出寬度時，支援**滑鼠滾輪直接左右橫向滾動**。
   - **Pointer Events 無縫拖曳換位**：上方查詢分頁支援滑鼠按住拖曳自由調整排列順序，具備目標落點藍色指示條。
+  - **當前所選分頁顯眼色彩 (Active Tab Colors)**：當前啟用中的 SQL 編輯分頁採用高對比度醒目色彩（預設皇家藍 `#1e40af` 配純白字 `#ffffff`），分頁圖示、資料庫標籤與關閉按鈕同步高對比適配，於多工作分頁中一目了然；可於設定中完全自訂。
   - **行內重新命名 (Inline Tab Rename)**：滑鼠雙擊分頁名稱即可直接在原地編輯命名，按下 <kbd>Enter</kbd> 保存、<kbd>Esc</kbd> 取消；亦可透過**滑鼠右鍵選單**選擇「重新命名」、「關閉此分頁」或「關閉其他分頁」。
 - **介面佈局靈活掌控 (Layout Controls)**：
   - **側邊欄快速收合/展開**：於右上角版面控制區點擊側邊欄按鈕，即可一鍵收合左方 Explorer 側邊欄，釋放最大代碼編輯空間，並自動記憶收合狀態。
@@ -169,9 +193,13 @@ SQLight 採用現代跨平台桌面客戶端的雙層解耦架構：
     - **複製為 JSON 物件陣列**：直接將全表或選取區域轉為 `[ { "id": 1, "name": "Alice" }, ... ]`，單元測試、Mock API 開發即貼即用。
     - **複製整列為 JSON**：複製單筆物件 `{ "id": 1, "name": "Alice" }`。
     - **複製為 Markdown 表格**：自動處理 Pipe 轉義與斷行，直接貼入 GitHub Issue、Pull Request 或 Notion 文件中呈現排版漂亮的表格。
-- **自動智慧分頁命名與自訂名稱**：
-  - 每次執行查詢自動產生獨立的 Result 分頁，分頁名稱自動識別並擷取 SQL 中第一個涉及的資料表名稱（如 `Users`、`Orders`）。
+- **分頁序號累計與命名規範 (`$SEQ.$Tabname $rowNumber'r'`)**：
+  - 記憶體維護單調遞增計數器（由 0 起算持續累計），每次執行查詢自動依序編號，分頁名稱自動格式化為 `$SEQ.$Tabname $rowNumber'r'`（例如 `1.Customers 50r`、`2.Orders 12r`、出錯時為 `3.Query 0r`）。
+  - 分頁列排版乾淨俐落，若標題已內含筆數資訊則不重複顯示額外徽章，發生錯誤時自動以高警示紅色 `Err` 徽章標示。
   - **支援重新命名**：滑鼠雙擊結果分頁名稱或點擊右鍵「重新命名」，即可自由更改為易識別的自訂名稱。
+- **當前所選結果分頁顯眼色彩 (Active Result Tab Colors)**：
+  - 當前啟用中的結果分頁套用顯眼高對比色彩（預設深森林綠 `#065f46` 配純白字 `#ffffff`），與上方藍色 SQL 分頁產生清晰視覺層次，即使多個查詢結果切換也能迅速定位。
+  - 顏色可於「設定」中自由自訂，並提供 7 種設計師精選調色盤預設與即時預覽。
 - **釘選保護機制 (Pin / Unpin)**：
   - 點擊分頁左側圖釘或右鍵選單即可釘選；**被釘選的分頁會自動移動至最左側**，受特殊保護，即使超過歷史保留上限也不會被自動清理。
 - **嚴謹的分頁排列順序**：
@@ -184,12 +212,19 @@ SQLight 採用現代跨平台桌面客戶端的雙層解耦架構：
   - 欄位寬度智慧自適應內容。
   - 儲存格選取與複製。
   - **右鍵快捷選單**：支援「複製儲存格」、「複製整行」、「匯出/複製為 TSV」、「匯出/複製為 CSV」、「複製為 JSON」、「複製為 Markdown 表格」。
-- **一鍵自動產生 INSERT / UPDATE / DELETE 語法**：
+- **一鍵自動產生 INSERT / UPDATE / DELETE 語法（內建交易安全防護）**：
   - 於結果列任何一處點選滑鼠右鍵，即可一鍵建立該列的 **INSERT、UPDATE 或 DELETE** SQL 語句。
   - **時間戳記註解**：自動於首行附加註解 `-- 自動產生語法 時間: YYYY-MM-DD HH:mm:ss`。
-  - **智慧 PK 與全欄位防呆條件**：
-    - 若資料表具有主鍵且結果包含 PK，自動使用 PK 作為 `WHERE` 條件。
-    - **若無 PK 或結果未含 PK**，自動改以**當前查詢結果的全部欄位**作為 `WHERE` 條件（並將 NULL 轉為 `IS NULL`），防止誤更新或誤刪多筆資料！
+  - **複合主鍵完整性驗證 (Composite PK Validation)**：
+    - 嚴格比對資料表所有主鍵欄位：只有當資料表定義的**所有複合主鍵欄位**皆完整存在於查詢結果中時，才以主鍵建立 `WHERE` 條件。
+    - **若無 PK、未取得 PK 定義或僅投影部分主鍵**：自動安全退回（fallback）改以**當前查詢結果的全部欄位**作為 `WHERE` 條件（並將 NULL 轉為 `IS NULL`），徹底防範因部分複合主鍵匹配多筆資料而造成誤更新或誤刪！
+  - **自動交易保護機制 (Transaction Guards)**：
+    - 產生的 `UPDATE` 與 `DELETE` 自動包覆於 `BEGIN TRANSACTION`、`BEGIN TRY ... COMMIT`、`BEGIN CATCH ... ROLLBACK` 結構中。
+    - 前置防護檢查 `IF @@TRANCOUNT <> 0 THROW`，執行後嚴格檢查 `IF @@ROWCOUNT <> 1 THROW`，確保影響筆數恰為 1 筆，否則自動觸發 `ROLLBACK`，保障生產資料絕對安全。
+  - **欄位安全過濾與逸出**：
+    - `INSERT` 與 `UPDATE SET` 自動排除 `Identity` 自動識別欄位。
+    - 二進位佔位符與超出 JS 安全範圍的超大整數主動防呆攔截，防止資料截斷與失真。
+    - 識別字逸出改為標準 T-SQL `[${name.replace(/\]/g, ']]')}]`，完整支援包含閉合括號 `]` 的欄位名稱。
   - **自動開分頁與剪貼簿**：自動建立新 SQL 查詢分頁開啟並聚焦，且同步寫入剪貼簿與跳出 Toast 通知。
 - **多結果集 (Multiple Result Sets)**：
   - 單次查詢返回多張表格時，自動提供子分頁標籤切換檢視。
@@ -201,23 +236,91 @@ SQLight 採用現代跨平台桌面客戶端的雙層解耦架構：
 - **History 面板**：
   - 自動記錄歷次執行的 SQL 語句、執行時間與耗時，點擊歷史記錄可直接重新填入新查詢分頁。
 
-### 6. 資料表資料瀏覽器 (Table Data Viewer)
-- 於側邊欄任何資料表右側點擊檢視按鈕，立即開啟獨立分頁瀏覽該表前 10,000 筆資料。
-- 提供分頁控制、每頁筆數設定 (20/50/100/200 筆)、欄位型別快速預覽。
+### 6. 執行統計與 IO 分析器 (Execution Stats & IO Analyzer)
+- **頂部開關隨選啟用 (On-Demand Performance Toggle)**：
+  - 預設保持關閉 (`false`)，避免日常查詢產生非必要的伺服器追蹤與網路開銷。
+  - 勾選頂部功能列的「**效能分析**」核取方塊後執行查詢，系統自動注入 `SET STATISTICS IO, TIME ON` 與階段性 DMV 遙測腳本。
+  - 執行完成後自動切換至底部「**Stats (效能)**」儀表板分頁，並主動將底層遙測資料集隔離剔除，使用者查詢結果集 100% 保持乾淨。
+- **5 大核心效能 KPI 摘要卡片**：
+  1. ⏱️ **總執行時間 (Elapsed Time)**：整體查詢端到端歷時。
+  2. ⚡ **CPU 時間 (CPU Time)**：資料庫引擎實際消耗之 CPU 計算毫秒數。
+  3. 🛠️ **編譯與解析時間 (Compile Time)**：SQL Server 生成查詢計畫與編譯所耗費的時間。
+  4. 📖 **邏輯讀取量 (Logical Reads)**：從記憶體緩衝區 (Buffer Cache) 讀取的 8KB 資料頁數與換算容量（如 `1,250 頁 (9.8 MB)`）。
+  5. 🎯 **緩衝快取命中率 (Buffer Cache Hit Ratio)**：精準換算 `(Logical Reads - Physical Reads) / Logical Reads` 百分比，快速評估是否發生硬碟實體 I/O 瓶頸。
+- **各資料表實體/邏輯 IO 細部展開 (Per-Table Breakdown)**：
+  - 清晰列出查詢所涉及的每一張資料表：掃描次數 (`Scan Count`)、邏輯讀取 (`Logical Reads`)、實體讀取 (`Physical Reads`)、預讀次數 (`Read-Ahead`)、LOB 大型物件讀取。
+  - **自動容量換算**：根據 SQL Server 內部 8KB 資料頁規格，自動換算為人類友善的資料量單位（`B` / `KB` / `MB` / `GB`）。
+  - **高 IO 警示 (High IO Alert)**：當單表邏輯讀取 > 1,000 頁或發生全表掃描且讀取 > 200 頁時，自動標記琥珀金警示與進度條，協助工程師一眼揪出效能殺手（Table Scan / Index Scan / 遺漏索引）。
+- **工作階段等待事件統計 (Session Wait Stats)**：
+  - 自動抓取當次查詢在 `sys.dm_exec_session_wait_stats` 中所累積的等待事件（如 `PAGEIOLATCH_SH`、`ASYNC_NETWORK_IO`、`CXPACKET` 等）。
+  - 清楚展示等待任務數 (`Waiting Tasks`)、累計等待毫秒數 (`Wait Time`) 與最大單次等待時間。
+- **一鍵匯出 Markdown 效能調優報告**：
+  - 點擊「複製 Markdown 報告」，即可產出包含總結指標、高 IO 警示標記、各資料表詳細 IO 表格與等待事件分析的完整排版報告，方便直接貼入 Pull Request、Jira 效能工單或 Slack/Teams 團隊討論。
 
-### 7. 個人化設定與防護 (Settings & Preferences)
+### 7. 資料表資料與結構瀏覽器 (Table Data & Structure Viewer)
+- **資料表資料瀏覽器 (Table Data Viewer)**：
+  - 於側邊欄任何資料表右鍵點選「**開啟資料表 (Open Data)**」，立即以獨立分頁開啟該資料表資料。
+  - 採用 AG Grid 虛擬滾動流暢瀏覽，支援快速文字篩選、儲存格矩形框選、多欄多列拖曳選取、Excel 級即時統計列（Sum/Avg/Min/Max/Distinct）、以及複製為 TSV/JSON/Markdown 與 DML 產生。
+- **資料表結構檢視器 (Table Structure Viewer)**：
+  - 於側邊欄任何資料表或檢視表右鍵點選「**資料表結構 (Table Structure)**」，即刻開啟專屬結構分頁。
+  - 完整展示 12 大欄位中繼資料屬性：
+    1. `# (Ordinal)`：欄位序號
+    2. `PK`：主鍵金黃色徽章標記
+    3. `欄位名稱 (Column Name)`：主鍵高亮呈現
+    4. `基礎型別 (Data Type)`：如 `nvarchar`、`int`、`decimal`
+    5. `完整型別與長度 (Full Type)`：如 `nvarchar(50)`、`decimal(18, 2)`、`nvarchar(MAX)`
+    6. `可為 NULL (IsNullable)`：YES（綠色徽章）／NO（紅色徽章）
+    7. `自動識別 (Identity)`：YES（青色徽章）／`-`
+    8. `預設值 (Default)`：預設值內容或 NULL
+    9. `最大長度 (Bytes)`：文字或二進位長度（支援 MAX）
+    10. `精確度 (Precision)`：數值型別精確度
+    11. `小數位數 (Scale)`：數值型別小數位數
+    12. `定序 (Collation)`：資料定序名稱
+  - 支援快速搜尋過濾、多格/多欄/多列框選、即時統計與一鍵匯出為 TSV、JSON、Markdown 表格。
+
+### 8. 實際執行計畫與 XML 視覺化檢視器 (Actual Execution Plan & XML Viewer)
+- **隨選勾選實際執行計畫 (SET STATISTICS XML ON)**：
+  - 勾選頂部功能列的「**實際執行計畫**」核取方塊（`Network` 網狀節點圖示，霓虹紫色高亮）。
+  - 執行查詢時，系統以非同步方式啟用 `SET STATISTICS XML ON;`，實際執行語句以取得真實執行統計（包括實際處理列數、運算子成本比例、實際執行時間與平行處理資訊）。
+  - **Fail-Safe 連線保護**：在 `try ... finally` 區塊中嚴格調用 `SET STATISTICS XML OFF;`，即使查詢因語法或逾時報錯，也 100% 確保連線工作階段不會殘留 XML 統計模式。
+- **資料結果集潔淨分離 (Clean Result Sets)**：
+  - SQL Server 傳回的 ShowPlan XML 欄位（`Microsoft SQL Server 2005 XML Showplan`）由底層引擎自動識別並安全抽離。
+  - 使用者執行的業務查詢資料（如 `SELECT * FROM Orders`）依然正常、乾淨地呈現在底部「**Results**」資料表格中，完全不被巨大的 XML 字串污染。
+- **獨立工作區分頁 (`ExecutionPlanTab` & `ExecutionPlanViewer`)**：
+  - 自動於上方工作區開啟專屬分頁（紫色標籤，圖示為 `Network`），以專屬視覺化畫布呈現圖形化計畫。
+  - **整合開源 `html-query-plan` 視覺化引擎**：
+    - 將 XML Showplan 精準轉譯為與 SSMS / Azure Data Studio 高度相符的樹狀圖形化計畫。
+    - 完整呈現各節點圖示（Clustered Index Scan/Seek、Table Scan、Hash Match、Nested Loops、Sort、Filter 等）。
+    - 清楚標記每個算子的**相對成本百分比 (Cost %)** 與資料流線段寬度（依實際資料傳輸量動態粗細）。
+    - **智慧懸浮資訊卡 (Rich Tooltips)**：滑鼠懸停於任何算子或線段上，即刻彈出包含實際列數、估計列數、述詞 (Predicate)、輸出欄位 (Output List)、I/O 與 CPU 成本的完整規格卡片。
+- **縮放與平移導覽控制 (Zoom & Pan Controls)**：
+  - 支援 <kbd>+</kbd> 放大（最高 250%）、<kbd>-</kbd> 縮小（最低 30%）、<kbd>100%</kbd> 一鍵重設大小。
+  - 大畫布自由捲動瀏覽，適合分析大型多表 JOIN 與複雜平行處理查詢。
+- **雙模式檢視：圖形計畫 (Diagram) 與 原始 XML (Raw XML)**：
+  - 支援一鍵於「**圖形計畫**」與「**原始 XML**」間無縫切換。
+  - 原始 XML 模式提供完整排版縮排、總行數統計、KB 容量換算與自動換行開關。
+- **一鍵複製原始 XML (One-Click Copy XML)**：
+  - 工具列提供專屬「**複製原始 XML**」按鈕，點擊後毫秒級寫入作業系統剪貼簿，並附帶動態綠色 Checkmark 與 Toast 提示反饋。
+- **一鍵另存為 `.sqlplan` 檔案 (Export to .sqlplan)**：
+  - 點擊「**另存為 .sqlplan**」按鈕，直接將完整的 ShowPlanXML 匯出為微軟標準的 `.sqlplan` 副檔名檔案。
+  - 下載之檔案可直接使用官方 **SQL Server Management Studio (SSMS)**、**Azure Data Studio** 或 **SentryOne Plan Explorer** 開啟、分析與分享。
+
+### 9. 個人化設定與安全防護 (Settings & Preferences)
 透過右上角齒輪開啟設定對話框（固定尺寸設計，切換分頁不晃動）：
 - **編輯器設定 (Editor)**：
   - 字型大小 (12px ~ 20px)。
-  - 字型系列 (Font Family，預設 JetBrains Mono, Fira Code, Consolas)。
-  - 自動換行 (Word Wrap) 開關。
-  - 代碼縮圖小地圖 (Minimap) 開關。
-  - 執行反饋高亮色彩自訂（預設柔和淡黃色 `#feffe0`）。
-- **結果與安全防護 (Results)**：
-  - Results 歷史分頁保留上限（5 ~ 50 組，預設 10 組，超額自動清除最舊未釘選分頁）。
-  - 預設最大查詢筆數截斷防護（1,000 ~ 50,000 筆或無限制，防止 `SELECT *` 意外打爆記憶體）。
+  - 字型家族 (Font Family，支援 Fira Code, JetBrains Mono, Cascadia Code, Consolas, Monaco 等寬字型)。
+  - 自動換行 (Word Wrap) 開關 (On / Off)。
+  - Tab 縮排空格數 (2 空格 / 4 空格)。
+  - 執行暫態高亮色彩自訂（預設柔和淡黃色 `#feffe0`，附調色盤與色碼輸入）。
+  - **SQL 編輯分頁啟用色彩 (Active Tab Colors)**：自訂上方分頁在選取時的背景色與前景色（預設皇家藍 `#1e40af` 配純白字 `#ffffff`），提供 7 種設計師快速預設與即時分頁預覽。
+- **查詢與結果設定 (Results)**：
+  - Results 歷史分頁保留上限（5 ~ 50 組，預設 10 組，超額自動清理最舊未釘選分頁）。
+  - 預設最大查詢筆數截斷防護（1,000 ~ 50,000 筆或無限制，防止意外撈取海量資料打爆記憶體）。
+  - **查詢結果分頁啟用色彩 (Active Result Tab Colors)**：自訂下方結果分頁在選取時的背景色與前景色（預設深森林綠 `#065f46` 配純白字 `#ffffff`），提供 7 種設計師快速預設與即時分頁預覽。
 - **關於與手冊 (About)**：
-  - 完整鍵盤快捷鍵清單與快速代碼範本操作說明。
+  - 完整常用鍵盤快捷鍵清單與快速 SQL 代碼範本操作說明。
+  - 支援一鍵重設所有設定為原廠預設值。
 
 ---
 
@@ -227,10 +330,13 @@ SQLight 採用現代跨平台桌面客戶端的雙層解耦架構：
 
 | 快捷鍵 | 作用範圍 | 功能說明 |
 | :--- | :--- | :--- |
+| <kbd>Ctrl</kbd> + <kbd>P</kbd> | 全域 / 編輯器 | **快速物件檢索 (Spotlight)**：呼出浮動搜尋面板，模糊檢索資料表、檢視表、預存程序、函數 |
 | <kbd>Ctrl</kbd> + <kbd>Enter</kbd> | SQL 編輯器 | **執行當前語句**：若有選取文字則執行選取範圍；無選取時自動執行游標所在獨立 SQL |
 | <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>Enter</kbd> | SQL 編輯器 | **執行全部語句**：無條件執行整個編輯器內的所有 SQL 代碼 |
 | <kbd>Ctrl</kbd> + <kbd>D</kbd> | SQL 編輯器 | **向下快速複製**：無選取時向下複製游標行；有選取時向下複製區塊並插入空白行間隔 |
 | <kbd>Shift</kbd> + <kbd>Alt</kbd> + <kbd>F</kbd> | SQL 編輯器 | **格式化 SQL**：有選取時格式化選取部分；無選取時格式化游標所在獨立語句 |
+| <kbd>Ctrl</kbd> + <kbd>S</kbd> | 全域 / 編輯器 | **儲存 SQL 檔案**：將當前查詢內容另存或儲存至本機檔案 |
+| <kbd>Ctrl</kbd> + <kbd>O</kbd> | 全域 | **開啟 SQL 檔案**：開啟本機 SQL 檔案至新查詢分頁 |
 | <kbd>Ctrl</kbd> + <kbd>Space</kbd> | SQL 編輯器 | **程式碼智慧自動補全**：手動觸發 IntelliSense（關鍵字、資料庫、資料表、欄位） |
 | 滑鼠雙擊 (<kbd>Double Click</kbd>) | 查詢/結果分頁 | **分頁重新命名**：行內雙擊分頁標籤名稱即可直接修改名稱 |
 | 滑鼠右鍵 (<kbd>Right Click</kbd>) | 查詢/結果分頁 | **分頁操作選單**：重新命名、關閉分頁、關閉其他分頁（結果分頁可釘選） |
@@ -290,17 +396,23 @@ npm run dev:tauri
 
 ---
 
-### 程式碼檢查與打包建置 (Production Build)
+### 程式碼檢查、測試與打包建置 (Verification & Build)
 
 ```bash
 # 執行 TypeScript 靜態型別檢查
 npm run typecheck
+
+# 執行自動化單元測試套件 (37 項涵蓋連線、安全 DML、語句切分、Spotlight 模糊檢索、預估執行計畫 SHOWPLAN_ALL、資料表結構、分頁顏色與執行統計分析)
+npm test
 
 # 執行前端生產環境打包
 npm run build
 
 # 建置發布版桌面應用程式 (.exe 安裝包 / 二進位檔)
 npm run build:tauri
+
+# 建置免安裝綠色版可攜式執行檔 (Portable .exe)
+npm run build:portable
 ```
 
 打包完成後的 Windows 執行檔將位於 `src-tauri/target/release/` 目錄中。

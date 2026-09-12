@@ -16,15 +16,22 @@
         :class="[
           'query-tab-item h-7 px-2.5 flex items-center space-x-2 text-xs rounded-t border-t border-x cursor-grab active:cursor-grabbing transition-all duration-100 group max-w-[260px] select-none touch-none',
           workspaceStore.activeTabId === tab.id
-            ? 'bg-dark-900 text-dark-100 border-dark-700 border-b-dark-900 font-medium shadow-xs'
+            ? 'font-medium shadow-xs border-dark-700'
             : 'bg-dark-800/80 text-dark-400 hover:text-dark-200 border-transparent hover:bg-dark-800',
           isPointerDragging && dragSourceIndex === idx ? 'opacity-35 border-dashed border-brand-400 scale-95' : '',
           dropHoverIndex === idx && isPointerDragging && dropHoverIndex !== dragSourceIndex ? 'border-brand-400 bg-brand-500/25 ring-1 ring-brand-400 scale-102' : ''
         ]"
+        :style="workspaceStore.activeTabId === tab.id ? {
+          backgroundColor: settingsStore.activeSqlTabBgColor,
+          color: settingsStore.activeSqlTabTextColor,
+          borderColor: settingsStore.activeSqlTabBgColor,
+        } : {}"
         :title="getTabTooltip(tab)"
       >
-        <FileCode v-if="tab.type === 'sql_editor'" class="w-3.5 h-3.5 text-brand-400 flex-shrink-0" />
-        <Table2 v-else class="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" />
+        <FileCode v-if="tab.type === 'sql_editor'" class="w-3.5 h-3.5 flex-shrink-0" :class="workspaceStore.activeTabId === tab.id ? 'text-white' : 'text-brand-400'" />
+        <Table2 v-else-if="tab.type === 'table_data'" class="w-3.5 h-3.5 flex-shrink-0" :class="workspaceStore.activeTabId === tab.id ? 'text-white' : 'text-emerald-400'" />
+        <TableProperties v-else-if="tab.type === 'table_structure'" class="w-3.5 h-3.5 flex-shrink-0" :class="workspaceStore.activeTabId === tab.id ? 'text-white' : 'text-indigo-400'" />
+        <Network v-else-if="tab.type === 'execution_plan'" class="w-3.5 h-3.5 flex-shrink-0" :class="workspaceStore.activeTabId === tab.id ? 'text-white' : 'text-purple-400'" />
 
         <!-- Title Display OR Inline Rename Input -->
         <input
@@ -49,7 +56,12 @@
           <!-- Database badge -->
           <span
             v-if="tab.database"
-            class="text-[10px] font-mono text-dark-400 bg-dark-850 px-1 py-0.2 rounded border border-dark-750/70 flex-shrink-0 group-hover:border-dark-650 transition-colors"
+            :class="[
+              'text-[10px] font-mono px-1 py-0.2 rounded border flex-shrink-0 transition-colors',
+              workspaceStore.activeTabId === tab.id
+                ? 'bg-black/25 text-white/90 border-white/20'
+                : 'text-dark-400 bg-dark-850 border-dark-750/70 group-hover:border-dark-650'
+            ]"
           >
             {{ tab.database }}
           </span>
@@ -67,7 +79,12 @@
           v-if="editingTabId !== tab.id"
           type="button"
           @click.stop="workspaceStore.closeTab(tab.id)"
-          class="p-0.5 rounded-full hover:bg-dark-700 text-dark-500 hover:text-dark-200 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 cursor-pointer"
+          :class="[
+            'p-0.5 rounded-full opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 cursor-pointer',
+            workspaceStore.activeTabId === tab.id
+              ? 'text-white/80 hover:text-white hover:bg-black/30'
+              : 'text-dark-500 hover:text-dark-200 hover:bg-dark-700'
+          ]"
           title="關閉分頁 (Close tab)"
         >
           <X class="w-3 h-3" />
@@ -166,6 +183,19 @@
         :table-name="(workspaceStore.activeTab as TableDataTab).tableName"
       />
 
+      <!-- Table Structure Browser Tab -->
+      <TableStructureViewer
+        v-else-if="workspaceStore.activeTab?.type === 'table_structure'"
+        :schema="(workspaceStore.activeTab as TableStructureTab).schema"
+        :table-name="(workspaceStore.activeTab as TableStructureTab).tableName"
+      />
+
+      <!-- Execution Plan Browser Tab -->
+      <ExecutionPlanViewer
+        v-else-if="workspaceStore.activeTab?.type === 'execution_plan'"
+        :tab="workspaceStore.activeTab as ExecutionPlanTab"
+      />
+
       <div v-else class="w-full h-full flex items-center justify-center text-dark-500 text-xs">
         <span>No active workspace tab</span>
       </div>
@@ -175,18 +205,22 @@
 
 <script setup lang="ts">
 import { ref, reactive, nextTick, onBeforeUnmount } from 'vue';
-import { FileCode, Table2, Plus, X, Edit2, Layers, Save } from 'lucide-vue-next';
+import { FileCode, Table2, TableProperties, Plus, X, Edit2, Layers, Save, Network } from 'lucide-vue-next';
 import { useWorkspaceStore } from '@/stores/workspaceStore';
 import { useConnectionStore } from '@/stores/connectionStore';
 import { useQueryStore } from '@/stores/queryStore';
+import { useSettingsStore } from '@/stores/settingsStore';
 import MonacoEditor from '@/components/editor/MonacoEditor.vue';
 import TableDataViewer from '@/components/editor/TableDataViewer.vue';
+import TableStructureViewer from '@/components/editor/TableStructureViewer.vue';
+import ExecutionPlanViewer from '@/components/editor/ExecutionPlanViewer.vue';
 import { saveSqlToFile, openSqlFromFile } from '@/utils/fileStorage';
-import type { SqlEditorTab, TableDataTab, WorkspaceTab } from '@/types/workspace';
+import type { SqlEditorTab, TableDataTab, TableStructureTab, ExecutionPlanTab, WorkspaceTab } from '@/types/workspace';
 
 const workspaceStore = useWorkspaceStore();
 const connectionStore = useConnectionStore();
 const queryStore = useQueryStore();
+const settingsStore = useSettingsStore();
 
 const monacoRef = ref<InstanceType<typeof MonacoEditor> | null>(null);
 

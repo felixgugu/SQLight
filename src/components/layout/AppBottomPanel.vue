@@ -76,11 +76,16 @@
             :class="[
               'result-tab-item h-5.5 px-2 flex items-center space-x-1.5 text-xxs rounded cursor-grab active:cursor-grabbing transition-all duration-100 group max-w-[220px] border flex-shrink-0 select-none touch-none',
               queryStore.activeResultTabId === rtab.id
-                ? 'bg-dark-750 text-dark-100 border-dark-600 font-medium shadow-xs'
+                ? 'font-medium shadow-xs border-dark-600'
                 : 'bg-dark-800/80 text-dark-400 hover:text-dark-200 border-transparent hover:bg-dark-800',
               isPointerDragging && dragSourceIndex === idx ? 'opacity-35 border-dashed border-brand-400 scale-95' : '',
               dropHoverIndex === idx && isPointerDragging && dropHoverIndex !== dragSourceIndex ? 'border-brand-400 bg-brand-500/25 ring-1 ring-brand-400 scale-102' : ''
             ]"
+            :style="queryStore.activeResultTabId === rtab.id ? {
+              backgroundColor: settingsStore.activeResultTabBgColor,
+              color: settingsStore.activeResultTabTextColor,
+              borderColor: settingsStore.activeResultTabBgColor,
+            } : {}"
             :title="`${rtab.title}\n執行時間: ${rtab.executedAt} (${rtab.durationMs}ms)\n筆數: ${rtab.rowCount} rows\n\nSQL 語句:\n${rtab.sql}`"
           >
             <!-- Pin / Unpin Button -->
@@ -90,8 +95,8 @@
               :class="[
                 'p-0.5 rounded transition-colors cursor-pointer',
                 rtab.isPinned
-                  ? 'text-amber-400 hover:text-amber-300'
-                  : 'text-dark-500 hover:text-dark-300 opacity-60 group-hover:opacity-100'
+                  ? 'text-amber-300'
+                  : (queryStore.activeResultTabId === rtab.id ? 'text-white/70 hover:text-white' : 'text-dark-500 hover:text-dark-300 opacity-60 group-hover:opacity-100')
               ]"
               :title="rtab.isPinned ? '已釘選（不會被自動清理，點擊解除釘選）' : '釘選此結果（保護不被自動移除）'"
             >
@@ -119,14 +124,14 @@
               {{ rtab.title }}
             </span>
 
-            <!-- Row Count or Status Badge -->
+            <!-- Status / Row Count Badge (if error or custom title without row count) -->
             <span
-              v-if="editingTabId !== rtab.id"
+              v-if="editingTabId !== rtab.id && (rtab.result.messages.some((m) => m.level === 'error') || !rtab.title.includes('r'))"
               :class="[
                 'text-xxs px-1 py-0.2 rounded font-mono flex-shrink-0 pointer-events-none',
                 rtab.result.messages.some((m) => m.level === 'error')
-                  ? 'bg-rose-900/80 text-rose-300'
-                  : 'bg-dark-700 text-dark-300'
+                  ? 'bg-rose-900/90 text-rose-200 border border-rose-700/50'
+                  : (queryStore.activeResultTabId === rtab.id ? 'bg-black/25 text-white/90' : 'bg-dark-700 text-dark-300')
               ]"
             >
               {{ rtab.result.messages.some((m) => m.level === 'error') ? 'Err' : `${rtab.rowCount}r` }}
@@ -142,7 +147,7 @@
                 'p-0.5 rounded transition-opacity flex-shrink-0',
                 queryStore.resultTabs.length <= 1
                   ? 'opacity-20 cursor-not-allowed text-dark-600'
-                  : 'text-dark-500 hover:text-dark-200 hover:bg-dark-700 opacity-0 group-hover:opacity-100 cursor-pointer'
+                  : (queryStore.activeResultTabId === rtab.id ? 'text-white/70 hover:text-white hover:bg-black/30' : 'text-dark-500 hover:text-dark-200 hover:bg-dark-700 opacity-0 group-hover:opacity-100 cursor-pointer')
               ]"
               :title="queryStore.resultTabs.length <= 1 ? '最後一個查詢結果不可刪除' : '關閉此結果'"
             >
@@ -221,23 +226,31 @@
         @select="onSelectHistory"
         @clear="queryStore.clearHistory()"
       />
+
+      <!-- Tab 4: Execution Stats & IO Analyzer -->
+      <ExecutionStatsViewer
+        v-else-if="workspaceStore.bottomPanelTab === 'stats'"
+      />
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, reactive, nextTick, onBeforeUnmount } from 'vue';
-import { TableProperties, MessageSquare, History, Minimize2, Pin, X, Edit2 } from 'lucide-vue-next';
+import { TableProperties, MessageSquare, History, Minimize2, Pin, X, Edit2, Gauge } from 'lucide-vue-next';
 import { useWorkspaceStore } from '@/stores/workspaceStore';
 import { useQueryStore } from '@/stores/queryStore';
+import { useSettingsStore } from '@/stores/settingsStore';
 import ResultGrid from '@/components/results/ResultGrid.vue';
 import ResultMessages from '@/components/results/ResultMessages.vue';
 import QueryHistory from '@/components/results/QueryHistory.vue';
+import ExecutionStatsViewer from '@/components/results/ExecutionStatsViewer.vue';
 import type { BottomPanelTab } from '@/types/workspace';
 import type { QueryResultTab } from '@/types/query';
 
 const workspaceStore = useWorkspaceStore();
 const queryStore = useQueryStore();
+const settingsStore = useSettingsStore();
 
 const resultsTabsBarRef = ref<HTMLDivElement | null>(null);
 const dragSourceIndex = ref<number | null>(null);
@@ -456,6 +469,12 @@ const panelTabs = computed<{ id: BottomPanelTab; label: string; icon: typeof Tab
     label: 'History',
     icon: History,
     badge: queryStore.history.length,
+  },
+  {
+    id: 'stats',
+    label: 'Stats',
+    icon: Gauge,
+    badge: queryStore.activeExecutionStats?.tableStats.length,
   },
 ]);
 
