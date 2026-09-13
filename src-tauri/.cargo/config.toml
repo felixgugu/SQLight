@@ -1,6 +1,7 @@
 [build]
-target = "x86_64-pc-windows-gnu"
+target = "x86_64-pc-windows-msvc"
 
-[target.x86_64-pc-windows-gnu]
-linker = "gcc"
-ar = "ar"
+[target.x86_64-pc-windows-msvc]
+rustflags = ["-C", "target-feature=+crt-static"]
+
+

@@ -88,50 +88,40 @@ Write-Host ""
 Write-Host "[4/5] 正在匯出免安裝執行檔與相依函式庫..." -ForegroundColor Yellow
 
 $CandidateExes = @(
-    "$PSScriptRoot\src-tauri\target\x86_64-pc-windows-gnu\release\sqlight.exe",
-    "$PSScriptRoot\src-tauri\target\x86_64-pc-windows-gnu\release\SQLight.exe",
+    "$PSScriptRoot\src-tauri\target\x86_64-pc-windows-msvc\release\sqlight.exe",
+    "$PSScriptRoot\src-tauri\target\x86_64-pc-windows-msvc\release\SQLight.exe",
     "$PSScriptRoot\src-tauri\target\release\sqlight.exe",
     "$PSScriptRoot\src-tauri\target\release\SQLight.exe",
-    "$PSScriptRoot\src-tauri\target\x86_64-pc-windows-msvc\release\sqlight.exe",
-    "$PSScriptRoot\src-tauri\target\x86_64-pc-windows-msvc\release\SQLight.exe"
+    "$PSScriptRoot\src-tauri\target\x86_64-pc-windows-gnu\release\sqlight.exe",
+    "$PSScriptRoot\src-tauri\target\x86_64-pc-windows-gnu\release\SQLight.exe"
 )
 
-$ExeSrc = $null
-foreach ($path in $CandidateExes) {
-    if (Test-Path $path) {
-        $ExeSrc = $path
-        break
-    }
-}
-
-if (-not $ExeSrc) {
+$ExistingExes = @($CandidateExes | Where-Object { Test-Path $_ } | Get-Item | Sort-Object LastWriteTime -Descending)
+if ($ExistingExes.Count -eq 0) {
     Stop-Script "找不到編譯後的執行檔，請檢查 src-tauri\target\ 目錄。"
 }
+
+$ExeSrc = $ExistingExes[0].FullName
 
 $TargetExe = "$OutDir\SQLight.exe"
 Copy-Item -LiteralPath $ExeSrc -Destination $TargetExe -Force
 Write-Host "  - 已匯出主程式: $TargetExe" -ForegroundColor Green
 
-# 搜尋並複製 WebView2Loader.dll (MinGW/GNU 工具鏈必要相依)
-$CandidateDlls = @(
-    "$PSScriptRoot\src-tauri\target\x86_64-pc-windows-gnu\release\WebView2Loader.dll",
-    "$PSScriptRoot\src-tauri\target\release\WebView2Loader.dll",
-    "$PSScriptRoot\src-tauri\target\x86_64-pc-windows-msvc\release\WebView2Loader.dll"
-)
-
-$DllSrc = $null
-foreach ($path in $CandidateDlls) {
-    if (Test-Path $path) {
-        $DllSrc = $path
-        break
-    }
-}
-
+# 檢查該編譯目錄下是否有 WebView2Loader.dll (GNU 工具鏈會產出，MSVC 靜態鏈結則無)
+$ExeDir = Split-Path $ExeSrc
+$DllCandidate = Join-Path $ExeDir "WebView2Loader.dll"
 $HasDll = $false
-if ($DllSrc) {
-    Copy-Item -LiteralPath $DllSrc -Destination "$OutDir\WebView2Loader.dll" -Force
+
+if (Test-Path $DllCandidate) {
+    Copy-Item -LiteralPath $DllCandidate -Destination "$OutDir\WebView2Loader.dll" -Force
     $HasDll = $true
-    Write-Host "  - 已包含 WebView2Loader.dll (Microsoft Edge WebView2 載入模組)" -ForegroundColor Green
+    Write-Host "  - 已包含 WebView2Loader.dll (GNU 工具鏈相依)" -ForegroundColor Yellow
+} else {
+    # 確保輸出目錄中若有舊版留存的 DLL 也一併清除
+    if (Test-Path "$OutDir\WebView2Loader.dll") {
+        Remove-Item -LiteralPath "$OutDir\WebView2Loader.dll" -Force -ErrorAction SilentlyContinue
+    }
+    Write-Host "  - 原生單一獨立執行檔模式 (MSVC 靜態整合 WebView2LoaderStatic，無需任何外部 DLL！)" -ForegroundColor Green
 }
 
 # 複製預設自訂範本檔 (若存在)
@@ -189,9 +179,12 @@ if (Test-Path $ZipPath) {
 Write-Host ""
 Write-Host "  【重要使用說明】" -ForegroundColor Yellow
 Write-Host "  1. 此版本為綠色免安裝版，不需要執行任何安裝精靈或管理員權限。" -ForegroundColor White
-Write-Host "  2. 在 Windows 平台上，執行檔與 WebView2Loader.dll 及自訂範本放在一起。" -ForegroundColor White
-Write-Host "  3. 只要將 dist-portable 資料夾（或 SQLight-Portable.zip 解壓縮後的內容）" -ForegroundColor White
-Write-Host "     複製到任何電腦或隨身碟，雙擊 SQLight.exe 即可直接運行！" -ForegroundColor White
+if ($HasDll) {
+    Write-Host "  2. 在此 MinGW 版本中，執行檔與 WebView2Loader.dll 及自訂範本放在一起。" -ForegroundColor White
+} else {
+    Write-Host "  2. 這是 100% 獨立單一執行檔 (已內嵌 WebView2Loader 與靜態 VC 執行階段，零外部依賴)。" -ForegroundColor Green
+}
+Write-Host "  3. 只要將 SQLight.exe 複製到任何 Windows 10/11 電腦或隨身碟，雙擊即可直接運行！" -ForegroundColor White
 Write-Host "========================================================================" -ForegroundColor Cyan
 Write-Host ""
 
