@@ -1,4 +1,8 @@
-﻿# ========================================================================
+﻿param(
+    [switch]$NoPause
+)
+
+# ========================================================================
 # SQLight - 單機免安裝版 (Portable) 自動建置與打包指令碼
 # 編碼規範：UTF-8 with BOM (相容 Windows PowerShell 5.1 與 PowerShell 7+)
 # ========================================================================
@@ -18,31 +22,34 @@ Write-Host "  SQLight - 單機免安裝版 (Portable) 自動建置與打包" -Fo
 Write-Host "========================================================================" -ForegroundColor Cyan
 Write-Host ""
 
-# ------------------------------------------------------------------------
-# 1. 檢查系統編譯環境 (Node.js, npm, Rust/Cargo)
-# ------------------------------------------------------------------------
-Write-Host "[1/5] 正在檢查系統編譯環境..." -ForegroundColor Yellow
+function Stop-Script ($msg) {
+    Write-Host ""
+    Write-Host "[錯誤] $msg" -ForegroundColor Red
+    if (-not $NoPause) {
+        Read-Host "按 Enter 鍵結束..."
+    }
+    exit 1
+}
 
 function Test-CommandAvailable ($cmd) {
     return [bool](Get-Command $cmd -ErrorAction SilentlyContinue)
 }
 
+# ------------------------------------------------------------------------
+# 1. 檢查系統編譯環境 (Node.js, npm, Rust/Cargo)
+# ------------------------------------------------------------------------
+Write-Host "[1/5] 正在檢查系統編譯環境..." -ForegroundColor Yellow
+
 if (-not (Test-CommandAvailable "node")) {
-    Write-Host "[錯誤] 找不到 Node.js，請確認已安裝 Node.js 並設定環境變數 PATH。" -ForegroundColor Red
-    Read-Host "按 Enter 鍵結束..."
-    exit 1
+    Stop-Script "找不到 Node.js，請確認已安裝 Node.js 並設定環境變數 PATH。"
 }
 
 if (-not (Test-CommandAvailable "npm")) {
-    Write-Host "[錯誤] 找不到 npm，請確認已安裝 npm 並設定環境變數 PATH。" -ForegroundColor Red
-    Read-Host "按 Enter 鍵結束..."
-    exit 1
+    Stop-Script "找不到 npm，請確認已安裝 npm 並設定環境變數 PATH。"
 }
 
 if (-not (Test-CommandAvailable "cargo")) {
-    Write-Host "[錯誤] 找不到 Rust / Cargo，請確認已安裝 Rust 並設定環境變數 PATH。" -ForegroundColor Red
-    Read-Host "按 Enter 鍵結束..."
-    exit 1
+    Stop-Script "找不到 Rust / Cargo，請確認已安裝 Rust 並設定環境變數 PATH。"
 }
 
 Write-Host "  - Node.js: OK ($(node --version))" -ForegroundColor Green
@@ -54,7 +61,7 @@ Write-Host ""
 # 2. 準備輸出目錄
 # ------------------------------------------------------------------------
 Write-Host "[2/5] 準備輸出目錄 (dist-portable)..." -ForegroundColor Yellow
-$OutDir = Join-Path $PSScriptRoot "dist-portable"
+$OutDir = "$PSScriptRoot\dist-portable"
 if (-not (Test-Path $OutDir)) {
     New-Item -ItemType Directory -Path $OutDir -Force | Out-Null
 }
@@ -71,10 +78,7 @@ Write-Host ""
 
 & npm run build:portable
 if ($LASTEXITCODE -ne 0) {
-    Write-Host ""
-    Write-Host "[錯誤] 建置過程失敗，請檢查上方編譯紀錄。" -ForegroundColor Red
-    Read-Host "按 Enter 鍵結束..."
-    exit 1
+    Stop-Script "建置過程失敗，請檢查上方編譯紀錄。"
 }
 Write-Host ""
 
@@ -84,12 +88,12 @@ Write-Host ""
 Write-Host "[4/5] 正在匯出免安裝執行檔與相依函式庫..." -ForegroundColor Yellow
 
 $CandidateExes = @(
-    Join-Path $PSScriptRoot "src-tauri\target\x86_64-pc-windows-gnu\release\sqlight.exe",
-    Join-Path $PSScriptRoot "src-tauri\target\x86_64-pc-windows-gnu\release\SQLight.exe",
-    Join-Path $PSScriptRoot "src-tauri\target\release\sqlight.exe",
-    Join-Path $PSScriptRoot "src-tauri\target\release\SQLight.exe",
-    Join-Path $PSScriptRoot "src-tauri\target\x86_64-pc-windows-msvc\release\sqlight.exe",
-    Join-Path $PSScriptRoot "src-tauri\target\x86_64-pc-windows-msvc\release\SQLight.exe"
+    "$PSScriptRoot\src-tauri\target\x86_64-pc-windows-gnu\release\sqlight.exe",
+    "$PSScriptRoot\src-tauri\target\x86_64-pc-windows-gnu\release\SQLight.exe",
+    "$PSScriptRoot\src-tauri\target\release\sqlight.exe",
+    "$PSScriptRoot\src-tauri\target\release\SQLight.exe",
+    "$PSScriptRoot\src-tauri\target\x86_64-pc-windows-msvc\release\sqlight.exe",
+    "$PSScriptRoot\src-tauri\target\x86_64-pc-windows-msvc\release\SQLight.exe"
 )
 
 $ExeSrc = $null
@@ -101,20 +105,18 @@ foreach ($path in $CandidateExes) {
 }
 
 if (-not $ExeSrc) {
-    Write-Host "[錯誤] 找不到編譯後的執行檔，請檢查 src-tauri\target\ 目錄。" -ForegroundColor Red
-    Read-Host "按 Enter 鍵結束..."
-    exit 1
+    Stop-Script "找不到編譯後的執行檔，請檢查 src-tauri\target\ 目錄。"
 }
 
-$TargetExe = Join-Path $OutDir "SQLight.exe"
+$TargetExe = "$OutDir\SQLight.exe"
 Copy-Item -LiteralPath $ExeSrc -Destination $TargetExe -Force
 Write-Host "  - 已匯出主程式: $TargetExe" -ForegroundColor Green
 
 # 搜尋並複製 WebView2Loader.dll (MinGW/GNU 工具鏈必要相依)
 $CandidateDlls = @(
-    Join-Path $PSScriptRoot "src-tauri\target\x86_64-pc-windows-gnu\release\WebView2Loader.dll",
-    Join-Path $PSScriptRoot "src-tauri\target\release\WebView2Loader.dll",
-    Join-Path $PSScriptRoot "src-tauri\target\x86_64-pc-windows-msvc\release\WebView2Loader.dll"
+    "$PSScriptRoot\src-tauri\target\x86_64-pc-windows-gnu\release\WebView2Loader.dll",
+    "$PSScriptRoot\src-tauri\target\release\WebView2Loader.dll",
+    "$PSScriptRoot\src-tauri\target\x86_64-pc-windows-msvc\release\WebView2Loader.dll"
 )
 
 $DllSrc = $null
@@ -127,15 +129,15 @@ foreach ($path in $CandidateDlls) {
 
 $HasDll = $false
 if ($DllSrc) {
-    Copy-Item -LiteralPath $DllSrc -Destination (Join-Path $OutDir "WebView2Loader.dll") -Force
+    Copy-Item -LiteralPath $DllSrc -Destination "$OutDir\WebView2Loader.dll" -Force
     $HasDll = $true
     Write-Host "  - 已包含 WebView2Loader.dll (Microsoft Edge WebView2 載入模組)" -ForegroundColor Green
 }
 
 # 複製預設自訂範本檔 (若存在)
-$CustomTplSrc = Join-Path $PSScriptRoot "src-tauri\sql_custom_templates.json"
+$CustomTplSrc = "$PSScriptRoot\src-tauri\sql_custom_templates.json"
 if (Test-Path $CustomTplSrc) {
-    Copy-Item -LiteralPath $CustomTplSrc -Destination (Join-Path $OutDir "sql_custom_templates.json") -Force
+    Copy-Item -LiteralPath $CustomTplSrc -Destination "$OutDir\sql_custom_templates.json" -Force
     Write-Host "  - 已包含 sql_custom_templates.json (常用 SQL 自訂範本文件)" -ForegroundColor Green
 }
 Write-Host ""
@@ -145,16 +147,16 @@ Write-Host ""
 # ------------------------------------------------------------------------
 Write-Host "[5/5] 正在打包可攜版壓縮檔 (SQLight-Portable.zip)..." -ForegroundColor Yellow
 
-$ZipPath = Join-Path $OutDir "SQLight-Portable.zip"
+$ZipPath = "$OutDir\SQLight-Portable.zip"
 if (Test-Path $ZipPath) {
     Remove-Item -LiteralPath $ZipPath -Force
 }
 
 $ItemsToZip = @($TargetExe)
 if ($HasDll) {
-    $ItemsToZip += (Join-Path $OutDir "WebView2Loader.dll")
+    $ItemsToZip += "$OutDir\WebView2Loader.dll"
 }
-$OutCustomTpl = Join-Path $OutDir "sql_custom_templates.json"
+$OutCustomTpl = "$OutDir\sql_custom_templates.json"
 if (Test-Path $OutCustomTpl) {
     $ItemsToZip += $OutCustomTpl
 }
@@ -193,7 +195,9 @@ Write-Host "     複製到任何電腦或隨身碟，雙擊 SQLight.exe 即可�
 Write-Host "========================================================================" -ForegroundColor Cyan
 Write-Host ""
 
-# 開啟輸出資料夾並反白選取該執行檔
-Start-Process explorer.exe -ArgumentList "/select,`"$TargetExe`""
+if (-not $NoPause) {
+    # 開啟輸出資料夾並反白選取該執行檔
+    Start-Process explorer.exe -ArgumentList "/select,`"$TargetExe`""
+    Read-Host "按 Enter 鍵結束..."
+}
 
-Read-Host "按 Enter 鍵結束..."
