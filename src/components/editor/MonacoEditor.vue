@@ -9,6 +9,7 @@ import { setupSqlCompletionProvider } from '@/utils/sqlCompletionProvider';
 import { useSettingsStore } from '@/stores/settingsStore';
 import { useWorkspaceStore } from '@/stores/workspaceStore';
 import { extractStatementAtCursor, type ExtractedStatement } from '@/utils/sqlStatementExtractor';
+import { extractTableIdentifierAtCursor, type ExtractedTableIdentifier } from '@/utils/sqlIdentifierExtractor';
 import { analyzeSmartPasteContext } from '@/utils/sqlSmartPaste';
 import { format as formatSql } from 'sql-formatter';
 
@@ -375,6 +376,29 @@ onMounted(() => {
     window.dispatchEvent(new CustomEvent('sqlight:open-quick-finder'));
   });
 
+  // Context Menu: 常用 SQL 範本庫 (SQL Templates)
+  editorInstance.addAction({
+    id: 'sqlight.open-sql-templates',
+    label: '常用 SQL 範本庫 (SQL Templates)...',
+    contextMenuGroupId: '1_modification',
+    contextMenuOrder: 1.5,
+    run: () => {
+      window.dispatchEvent(new CustomEvent('sqlight:open-sql-templates'));
+    },
+  });
+
+  // Context Menu: 在物件總管中定位 (Locate in Explorer)
+  editorInstance.addAction({
+    id: 'sqlight.locate-table-in-explorer',
+    label: '在物件總管中定位 (Locate Table in Explorer)',
+    contextMenuGroupId: '1_modification',
+    contextMenuOrder: 1.6,
+    run: () => {
+      window.dispatchEvent(new CustomEvent('sqlight:locate-table-at-cursor'));
+    },
+  });
+
+
   // Smart Column Paste: Insert pending column name at cursor position with context awareness
   editorInstance.onMouseUp(() => {
     if (!workspaceStore.pendingColumnToInsert) return;
@@ -480,6 +504,65 @@ watch(
   }
 );
 
+function insertTextAtCursor(text: string) {
+  if (!editorInstance) return;
+  const model = editorInstance.getModel();
+  if (!model) return;
+
+  const selection = editorInstance.getSelection();
+  const position = editorInstance.getPosition();
+
+  if (selection && !selection.isEmpty()) {
+    editorInstance.executeEdits('sql-template-insert', [
+      {
+        range: selection,
+        text: text,
+        forceMoveMarkers: true,
+      },
+    ]);
+  } else if (position) {
+    editorInstance.executeEdits('sql-template-insert', [
+      {
+        range: new monaco.Range(
+          position.lineNumber,
+          position.column,
+          position.lineNumber,
+          position.column
+        ),
+        text: text,
+        forceMoveMarkers: true,
+      },
+    ]);
+  } else {
+    const lineCount = model.getLineCount();
+    const maxCol = model.getLineMaxColumn(lineCount);
+    const prefix = model.getValue().trim() ? '\n\n' : '';
+    editorInstance.executeEdits('sql-template-insert', [
+      {
+        range: new monaco.Range(lineCount, maxCol, lineCount, maxCol),
+        text: prefix + text,
+        forceMoveMarkers: true,
+      },
+    ]);
+  }
+
+  editorInstance.focus();
+}
+
+function getTableNameAtCursor(): ExtractedTableIdentifier | null {
+  if (!editorInstance) return null;
+  const model = editorInstance.getModel();
+  if (!model) return null;
+
+  const selection = editorInstance.getSelection();
+  const position = editorInstance.getPosition();
+  const selectedText = selection && !selection.isEmpty() ? model.getValueInRange(selection) : undefined;
+  const lineContent = position ? model.getLineContent(position.lineNumber) : '';
+  const cursorCol = position ? position.column : 1;
+
+  return extractTableIdentifierAtCursor(lineContent, cursorCol, selectedText);
+}
+
 onBeforeUnmount(() => {
   if (highlightDecorations) {
     highlightDecorations.clear();
@@ -497,5 +580,8 @@ defineExpose({
   getFullDocumentQuery,
   duplicateLineOrSelection,
   formatCode,
+  insertTextAtCursor,
+  getTableNameAtCursor,
 });
 </script>
+

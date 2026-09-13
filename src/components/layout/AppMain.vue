@@ -505,12 +505,29 @@ async function runQuery(mode: 'current' | 'all' = 'current', queryOverride?: str
 
   const result = await queryStore.execute(connId, db, targetSql);
 
-  // Auto-switch to Results or Messages
-  if (result && result.messages.some((m) => m.level === 'error')) {
+  // Auto-switch to Results or Messages (if DDL/DML has 0 result sets or error, show Messages like SSMS)
+  if (result && (result.messages.some((m) => m.level === 'error') || result.resultSets.length === 0)) {
     workspaceStore.setBottomPanelTab('messages');
   } else {
     workspaceStore.setBottomPanelTab('results');
   }
+}
+
+function insertTextAtCursor(text: string, title?: string) {
+  if (monacoRef.value && workspaceStore.activeTab?.type === 'sql_editor') {
+    monacoRef.value.insertTextAtCursor(text);
+    workspaceStore.showToast(`已插入「${title || 'SQL 範本'}」至目前編輯點`, 'success', 2200);
+  } else {
+    workspaceStore.addSqlTab(text, title ? `${title}.sql` : undefined);
+    workspaceStore.showToast(`已在新分頁開啟「${title || 'SQL 範本'}」`, 'info', 2200);
+  }
+}
+
+function getTableNameAtCursor() {
+  if (workspaceStore.activeTab?.type !== 'sql_editor') {
+    return null;
+  }
+  return monacoRef.value?.getTableNameAtCursor() ?? null;
 }
 
 onBeforeUnmount(() => {
@@ -526,5 +543,8 @@ defineExpose({
   formatCode,
   saveActiveTab,
   openSqlFile,
+  insertTextAtCursor,
+  getTableNameAtCursor,
 });
 </script>
+

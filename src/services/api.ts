@@ -78,7 +78,11 @@ function mockInvoke<T>(cmd: string, args?: Record<string, unknown>): Promise<T> 
     case 'connect':
     case 'disconnect':
     case 'switch_database':
+    case 'cancel_query':
       return Promise.resolve(undefined as unknown as T);
+
+    case 'get_connection_spid':
+      return Promise.resolve(55 as unknown as T);
 
     case 'execute_query': {
       const sql = ((args?.sql as string) || '').trim();
@@ -229,7 +233,49 @@ function mockInvoke<T>(cmd: string, args?: Record<string, unknown>): Promise<T> 
         },
       ] as unknown as T);
 
+    case 'load_custom_templates': {
+      try {
+        const raw = localStorage.getItem('sqlight_custom_sql_templates');
+        const list = raw ? JSON.parse(raw) : [
+          {
+            id: 'custom-sample-1',
+            title: '範例：自訂業務查詢 (Custom Business Query)',
+            category: 'custom',
+            categoryLabel: '自訂範本',
+            tags: ['範例', '自訂', 'Sample'],
+            description: '這是與應用程式同層放置的自訂語法檔案 (sql_custom_templates.json)。您可隨時以任一文字編輯器 (VS Code、Notepad) 編輯此檔案，儲存後在 SQLight 點擊「重新載入」即可即時生效！',
+            code: '-- 自訂 SQL 語法範本\n-- 支援在 sql_custom_templates.json 中自由擴充團隊專用語法\nSELECT \n    TOP 50 *\nFROM dbo.YourTable\nORDER BY Id DESC;',
+            isCustom: true,
+            createdAt: Date.now(),
+          }
+        ];
+        return Promise.resolve({
+          filePath: './sql_custom_templates.json',
+          templates: list,
+        } as unknown as T);
+      } catch {
+        return Promise.resolve({
+          filePath: './sql_custom_templates.json',
+          templates: [],
+        } as unknown as T);
+      }
+    }
+
+    case 'save_custom_templates': {
+      try {
+        const templates = (args?.templates ?? []) as unknown[];
+        localStorage.setItem('sqlight_custom_sql_templates', JSON.stringify(templates));
+      } catch (err) {
+        console.warn('Mock save_custom_templates failed:', err);
+      }
+      return Promise.resolve('./sql_custom_templates.json' as unknown as T);
+    }
+
+    case 'open_custom_templates_file':
+      return Promise.resolve('./sql_custom_templates.json' as unknown as T);
+
     default:
       return Promise.reject(new Error(`Unknown command '${cmd}'`));
   }
 }
+

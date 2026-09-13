@@ -3,6 +3,7 @@ use crate::models::connection::ConnectionProfile;
 use std::fs;
 use std::path::PathBuf;
 
+#[derive(Clone)]
 pub struct StorageService {
     config_path: PathBuf,
 }

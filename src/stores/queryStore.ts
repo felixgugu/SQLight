@@ -1,10 +1,11 @@
 import { defineStore } from 'pinia';
 import { ref, computed, watch } from 'vue';
-import type { QueryResult, QueryHistoryItem, QueryResultTab } from '@/types/query';
+import type { QueryResult, QueryHistoryItem, QueryResultTab, QueryMessage, ResultSet } from '@/types/query';
 import { queryService } from '@/services/queryService';
 import { useSettingsStore } from './settingsStore';
 import { useWorkspaceStore } from './workspaceStore';
 import { parseTargetTableFromSql } from '@/utils/sqlGenerator';
+import { splitSqlBatches } from '@/utils/sqlStatementExtractor';
 import {
   buildExecutionStats,
   wrapQueryWithPerfTelemetry,
@@ -44,6 +45,28 @@ export const useQueryStore = defineStore('query', () => {
   const activeResultTabId = ref<string | null>(null);
 
   const isExecuting = ref<boolean>(false);
+  const isCancelling = ref<boolean>(false);
+  const currentRequestId = ref<string | null>(null);
+  const currentRunningConnectionId = ref<string | null>(null);
+  const elapsedExecutionMs = ref<number>(0);
+  let executionTimer: ReturnType<typeof setInterval> | null = null;
+
+  function startExecutionTimer() {
+    elapsedExecutionMs.value = 0;
+    const start = Date.now();
+    if (executionTimer) clearInterval(executionTimer);
+    executionTimer = setInterval(() => {
+      elapsedExecutionMs.value = Date.now() - start;
+    }, 100);
+  }
+
+  function stopExecutionTimer() {
+    if (executionTimer) {
+      clearInterval(executionTimer);
+      executionTimer = null;
+    }
+  }
+
   const executionError = ref<string | null>(null);
   const history = ref<QueryHistoryItem[]>([]);
   const maxRows = ref<number | null>(10000);
@@ -204,8 +227,13 @@ export const useQueryStore = defineStore('query', () => {
   ): Promise<QueryResult | null> {
     if (!sql.trim()) return null;
 
+    const reqId = `req_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
+    currentRequestId.value = reqId;
+    currentRunningConnectionId.value = connectionId;
     isExecuting.value = true;
+    isCancelling.value = false;
     executionError.value = null;
+    startExecutionTimer();
     const startTime = Date.now();
 
     try {
@@ -215,10 +243,55 @@ export const useQueryStore = defineStore('query', () => {
       let result: QueryResult;
       let actualPlanXml: string | null = null;
 
-      if (isShowplan) {
+      const batches = splitSqlBatches(sql);
+
+      if (batches.length > 1 && !isShowplan && !isActualPlan) {
+        // Multi-batch execution (Batch Runner - executes batches sequentially)
+        const combinedResultSets: ResultSet[] = [];
+        const combinedMessages: QueryMessage[] = [];
+        let totalAffectedRows = 0;
+
+        for (let bIdx = 0; bIdx < batches.length; bIdx++) {
+          if (isCancelling.value) break;
+          const batchSql = batches[bIdx];
+          if (!batchSql || !batchSql.trim()) continue;
+
+          const batchEffectiveSql = isStatsEnabled.value
+            ? wrapQueryWithPerfTelemetry(batchSql)
+            : batchSql;
+
+          const batchRes = await queryService.executeQuery(
+            connectionId,
+            database,
+            batchEffectiveSql,
+            limit,
+            reqId
+          );
+
+          if (batchRes.resultSets && batchRes.resultSets.length > 0) {
+            combinedResultSets.push(...batchRes.resultSets);
+          }
+          if (batchRes.messages) {
+            combinedMessages.push(...batchRes.messages);
+          }
+          totalAffectedRows += batchRes.affectedRows || 0;
+
+          // If a batch produced an error, stop executing subsequent batches
+          if (batchRes.messages && batchRes.messages.some((m) => m.level === 'error')) {
+            break;
+          }
+        }
+
+        result = {
+          resultSets: combinedResultSets,
+          messages: combinedMessages,
+          affectedRows: totalAffectedRows,
+          executionTimeMs: Date.now() - startTime,
+        };
+      } else if (isShowplan) {
         try {
-          await queryService.executeQuery(connectionId, database, 'SET SHOWPLAN_ALL ON;');
-          result = await queryService.executeQuery(connectionId, database, sql, limit);
+          await queryService.executeQuery(connectionId, database, 'SET SHOWPLAN_ALL ON;', null, reqId);
+          result = await queryService.executeQuery(connectionId, database, sql, limit, reqId);
         } finally {
           try {
             await queryService.executeQuery(connectionId, database, 'SET SHOWPLAN_ALL OFF;');
@@ -228,8 +301,8 @@ export const useQueryStore = defineStore('query', () => {
         }
       } else if (isActualPlan) {
         try {
-          await queryService.executeQuery(connectionId, database, 'SET STATISTICS XML ON;');
-          result = await queryService.executeQuery(connectionId, database, sql, limit);
+          await queryService.executeQuery(connectionId, database, 'SET STATISTICS XML ON;', null, reqId);
+          result = await queryService.executeQuery(connectionId, database, sql, limit, reqId);
         } finally {
           try {
             await queryService.executeQuery(connectionId, database, 'SET STATISTICS XML OFF;');
@@ -239,7 +312,7 @@ export const useQueryStore = defineStore('query', () => {
         }
       } else {
         const effectiveSql = isStatsEnabled.value ? wrapQueryWithPerfTelemetry(sql) : sql;
-        result = await queryService.executeQuery(connectionId, database, effectiveSql, limit);
+        result = await queryService.executeQuery(connectionId, database, effectiveSql, limit, reqId);
       }
 
       const duration = result.executionTimeMs || (Date.now() - startTime);
@@ -398,6 +471,47 @@ export const useQueryStore = defineStore('query', () => {
     } catch (err: unknown) {
       const duration = Date.now() - startTime;
       const msg = err instanceof Error ? err.message : String(err);
+      const isCancelled =
+        isCancelling.value ||
+        msg.toLowerCase().includes('cancelled') ||
+        msg.includes('取消');
+
+      if (isCancelled) {
+        executionError.value = '查詢已被使用者取消 (Query cancelled by user)';
+        const timeStr = new Date().toLocaleTimeString();
+
+        history.value.unshift({
+          id: `hist-${Date.now()}`,
+          connectionId,
+          database,
+          sql,
+          executedAt: timeStr,
+          executionTimeMs: duration,
+          status: 'cancelled',
+          errorMessage: '查詢已被使用者取消 (Query cancelled by user)',
+        });
+
+        const cancelMessage: QueryMessage = {
+          level: 'warning',
+          message: `🛑 查詢已被使用者中斷與取消 (Query cancelled by user). 耗時: ${(duration / 1000).toFixed(2)} 秒`,
+          timestamp: new Date().toISOString(),
+        };
+
+        if (activeResultTab.value) {
+          activeResultTab.value.result.messages.push(cancelMessage);
+        }
+
+        try {
+          const workspaceStore = useWorkspaceStore();
+          workspaceStore.setBottomPanelTab('messages');
+          workspaceStore.showToast('查詢已中斷並取消 (Query cancelled)', 'info', 2500);
+        } catch {
+          // ignore if workspaceStore unavailable
+        }
+
+        return null;
+      }
+
       executionError.value = msg;
       const timeStr = new Date().toLocaleTimeString();
       const parsed = parseTargetTableFromSql(sql);
@@ -452,7 +566,25 @@ export const useQueryStore = defineStore('query', () => {
 
       return errorResult;
     } finally {
+      stopExecutionTimer();
       isExecuting.value = false;
+      isCancelling.value = false;
+      currentRequestId.value = null;
+      currentRunningConnectionId.value = null;
+    }
+  }
+
+  async function cancelQuery(): Promise<void> {
+    if (!isExecuting.value) return;
+    isCancelling.value = true;
+    try {
+      const connId = currentRunningConnectionId.value;
+      const reqId = currentRequestId.value;
+      if (connId) {
+        await queryService.cancelQuery(connId, reqId || undefined);
+      }
+    } catch (err) {
+      console.error('Failed to cancel query:', err);
     }
   }
 
@@ -553,6 +685,10 @@ export const useQueryStore = defineStore('query', () => {
     activeResultTab,
     activeResult,
     isExecuting,
+    isCancelling,
+    currentRequestId,
+    elapsedExecutionMs,
+    cancelQuery,
     executionError,
     history,
     maxRows,

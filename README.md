@@ -12,8 +12,12 @@
 2. [系統架構與技術棧 (Architecture & Tech Stack)](#-系統架構與技術棧-architecture--tech-stack)
 3. [核心功能與設計細節 (Feature Deep Dive)](#-核心功能與設計細節-feature-deep-dive)
    - [連線與資料庫物件瀏覽 (Connection & Schema Explorer)](#1-連線與資料庫物件瀏覽)
+   - [快速定位游標處資料表 (Locate Table in Explorer)](#-快速定位游標處資料表-locate-table-in-explorer)
    - [智慧記憶與自動復原 (Auto-Restore Last Session)](#2-智慧記憶與自動復原)
    - [專業級 Monaco SQL 編輯器 & DBA 工具箱 (Monaco SQL Workspace & DBA Diagnostics)](#3-專業級-monaco-sql-編輯器--dba-診斷工具箱)
+   - [長時間查詢中斷與取消機制 (Cancel Query / Task Killer & SPID)](#-長時間查詢中斷與取消機制-cancel-query--task-killer)
+   - [常用 SQL 範本庫與同層自訂語法文件 (SQL Templates & Co-located Custom File)](#-常用-sql-範本庫與應用程式同層自訂文件-sql_custom_templatesjson)
+   - [客戶端 GO 批次分割執行引擎 (Client-Side GO Batch Runner)](#-客戶端-go-批次分割執行引擎-client-side-go-batch-runner)
    - [多結果歷史分頁、AG Grid & 即時統計列 (Multi-Result Tabs, AG Grid & Live Stats)](#4-多結果歷史分頁-ag-grid--即時統計列)
    - [訊息面板與執行歷史 (Messages & Query History)](#5-訊息面板與執行歷史)
    - [執行統計與 IO 分析器 (Execution Stats & IO Analyzer)](#6-執行統計與-io-分析器-execution-stats--io-analyzer)
@@ -33,6 +37,10 @@
 - ⚡ **秒開啟動**：原生 Rust 後端核心，體積輕巧且無肥重執行環境開銷。
 - 🎨 **現代暗色美學**：精雕細琢的 Dark Theme，搭配流暢的微互動動畫與清晰的層次感。
 - 💻 **媲美 VS Code 的編程手感**：深度整合 Monaco Editor，支援智慧補全、單句語法隔離、快速複製與自適應格式化。
+- 🛑 **秒級查詢取消與 Task Killer**：點擊取消或按下快捷鍵即刻中斷本地讀取，後端自動透過獨立連線發送 `KILL <spid>;` 釋放資料庫鎖定與運算資源。
+- 🎯 **快速定位資料表 (Locate in Explorer)**：編輯器游標或反白處物件一鍵在左側 Explorer 自動連鎖展開、載入欄位、光暈高亮並置中捲動。
+- 📚 **常用 SQL 範本庫與同層自訂文件**：內建豐富 T-SQL 與變數宣告範例，同層實體文件 `sql_custom_templates.json` 隨拷隨走、外部編輯熱重載。
+- 🚀 **客戶端 GO 批次引擎**：狀態機智慧隔離註解與字串內的 `GO`，無縫支援多批次 DDL 與大型腳本執行。
 - 📊 **百萬級資料流暢瀏覽**：採用 AG Grid 虛擬化捲動引擎，海量資料渲染依然絲滑不卡頓。
 - 🎯 **人性化的操作細節**：智慧記憶上次連線與資料庫、可自訂執行閃爍高亮、Pointer Events 無縫分頁拖曳、多結果歷史防清除釘選。
 
@@ -115,6 +123,19 @@ SQLight 採用現代跨平台桌面客戶端的雙層解耦架構：
     - **`SELECT` 清單**：自動判斷前後欄位並智慧補齊逗號 `,`（例如 `SELECT id |` &rarr; `SELECT id, [col]`；`SELECT | name` &rarr; `SELECT [col], name`）。
     - **`WHERE` / `ON` / `SET` 條件**：自動補齊 ` = ?`（例如 `WHERE |` &rarr; `WHERE [col] = ?`），並**自動反白聚焦 `?`**，鍵入數值立即覆寫。若後方或前方已有比較運算子則絕不重複加上。
     - **一般語境防黏結**：若緊鄰字母數字單字，最少自動補上空白間隔（如 `foo [col] bar`）。
+- **快速定位游標處資料表 (Locate Table in Explorer)**：
+  - **雙重入口**：點選 Explorer 頂部工具列「**定位**」按鈕（`LocateFixed` 準星圖示），或於 Monaco 編輯器內任何資料表/檢視表名稱處按右鍵選擇「**在物件總管中定位 (Locate Table in Explorer)**」。
+  - **智慧識別抽取器**：
+    - **選取優先**：使用者反白文字（如 `Orders`、`[Orders]`、`'Orders'`）優先解析。
+    - **行內游標邊界解析**：自動精準解析單段或多段式識別字，包括 `[dbo].[Orders]`、`dbo.Orders`、`[Sales].[Order Details]`（支援空格）、`[Northwind].[dbo].[Customers]` 與一般單詞。
+    - **SQL 關鍵字防誤判**：自動排除 `SELECT`、`FROM`、`WHERE`、`JOIN` 等語法關鍵字。
+  - **智慧連鎖展開與載入**：
+    - 若 Explorer 搜尋框（`filterQuery`）有過濾字串且會遮蔽目標物件，自動清空搜尋框以確保可見。
+    - 依序自動展開「`連線` &rarr; `資料庫` &rarr; `資料表 (或檢視表/預存程序/函數)` &rarr; `目標物件`」。
+    - 自動背景非同步載入該資料表之欄位清單。
+  - **醒目反饋與置中滾動**：
+    - 節點套用品牌色微亮背景、高對比發光邊框與動態呼吸「**已定位**」標籤。
+    - 自動觸發平滑滾動 (`scrollIntoView({ behavior: 'smooth', block: 'center' })`) 將該資料表捲動至畫面可視正中央，並於 3.5 秒後優雅恢復常態。
 - **連線右鍵操作選單**：
   - **重新整理**：即時從伺服器重新讀取資料庫與物件清單。
   - **行內重新命名 (Inline Rename)**：在側邊欄直接雙擊或右鍵重新命名連線代稱，並自動防重名檢查。
@@ -165,6 +186,33 @@ SQLight 採用現代跨平台桌面客戶端的雙層解耦架構：
   - **有選取時**：將整個選取區塊往下複製一份，並**自動在中間插入空白行**隔開，避免頭尾 SQL 黏在一起。
 - **智慧 SQL 格式化 (`Shift + Alt + F`)**：
   - 有選取時僅格式化選取的 SQL；未選取時僅格式化當前游標所在的獨立語句。
+- **長時間查詢中斷與伺服器 Task Killer (Cancel Query / Task Killer & SPID)**：
+  - **細粒度連線鎖定**：後端由全域獨占鎖重構為細粒度連線鎖，查詢執行期間微秒級釋放，確保取消信號立即可達。
+  - **動態執行/取消按鈕與停止按鈕**：
+    - 查詢執行中時，頂部綠色執行按鈕動態轉化為紅色呼吸燈「**點擊中斷並取消查詢**」按鈕，獨立停止按鈕同步點亮。
+    - 支援快捷鍵 <kbd>Alt</kbd> + <kbd>Break</kbd> / <kbd>Pause</kbd>（SSMS 標準）與 <kbd>Escape</kbd> 秒級取消。
+  - **伺服器端 KILL 命令發送 (Task Killer)**：
+    - 在連線建立時自動記錄當前會話 `SELECT @@SPID;`。
+    - 取消觸發時，透過 `tokio::select!` 毫秒級中斷本機讀取，並立即透過獨立背景連線向 SQL Server 發送 `KILL <spid>;`，即刻終止伺服器端計算、回滾交易並釋放資料庫鎖定 (Locks)。
+  - **即時 SPID 與碼錶計時**：狀態列左側常駐顯示 `SPID: <id>`，右側動態顯示 `執行中 (00:04)...` 與中斷狀態。
+  - **髒連線隔離與透明自動重連**：被中斷的 TCP 連線自動安全捨棄並在背景重連，使用者完全無感，後續查詢順暢無阻。
+- **常用 SQL 範本庫與應用程式同層自訂文件 (`sql_custom_templates.json`)**：
+  - **雙重入口**：頂部工具列專屬 `BookOpen` 圖示按鈕（位於「快速物件檢索」旁），或 Monaco 編輯器內滑鼠右鍵「**常用 SQL 範本庫 (SQL Templates)...**」。
+  - **豐富內建語法庫**：
+    - **常用語法**：高效分頁 (`OFFSET...FETCH`)、關聯更新 (`UPDATE...FROM...JOIN`)、`MERGE` (UPSERT)、`OUTPUT` 異動擷取、防重複插入 (`WHERE NOT EXISTS`)。
+    - **變數與中繼運算**：純量變數預設值宣告與賦值、含索引資料表變數 (`@TableVariable`)、區域暫存表 (`#TempTable`) 與索引最佳化、系統環境變數 (`SCOPE_IDENTITY()`、`@@ROWCOUNT`、`@@SPID`)、自訂 TVP 資料表型別批次傳遞。
+    - **CTE 語法**：多重 CTE 串接、遞迴樹狀組織階層展開 (`OrgHierarchy`)、CTE 刪除重複資料、遞迴日期序列生成。
+    - **進階用法**：視窗函數 (`DENSE_RANK`, `Running Total`)、`CROSS APPLY` 取得分組最新 Top N、`STRING_SPLIT` 與 `STRING_AGG`、動態 PIVOT 行列轉置、生產級交易防護 (`TRY...CATCH` + `XACT_ABORT`)、安全參數化動態 SQL (`sp_executesql`)、分批刪除海量資料防鎖定升級。
+    - **診斷維護**：DMV 缺失索引建議、即時鎖定與阻塞源頭排查。
+  - **應用程式同層實體自訂文件 (`sql_custom_templates.json`)**：
+    - 正式打包版本自動座落於 `SQLight.exe` 同層目錄（免安裝可攜版隨拷隨走，極致方便團隊統一共用）。
+    - 支援外部編輯器（VS Code、記事本）自由維護修改，視窗內支援「**📂 在檔案總管顯示**」與「**🔄 重新載入**」熱重載。
+    - 介面內建完整 CRUD（新增、編輯、刪除自訂範本），自動即時回寫該實體 JSON 檔。
+  - **游標處一鍵插入**：支援按下 <kbd>Enter</kbd> 精準貼入編輯器當前游標處（自動覆蓋選區），或以新分頁開啟。
+- **客戶端 GO 批次分割執行引擎 (Client-Side GO Batch Runner)**：
+  - **智慧 GO 解析器**：內建狀態機語意掃描，精確略過字串常值 (`'...'`) 與單行/多行註解（`--`, `/*...*/`）中的 `GO` 關鍵字，解決 TDS 驅動傳送未支援的 `GO` 造成之 Msg 102 語法報錯。
+  - **多批次連續執行**：將大型 SQL 腳本依 `GO` 邊界自動拆分為多個獨立 Batch 循序發送至資料庫執行，並自動整合所有 ResultSets、受影響列數與訊息。
+  - **DDL 體驗優化**：產生與執行 `CREATE TABLE` 等無資料列回傳之指令時，執行後自動導向「Messages」面板顯示完成狀態，貼合 SSMS 標準使用體驗。
 
 ### 4. 多結果歷史分頁、AG Grid & 即時統計列
 - **欄位拖曳重排與全方位選取引擎 (Column Reordering & Selection Engine)**：
@@ -333,11 +381,16 @@ SQLight 採用現代跨平台桌面客戶端的雙層解耦架構：
 | <kbd>Ctrl</kbd> + <kbd>P</kbd> | 全域 / 編輯器 | **快速物件檢索 (Spotlight)**：呼出浮動搜尋面板，模糊檢索資料表、檢視表、預存程序、函數 |
 | <kbd>Ctrl</kbd> + <kbd>Enter</kbd> | SQL 編輯器 | **執行當前語句**：若有選取文字則執行選取範圍；無選取時自動執行游標所在獨立 SQL |
 | <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>Enter</kbd> | SQL 編輯器 | **執行全部語句**：無條件執行整個編輯器內的所有 SQL 代碼 |
+| <kbd>Alt</kbd> + <kbd>Break</kbd> / <kbd>Pause</kbd> | 全域 / 編輯器 | **中斷並取消查詢 (Cancel Query)**：微軟 SSMS 標準中斷快捷鍵，中止本地讀取並發送 `KILL <spid>` 終止伺服器運算 |
+| <kbd>Escape</kbd> | 全域 / 編輯器 | **取消查詢 / 關閉浮窗**：查詢執行中時中斷取消查詢；浮窗/檢索器開啟時關閉並交還編輯器焦點；表格選取時清除框選 |
 | <kbd>Ctrl</kbd> + <kbd>D</kbd> | SQL 編輯器 | **向下快速複製**：無選取時向下複製游標行；有選取時向下複製區塊並插入空白行間隔 |
 | <kbd>Shift</kbd> + <kbd>Alt</kbd> + <kbd>F</kbd> | SQL 編輯器 | **格式化 SQL**：有選取時格式化選取部分；無選取時格式化游標所在獨立語句 |
 | <kbd>Ctrl</kbd> + <kbd>S</kbd> | 全域 / 編輯器 | **儲存 SQL 檔案**：將當前查詢內容另存或儲存至本機檔案 |
 | <kbd>Ctrl</kbd> + <kbd>O</kbd> | 全域 | **開啟 SQL 檔案**：開啟本機 SQL 檔案至新查詢分頁 |
 | <kbd>Ctrl</kbd> + <kbd>Space</kbd> | SQL 編輯器 | **程式碼智慧自動補全**：手動觸發 IntelliSense（關鍵字、資料庫、資料表、欄位） |
+| 滑鼠右鍵 (<kbd>Right Click</kbd>) | SQL 編輯器 | **編輯器快顯選單**：在物件總管中定位 (Locate in Explorer)、常用 SQL 範本庫 (SQL Templates)... |
+| 工具列按鈕 (<kbd>LocateFixed</kbd>) | 物件總管 (Explorer) | **快速定位資料表**：捕捉游標/反白處資料表名稱，左側自動連鎖展開、載入欄位、光暈高亮並置中捲動 |
+| 工具列按鈕 (<kbd>BookOpen</kbd>) | 頂部工具列 | **常用 SQL 範本庫**：開啟內建常用/CTE/進階/變數範本與應用程式同層實體自訂文件 |
 | 滑鼠雙擊 (<kbd>Double Click</kbd>) | 查詢/結果分頁 | **分頁重新命名**：行內雙擊分頁標籤名稱即可直接修改名稱 |
 | 滑鼠右鍵 (<kbd>Right Click</kbd>) | 查詢/結果分頁 | **分頁操作選單**：重新命名、關閉分頁、關閉其他分頁（結果分頁可釘選） |
 | 滑鼠滾輪 (<kbd>Wheel</kbd>) | 分頁列 | **橫向滾動**：於頂部 Query 分頁列或底部 Results 分頁列滾動滑鼠可左右橫向捲動 |
@@ -402,7 +455,7 @@ npm run dev:tauri
 # 執行 TypeScript 靜態型別檢查
 npm run typecheck
 
-# 執行自動化單元測試套件 (37 項涵蓋連線、安全 DML、語句切分、Spotlight 模糊檢索、預估執行計畫 SHOWPLAN_ALL、資料表結構、分頁顏色與執行統計分析)
+# 執行自動化單元測試套件 (90 項涵蓋連線、安全 DML、語句切分、Spotlight 模糊檢索、預估執行計畫 SHOWPLAN_ALL、資料表結構、分頁顏色、執行統計分析、長時間查詢中斷取消與 Task Killer、常用 SQL 範本庫與快速定位抽取器)
 npm test
 
 # 執行前端生產環境打包

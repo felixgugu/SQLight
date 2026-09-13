@@ -14,14 +14,20 @@ pub type TiberiusClient = Client<Compat<TcpStream>>;
 pub struct SqlServerConnection {
     client: TiberiusClient,
     current_database: String,
+    spid: u32,
 }
 
 impl SqlServerConnection {
-    pub fn new(client: TiberiusClient, database: String) -> Self {
+    pub fn new(client: TiberiusClient, database: String, spid: u32) -> Self {
         Self {
             client,
             current_database: database,
+            spid,
         }
+    }
+
+    pub fn spid(&self) -> u32 {
+        self.spid
     }
 
     fn column_data_to_cell(data: &ColumnData) -> CellValue {
@@ -189,6 +195,10 @@ impl SqlServerConnection {
 
 #[async_trait]
 impl DatabaseConnection for SqlServerConnection {
+    fn spid(&self) -> u32 {
+        self.spid
+    }
+
     async fn execute_query(&mut self, sql: &str, max_rows: Option<usize>) -> AppResult<QueryResult> {
         let start = Instant::now();
 

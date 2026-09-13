@@ -8,6 +8,13 @@
       </div>
       <div class="flex items-center space-x-1">
         <button
+          @click="handleLocateCurrentTable"
+          class="p-1 hover:bg-dark-750 text-dark-400 hover:text-brand-400 rounded transition-colors"
+          title="快速定位游標處資料表 (Locate Table at Cursor)"
+        >
+          <LocateFixed class="w-3.5 h-3.5" />
+        </button>
+        <button
           @click="$emit('open-connection-modal')"
           class="p-1 hover:bg-dark-750 text-dark-400 hover:text-dark-200 rounded transition-colors"
           title="New Connection"
@@ -249,9 +256,15 @@
                     >
                       <!-- Table Item -->
                       <div
+                        :id="`tree-node-${tableKey(conn.id, db, table.schema, table.name)}`"
                         @click="toggleTable(conn.id, db, table.schema, table.name)"
                         @contextmenu.prevent="openContextMenu($event, conn.id, db, table.schema, table.name, 'TABLE')"
-                        class="flex items-center space-x-1 px-1.5 py-0.5 rounded hover:bg-dark-750 cursor-pointer text-dark-300 hover:text-dark-100 group"
+                        :class="[
+                          'flex items-center space-x-1 px-1.5 py-0.5 rounded cursor-pointer group transition-all duration-150',
+                          activeLocatedKey === tableKey(conn.id, db, table.schema, table.name)
+                            ? 'bg-brand-500/25 ring-1 ring-brand-400 text-brand-100 font-semibold shadow-md shadow-brand-500/10'
+                            : 'hover:bg-dark-750 text-dark-300 hover:text-dark-100'
+                        ]"
                         :title="`${table.schema}.${table.name} (Table) - 右鍵開啟選單 (Open Data / DDL)`"
                       >
                         <component
@@ -261,6 +274,12 @@
                         <Table2 class="w-3 h-3 text-brand-400 flex-shrink-0" />
                         <span class="text-dark-400 text-xxs flex-shrink-0">{{ table.schema }}.</span>
                         <span class="truncate flex-1 font-medium">{{ table.name }}</span>
+                        <span
+                          v-if="activeLocatedKey === tableKey(conn.id, db, table.schema, table.name)"
+                          class="text-[9px] px-1 py-0.2 bg-brand-500 text-white rounded font-sans flex-shrink-0 animate-pulse ml-1"
+                        >
+                          已定位
+                        </span>
                       </div>
 
                       <!-- Columns List -->
@@ -354,9 +373,15 @@
                     >
                       <!-- View Item -->
                       <div
+                        :id="`tree-node-${tableKey(conn.id, db, view.schema, view.name)}`"
                         @click="toggleTable(conn.id, db, view.schema, view.name)"
                         @contextmenu.prevent="openContextMenu($event, conn.id, db, view.schema, view.name, 'VIEW')"
-                        class="flex items-center space-x-1 px-1.5 py-0.5 rounded hover:bg-dark-750 cursor-pointer text-dark-300 hover:text-dark-100 group"
+                        :class="[
+                          'flex items-center space-x-1 px-1.5 py-0.5 rounded cursor-pointer group transition-all duration-150',
+                          activeLocatedKey === tableKey(conn.id, db, view.schema, view.name)
+                            ? 'bg-purple-500/25 ring-1 ring-purple-400 text-purple-100 font-semibold shadow-md shadow-purple-500/10'
+                            : 'hover:bg-dark-750 text-dark-300 hover:text-dark-100'
+                        ]"
                         :title="`${view.schema}.${view.name} (View) - 右鍵檢視定義或查詢`"
                       >
                         <component
@@ -366,6 +391,12 @@
                         <FileText class="w-3 h-3 text-purple-400 flex-shrink-0" />
                         <span class="text-dark-400 text-xxs flex-shrink-0">{{ view.schema }}.</span>
                         <span class="truncate flex-1 font-medium">{{ view.name }}</span>
+                        <span
+                          v-if="activeLocatedKey === tableKey(conn.id, db, view.schema, view.name)"
+                          class="text-[9px] px-1 py-0.2 bg-purple-500 text-white rounded font-sans flex-shrink-0 animate-pulse ml-1"
+                        >
+                          已定位
+                        </span>
                       </div>
 
                       <!-- View Columns -->
@@ -448,15 +479,27 @@
                       v-else
                       v-for="proc in getFilteredProcedures(conn.id, db)"
                       :key="`${conn.id}:${db}:${proc.schema}.${proc.name}`"
+                      :id="`tree-node-${tableKey(conn.id, db, proc.schema, proc.name)}`"
                       @click="selectDatabase(conn.id, db)"
                       @contextmenu.prevent="openContextMenu($event, conn.id, db, proc.schema, proc.name, 'PROCEDURE')"
                       @dblclick="handleViewDefinition(conn.id, db, proc.schema, proc.name)"
-                      class="flex items-center space-x-1 px-1.5 py-0.5 rounded hover:bg-dark-750 cursor-pointer text-dark-300 hover:text-dark-100 group"
+                      :class="[
+                        'flex items-center space-x-1 px-1.5 py-0.5 rounded cursor-pointer group transition-all duration-150',
+                        activeLocatedKey === tableKey(conn.id, db, proc.schema, proc.name)
+                          ? 'bg-amber-500/25 ring-1 ring-amber-400 text-amber-100 font-semibold shadow-md shadow-amber-500/10'
+                          : 'hover:bg-dark-750 text-dark-300 hover:text-dark-100'
+                      ]"
                       :title="`${proc.schema}.${proc.name} (Stored Procedure) - 雙擊檢視定義，右鍵開啟選單`"
                     >
                       <Cog class="w-3 h-3 text-amber-400 flex-shrink-0" />
                       <span class="text-dark-400 text-xxs flex-shrink-0">{{ proc.schema }}.</span>
                       <span class="truncate flex-1 font-medium">{{ proc.name }}</span>
+                      <span
+                        v-if="activeLocatedKey === tableKey(conn.id, db, proc.schema, proc.name)"
+                        class="text-[9px] px-1 py-0.2 bg-amber-500 text-white rounded font-sans flex-shrink-0 animate-pulse ml-1"
+                      >
+                        已定位
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -495,15 +538,27 @@
                       v-else
                       v-for="func in getFilteredFunctions(conn.id, db)"
                       :key="`${conn.id}:${db}:${func.schema}.${func.name}`"
+                      :id="`tree-node-${tableKey(conn.id, db, func.schema, func.name)}`"
                       @click="selectDatabase(conn.id, db)"
                       @contextmenu.prevent="openContextMenu($event, conn.id, db, func.schema, func.name, 'FUNCTION')"
                       @dblclick="handleViewDefinition(conn.id, db, func.schema, func.name)"
-                      class="flex items-center space-x-1 px-1.5 py-0.5 rounded hover:bg-dark-750 cursor-pointer text-dark-300 hover:text-dark-100 group"
+                      :class="[
+                        'flex items-center space-x-1 px-1.5 py-0.5 rounded cursor-pointer group transition-all duration-150',
+                        activeLocatedKey === tableKey(conn.id, db, func.schema, func.name)
+                          ? 'bg-sky-500/25 ring-1 ring-sky-400 text-sky-100 font-semibold shadow-md shadow-sky-500/10'
+                          : 'hover:bg-dark-750 text-dark-300 hover:text-dark-100'
+                      ]"
                       :title="`${func.schema}.${func.name} (Function) - 雙擊檢視定義，右鍵開啟選單`"
                     >
                       <Code2 class="w-3 h-3 text-sky-400 flex-shrink-0" />
                       <span class="text-dark-400 text-xxs flex-shrink-0">{{ func.schema }}.</span>
                       <span class="truncate flex-1 font-medium">{{ func.name }}</span>
+                      <span
+                        v-if="activeLocatedKey === tableKey(conn.id, db, func.schema, func.name)"
+                        class="text-[9px] px-1 py-0.2 bg-sky-500 text-white rounded font-sans flex-shrink-0 animate-pulse ml-1"
+                      >
+                        已定位
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -691,6 +746,7 @@ import {
   Cog,
   Code2,
   Play,
+  LocateFixed,
 } from 'lucide-vue-next';
 import ConfirmModal from '@/components/common/ConfirmModal.vue';
 import { useConnectionStore } from '@/stores/connectionStore';
@@ -701,10 +757,12 @@ import { wrapIdentifierIfNeeded } from '@/utils/sqlParser';
 import { generateCreateTableDdl } from '@/utils/ddlGenerator';
 import type { TableItem, ColumnItem, RoutineItem } from '@/types/schema';
 import type { ConnectionProfile } from '@/types/connection';
+import type { ExtractedTableIdentifier } from '@/utils/sqlIdentifierExtractor';
 
 const emit = defineEmits<{
   (e: 'open-connection-modal'): void;
   (e: 'edit-connection', profile: ConnectionProfile): void;
+  (e: 'request-locate-table'): void;
 }>();
 
 const connectionStore = useConnectionStore();
@@ -742,6 +800,12 @@ const loadedColumns = reactive<Record<string, ColumnItem[]>>({});
 const tablesByDb = schemaStore.tablesByDb;
 const loadingTablesByDb = schemaStore.loadingTablesByDb;
 const loadingColumns = reactive<Record<string, boolean>>({});
+const activeLocatedKey = ref<string | null>(null);
+let highlightTimer: ReturnType<typeof setTimeout> | null = null;
+
+function handleLocateCurrentTable() {
+  emit('request-locate-table');
+}
 
 function isFolderExpanded(connId: string, db: string, folder: 'tables' | 'views' | 'procs' | 'funcs'): boolean {
   if (filterQuery.value.trim()) {
@@ -1296,4 +1360,184 @@ GO
   workspaceStore.showToast(`已產生 [${schema}].[${tableName}] 之呼叫樣板`, 'success', 2500);
   contextMenu.visible = false;
 }
+
+async function locateTable(options: ExtractedTableIdentifier & { database?: string; connectionId?: string }) {
+  const targetConnId =
+    options.connectionId ||
+    workspaceStore.activeTab?.connectionId ||
+    connectionStore.activeConnectionId;
+
+  if (!targetConnId) {
+    workspaceStore.showToast('尚未建立連線，無法進行定位', 'warning', 2500);
+    return;
+  }
+
+  const targetDb =
+    options.database ||
+    workspaceStore.activeTab?.database ||
+    connectionStore.activeDatabase ||
+    'master';
+
+  // Ensure connection is active
+  if (connectionStore.activeConnectionId !== targetConnId || connectionStore.status !== 'connected') {
+    try {
+      await connectionStore.connect(targetConnId);
+    } catch (err: unknown) {
+      workspaceStore.showToast(
+        `連線伺服器失敗: ${err instanceof Error ? err.message : String(err)}`,
+        'error',
+        3000
+      );
+      return;
+    }
+  }
+
+  // Ensure database tables and routines are loaded
+  const dbKey = `${targetConnId}:${targetDb}`;
+  if (!tablesByDb[dbKey] || tablesByDb[dbKey].length === 0) {
+    await loadDatabaseTables(targetConnId, targetDb);
+  }
+
+  const allTables = tablesByDb[dbKey] || [];
+  const lowerTable = options.table.toLowerCase();
+  const lowerSchema = options.schema?.toLowerCase();
+
+  let matchedType: 'TABLE' | 'VIEW' | 'PROCEDURE' | 'FUNCTION' = 'TABLE';
+  let matchedSchema = '';
+  let matchedName = '';
+
+  // 1. Search in BASE TABLE
+  const matchedTable = allTables.find((t) => {
+    if (t.kind !== 'BASE TABLE') return false;
+    if (lowerSchema) {
+      return t.schema.toLowerCase() === lowerSchema && t.name.toLowerCase() === lowerTable;
+    }
+    return t.name.toLowerCase() === lowerTable;
+  });
+
+  if (matchedTable) {
+    matchedType = 'TABLE';
+    matchedSchema = matchedTable.schema;
+    matchedName = matchedTable.name;
+  } else {
+    // 2. Search in VIEW
+    const matchedView = allTables.find((t) => {
+      if (t.kind !== 'VIEW') return false;
+      if (lowerSchema) {
+        return t.schema.toLowerCase() === lowerSchema && t.name.toLowerCase() === lowerTable;
+      }
+      return t.name.toLowerCase() === lowerTable;
+    });
+
+    if (matchedView) {
+      matchedType = 'VIEW';
+      matchedSchema = matchedView.schema;
+      matchedName = matchedView.name;
+    } else {
+      // 3. Search in ROUTINES (Procedures / Functions) as a helpful fallback
+      const routines = schemaStore.routinesByDb[dbKey] || [];
+      const matchedRoutine = routines.find((r) => {
+        if (lowerSchema) {
+          return r.schema.toLowerCase() === lowerSchema && r.name.toLowerCase() === lowerTable;
+        }
+        return r.name.toLowerCase() === lowerTable;
+      });
+
+      if (matchedRoutine) {
+        matchedType = matchedRoutine.kind === 'PROCEDURE' ? 'PROCEDURE' : 'FUNCTION';
+        matchedSchema = matchedRoutine.schema;
+        matchedName = matchedRoutine.name;
+      }
+    }
+  }
+
+  if (!matchedName) {
+    const displayTarget = options.schema ? `${options.schema}.${options.table}` : options.table;
+    workspaceStore.showToast(
+      `在資料庫 [${targetDb}] 中找不到相符的物件「${displayTarget}」`,
+      'warning',
+      3000
+    );
+    return;
+  }
+
+  // If a filter is currently active and hides this matched object, clear the filter
+  if (filterQuery.value.trim()) {
+    const q = filterQuery.value.trim().toLowerCase();
+    if (!matchedName.toLowerCase().includes(q) && !matchedSchema.toLowerCase().includes(q)) {
+      filterQuery.value = '';
+    }
+  }
+
+  // Expand parent Connection and Database
+  expandedConns[targetConnId] = true;
+  expandedDbs[`${targetConnId}:${targetDb}`] = true;
+
+  // Expand folder according to matched type
+  if (matchedType === 'TABLE') {
+    expandedFolders[`${targetConnId}:${targetDb}:tables`] = true;
+  } else if (matchedType === 'VIEW') {
+    expandedFolders[`${targetConnId}:${targetDb}:views`] = true;
+  } else if (matchedType === 'PROCEDURE') {
+    expandedFolders[`${targetConnId}:${targetDb}:procs`] = true;
+  } else if (matchedType === 'FUNCTION') {
+    expandedFolders[`${targetConnId}:${targetDb}:funcs`] = true;
+  }
+
+  const targetKey = tableKey(targetConnId, targetDb, matchedSchema, matchedName);
+
+  // If table or view, expand it and load columns if not loaded
+  if (matchedType === 'TABLE' || matchedType === 'VIEW') {
+    expandedTables[targetKey] = true;
+    if (!loadedColumns[targetKey]) {
+      loadingColumns[targetKey] = true;
+      schemaService
+        .getColumns(targetConnId, matchedSchema, matchedName, targetDb)
+        .then((cols) => {
+          loadedColumns[targetKey] = cols;
+        })
+        .catch((err) => {
+          console.warn('Failed to load columns for located table:', err);
+        })
+        .finally(() => {
+          loadingColumns[targetKey] = false;
+        });
+    }
+  }
+
+  // Set highlight
+  activeLocatedKey.value = targetKey;
+
+  // Scroll into view
+  await nextTick();
+  setTimeout(() => {
+    const el = document.getElementById(`tree-node-${targetKey}`);
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }, 60);
+
+  // Reset highlight after 3.5s
+  if (highlightTimer) clearTimeout(highlightTimer);
+  highlightTimer = setTimeout(() => {
+    if (activeLocatedKey.value === targetKey) {
+      activeLocatedKey.value = null;
+    }
+  }, 3500);
+
+  const typeDesc =
+    matchedType === 'TABLE' ? '資料表' :
+    matchedType === 'VIEW' ? '檢視表' :
+    matchedType === 'PROCEDURE' ? '預存程序' : '函數';
+
+  workspaceStore.showToast(
+    `已在物件總管定位到${typeDesc} [${matchedSchema}].[${matchedName}]`,
+    'success',
+    2500
+  );
+}
+
+defineExpose({
+  locateTable,
+});
 </script>

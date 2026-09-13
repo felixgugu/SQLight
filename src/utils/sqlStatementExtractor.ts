@@ -306,3 +306,39 @@ export function extractStatementAtCursor(
     },
   };
 }
+
+/**
+ * Splits a full SQL script into separate executable batches by detecting GO boundaries.
+ * Accurately ignores 'GO' inside string literals, comments, or bracketed identifiers.
+ */
+export function splitSqlBatches(fullText: string): string[] {
+  if (!fullText || !fullText.trim()) return [];
+
+  const { lines, lineMetas } = parseSqlLines(fullText);
+  if (lineMetas.length === 0) return [];
+
+  const batches: string[] = [];
+  let currentBatchLines: string[] = [];
+
+  for (let i = 0; i < lineMetas.length; i++) {
+    const meta = lineMetas[i];
+    if (meta?.isGo) {
+      // Encountered a GO separator: flush current batch if not empty
+      const batchSql = currentBatchLines.join('\n').trim();
+      if (batchSql) {
+        batches.push(batchSql);
+      }
+      currentBatchLines = [];
+    } else {
+      const lineStr = lines[i] ?? '';
+      currentBatchLines.push(lineStr);
+    }
+  }
+
+  const finalBatchSql = currentBatchLines.join('\n').trim();
+  if (finalBatchSql) {
+    batches.push(finalBatchSql);
+  }
+
+  return batches;
+}

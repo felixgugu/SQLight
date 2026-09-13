@@ -3,13 +3,16 @@
     <!-- Top Toolbar Header -->
     <AppHeader
       @run-query="handleRunQuery"
+      @cancel-query="handleCancelQuery"
       @format-sql="handleFormatSql"
       @open-sql-file="handleOpenSqlFile"
       @save-sql-file="handleSaveSqlFile"
       @open-connection-modal="handleOpenNewConnection"
       @open-settings-modal="isSettingsModalOpen = true"
       @open-quick-finder="isQuickFinderOpen = true"
+      @open-sql-templates="isSqlTemplatesOpen = true"
     />
+
 
     <!-- Center Resizable Body (Sidebar + Workspace/Results) -->
     <div class="flex-1 flex overflow-hidden relative">
@@ -20,8 +23,10 @@
         class="h-full flex-shrink-0 overflow-hidden"
       >
         <AppSidebar
+          ref="sidebarRef"
           @open-connection-modal="handleOpenNewConnection"
           @edit-connection="handleEditConnection"
+          @request-locate-table="handleLocateTableRequest"
         />
       </div>
 
@@ -80,6 +85,15 @@
       @close="isQuickFinderOpen = false"
     />
 
+    <!-- Common SQL Templates Modal (常用 SQL 範本庫與同層自訂文件) -->
+    <SqlTemplateModal
+      :is-open="isSqlTemplatesOpen"
+      @close="isSqlTemplatesOpen = false"
+      @insert="handleInsertTemplate"
+      @open-in-new-tab="handleOpenTemplateInNewTab"
+    />
+
+
     <!-- Global Floating Toast Notification -->
     <Transition
       enter-active-class="transition duration-200 ease-out"
@@ -121,16 +135,54 @@ import ResizableSplitter from '@/components/common/ResizableSplitter.vue';
 import ConnectionModal from '@/components/modals/ConnectionModal.vue';
 import SettingsModal from '@/components/modals/SettingsModal.vue';
 import QuickObjectFinderModal from '@/components/modals/QuickObjectFinderModal.vue';
+import SqlTemplateModal from '@/components/modals/SqlTemplateModal.vue';
 import { useSplitter } from '@/composables/useSplitter';
 import { useWorkspaceStore } from '@/stores/workspaceStore';
+import { useQueryStore } from '@/stores/queryStore';
 import type { ConnectionProfile } from '@/types/connection';
+import type { SqlTemplate } from '@/types/sqlTemplate';
 
 const workspaceStore = useWorkspaceStore();
+const queryStore = useQueryStore();
 const isConnectionModalOpen = ref(false);
 const isSettingsModalOpen = ref(false);
 const isQuickFinderOpen = ref(false);
+const isSqlTemplatesOpen = ref(false);
 const editingProfile = ref<ConnectionProfile | null>(null);
 const mainWorkspaceRef = ref<InstanceType<typeof AppMain> | null>(null);
+const sidebarRef = ref<InstanceType<typeof AppSidebar> | null>(null);
+
+async function handleLocateTableRequest() {
+  if (!workspaceStore.isSidebarOpen) {
+    workspaceStore.toggleSidebar();
+  }
+
+  const target = mainWorkspaceRef.value?.getTableNameAtCursor();
+  if (!target || !target.table) {
+    workspaceStore.showToast(
+      '游標處未偵測到資料表名稱，請將游標移至資料表或反白選取名稱',
+      'info',
+      2500
+    );
+    return;
+  }
+
+  if (sidebarRef.value) {
+    await sidebarRef.value.locateTable(target);
+  }
+}
+
+function handleInsertTemplate(template: SqlTemplate) {
+  isSqlTemplatesOpen.value = false;
+  mainWorkspaceRef.value?.insertTextAtCursor(template.code, template.title);
+}
+
+function handleOpenTemplateInNewTab(template: SqlTemplate) {
+  isSqlTemplatesOpen.value = false;
+  workspaceStore.addSqlTab(template.code, `${template.title}.sql`);
+  workspaceStore.showToast(`已在新分頁開啟「${template.title}」`, 'info', 2200);
+}
+
 
 function handleOpenNewConnection() {
   editingProfile.value = null;
@@ -168,6 +220,10 @@ function handleRunQuery(mode: 'current' | 'all' = 'current') {
   mainWorkspaceRef.value?.runQuery(mode);
 }
 
+function handleCancelQuery() {
+  queryStore.cancelQuery();
+}
+
 function handleFormatSql() {
   if (mainWorkspaceRef.value) {
     mainWorkspaceRef.value.formatCode();
@@ -185,6 +241,21 @@ function handleSaveSqlFile() {
 }
 
 function handleGlobalKeydown(e: KeyboardEvent) {
+  // Alt + Break / Pause -> Cancel Running Query
+  if (e.altKey && (e.key === 'Pause' || e.key === 'Cancel' || e.code === 'Pause')) {
+    e.preventDefault();
+    handleCancelQuery();
+    return;
+  }
+
+  // Escape -> Cancel Query if executing and no modal is open
+  if (e.key === 'Escape' && queryStore.isExecuting) {
+    if (!isQuickFinderOpen.value && !isConnectionModalOpen.value && !isSettingsModalOpen.value) {
+      e.preventDefault();
+      handleCancelQuery();
+      return;
+    }
+  }
   // Ctrl/Cmd + Shift + Enter -> Run All
   if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'Enter') {
     e.preventDefault();
@@ -232,13 +303,22 @@ function handleOpenQuickFinder() {
   isQuickFinderOpen.value = true;
 }
 
+function handleOpenSqlTemplates() {
+  isSqlTemplatesOpen.value = true;
+}
+
 onMounted(() => {
   window.addEventListener('keydown', handleGlobalKeydown);
   window.addEventListener('sqlight:open-quick-finder', handleOpenQuickFinder);
+  window.addEventListener('sqlight:open-sql-templates', handleOpenSqlTemplates);
+  window.addEventListener('sqlight:locate-table-at-cursor', handleLocateTableRequest);
 });
 
 onBeforeUnmount(() => {
   window.removeEventListener('keydown', handleGlobalKeydown);
   window.removeEventListener('sqlight:open-quick-finder', handleOpenQuickFinder);
+  window.removeEventListener('sqlight:open-sql-templates', handleOpenSqlTemplates);
+  window.removeEventListener('sqlight:locate-table-at-cursor', handleLocateTableRequest);
 });
 </script>
+

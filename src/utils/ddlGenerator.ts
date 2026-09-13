@@ -89,6 +89,7 @@ export function generateCreateTableDdl(options: DdlOptions): string {
     const pkColList = pkCols
       .map((c) => `${escapeIdentifier(c.name)} ASC`)
       .join(', ');
+    lines.push(`    -- 提示：若修改資料表名稱，請一併修改下方的約束名稱 ${pkConstraintName}`);
     lines.push(`    CONSTRAINT ${pkConstraintName} PRIMARY KEY CLUSTERED (${pkColList})`);
   }
 
@@ -100,14 +101,8 @@ export function generateCreateTableDdl(options: DdlOptions): string {
 -- 資料表結構 DDL 腳本: ${fullTableName}
 -- 產生時間: ${nowStr}
 -- ============================================================
-${useDbHeader}SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
-
-CREATE TABLE ${fullTableName} (
+${useDbHeader}CREATE TABLE ${fullTableName} (
 ${columnsSql}
 );
-GO
 `;
 }

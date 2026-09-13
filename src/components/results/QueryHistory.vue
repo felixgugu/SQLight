@@ -29,16 +29,26 @@
           <span
             :class="[
               'w-2 h-2 rounded-full mt-1.5 flex-shrink-0',
-              item.status === 'success' ? 'bg-emerald-500 shadow-xs shadow-emerald-500/50' : 'bg-rose-500'
+              item.status === 'success'
+                ? 'bg-emerald-500 shadow-xs shadow-emerald-500/50'
+                : item.status === 'cancelled'
+                ? 'bg-amber-400 shadow-xs shadow-amber-400/50'
+                : 'bg-rose-500'
             ]"
-            :title="item.status"
+            :title="item.status === 'cancelled' ? '已取消 (Cancelled)' : item.status"
           />
 
           <div class="truncate flex-1 min-w-0">
             <div class="text-dark-200 truncate font-mono text-xs group-hover:text-brand-300">
               {{ item.sql }}
             </div>
-            <div v-if="item.errorMessage" class="text-rose-400 text-xxs truncate mt-0.5">
+            <div
+              v-if="item.errorMessage"
+              :class="[
+                'text-xxs truncate mt-0.5',
+                item.status === 'cancelled' ? 'text-amber-400/90' : 'text-rose-400'
+              ]"
+            >
               {{ item.errorMessage }}
             </div>
           </div>

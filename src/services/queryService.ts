@@ -19,4 +19,20 @@ export const queryService = {
       timeoutSeconds,
     });
   },
+
+  async cancelQuery(
+    connectionId: string,
+    requestId?: string
+  ): Promise<void> {
+    return invokeCommand<void>('cancel_query', {
+      connectionId,
+      requestId,
+    });
+  },
+
+  async getConnectionSpid(connectionId: string): Promise<number | null> {
+    return invokeCommand<number | null>('get_connection_spid', {
+      connectionId,
+    });
+  },
 };

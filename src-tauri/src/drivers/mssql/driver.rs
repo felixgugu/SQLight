@@ -45,15 +45,39 @@ impl DatabaseDriver for SqlServerDriver {
 
         let _ = tcp.set_nodelay(true);
 
-        let client = Client::connect(config, tcp.compat_write())
+        let mut client = Client::connect(config, tcp.compat_write())
             .await
             .map_err(|e| AppError::Connection {
                 message: format!("SQL Server handshake/authentication failed: {}", e),
             })?;
 
+        let spid = match client.simple_query("SELECT @@SPID;").await {
+            Ok(stream) => match stream.into_results().await {
+                Ok(results) => results
+                    .first()
+                    .and_then(|rows| rows.first())
+                    .and_then(|row| {
+                        if let Ok(Some(v)) = row.try_get::<i32, _>(0) {
+                            return Some(v as u32);
+                        }
+                        if let Ok(Some(v)) = row.try_get::<i16, _>(0) {
+                            return Some(v as u32);
+                        }
+                        if let Ok(Some(v)) = row.try_get::<i64, _>(0) {
+                            return Some(v as u32);
+                        }
+                        None
+                    })
+                    .unwrap_or(0),
+                Err(_) => 0,
+            },
+            Err(_) => 0,
+        };
+
         Ok(Box::new(SqlServerConnection::new(
             client,
             profile.database.clone(),
+            spid,
         )))
     }
 

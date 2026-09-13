@@ -3,6 +3,7 @@ use keyring::Entry;
 
 const SERVICE_NAME: &str = "SQLightDesktopClient";
 
+#[derive(Clone)]
 pub struct CredentialStore;
 
 impl CredentialStore {

@@ -3,6 +3,7 @@ import { ref, computed, reactive } from 'vue';
 import type { ConnectionProfile, ConnectionStatus } from '@/types/connection';
 import { connectionService, type SaveConnectionPayload } from '@/services/connectionService';
 import { schemaService } from '@/services/schemaService';
+import { queryService } from '@/services/queryService';
 import { useSchemaStore } from './schemaStore';
 import { useWorkspaceStore } from './workspaceStore';
 
@@ -54,6 +55,7 @@ export const useConnectionStore = defineStore('connection', () => {
   const activeConnectionId = ref<string | null>(null);
   const status = ref<ConnectionStatus>('disconnected');
   const activeDatabase = ref<string>('master');
+  const activeSpid = ref<number | null>(null);
   const availableDatabases = ref<string[]>(['master', 'tempdb', 'model', 'msdb']);
   const databasesByConn = reactive<Record<string, string[]>>(loadDatabasesCache());
   const lastDbByConn = reactive<Record<string, string>>(loadLastDbByConn());
@@ -274,6 +276,16 @@ export const useConnectionStore = defineStore('connection', () => {
       recordLastDatabase(id, targetDb);
 
       status.value = 'connected';
+      try {
+        const spid = await queryService.getConnectionSpid(id);
+        if (myEpoch === connectEpoch) {
+          activeSpid.value = spid;
+        }
+      } catch {
+        if (myEpoch === connectEpoch) {
+          activeSpid.value = null;
+        }
+      }
       await refreshDatabases(id);
       if (myEpoch !== connectEpoch) return;
 
@@ -285,6 +297,7 @@ export const useConnectionStore = defineStore('connection', () => {
         errorMessage.value = err instanceof Error ? err.message : String(err);
         activeConnectionId.value = prevActiveConnId;
         activeDatabase.value = prevActiveDb;
+        activeSpid.value = null;
       }
       throw err;
     }
@@ -299,6 +312,7 @@ export const useConnectionStore = defineStore('connection', () => {
       }
       status.value = 'disconnected';
       activeConnectionId.value = null;
+      activeSpid.value = null;
     }
   }
 
@@ -364,6 +378,7 @@ export const useConnectionStore = defineStore('connection', () => {
     activeConnection,
     status,
     activeDatabase,
+    activeSpid,
     availableDatabases,
     databasesByConn,
     isLoading,

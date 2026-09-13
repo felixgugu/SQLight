@@ -37,7 +37,7 @@ export interface QueryHistoryItem {
   sql: string;
   executedAt: string;
   executionTimeMs: number;
-  status: 'success' | 'error';
+  status: 'success' | 'error' | 'cancelled';
   affectedRows?: number;
   errorMessage?: string;
 }

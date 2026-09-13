@@ -12,11 +12,21 @@ use std::sync::{Arc, Mutex as StdMutex};
 use tokio::sync::Mutex as TokioMutex;
 use uuid::Uuid;
 
+#[allow(dead_code)]
+struct ActiveQueryState {
+    request_id: String,
+    connection_id: String,
+    spid: u32,
+    cancel_tx: Option<tokio::sync::oneshot::Sender<()>>,
+}
+
+#[derive(Clone)]
 pub struct ConnectionManager {
     credential_store: CredentialStore,
     storage: StorageService,
-    active_connections: Arc<TokioMutex<HashMap<String, Box<dyn DatabaseConnection>>>>,
+    active_connections: Arc<TokioMutex<HashMap<String, Arc<TokioMutex<Box<dyn DatabaseConnection>>>>>>,
     password_cache: Arc<StdMutex<HashMap<String, String>>>,
+    active_queries: Arc<StdMutex<HashMap<String, ActiveQueryState>>>,
 }
 
 impl ConnectionManager {
@@ -26,6 +36,7 @@ impl ConnectionManager {
             storage: StorageService::new(),
             active_connections: Arc::new(TokioMutex::new(HashMap::new())),
             password_cache: Arc::new(StdMutex::new(HashMap::new())),
+            active_queries: Arc::new(StdMutex::new(HashMap::new())),
         }
     }
 
@@ -129,24 +140,14 @@ impl ConnectionManager {
         driver.test_connection(&temp_profile, &password).await
     }
 
-    pub async fn connect(&self, id: &str) -> AppResult<()> {
-        let profiles = self.storage.load_profiles()?;
-        let profile = profiles
-            .iter()
-            .find(|p| p.id == id)
-            .ok_or_else(|| AppError::NotFound {
-                message: format!("Connection profile {} not found", id),
-            })?;
-
-        // 1. Check in-memory password cache first
-        let cached_password = self
+    fn get_password(&self, id: &str) -> String {
+        let cached = self
             .password_cache
             .lock()
             .ok()
             .and_then(|cache| cache.get(id).cloned());
 
-        // 2. Check Windows Credential Manager if not in cache
-        let password = match cached_password {
+        match cached {
             Some(p) if !p.is_empty() => p,
             _ => {
                 let from_store = self
@@ -163,14 +164,53 @@ impl ConnectionManager {
                 }
                 from_store
             }
-        };
+        }
+    }
+
+    pub async fn connect(&self, id: &str) -> AppResult<()> {
+        let profiles = self.storage.load_profiles()?;
+        let profile = profiles
+            .iter()
+            .find(|p| p.id == id)
+            .ok_or_else(|| AppError::NotFound {
+                message: format!("Connection profile {} not found", id),
+            })?;
+
+        let password = self.get_password(id);
 
         let driver = SqlServerDriver::new();
         let conn = driver.connect(profile, &password).await?;
 
         let mut conns = self.active_connections.lock().await;
-        conns.insert(id.to_string(), conn);
+        conns.insert(id.to_string(), Arc::new(TokioMutex::new(conn)));
         Ok(())
+    }
+
+    pub async fn get_or_connect(&self, id: &str) -> AppResult<Arc<TokioMutex<Box<dyn DatabaseConnection>>>> {
+        {
+            let conns = self.active_connections.lock().await;
+            if let Some(conn_arc) = conns.get(id) {
+                return Ok(conn_arc.clone());
+            }
+        }
+        self.connect(id).await?;
+        let conns = self.active_connections.lock().await;
+        conns.get(id).cloned().ok_or_else(|| AppError::Connection {
+            message: format!("Not connected to connection '{}'", id),
+        })
+    }
+
+    pub async fn get_connection_spid(&self, id: &str) -> AppResult<Option<u32>> {
+        let conn_arc = {
+            let conns = self.active_connections.lock().await;
+            conns.get(id).cloned()
+        };
+        if let Some(conn_arc) = conn_arc {
+            let conn = conn_arc.lock().await;
+            Ok(Some(conn.spid()))
+        } else {
+            Ok(None)
+        }
     }
 
     pub async fn disconnect(&self, id: &str) -> AppResult<()> {
@@ -184,21 +224,121 @@ impl ConnectionManager {
         id: &str,
         sql: &str,
         max_rows: Option<usize>,
+        request_id: Option<&str>,
     ) -> AppResult<QueryResult> {
-        let mut conns = self.active_connections.lock().await;
-        let conn = conns.get_mut(id).ok_or_else(|| AppError::Connection {
-            message: format!("Not connected to connection '{}'", id),
-        })?;
+        let conn_arc = self.get_or_connect(id).await?;
+        let req_id = request_id
+            .filter(|s| !s.trim().is_empty())
+            .map(|s| s.to_string())
+            .unwrap_or_else(|| Uuid::new_v4().to_string());
 
-        conn.execute_query(sql, max_rows).await
+        let (cancel_tx, mut cancel_rx) = tokio::sync::oneshot::channel::<()>();
+
+        let spid = {
+            let conn = conn_arc.lock().await;
+            conn.spid()
+        };
+
+        {
+            let mut queries = self.active_queries.lock().unwrap();
+            queries.insert(
+                req_id.clone(),
+                ActiveQueryState {
+                    request_id: req_id.clone(),
+                    connection_id: id.to_string(),
+                    spid,
+                    cancel_tx: Some(cancel_tx),
+                },
+            );
+        }
+
+        let mut conn = conn_arc.lock().await;
+        let query_fut = conn.execute_query(sql, max_rows);
+
+        let res = tokio::select! {
+            biased;
+            _ = &mut cancel_rx => {
+                // Query was cancelled by user!
+                // TCP stream is dirty due to mid-flight cancel; remove from pool
+                {
+                    let mut conns = self.active_connections.lock().await;
+                    conns.remove(id);
+                }
+                // Preemptively re-connect in background so next query doesn't wait
+                let self_clone = self.clone();
+                let id_clone = id.to_string();
+                tokio::spawn(async move {
+                    let _ = self_clone.connect(&id_clone).await;
+                });
+                Err(AppError::QueryCancelled)
+            }
+            query_res = query_fut => {
+                query_res
+            }
+        };
+
+        if let Ok(mut queries) = self.active_queries.lock() {
+            queries.remove(&req_id);
+        }
+
+        res
+    }
+
+    pub async fn cancel_query(
+        &self,
+        connection_id: &str,
+        request_id: Option<&str>,
+    ) -> AppResult<()> {
+        let query_state = {
+            let mut queries = self.active_queries.lock().unwrap();
+            if let Some(req_id) = request_id.filter(|s| !s.trim().is_empty()) {
+                queries.remove(req_id)
+            } else {
+                let found_key = queries
+                    .iter()
+                    .find(|(_, q)| q.connection_id == connection_id)
+                    .map(|(k, _)| k.clone());
+                found_key.and_then(|k| queries.remove(&k))
+            }
+        };
+
+        if let Some(mut state) = query_state {
+            if let Some(tx) = state.cancel_tx.take() {
+                let _ = tx.send(());
+            }
+
+            let spid = state.spid;
+            if spid > 0 {
+                let conn_id = state.connection_id.clone();
+                let profiles = self.storage.load_profiles().unwrap_or_default();
+                if let Some(profile) = profiles.into_iter().find(|p| p.id == conn_id) {
+                    let password = self.get_password(&conn_id);
+                    tokio::spawn(async move {
+                        let driver = SqlServerDriver::new();
+                        if let Ok(mut aux_conn) = driver.connect(&profile, &password).await {
+                            let kill_sql = format!("KILL {};", spid);
+                            let _ = aux_conn.execute_query(&kill_sql, None).await;
+                        }
+                    });
+                }
+            }
+        } else {
+            // If no active query was found in registry, still drop connection as a safeguard
+            let mut conns = self.active_connections.lock().await;
+            conns.remove(connection_id);
+            let self_clone = self.clone();
+            let id_clone = connection_id.to_string();
+            tokio::spawn(async move {
+                let _ = self_clone.connect(&id_clone).await;
+            });
+        }
+
+        Ok(())
     }
 
     pub async fn get_databases(&self, id: &str) -> AppResult<Vec<DatabaseItem>> {
-        let mut conns = self.active_connections.lock().await;
-        let conn = conns.get_mut(id).ok_or_else(|| AppError::Connection {
-            message: format!("Not connected to connection '{}'", id),
-        })?;
-
+        let conn_arc = self.get_or_connect(id).await?;
+        let mut conn = conn_arc.lock().await;
         conn.get_databases().await
     }
 
@@ -208,11 +348,8 @@ impl ConnectionManager {
         database: Option<&str>,
         schema: Option<&str>,
     ) -> AppResult<Vec<TableItem>> {
-        let mut conns = self.active_connections.lock().await;
-        let conn = conns.get_mut(id).ok_or_else(|| AppError::Connection {
-            message: format!("Not connected to connection '{}'", id),
-        })?;
-
+        let conn_arc = self.get_or_connect(id).await?;
+        let mut conn = conn_arc.lock().await;
         conn.get_tables(database, schema).await
     }
 
@@ -223,11 +360,8 @@ impl ConnectionManager {
         schema: &str,
         table: &str,
     ) -> AppResult<Vec<ColumnItem>> {
-        let mut conns = self.active_connections.lock().await;
-        let conn = conns.get_mut(id).ok_or_else(|| AppError::Connection {
-            message: format!("Not connected to connection '{}'", id),
-        })?;
-
+        let conn_arc = self.get_or_connect(id).await?;
+        let mut conn = conn_arc.lock().await;
         conn.get_columns(database, schema, table).await
     }
 
@@ -236,20 +370,14 @@ impl ConnectionManager {
         id: &str,
         database: Option<&str>,
     ) -> AppResult<Vec<TableSchema>> {
-        let mut conns = self.active_connections.lock().await;
-        let conn = conns.get_mut(id).ok_or_else(|| AppError::Connection {
-            message: format!("Not connected to connection '{}'", id),
-        })?;
-
+        let conn_arc = self.get_or_connect(id).await?;
+        let mut conn = conn_arc.lock().await;
         conn.get_database_schema(database).await
     }
 
     pub async fn switch_database(&self, id: &str, database: &str) -> AppResult<()> {
-        let mut conns = self.active_connections.lock().await;
-        let conn = conns.get_mut(id).ok_or_else(|| AppError::Connection {
-            message: format!("Not connected to connection '{}'", id),
-        })?;
-
+        let conn_arc = self.get_or_connect(id).await?;
+        let mut conn = conn_arc.lock().await;
         conn.switch_database(database).await
     }
 }

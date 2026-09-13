@@ -30,6 +30,9 @@ pub enum AppError {
     NotFound {
         message: String,
     },
+
+    #[error("Query cancelled by user")]
+    QueryCancelled,
 }
 
 pub type AppResult<T> = Result<T, AppError>;

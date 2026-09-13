@@ -139,22 +139,31 @@
     <div :class="['flex items-center space-x-2', isDbaDropdownOpen ? 'relative z-50' : '']">
       <!-- Main Action Toolbar (Run, Run All, Stop, Format, New Tab, Limit) -->
       <div class="flex items-center space-x-1">
-        <!-- Run Current Statement / Selected Button -->
+        <!-- Run Current Statement / Selected Button (Dynamic Cancel when running) -->
         <button
+          v-if="!queryStore.isExecuting"
           @click="$emit('run-query', 'current')"
-          :disabled="queryStore.isExecuting"
-          class="p-1.5 bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white rounded font-medium shadow-xs transition-colors group disabled:opacity-50 cursor-pointer flex items-center justify-center"
+          class="p-1.5 bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white rounded font-medium shadow-xs transition-colors group cursor-pointer flex items-center justify-center"
           title="執行當前語句或選取內容 (Ctrl + Enter)"
         >
-          <RotateCw v-if="queryStore.isExecuting" class="w-3.5 h-3.5 animate-spin" />
-          <Play v-else class="w-3.5 h-3.5 fill-current" />
+          <Play class="w-3.5 h-3.5 fill-current" />
+        </button>
+        <button
+          v-else
+          @click="$emit('cancel-query')"
+          :disabled="queryStore.isCancelling"
+          class="p-1.5 bg-rose-600 hover:bg-rose-500 active:bg-rose-700 text-white rounded font-medium shadow-xs transition-colors group cursor-pointer flex items-center justify-center animate-pulse disabled:opacity-50"
+          :title="queryStore.isCancelling ? '正在中斷查詢中...' : '點擊中斷並取消查詢 (Click to Cancel / Esc)'"
+        >
+          <RotateCw v-if="queryStore.isCancelling" class="w-3.5 h-3.5 animate-spin" />
+          <Square v-else class="w-3.5 h-3.5 fill-current" />
         </button>
 
         <!-- Run All Statements Button -->
         <button
           @click="$emit('run-query', 'all')"
           :disabled="queryStore.isExecuting"
-          class="p-1.5 bg-emerald-700/80 hover:bg-emerald-600 active:bg-emerald-800 text-emerald-100 hover:text-white rounded font-medium shadow-xs transition-colors group disabled:opacity-50 cursor-pointer flex items-center justify-center"
+          class="p-1.5 bg-emerald-700/80 hover:bg-emerald-600 active:bg-emerald-800 text-emerald-100 hover:text-white rounded font-medium shadow-xs transition-colors group disabled:opacity-40 cursor-pointer flex items-center justify-center"
           title="無條件執行整頁全部內容 (Ctrl + Shift + Enter)"
         >
           <PlaySquare class="w-3.5 h-3.5" />
@@ -162,11 +171,18 @@
 
         <!-- Stop Button -->
         <button
-          class="p-1.5 bg-dark-800 hover:bg-dark-750 text-dark-400 hover:text-dark-200 rounded border border-dark-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center"
-          :disabled="!queryStore.isExecuting"
-          title="取消查詢執行 (Stop Execution)"
+          @click="$emit('cancel-query')"
+          :disabled="!queryStore.isExecuting || queryStore.isCancelling"
+          :class="[
+            'p-1.5 rounded border transition-colors flex items-center justify-center',
+            queryStore.isExecuting
+              ? 'bg-rose-600 hover:bg-rose-500 active:bg-rose-700 text-white border-rose-500 cursor-pointer animate-pulse shadow-xs'
+              : 'bg-dark-800 text-dark-400 border-dark-700 opacity-40 cursor-not-allowed'
+          ]"
+          :title="queryStore.isExecuting ? (queryStore.isCancelling ? '正在中斷查詢...' : '取消查詢執行 (Alt + Break / Esc)') : '目前無執行中的查詢'"
         >
-          <Square class="w-3.5 h-3.5" />
+          <RotateCw v-if="queryStore.isCancelling" class="w-3.5 h-3.5 animate-spin" />
+          <Square v-else class="w-3.5 h-3.5" />
         </button>
 
         <div class="h-4 w-px bg-dark-700 mx-1"></div>
@@ -215,6 +231,16 @@
         >
           <Search class="w-3.5 h-3.5 text-brand-400" />
         </button>
+
+        <!-- SQL Templates Library Button (非快速鍵，自訂語法與範本庫) -->
+        <button
+          @click="$emit('open-sql-templates')"
+          class="p-1.5 bg-dark-800 hover:bg-dark-750 text-dark-300 hover:text-dark-100 rounded border border-dark-700 transition-colors cursor-pointer flex items-center justify-center"
+          title="常用 SQL 範本庫 (常用語法、CTE、進階用法、說明與同層自訂文件)"
+        >
+          <BookOpen class="w-3.5 h-3.5 text-amber-400" />
+        </button>
+
 
         <!-- DBA Diagnostics Toolbox Button & Dropdown -->
         <div class="relative">
@@ -408,6 +434,7 @@ import {
   Check,
   Activity,
   Search,
+  BookOpen,
   Gauge,
   Workflow,
   Network,
@@ -432,13 +459,16 @@ function openDbaQuery(query: DbaQueryItem) {
 
 const emit = defineEmits<{
   (e: 'run-query', mode?: 'current' | 'all'): void;
+  (e: 'cancel-query'): void;
   (e: 'format-sql'): void;
   (e: 'open-sql-file'): void;
   (e: 'save-sql-file'): void;
   (e: 'open-connection-modal'): void;
   (e: 'open-settings-modal'): void;
   (e: 'open-quick-finder'): void;
+  (e: 'open-sql-templates'): void;
 }>();
+
 
 async function handleSelectConnection(connId: string) {
   isConnDropdownOpen.value = false;
