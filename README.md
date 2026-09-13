@@ -466,6 +466,10 @@ npm run build:tauri
 
 # 建置免安裝綠色版可攜式執行檔 (Portable .exe)
 npm run build:portable
+
+# 執行自動化一鍵打包腳本 (自動匯出執行檔、WebView2Loader.dll、自訂範本並壓縮為 zip)
+npm run build:portable:ps1
+# 或於終端機執行 .\build-portable.ps1，亦可直接雙擊 build-portable.bat
 ```
 
 打包完成後的 Windows 執行檔將位於 `src-tauri/target/release/` 目錄中。

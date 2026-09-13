@@ -9,6 +9,7 @@
     "build": "vue-tsc --noEmit && vite build",
     "build:tauri": "tauri build",
     "build:portable": "tauri build --no-bundle",
+    "build:portable:ps1": "powershell -ExecutionPolicy Bypass -File ./build-portable.ps1",
     "preview": "vite preview",
     "typecheck": "vue-tsc --noEmit",
     "test": "node scripts/test.mjs",
