@@ -31,16 +31,121 @@
       </div>
     </div>
 
-    <!-- Filter Search Box -->
-    <div class="p-2 border-b border-dark-700 flex-shrink-0">
+    <!-- Filter Search Box with ComboBox & Clear Button -->
+    <div ref="filterContainerRef" class="p-2 border-b border-dark-700 flex-shrink-0 relative">
       <div class="relative flex items-center">
-        <Search class="w-3 h-3 text-dark-500 absolute left-2" />
+        <Search class="w-3 h-3 text-dark-500 absolute left-2 pointer-events-none" />
         <input
+          ref="filterInputRef"
           v-model="filterQuery"
+          @keydown.enter.stop="handleKeyEnter"
+          @keydown.down.prevent="handleKeyDown"
+          @keydown.up.prevent="handleKeyUp"
+          @keydown.esc.stop="handleKeyEsc"
+          @blur="handleInputBlur"
           type="text"
           placeholder="Filter tables, views & procs..."
-          class="w-full bg-dark-900 border border-dark-700 rounded px-2 py-1 pl-7 text-xs text-dark-100 placeholder-dark-500 focus:outline-none focus:border-brand-500 font-mono transition-colors"
+          class="w-full bg-dark-900 border border-dark-700 rounded px-2 py-1 pl-7 pr-12 text-xs text-dark-100 placeholder-dark-500 focus:outline-none focus:border-brand-500 font-mono transition-colors"
         />
+
+        <!-- Right Buttons inside Input -->
+        <div class="absolute right-1 flex items-center space-x-0.5">
+          <!-- Clear Button (X) -->
+          <button
+            v-if="filterQuery"
+            type="button"
+            @click.stop="clearFilter"
+            class="p-0.5 text-dark-400 hover:text-dark-100 hover:bg-dark-750 rounded transition-colors"
+            title="清除搜尋條件 (Esc)"
+          >
+            <X class="w-3 h-3" />
+          </button>
+
+          <!-- ComboBox Dropdown Toggle Arrow -->
+          <button
+            type="button"
+            @click.stop="toggleHistoryDropdown"
+            :class="[
+              'p-0.5 rounded transition-colors',
+              isHistoryDropdownOpen ? 'text-brand-400 bg-dark-750' : 'text-dark-400 hover:text-dark-200 hover:bg-dark-750'
+            ]"
+            title="過濾歷史紀錄 (Recent Filters)"
+          >
+            <ChevronDown :class="['w-3 h-3 transition-transform duration-150', isHistoryDropdownOpen ? 'rotate-180' : '']" />
+          </button>
+        </div>
+      </div>
+
+      <!-- ComboBox Dropdown Menu -->
+      <div
+        v-if="isHistoryDropdownOpen"
+        class="absolute left-2 right-2 top-full mt-1 z-50 bg-dark-800 border border-dark-700 rounded-md shadow-2xl py-1 text-xs font-sans text-dark-200 select-none overflow-hidden"
+      >
+        <!-- Dropdown Header -->
+        <div class="px-2.5 py-1 text-xxs text-dark-400 border-b border-dark-750 flex items-center justify-between font-sans">
+          <span class="flex items-center space-x-1">
+            <History class="w-3 h-3 text-brand-400" />
+            <span>搜尋歷史紀錄 (最多 30 筆)</span>
+          </span>
+          <span v-if="filterHistory.length > 0" class="text-xxs px-1 py-0.2 bg-dark-700 text-dark-300 rounded font-mono">
+            {{ filterHistory.length }}
+          </span>
+        </div>
+
+        <!-- History List -->
+        <div
+          v-if="filterHistory.length > 0"
+          ref="historyListRef"
+          class="max-h-56 overflow-y-auto py-0.5 font-mono"
+        >
+          <div
+            v-for="(item, idx) in filterHistory"
+            :key="item"
+            @mousedown.prevent
+            @click="selectHistoryItem(item)"
+            @mouseenter="highlightedHistoryIndex = idx"
+            :class="[
+              'px-2.5 py-1.5 flex items-center justify-between cursor-pointer group transition-colors',
+              highlightedHistoryIndex === idx
+                ? 'bg-dark-700 text-dark-100'
+                : 'hover:bg-dark-750 text-dark-300'
+            ]"
+          >
+            <div class="flex items-center space-x-2 min-w-0 flex-1 mr-2">
+              <Clock class="w-3 h-3 text-dark-500 group-hover:text-dark-400 flex-shrink-0" />
+              <span class="text-xs truncate">{{ item }}</span>
+            </div>
+            <button
+              type="button"
+              @click.stop="handleRemoveHistoryItem(item)"
+              class="p-0.5 text-dark-500 hover:text-rose-400 rounded opacity-0 group-hover:opacity-100 transition-all flex-shrink-0"
+              title="刪除此筆紀錄"
+            >
+              <X class="w-3 h-3" />
+            </button>
+          </div>
+        </div>
+
+        <!-- Empty State -->
+        <div v-else class="px-3 py-4 text-center text-dark-500 text-xs font-sans">
+          尚無過濾歷史紀錄
+        </div>
+
+        <!-- Dropdown Footer -->
+        <div
+          v-if="filterHistory.length > 0"
+          class="border-t border-dark-750 px-2.5 py-1 flex items-center justify-between bg-dark-850/60 font-sans"
+        >
+          <span class="text-xxs text-dark-500">按 Enter 或點選套用</span>
+          <button
+            type="button"
+            @mousedown.prevent
+            @click.stop="handleClearAllHistory"
+            class="text-xxs text-dark-400 hover:text-rose-400 transition-colors"
+          >
+            清除全部紀錄
+          </button>
+        </div>
       </div>
     </div>
 
@@ -721,7 +826,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, reactive, nextTick } from 'vue';
+import { ref, computed, onMounted, onUnmounted, reactive, nextTick, watch } from 'vue';
 import {
   Server,
   Plus,
@@ -747,6 +852,8 @@ import {
   Code2,
   Play,
   LocateFixed,
+  History,
+  Clock,
 } from 'lucide-vue-next';
 import ConfirmModal from '@/components/common/ConfirmModal.vue';
 import { useConnectionStore } from '@/stores/connectionStore';
@@ -755,6 +862,13 @@ import { useSchemaStore } from '@/stores/schemaStore';
 import { schemaService } from '@/services/schemaService';
 import { wrapIdentifierIfNeeded } from '@/utils/sqlParser';
 import { generateCreateTableDdl } from '@/utils/ddlGenerator';
+import {
+  loadFilterHistory,
+  saveFilterHistory,
+  addFilterHistoryItem,
+  removeFilterHistoryItem,
+  clearFilterHistory,
+} from '@/utils/filterHistory';
 import type { TableItem, ColumnItem, RoutineItem } from '@/types/schema';
 import type { ConnectionProfile } from '@/types/connection';
 import type { ExtractedTableIdentifier } from '@/utils/sqlIdentifierExtractor';
@@ -790,6 +904,172 @@ function handleColumnDoubleClick(col: ColumnItem) {
 }
 
 const filterQuery = ref('');
+const filterHistory = ref<string[]>(loadFilterHistory());
+const isHistoryDropdownOpen = ref(false);
+const highlightedHistoryIndex = ref(-1);
+const filterContainerRef = ref<HTMLElement | null>(null);
+const filterInputRef = ref<HTMLInputElement | null>(null);
+const historyListRef = ref<HTMLElement | null>(null);
+let debounceRecordTimer: ReturnType<typeof setTimeout> | null = null;
+
+function recordCurrentFilter(query?: string) {
+  const target = (query !== undefined ? query : filterQuery.value).trim();
+  if (!target) return;
+  filterHistory.value = addFilterHistoryItem(filterHistory.value, target);
+  saveFilterHistory(filterHistory.value);
+}
+
+function clearFilter() {
+  filterQuery.value = '';
+  isHistoryDropdownOpen.value = false;
+  highlightedHistoryIndex.value = -1;
+  nextTick(() => {
+    filterInputRef.value?.focus();
+  });
+}
+
+function toggleHistoryDropdown() {
+  isHistoryDropdownOpen.value = !isHistoryDropdownOpen.value;
+  highlightedHistoryIndex.value = -1;
+  if (isHistoryDropdownOpen.value) {
+    nextTick(() => {
+      filterInputRef.value?.focus();
+    });
+  }
+}
+
+function selectHistoryItem(item: string) {
+  filterQuery.value = item;
+  recordCurrentFilter(item);
+  isHistoryDropdownOpen.value = false;
+  highlightedHistoryIndex.value = -1;
+  nextTick(() => {
+    filterInputRef.value?.focus();
+  });
+}
+
+function handleRemoveHistoryItem(item: string) {
+  filterHistory.value = removeFilterHistoryItem(filterHistory.value, item);
+  saveFilterHistory(filterHistory.value);
+  if (highlightedHistoryIndex.value >= filterHistory.value.length) {
+    highlightedHistoryIndex.value = filterHistory.value.length - 1;
+  }
+}
+
+function handleClearAllHistory() {
+  clearFilterHistory();
+  filterHistory.value = [];
+  highlightedHistoryIndex.value = -1;
+  isHistoryDropdownOpen.value = false;
+}
+
+function scrollHighlightedIntoView() {
+  nextTick(() => {
+    const listEl = historyListRef.value;
+    if (!listEl) return;
+    const items = listEl.children;
+    if (highlightedHistoryIndex.value >= 0 && items[highlightedHistoryIndex.value]) {
+      (items[highlightedHistoryIndex.value] as HTMLElement).scrollIntoView({
+        block: 'nearest',
+      });
+    }
+  });
+}
+
+function handleKeyDown() {
+  if (!isHistoryDropdownOpen.value) {
+    isHistoryDropdownOpen.value = true;
+    highlightedHistoryIndex.value = filterHistory.value.length > 0 ? 0 : -1;
+    scrollHighlightedIntoView();
+    return;
+  }
+  if (filterHistory.value.length === 0) return;
+  if (highlightedHistoryIndex.value < filterHistory.value.length - 1) {
+    highlightedHistoryIndex.value++;
+  } else {
+    highlightedHistoryIndex.value = 0;
+  }
+  scrollHighlightedIntoView();
+}
+
+function handleKeyUp() {
+  if (!isHistoryDropdownOpen.value) return;
+  if (filterHistory.value.length === 0) return;
+  if (highlightedHistoryIndex.value > 0) {
+    highlightedHistoryIndex.value--;
+  } else {
+    highlightedHistoryIndex.value = filterHistory.value.length - 1;
+  }
+  scrollHighlightedIntoView();
+}
+
+function handleKeyEnter() {
+  if (isHistoryDropdownOpen.value && highlightedHistoryIndex.value >= 0) {
+    const selected = filterHistory.value[highlightedHistoryIndex.value];
+    if (selected) {
+      selectHistoryItem(selected);
+      return;
+    }
+  }
+  recordCurrentFilter();
+  isHistoryDropdownOpen.value = false;
+  highlightedHistoryIndex.value = -1;
+}
+
+function handleKeyEsc() {
+  if (isHistoryDropdownOpen.value) {
+    isHistoryDropdownOpen.value = false;
+    highlightedHistoryIndex.value = -1;
+  } else if (filterQuery.value) {
+    clearFilter();
+  }
+}
+
+function handleInputBlur() {
+  if (debounceRecordTimer) {
+    clearTimeout(debounceRecordTimer);
+    debounceRecordTimer = null;
+  }
+  recordCurrentFilter();
+}
+
+// Debounce record when user pauses typing
+watch(filterQuery, (newVal) => {
+  if (debounceRecordTimer) {
+    clearTimeout(debounceRecordTimer);
+    debounceRecordTimer = null;
+  }
+  const trimmed = (newVal || '').trim();
+  if (trimmed.length >= 2) {
+    debounceRecordTimer = setTimeout(() => {
+      recordCurrentFilter(trimmed);
+    }, 1200);
+  }
+});
+
+// Click outside handling for dropdown
+function handleDocumentPointerDown(event: PointerEvent) {
+  if (!isHistoryDropdownOpen.value) return;
+  const target = event.target as Node | null;
+  if (filterContainerRef.value && target && !filterContainerRef.value.contains(target)) {
+    isHistoryDropdownOpen.value = false;
+    highlightedHistoryIndex.value = -1;
+  }
+}
+
+onMounted(() => {
+  document.addEventListener('pointerdown', handleDocumentPointerDown);
+});
+
+onUnmounted(() => {
+  document.removeEventListener('pointerdown', handleDocumentPointerDown);
+  if (debounceRecordTimer) {
+    clearTimeout(debounceRecordTimer);
+  }
+  if (highlightTimer) {
+    clearTimeout(highlightTimer);
+  }
+});
 const isRefreshing = ref(false);
 const refreshingConnId = ref<string | null>(null);
 const expandedConns = reactive<Record<string, boolean>>({});

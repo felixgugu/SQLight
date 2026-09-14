@@ -196,7 +196,7 @@
     <div
       v-if="contextMenu.visible"
       :style="{ top: `${contextMenu.y}px`, left: `${contextMenu.x}px` }"
-      class="fixed z-50 bg-dark-800 border border-dark-700 rounded shadow-xl py-1 w-52 text-xs font-sans text-dark-200 select-none"
+      class="fixed z-50 bg-dark-800 border border-dark-700 rounded-md shadow-2xl py-1 w-64 text-xs font-sans text-dark-200 select-none"
       @click="contextMenu.visible = false"
     >
       <div class="px-2.5 py-1 text-xxs text-dark-400 border-b border-dark-750 font-mono truncate">
@@ -226,6 +226,100 @@
         <Braces class="w-3.5 h-3.5 text-teal-400" />
         <span>複製整列為 JSON (Row JSON)</span>
       </button>
+
+      <div class="my-1 border-t border-dark-750"></div>
+
+      <!-- ALTER TABLE Section Header -->
+      <div class="px-2.5 py-1 text-xxs text-indigo-400 font-semibold uppercase tracking-wider flex items-center justify-between">
+        <span>產生 ALTER TABLE 語法</span>
+        <span v-if="targetColumnName" class="text-dark-500 font-mono text-[10px] truncate max-w-[110px]">
+          {{ targetColumnName }}
+        </span>
+      </div>
+
+      <!-- 1. ALTER COLUMN -->
+      <div class="flex items-center hover:bg-dark-750 group transition-colors">
+        <button
+          type="button"
+          @click="handleAlterColumnScript('alter')"
+          class="flex-1 text-left px-2.5 py-1.5 hover:text-dark-100 flex items-center space-x-2 transition-colors min-w-0"
+          title="在新查詢分頁開啟 ALTER COLUMN 語法"
+        >
+          <Pencil class="w-3.5 h-3.5 text-amber-400 flex-shrink-0" />
+          <span class="truncate">修改欄位 (ALTER COLUMN...)</span>
+        </button>
+        <button
+          type="button"
+          @click.stop="handleCopyAlterColumnScript('alter')"
+          class="p-1.5 text-dark-400 hover:text-brand-300 rounded hover:bg-dark-700 mr-1.5 transition-colors flex-shrink-0"
+          title="複製 ALTER COLUMN 語法至剪貼簿"
+        >
+          <Copy class="w-3 h-3" />
+        </button>
+      </div>
+
+      <!-- 2. ADD COLUMN -->
+      <div class="flex items-center hover:bg-dark-750 group transition-colors">
+        <button
+          type="button"
+          @click="handleAlterColumnScript('add')"
+          class="flex-1 text-left px-2.5 py-1.5 hover:text-dark-100 flex items-center space-x-2 transition-colors min-w-0"
+          title="在新查詢分頁開啟 ADD COLUMN 語法"
+        >
+          <Plus class="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" />
+          <span class="truncate">新增欄位 (ADD COLUMN...)</span>
+        </button>
+        <button
+          type="button"
+          @click.stop="handleCopyAlterColumnScript('add')"
+          class="p-1.5 text-dark-400 hover:text-brand-300 rounded hover:bg-dark-700 mr-1.5 transition-colors flex-shrink-0"
+          title="複製 ADD COLUMN 語法至剪貼簿"
+        >
+          <Copy class="w-3 h-3" />
+        </button>
+      </div>
+
+      <!-- 3. DROP COLUMN -->
+      <div class="flex items-center hover:bg-dark-750 group transition-colors">
+        <button
+          type="button"
+          @click="handleAlterColumnScript('drop')"
+          class="flex-1 text-left px-2.5 py-1.5 hover:text-rose-300 text-rose-400/90 flex items-center space-x-2 transition-colors min-w-0"
+          title="在新查詢分頁開啟 DROP COLUMN 語法"
+        >
+          <Trash2 class="w-3.5 h-3.5 text-rose-400 flex-shrink-0" />
+          <span class="truncate">刪除欄位 (DROP COLUMN...)</span>
+        </button>
+        <button
+          type="button"
+          @click.stop="handleCopyAlterColumnScript('drop')"
+          class="p-1.5 text-dark-400 hover:text-rose-300 rounded hover:bg-dark-700 mr-1.5 transition-colors flex-shrink-0"
+          title="複製 DROP COLUMN 語法至剪貼簿"
+        >
+          <Copy class="w-3 h-3" />
+        </button>
+      </div>
+
+      <!-- 4. ALL ALTER TEMPLATES -->
+      <div class="flex items-center hover:bg-dark-750 group transition-colors border-t border-dark-750/50">
+        <button
+          type="button"
+          @click="handleAlterColumnScript('all')"
+          class="flex-1 text-left px-2.5 py-1.5 hover:text-dark-100 flex items-center space-x-2 transition-colors min-w-0 text-indigo-300"
+          title="在新查詢分頁產生完整 ALTER TABLE 語法樣板"
+        >
+          <FileCode class="w-3.5 h-3.5 text-indigo-400 flex-shrink-0" />
+          <span class="truncate">完整 ALTER 樣板 (All-in-One)</span>
+        </button>
+        <button
+          type="button"
+          @click.stop="handleCopyAlterColumnScript('all')"
+          class="p-1.5 text-dark-400 hover:text-indigo-300 rounded hover:bg-dark-700 mr-1.5 transition-colors flex-shrink-0"
+          title="複製完整樣板至剪貼簿"
+        >
+          <Copy class="w-3 h-3" />
+        </button>
+      </div>
 
       <div class="my-1 border-t border-dark-750"></div>
 
@@ -290,7 +384,18 @@ import {
   Copy,
   Braces,
   Table,
+  Plus,
+  Trash2,
+  Pencil,
+  FileCode,
 } from 'lucide-vue-next';
+import {
+  generateAlterColumnSql,
+  generateDropColumnSql,
+  generateAddColumnSql,
+  generateAllAlterTableTemplateSql,
+  type AlterTableColumnOptions,
+} from '@/utils/alterTableGenerator';
 import { AgGridVue } from 'ag-grid-vue3';
 import {
   AllCommunityModule,
@@ -355,6 +460,7 @@ const contextMenu = reactive<{
   colName: string;
   cellValue: unknown;
   rowIndex: number;
+  selectedRow: ColumnStructureRow | null;
 }>({
   visible: false,
   x: 0,
@@ -362,6 +468,11 @@ const contextMenu = reactive<{
   colName: '',
   cellValue: null,
   rowIndex: -1,
+  selectedRow: null,
+});
+
+const targetColumnName = computed(() => {
+  return contextMenu.selectedRow?.columnName || contextMenu.colName || '';
 });
 
 // Adapter columns for export & selection
@@ -681,11 +792,15 @@ function onCellContextMenu(event: CellContextMenuEvent) {
   if (!mouseEvent) return;
 
   const colId = event.column.getColId();
-  contextMenu.x = Math.min(mouseEvent.clientX, window.innerWidth - 220);
-  contextMenu.y = Math.min(mouseEvent.clientY, window.innerHeight - 300);
+  contextMenu.x = Math.min(mouseEvent.clientX, window.innerWidth - 275);
+  contextMenu.y = Math.min(mouseEvent.clientY, window.innerHeight - 440);
   contextMenu.colName = colId;
   contextMenu.cellValue = event.value;
   contextMenu.rowIndex = event.rowIndex ?? -1;
+  contextMenu.selectedRow =
+    (event.data as ColumnStructureRow) ||
+    (event.rowIndex != null && columns.value[event.rowIndex]) ||
+    null;
   contextMenu.visible = true;
 
   function closeMenu() {
@@ -695,6 +810,93 @@ function onCellContextMenu(event: CellContextMenuEvent) {
   setTimeout(() => {
     document.addEventListener('click', closeMenu);
   }, 0);
+}
+
+function getAlterTableOptions(): AlterTableColumnOptions {
+  const row = contextMenu.selectedRow;
+  const colName = row?.columnName || contextMenu.colName || 'ColumnName';
+  return {
+    schema: props.schema,
+    tableName: props.tableName,
+    columnName: colName,
+    dataType: row?.dataType,
+    fullType: row?.fullType,
+    isNullable: row?.isNullable,
+    defaultValue: row?.defaultValue,
+    database: connectionStore.activeDatabase,
+  };
+}
+
+function handleAlterColumnScript(action: 'alter' | 'drop' | 'add' | 'all') {
+  const opts = getAlterTableOptions();
+  let sql = '';
+  let title = '';
+  let toastMsg = '';
+
+  switch (action) {
+    case 'alter':
+      sql = generateAlterColumnSql(opts);
+      title = `ALTER_${props.tableName}_${opts.columnName}.sql`;
+      toastMsg = `已產生修改欄位 [${opts.columnName}] 語法`;
+      break;
+    case 'drop':
+      sql = generateDropColumnSql(opts);
+      title = `DROP_${props.tableName}_${opts.columnName}.sql`;
+      toastMsg = `已產生刪除欄位 [${opts.columnName}] 語法`;
+      break;
+    case 'add':
+      sql = generateAddColumnSql(opts);
+      title = `ADD_${props.tableName}.sql`;
+      toastMsg = `已產生新增欄位語法`;
+      break;
+    case 'all':
+      sql = generateAllAlterTableTemplateSql(opts);
+      title = `ALTER_${props.tableName}_Template.sql`;
+      toastMsg = `已產生 ALTER TABLE 綜合樣板`;
+      break;
+  }
+
+  workspaceStore.addSqlTab(
+    sql,
+    title,
+    connectionStore.activeConnectionId || undefined,
+    connectionStore.activeDatabase || undefined
+  );
+  workspaceStore.showToast(toastMsg, 'success', 2500);
+  contextMenu.visible = false;
+}
+
+function handleCopyAlterColumnScript(action: 'alter' | 'drop' | 'add' | 'all') {
+  const opts = getAlterTableOptions();
+  let sql = '';
+  let actionName = '';
+
+  switch (action) {
+    case 'alter':
+      sql = generateAlterColumnSql(opts);
+      actionName = `ALTER COLUMN [${opts.columnName}]`;
+      break;
+    case 'drop':
+      sql = generateDropColumnSql(opts);
+      actionName = `DROP COLUMN [${opts.columnName}]`;
+      break;
+    case 'add':
+      sql = generateAddColumnSql(opts);
+      actionName = 'ADD COLUMN';
+      break;
+    case 'all':
+      sql = generateAllAlterTableTemplateSql(opts);
+      actionName = 'ALTER TABLE 樣板';
+      break;
+  }
+
+  try {
+    navigator.clipboard?.writeText(sql);
+    workspaceStore.showToast(`已複製 ${actionName} 語法至剪貼簿`, 'success', 2500);
+  } catch (err) {
+    console.warn('Failed to copy to clipboard:', err);
+  }
+  contextMenu.visible = false;
 }
 
 function copyCellValue() {

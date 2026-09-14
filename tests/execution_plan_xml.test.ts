@@ -445,7 +445,7 @@ test('ExecutionPlanViewer.vue uses native Vue event delegation with jsTooltips: 
   assert.ok(vueFile.includes('showNodeOrLineTooltip'), 'Should define showNodeOrLineTooltip');
   assert.ok(vueFile.includes('getLineTooltip'), 'Should extract polyline data flow stats');
   assert.ok(
-    vueFile.includes('.plan-render-canvas .qp-node .qp-tt {\n  display: none !important;'),
+    /\.plan-render-canvas \.qp-node \.qp-tt\s*\{\s*display:\s*none\s*!important;/.test(vueFile),
     'Should hide in-canvas tooltip templates'
   );
   assert.ok(vueFile.includes('body > .qp-tt'), 'Should style active floating tooltip attached to body');
