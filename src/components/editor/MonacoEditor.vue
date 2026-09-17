@@ -30,6 +30,8 @@ const workspaceStore = useWorkspaceStore();
 const editorContainer = ref<HTMLDivElement | null>(null);
 let editorInstance: monaco.editor.IStandaloneCodeEditor | null = null;
 let highlightDecorations: monaco.editor.IEditorDecorationsCollection | null = null;
+let dragOverHandler: ((e: DragEvent) => void) | null = null;
+let dropHandler: ((e: DragEvent) => void) | null = null;
 
 function hexToRgba(hex: string, alpha: number): string {
   let cleanHex = hex.replace('#', '');
@@ -478,6 +480,115 @@ onMounted(() => {
       workspaceStore.clearPendingColumnToInsert();
     }
   });
+
+  // Drag & drop table support from Explorer
+  dragOverHandler = (e: DragEvent) => {
+    if (props.readOnly) return;
+    if (!e.dataTransfer) return;
+    const types = e.dataTransfer.types;
+    if (!types) return;
+    const typeArray = Array.from(types);
+    const hasTable =
+      typeArray.includes('application/sqlight-table') ||
+      (types as any).contains?.('application/sqlight-table') ||
+      typeArray.includes('text/plain');
+
+    if (hasTable) {
+      e.preventDefault();
+      e.stopPropagation();
+      e.dataTransfer.dropEffect = 'copy';
+      if (editorInstance) {
+        const target = editorInstance.getTargetAtClientPoint(e.clientX, e.clientY);
+        if (target?.position) {
+          editorInstance.setPosition(target.position);
+        }
+      }
+    }
+  };
+
+  dropHandler = (e: DragEvent) => {
+    if (props.readOnly) return;
+    if (!e.dataTransfer) return;
+    const types = e.dataTransfer.types;
+    if (!types) return;
+    const typeArray = Array.from(types);
+    const hasTable =
+      typeArray.includes('application/sqlight-table') ||
+      (types as any).contains?.('application/sqlight-table') ||
+      typeArray.includes('text/plain');
+
+    if (!hasTable) return;
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (!editorInstance) return;
+
+    const raw = e.dataTransfer.getData('application/sqlight-table');
+    let sql = '';
+    let tableName = '資料表';
+    if (raw) {
+      try {
+        const data = JSON.parse(raw);
+        tableName = data.table || tableName;
+        if (data.sql) {
+          sql = data.sql;
+        } else {
+          const dbPrefix = data.db ? `[${data.db}].` : '';
+          sql = `SELECT TOP 1000\n  *\nFROM ${dbPrefix}[${data.schema}].[${data.table}];\n`;
+        }
+      } catch {
+        sql = e.dataTransfer.getData('text/plain') || '';
+      }
+    } else {
+      sql = e.dataTransfer.getData('text/plain') || '';
+    }
+
+    if (!sql) return;
+
+    const currentVal = editorInstance.getValue();
+    if (!currentVal.trim()) {
+      editorInstance.setValue(sql);
+      editorInstance.setPosition(new monaco.Position(1, 1));
+    } else {
+      const target = editorInstance.getTargetAtClientPoint(e.clientX, e.clientY);
+      const model = editorInstance.getModel();
+      if (target?.position && model) {
+        const pos = target.position;
+        const lineContent = model.getLineContent(pos.lineNumber);
+        const prefix = lineContent.trim() ? (pos.column > 1 ? '\n\n' : '') : '';
+        const suffix = lineContent.trim() && pos.column <= lineContent.length ? '\n\n' : (sql.endsWith('\n') ? '' : '\n');
+        const textToInsert = prefix + sql + suffix;
+        editorInstance.executeEdits('sqlight-table-drop', [
+          {
+            range: new monaco.Range(pos.lineNumber, pos.column, pos.lineNumber, pos.column),
+            text: textToInsert,
+            forceMoveMarkers: true,
+          },
+        ]);
+        editorInstance.setPosition(new monaco.Position(pos.lineNumber, pos.column));
+      } else if (model) {
+        const lineCount = model.getLineCount();
+        const maxCol = model.getLineMaxColumn(lineCount);
+        const prefix = currentVal.endsWith('\n') ? '\n' : '\n\n';
+        editorInstance.executeEdits('sqlight-table-drop', [
+          {
+            range: new monaco.Range(lineCount, maxCol, lineCount, maxCol),
+            text: `${prefix}${sql}`,
+            forceMoveMarkers: true,
+          },
+        ]);
+        editorInstance.setPosition(new monaco.Position(model.getLineCount(), 1));
+      }
+    }
+
+    const updatedVal = editorInstance.getValue();
+    emit('update:modelValue', updatedVal);
+    editorInstance.focus();
+    workspaceStore.showToast(`已插入 ${tableName} SELECT 語法`, 'success', 2000);
+  };
+
+  editorContainer.value.addEventListener('dragover', dragOverHandler, true);
+  editorContainer.value.addEventListener('drop', dropHandler, true);
 });
 
 // Sync editor options when settingsStore changes
@@ -569,6 +680,10 @@ function getTableNameAtCursor(): ExtractedTableIdentifier | null {
 }
 
 onBeforeUnmount(() => {
+  if (editorContainer.value && dragOverHandler && dropHandler) {
+    editorContainer.value.removeEventListener('dragover', dragOverHandler, true);
+    editorContainer.value.removeEventListener('drop', dropHandler, true);
+  }
   if (highlightDecorations) {
     highlightDecorations.clear();
     highlightDecorations = null;

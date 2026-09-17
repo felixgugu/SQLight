@@ -1,10 +1,10 @@
-import { ref, onUnmounted } from 'vue';
+import { ref, getCurrentInstance, onUnmounted } from 'vue';
 
 export interface UseSplitterOptions {
   direction: 'horizontal' | 'vertical';
   initialSize: number;
-  minSize?: number;
-  maxSize?: number;
+  minSize?: number | (() => number);
+  maxSize?: number | (() => number);
   reverse?: boolean; // When true, dragging backwards increases the size (useful for bottom or right panels)
   onResize?: (newSize: number) => void;
 }
@@ -18,6 +18,12 @@ export function useSplitter(options: UseSplitterOptions) {
     reverse = false,
     onResize,
   } = options;
+
+  function resolveBound(val: number | (() => number) | undefined, defaultVal: number): number {
+    if (typeof val === 'function') return val();
+    if (typeof val === 'number') return val;
+    return defaultVal;
+  }
 
   const size = ref<number>(initialSize);
   const isDragging = ref<boolean>(false);
@@ -33,13 +39,15 @@ export function useSplitter(options: UseSplitterOptions) {
     startPos = direction === 'horizontal' ? event.clientX : event.clientY;
     startSize = size.value;
 
-    document.addEventListener('pointermove', onPointerMove);
-    document.addEventListener('pointerup', onPointerUp);
-    document.addEventListener('pointercancel', onPointerUp);
+    if (typeof document !== 'undefined') {
+      document.addEventListener('pointermove', onPointerMove);
+      document.addEventListener('pointerup', onPointerUp);
+      document.addEventListener('pointercancel', onPointerUp);
 
-    // Prevent text selection during drag
-    document.body.style.userSelect = 'none';
-    document.body.style.cursor = direction === 'horizontal' ? 'col-resize' : 'row-resize';
+      // Prevent text selection during drag
+      document.body.style.userSelect = 'none';
+      document.body.style.cursor = direction === 'horizontal' ? 'col-resize' : 'row-resize';
+    }
   }
 
   function onPointerMove(event: PointerEvent) {
@@ -49,10 +57,13 @@ export function useSplitter(options: UseSplitterOptions) {
     const delta = reverse ? startPos - currentPos : currentPos - startPos;
     let newSize = startSize + delta;
 
-    if (newSize < minSize) {
-      newSize = minSize;
-    } else if (newSize > maxSize) {
-      newSize = maxSize;
+    const currentMin = resolveBound(minSize, 50);
+    const currentMax = resolveBound(maxSize, Infinity);
+
+    if (newSize < currentMin) {
+      newSize = currentMin;
+    } else if (newSize > currentMax) {
+      newSize = currentMax;
     }
 
     size.value = Math.round(newSize);
@@ -63,23 +74,52 @@ export function useSplitter(options: UseSplitterOptions) {
     if (!isDragging.value) return;
 
     isDragging.value = false;
-    document.removeEventListener('pointermove', onPointerMove);
-    document.removeEventListener('pointerup', onPointerUp);
-    document.removeEventListener('pointercancel', onPointerUp);
+    if (typeof document !== 'undefined') {
+      document.removeEventListener('pointermove', onPointerMove);
+      document.removeEventListener('pointerup', onPointerUp);
+      document.removeEventListener('pointercancel', onPointerUp);
 
-    document.body.style.userSelect = '';
-    document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+      document.body.style.cursor = '';
+    }
   }
 
-  onUnmounted(() => {
-    document.removeEventListener('pointermove', onPointerMove);
-    document.removeEventListener('pointerup', onPointerUp);
-    document.removeEventListener('pointercancel', onPointerUp);
-  });
+  function handleWindowResize() {
+    if (typeof window === 'undefined') return;
+    const currentMin = resolveBound(minSize, 50);
+    const currentMax = resolveBound(maxSize, Infinity);
+
+    if (size.value > currentMax) {
+      size.value = Math.round(Math.max(currentMin, currentMax));
+      onResize?.(size.value);
+    } else if (size.value < currentMin) {
+      size.value = Math.round(currentMin);
+      onResize?.(size.value);
+    }
+  }
+
+  if (typeof window !== 'undefined') {
+    window.addEventListener('resize', handleWindowResize);
+  }
+
+  if (getCurrentInstance()) {
+    onUnmounted(() => {
+      if (typeof document !== 'undefined') {
+        document.removeEventListener('pointermove', onPointerMove);
+        document.removeEventListener('pointerup', onPointerUp);
+        document.removeEventListener('pointercancel', onPointerUp);
+      }
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('resize', handleWindowResize);
+      }
+    });
+  }
 
   return {
     size,
     isDragging,
     onPointerDown,
+    onPointerMove,
+    onPointerUp,
   };
 }

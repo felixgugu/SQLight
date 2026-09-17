@@ -1,7 +1,13 @@
 <template>
   <main class="h-full flex flex-col bg-dark-900 overflow-hidden">
     <!-- Workspace Tab Bar -->
-    <div class="h-9 bg-dark-850 border-b border-dark-700 flex items-center px-1.5 space-x-1 select-none flex-shrink-0 overflow-hidden">
+    <div
+      @dragover.prevent="handleBarDragOver"
+      @dragleave="handleBarDragLeave"
+      @drop.prevent="handleBarDrop"
+      class="h-9 bg-dark-850 border-b border-dark-700 flex items-center px-1.5 space-x-1 select-none flex-shrink-0 overflow-hidden transition-colors"
+      :class="[isBarDragOver ? 'bg-dark-800 ring-1 ring-inset ring-brand-500/40' : '']"
+    >
       <!-- Fixed Left: Add New Query Tab Button -->
       <button
         type="button"
@@ -28,26 +34,24 @@
           @pointerdown="onTabPointerDown($event, idx)"
           @click="handleTabClick(tab.id)"
           @contextmenu.prevent="openTabContextMenu($event, tab)"
+          @dragover.stop.prevent="handleTabItemDragOver($event, tab)"
+          @dragleave.stop="handleTabItemDragLeave($event, tab)"
+          @drop.stop.prevent="handleTabItemDrop($event, tab)"
           :class="[
-            'query-tab-item h-7 px-2.5 flex items-center space-x-2 text-xs rounded-t border-t border-x cursor-grab active:cursor-grabbing transition-all duration-100 group max-w-[260px] select-none touch-none flex-shrink-0',
-            workspaceStore.activeTabId === tab.id
-              ? 'font-medium shadow-xs border-dark-700'
-              : 'bg-dark-800/80 text-dark-400 hover:text-dark-200 border-transparent hover:bg-dark-800',
+            'query-tab-item h-7 px-2.5 flex items-center space-x-2 text-xs rounded-t border-x cursor-grab active:cursor-grabbing transition-all duration-100 group max-w-[260px] select-none touch-none flex-shrink-0',
+            workspaceStore.activeTabId === tab.id ? 'font-medium shadow-sm active-tab' : 'inactive-tab shadow-xs',
             isPointerDragging && dragSourceIndex === idx ? 'opacity-35 border-dashed border-brand-400 scale-95' : '',
-            dropHoverIndex === idx && isPointerDragging && dropHoverIndex !== dragSourceIndex ? 'border-brand-400 bg-brand-500/25 ring-1 ring-brand-400 scale-102' : ''
+            dropHoverIndex === idx && isPointerDragging && dropHoverIndex !== dragSourceIndex ? 'border-brand-400 bg-brand-500/25 ring-1 ring-brand-400 scale-102' : '',
+            dragOverTabId === tab.id ? 'border-brand-400 bg-brand-500/30 ring-1 ring-brand-400 scale-102 shadow-md' : ''
           ]"
-          :style="workspaceStore.activeTabId === tab.id ? {
-            backgroundColor: settingsStore.activeSqlTabBgColor,
-            color: settingsStore.activeSqlTabTextColor,
-            borderColor: settingsStore.activeSqlTabBgColor,
-          } : {}"
+          :style="getTabItemStyle(tab, idx)"
           :title="getTabTooltip(tab)"
         >
-          <FileCode v-if="tab.type === 'sql_editor'" class="w-3.5 h-3.5 flex-shrink-0" :class="workspaceStore.activeTabId === tab.id ? 'text-white' : 'text-brand-400'" />
-          <Table2 v-else-if="tab.type === 'table_data'" class="w-3.5 h-3.5 flex-shrink-0" :class="workspaceStore.activeTabId === tab.id ? 'text-white' : 'text-emerald-400'" />
-          <TableProperties v-else-if="tab.type === 'table_structure'" class="w-3.5 h-3.5 flex-shrink-0" :class="workspaceStore.activeTabId === tab.id ? 'text-white' : 'text-indigo-400'" />
-          <Network v-else-if="tab.type === 'execution_plan'" class="w-3.5 h-3.5 flex-shrink-0" :class="workspaceStore.activeTabId === tab.id ? 'text-white' : 'text-purple-400'" />
-          <Workflow v-else-if="tab.type === 'er_diagram'" class="w-3.5 h-3.5 flex-shrink-0" :class="workspaceStore.activeTabId === tab.id ? 'text-white' : 'text-cyan-400'" />
+          <FileCode v-if="tab.type === 'sql_editor'" class="w-3.5 h-3.5 flex-shrink-0 transition-colors" :class="workspaceStore.activeTabId === tab.id ? 'text-white' : 'text-blue-400'" />
+          <Table2 v-else-if="tab.type === 'table_data'" class="w-3.5 h-3.5 flex-shrink-0 transition-colors" :class="workspaceStore.activeTabId === tab.id ? 'text-white' : 'text-emerald-400'" />
+          <TableProperties v-else-if="tab.type === 'table_structure'" class="w-3.5 h-3.5 flex-shrink-0 transition-colors" :class="workspaceStore.activeTabId === tab.id ? 'text-white' : 'text-indigo-400'" />
+          <Network v-else-if="tab.type === 'execution_plan'" class="w-3.5 h-3.5 flex-shrink-0 transition-colors" :class="workspaceStore.activeTabId === tab.id ? 'text-white' : 'text-purple-400'" />
+          <Workflow v-else-if="tab.type === 'er_diagram'" class="w-3.5 h-3.5 flex-shrink-0 transition-colors" :class="workspaceStore.activeTabId === tab.id ? 'text-white' : 'text-cyan-400'" />
 
           <!-- Title Display OR Inline Rename Input -->
           <input
@@ -72,12 +76,13 @@
             <!-- Database badge -->
             <span
               v-if="tab.database"
-              :class="[
-                'text-[10px] font-mono px-1 py-0.2 rounded border flex-shrink-0 transition-colors',
-                workspaceStore.activeTabId === tab.id
-                  ? 'bg-black/25 text-white/90 border-white/20'
-                  : 'text-dark-400 bg-dark-850 border-dark-750/70 group-hover:border-dark-650'
-              ]"
+              class="text-[10px] font-mono px-1 py-0.2 rounded border flex-shrink-0 transition-colors"
+              :class="workspaceStore.activeTabId === tab.id
+                ? 'text-white/95 border-white/20'
+                : 'text-slate-300 border-white/10 group-hover:text-white group-hover:border-white/20'"
+              :style="{
+                backgroundColor: 'var(--tab-badge-bg)',
+              }"
             >
               {{ tab.database }}
             </span>
@@ -86,7 +91,7 @@
           <!-- Dirty Indicator -->
           <span
             v-if="tab.isDirty && editingTabId !== tab.id"
-            class="w-1.5 h-1.5 rounded-full bg-amber-400 flex-shrink-0"
+            class="w-1.5 h-1.5 rounded-full bg-amber-400 flex-shrink-0 ring-1 ring-black/30"
             title="未儲存變更 (Unsaved changes)"
           />
 
@@ -95,12 +100,10 @@
             v-if="editingTabId !== tab.id"
             type="button"
             @click.stop="workspaceStore.closeTab(tab.id)"
-            :class="[
-              'p-0.5 rounded-full opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 cursor-pointer',
-              workspaceStore.activeTabId === tab.id
-                ? 'text-white/80 hover:text-white hover:bg-black/30'
-                : 'text-dark-500 hover:text-dark-200 hover:bg-dark-700'
-            ]"
+            class="p-0.5 rounded-full opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 cursor-pointer"
+            :class="workspaceStore.activeTabId === tab.id
+              ? 'text-white/80 hover:text-white hover:bg-black/30'
+              : 'text-slate-300 hover:text-white hover:bg-white/15'"
             title="關閉分頁 (Close tab)"
           >
             <X class="w-3 h-3" />
@@ -186,6 +189,7 @@
       <!-- Table Data Browser Tab -->
       <TableDataViewer
         v-else-if="workspaceStore.activeTab?.type === 'table_data'"
+        :key="workspaceStore.activeTab.id"
         :schema="(workspaceStore.activeTab as TableDataTab).schema"
         :table-name="(workspaceStore.activeTab as TableDataTab).tableName"
       />
@@ -193,6 +197,7 @@
       <!-- Table Structure Browser Tab -->
       <TableStructureViewer
         v-else-if="workspaceStore.activeTab?.type === 'table_structure'"
+        :key="workspaceStore.activeTab.id"
         :schema="(workspaceStore.activeTab as TableStructureTab).schema"
         :table-name="(workspaceStore.activeTab as TableStructureTab).tableName"
       />
@@ -200,12 +205,14 @@
       <!-- Execution Plan Browser Tab -->
       <ExecutionPlanViewer
         v-else-if="workspaceStore.activeTab?.type === 'execution_plan'"
+        :key="workspaceStore.activeTab.id"
         :tab="workspaceStore.activeTab as ExecutionPlanTab"
       />
 
       <!-- ER Diagram Tab -->
       <ErDiagramViewer
         v-else-if="workspaceStore.activeTab?.type === 'er_diagram'"
+        :key="workspaceStore.activeTab.id"
         :tab="workspaceStore.activeTab as ErDiagramTab"
       />
 
@@ -229,6 +236,7 @@ import TableStructureViewer from '@/components/editor/TableStructureViewer.vue';
 import ExecutionPlanViewer from '@/components/editor/ExecutionPlanViewer.vue';
 import ErDiagramViewer from '@/components/editor/ErDiagramViewer.vue';
 import { saveSqlToFile, openSqlFromFile } from '@/utils/fileStorage';
+import { getTabThemeStyle } from '@/utils/tabTheme';
 import type { SqlEditorTab, TableDataTab, TableStructureTab, ExecutionPlanTab, ErDiagramTab, WorkspaceTab } from '@/types/workspace';
 
 const workspaceStore = useWorkspaceStore();
@@ -341,6 +349,25 @@ function handleTabClick(tabId: string) {
     return;
   }
   workspaceStore.setActiveTab(tabId);
+}
+
+function getTabItemStyle(tab: WorkspaceTab, idx: number) {
+  const isActive = workspaceStore.activeTabId === tab.id;
+  const isDropHover = dropHoverIndex.value === idx && isPointerDragging.value && dropHoverIndex.value !== dragSourceIndex.value;
+  const isDragOver = dragOverTabId.value === tab.id;
+
+  if (isDropHover || isDragOver) {
+    return {
+      borderTopWidth: '2px',
+    };
+  }
+
+  return getTabThemeStyle(
+    tab.type,
+    isActive,
+    settingsStore.activeSqlTabBgColor,
+    settingsStore.activeSqlTabTextColor
+  );
 }
 
 // ========================
@@ -567,6 +594,184 @@ function handleAddNewTab() {
   });
 }
 
+// ========================
+// Drag & Drop Tables from Explorer onto Tabs / Tab Bar
+// ========================
+const isBarDragOver = ref(false);
+const dragOverTabId = ref<string | null>(null);
+let tabHoverSwitchTimer: ReturnType<typeof setTimeout> | null = null;
+
+function isTableDragEvent(e: DragEvent): boolean {
+  if (!e.dataTransfer) return false;
+  const types = e.dataTransfer.types;
+  if (!types) return false;
+  const typeArray = Array.from(types);
+  return (
+    typeArray.includes('application/sqlight-table') ||
+    (types as any).contains?.('application/sqlight-table') ||
+    typeArray.includes('text/plain')
+  );
+}
+
+function handleBarDragOver(e: DragEvent) {
+  if (isTableDragEvent(e)) {
+    e.preventDefault();
+    if (e.dataTransfer) {
+      e.dataTransfer.dropEffect = 'copy';
+    }
+    isBarDragOver.value = true;
+  }
+}
+
+function handleBarDragLeave(e: DragEvent) {
+  const currentTarget = e.currentTarget as HTMLElement | null;
+  const relatedTarget = e.relatedTarget as HTMLElement | null;
+  if (currentTarget && relatedTarget && currentTarget.contains(relatedTarget)) {
+    return;
+  }
+  isBarDragOver.value = false;
+}
+
+function handleBarDrop(e: DragEvent) {
+  isBarDragOver.value = false;
+  if (!isTableDragEvent(e)) return;
+  e.preventDefault();
+
+  const raw = e.dataTransfer?.getData('application/sqlight-table');
+  let tableInfo: { connId?: string; db?: string; schema?: string; table?: string; sql?: string } | null = null;
+  if (raw) {
+    try {
+      tableInfo = JSON.parse(raw);
+    } catch {
+      tableInfo = null;
+    }
+  }
+
+  const plainText = e.dataTransfer?.getData('text/plain') || '';
+  const tableName = tableInfo?.table || 'Query';
+  const dbPrefix = tableInfo?.db ? `[${tableInfo.db}].` : '';
+  const sql = tableInfo?.sql || (tableInfo?.schema && tableInfo?.table
+    ? `SELECT TOP 1000\n  *\nFROM ${dbPrefix}[${tableInfo.schema}].[${tableInfo.table}];\n`
+    : plainText || 'SELECT TOP 1000 * FROM sys.tables;\n');
+
+  try {
+    workspaceStore.addSqlTab(
+      sql,
+      `${tableName}.sql`,
+      tableInfo?.connId,
+      tableInfo?.db
+    );
+    workspaceStore.showToast(`已開啟 ${tableName} 查詢分頁`, 'success', 2000);
+  } catch (err) {
+    console.error('Failed to parse dropped table on bar:', err);
+  }
+}
+
+function handleTabItemDragOver(e: DragEvent, tab: WorkspaceTab) {
+  if (!isTableDragEvent(e)) return;
+  e.preventDefault();
+  if (e.dataTransfer) {
+    e.dataTransfer.dropEffect = 'copy';
+  }
+
+  if (dragOverTabId.value !== tab.id) {
+    dragOverTabId.value = tab.id;
+    if (tabHoverSwitchTimer) {
+      clearTimeout(tabHoverSwitchTimer);
+      tabHoverSwitchTimer = null;
+    }
+    if (workspaceStore.activeTabId !== tab.id) {
+      tabHoverSwitchTimer = setTimeout(() => {
+        workspaceStore.setActiveTab(tab.id);
+      }, 350);
+    }
+  }
+}
+
+function handleTabItemDragLeave(e: DragEvent, tab: WorkspaceTab) {
+  const currentTarget = e.currentTarget as HTMLElement | null;
+  const relatedTarget = e.relatedTarget as HTMLElement | null;
+  if (currentTarget && relatedTarget && currentTarget.contains(relatedTarget)) {
+    return;
+  }
+  if (dragOverTabId.value === tab.id) {
+    dragOverTabId.value = null;
+  }
+  if (tabHoverSwitchTimer) {
+    clearTimeout(tabHoverSwitchTimer);
+    tabHoverSwitchTimer = null;
+  }
+}
+
+async function handleTabItemDrop(e: DragEvent, tab: WorkspaceTab) {
+  if (tabHoverSwitchTimer) {
+    clearTimeout(tabHoverSwitchTimer);
+    tabHoverSwitchTimer = null;
+  }
+  dragOverTabId.value = null;
+
+  if (!isTableDragEvent(e)) return;
+  e.preventDefault();
+
+  const raw = e.dataTransfer?.getData('application/sqlight-table');
+  let tableInfo: { connId?: string; db?: string; schema?: string; table?: string; sql?: string } | null = null;
+  if (raw) {
+    try {
+      tableInfo = JSON.parse(raw);
+    } catch {
+      tableInfo = null;
+    }
+  }
+
+  const plainText = e.dataTransfer?.getData('text/plain') || '';
+  const tableName = tableInfo?.table || 'Query';
+  const dbPrefix = tableInfo?.db ? `[${tableInfo.db}].` : '';
+  const sql = tableInfo?.sql || (tableInfo?.schema && tableInfo?.table
+    ? `SELECT TOP 1000\n  *\nFROM ${dbPrefix}[${tableInfo.schema}].[${tableInfo.table}];\n`
+    : plainText || 'SELECT TOP 1000 * FROM sys.tables;\n');
+
+  try {
+    if (tab.type === 'er_diagram') {
+      workspaceStore.setActiveTab(tab.id);
+      if (tableInfo?.schema && tableInfo?.table) {
+        nextTick(() => {
+          window.dispatchEvent(
+            new CustomEvent('sqlight:add-table-to-er', {
+              detail: {
+                schema: tableInfo!.schema,
+                table: tableInfo!.table,
+                connId: tableInfo!.connId,
+                database: tableInfo!.db,
+              },
+            })
+          );
+        });
+        workspaceStore.showToast(`已將 ${tableInfo.schema}.${tableInfo.table} 加入至 ER 圖`, 'success', 2000);
+      }
+    } else if (tab.type === 'sql_editor') {
+      workspaceStore.setActiveTab(tab.id);
+      const sqlTab = tab as SqlEditorTab;
+      if (!sqlTab.query.trim()) {
+        sqlTab.query = sql;
+      } else {
+        const prefix = sqlTab.query.endsWith('\n') ? '\n' : '\n\n';
+        sqlTab.query += prefix + sql;
+      }
+      workspaceStore.showToast(`已將 ${tableName} 查詢語法加入至分頁`, 'success', 2000);
+    } else {
+      workspaceStore.addSqlTab(
+        sql,
+        `${tableName}.sql`,
+        tableInfo?.connId,
+        tableInfo?.db
+      );
+      workspaceStore.showToast(`已開啟 ${tableName} 查詢分頁`, 'success', 2000);
+    }
+  } catch (err) {
+    console.error('Failed to parse dropped table:', err);
+  }
+}
+
 watch(
   () => workspaceStore.activeTabId,
   (newId) => {
@@ -579,6 +784,10 @@ watch(
 );
 
 onBeforeUnmount(() => {
+  if (tabHoverSwitchTimer) {
+    clearTimeout(tabHoverSwitchTimer);
+    tabHoverSwitchTimer = null;
+  }
   window.removeEventListener('pointermove', onDocumentPointerMove);
   window.removeEventListener('pointerup', onDocumentPointerUp);
   window.removeEventListener('pointercancel', onDocumentPointerUp);
@@ -598,6 +807,23 @@ defineExpose({
 </script>
 
 <style scoped>
+.query-tab-item {
+  background-color: var(--tab-bg);
+  border-top-width: 2px;
+  border-top-color: var(--tab-top-accent);
+  border-left-color: var(--tab-border);
+  border-right-color: var(--tab-border);
+  color: var(--tab-text);
+}
+
+.query-tab-item:hover {
+  background-color: var(--tab-hover-bg);
+  border-top-color: var(--tab-top-accent);
+  border-left-color: var(--tab-hover-border);
+  border-right-color: var(--tab-hover-border);
+  color: var(--tab-hover-text);
+}
+
 .query-tabs-scroll {
   overflow-x: auto;
   overflow-y: hidden;

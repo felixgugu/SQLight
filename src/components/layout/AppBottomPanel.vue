@@ -216,7 +216,8 @@
       <!-- Tab 2: Messages -->
       <ResultMessages
         v-else-if="workspaceStore.bottomPanelTab === 'messages'"
-        :messages="queryStore.activeResult?.messages ?? []"
+        :messages="queryStore.sessionMessages"
+        @clear="queryStore.clearMessages()"
       />
 
       <!-- Tab 3: History -->
@@ -448,7 +449,7 @@ onBeforeUnmount(() => {
 });
 
 const hasErrorMessages = computed(() => {
-  return queryStore.activeResult?.messages.some((m) => m.level === 'error') ?? false;
+  return queryStore.sessionMessages.some((m) => m.level === 'error');
 });
 
 const panelTabs = computed<{ id: BottomPanelTab; label: string; icon: typeof TableProperties; badge?: number }[]>(() => [
@@ -462,7 +463,7 @@ const panelTabs = computed<{ id: BottomPanelTab; label: string; icon: typeof Tab
     id: 'messages',
     label: 'Messages',
     icon: MessageSquare,
-    badge: queryStore.activeResult?.messages.length ?? 0,
+    badge: queryStore.sessionMessages.length,
   },
   {
     id: 'history',

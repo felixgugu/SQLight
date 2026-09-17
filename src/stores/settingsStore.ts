@@ -13,6 +13,7 @@ export interface AppSettings {
   activeSqlTabTextColor: string;
   activeResultTabBgColor: string;
   activeResultTabTextColor: string;
+  erTheme: 'dark' | 'light';
 }
 
 const STORAGE_KEY = 'sqlight_app_settings';
@@ -29,6 +30,7 @@ const DEFAULT_SETTINGS: AppSettings = {
   activeSqlTabTextColor: '#ffffff',
   activeResultTabBgColor: '#065f46',
   activeResultTabTextColor: '#ffffff',
+  erTheme: 'dark',
 };
 
 function loadSettings(): AppSettings {
@@ -58,6 +60,7 @@ export const useSettingsStore = defineStore('settings', () => {
   const activeSqlTabTextColor = ref<string>(initial.activeSqlTabTextColor || '#ffffff');
   const activeResultTabBgColor = ref<string>(initial.activeResultTabBgColor || '#065f46');
   const activeResultTabTextColor = ref<string>(initial.activeResultTabTextColor || '#ffffff');
+  const erTheme = ref<'dark' | 'light'>(initial.erTheme || 'dark');
 
   function saveSettings() {
     const data: AppSettings = {
@@ -72,6 +75,7 @@ export const useSettingsStore = defineStore('settings', () => {
       activeSqlTabTextColor: activeSqlTabTextColor.value,
       activeResultTabBgColor: activeResultTabBgColor.value,
       activeResultTabTextColor: activeResultTabTextColor.value,
+      erTheme: erTheme.value,
     };
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
@@ -94,6 +98,7 @@ export const useSettingsStore = defineStore('settings', () => {
       activeSqlTabTextColor,
       activeResultTabBgColor,
       activeResultTabTextColor,
+      erTheme,
     ],
     () => {
       saveSettings();
@@ -112,6 +117,7 @@ export const useSettingsStore = defineStore('settings', () => {
     activeSqlTabTextColor.value = DEFAULT_SETTINGS.activeSqlTabTextColor;
     activeResultTabBgColor.value = DEFAULT_SETTINGS.activeResultTabBgColor;
     activeResultTabTextColor.value = DEFAULT_SETTINGS.activeResultTabTextColor;
+    erTheme.value = DEFAULT_SETTINGS.erTheme;
   }
 
   return {
@@ -126,6 +132,8 @@ export const useSettingsStore = defineStore('settings', () => {
     activeSqlTabTextColor,
     activeResultTabBgColor,
     activeResultTabTextColor,
+    erTheme,
+    saveSettings,
     resetToDefaults,
   };
 });

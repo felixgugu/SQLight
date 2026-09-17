@@ -21,6 +21,8 @@ export interface QueryMessage {
   code?: number;
   lineNumber?: number;
   timestamp: string;
+  id?: string;
+  seq?: number;
 }
 
 export interface QueryResult {
@@ -40,6 +42,17 @@ export interface QueryHistoryItem {
   status: 'success' | 'error' | 'cancelled';
   affectedRows?: number;
   errorMessage?: string;
+  seq?: number;
+}
+
+export interface SessionMessageItem {
+  id: string;
+  seq: number;
+  level: 'info' | 'warning' | 'error';
+  message: string;
+  code?: number;
+  lineNumber?: number;
+  timestamp: string;
 }
 
 export interface QueryResultTab {

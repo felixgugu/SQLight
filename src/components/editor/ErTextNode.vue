@@ -1,13 +1,14 @@
 <template>
   <div
-    class="w-full h-full rounded-lg shadow-xl border overflow-hidden flex flex-col font-sans transition-all relative select-none group"
+    class="w-full h-full rounded-lg shadow-xl border overflow-hidden flex flex-col font-sans transition-all relative select-none group cursor-move"
     :class="[
       themeClasses.container,
       isSelected ? 'ring-2 ring-brand-400 shadow-brand-500/20' : ''
     ]"
   >
-    <!-- Card Header (Drag Handle) -->
+    <!-- Card Header (Drag Handle) - Only visible in Edit Mode -->
     <div
+      v-if="nodeData.isEditMode"
       class="h-7 px-2 flex items-center justify-between flex-shrink-0 cursor-move border-b select-none"
       :class="themeClasses.header"
     >
@@ -23,7 +24,9 @@
             class="w-2.5 h-2.5 rounded-full transition-transform hover:scale-125 cursor-pointer"
             :class="[
               colorOption.bgClass,
-              nodeData.color === colorOption.key ? 'ring-1 ring-white scale-110' : 'opacity-70 hover:opacity-100'
+              (nodeData.color || 'dark') === colorOption.key
+                ? (isLightTheme ? 'ring-1.5 ring-slate-800 scale-110 shadow-xs' : 'ring-1.5 ring-white scale-110 shadow-xs')
+                : 'opacity-70 hover:opacity-100'
             ]"
             :title="`切換為 ${colorOption.label}`"
           />
@@ -43,8 +46,17 @@
       </div>
     </div>
 
+    <!-- View Mode Subtle Drag Bar (visible on hover) -->
+    <div
+      v-if="!nodeData.isEditMode"
+      class="h-2.5 w-full flex items-center justify-center flex-shrink-0 cursor-move opacity-0 group-hover:opacity-40 hover:!opacity-80 transition-opacity select-none"
+      title="拖曳以移動文字卡片"
+    >
+      <div class="w-6 h-0.5 rounded-full bg-current opacity-60"></div>
+    </div>
+
     <!-- Card Body: Editable Textarea -->
-    <div class="flex-1 w-full relative overflow-hidden p-2 flex flex-col">
+    <div class="flex-1 w-full relative overflow-hidden px-2 pb-2 pt-0.5 flex flex-col cursor-text">
       <textarea
         ref="textareaRef"
         v-model="textContent"
@@ -80,16 +92,21 @@
 import { ref, computed, inject, onMounted } from 'vue';
 import { Type, X } from 'lucide-vue-next';
 import type { Node } from '@antv/x6';
+import { useSettingsStore } from '@/stores/settingsStore';
 
-export type NoteColor = 'amber' | 'blue' | 'emerald' | 'purple' | 'dark';
+export type NoteColor = 'amber' | 'blue' | 'emerald' | 'purple' | 'rose' | 'dark';
 
 export interface ErTextNodeData {
   text: string;
   color?: NoteColor;
+  isEditMode?: boolean;
+  erTheme?: 'dark' | 'light';
 }
 
 const getNode = inject<() => Node>('getNode');
 const node = getNode ? getNode() : null;
+
+const settingsStore = useSettingsStore();
 
 const textareaRef = ref<HTMLTextAreaElement | null>(null);
 const textContent = ref('');
@@ -97,19 +114,67 @@ const isSelected = ref(false);
 
 const nodeData = ref<ErTextNodeData>({
   text: '',
-  color: 'amber',
+  color: 'dark',
+  isEditMode: false,
 });
+
+const isLightTheme = computed(() => (nodeData.value.erTheme || settingsStore.erTheme) === 'light');
 
 const colorOptions: Array<{ key: NoteColor; label: string; bgClass: string }> = [
   { key: 'amber', label: '經典便箋黃', bgClass: 'bg-amber-400' },
   { key: 'blue', label: '科技藍', bgClass: 'bg-sky-400' },
   { key: 'emerald', label: '清新綠', bgClass: 'bg-emerald-400' },
   { key: 'purple', label: '高雅紫', bgClass: 'bg-purple-400' },
+  { key: 'rose', label: '警示紅', bgClass: 'bg-rose-400' },
   { key: 'dark', label: '極簡深灰', bgClass: 'bg-zinc-400' },
 ];
 
 const themeClasses = computed(() => {
-  const c = nodeData.value.color || 'amber';
+  const c = nodeData.value.color || 'dark';
+  const isLight = isLightTheme.value;
+
+  if (isLight) {
+    switch (c) {
+      case 'blue':
+        return {
+          container: 'bg-sky-50 border-sky-300/80 hover:border-sky-400 text-sky-950 shadow-md shadow-sky-900/5',
+          header: 'bg-sky-100/80 border-sky-200 text-sky-800',
+          textarea: 'text-sky-950 placeholder:text-sky-700/40',
+        };
+      case 'emerald':
+        return {
+          container: 'bg-emerald-50 border-emerald-300/80 hover:border-emerald-400 text-emerald-950 shadow-md shadow-emerald-900/5',
+          header: 'bg-emerald-100/80 border-emerald-200 text-emerald-800',
+          textarea: 'text-emerald-950 placeholder:text-emerald-700/40',
+        };
+      case 'purple':
+        return {
+          container: 'bg-purple-50 border-purple-300/80 hover:border-purple-400 text-purple-950 shadow-md shadow-purple-900/5',
+          header: 'bg-purple-100/80 border-purple-200 text-purple-800',
+          textarea: 'text-purple-950 placeholder:text-purple-700/40',
+        };
+      case 'rose':
+        return {
+          container: 'bg-rose-50 border-rose-300/80 hover:border-rose-400 text-rose-950 shadow-md shadow-rose-900/5',
+          header: 'bg-rose-100/80 border-rose-200 text-rose-800',
+          textarea: 'text-rose-950 placeholder:text-rose-700/40',
+        };
+      case 'amber':
+        return {
+          container: 'bg-amber-50 border-amber-300/80 hover:border-amber-400 text-amber-950 shadow-md shadow-amber-900/5',
+          header: 'bg-amber-100/80 border-amber-200 text-amber-800',
+          textarea: 'text-amber-950 placeholder:text-amber-700/40',
+        };
+      case 'dark':
+      default:
+        return {
+          container: 'bg-slate-100 border-slate-400 hover:border-slate-500 text-slate-800 shadow-md shadow-slate-900/5',
+          header: 'bg-slate-200/90 border-slate-300 text-slate-700',
+          textarea: 'text-slate-900 placeholder:text-slate-500',
+        };
+    }
+  }
+
   switch (c) {
     case 'blue':
       return {
@@ -129,18 +194,24 @@ const themeClasses = computed(() => {
         header: 'bg-purple-900/40 border-purple-500/30 text-purple-200',
         textarea: 'text-purple-100 placeholder:text-purple-300/40',
       };
-    case 'dark':
+    case 'rose':
       return {
-        container: 'bg-dark-850/95 border-dark-700 hover:border-dark-600 text-dark-100 shadow-dark-950/60 backdrop-blur-md',
-        header: 'bg-dark-800 border-dark-700/80 text-dark-300',
-        textarea: 'text-dark-100 placeholder:text-dark-500',
+        container: 'bg-rose-950/40 border-rose-500/50 hover:border-rose-400 text-rose-100 shadow-rose-950/40 backdrop-blur-md',
+        header: 'bg-rose-900/40 border-rose-500/30 text-rose-200',
+        textarea: 'text-rose-100 placeholder:text-rose-300/40',
       };
     case 'amber':
-    default:
       return {
         container: 'bg-amber-950/40 border-amber-500/50 hover:border-amber-400 text-amber-100 shadow-amber-950/40 backdrop-blur-md',
         header: 'bg-amber-900/40 border-amber-500/30 text-amber-200',
         textarea: 'text-amber-100 placeholder:text-amber-300/40',
+      };
+    case 'dark':
+    default:
+      return {
+        container: 'bg-dark-850/95 border-dark-700 hover:border-dark-600 text-dark-100 shadow-dark-950/60 backdrop-blur-md',
+        header: 'bg-dark-800 border-dark-700/80 text-dark-300',
+        textarea: 'text-dark-100 placeholder:text-dark-500',
       };
   }
 });
@@ -200,7 +271,9 @@ onMounted(() => {
     if (d) {
       nodeData.value = {
         text: d.text || '',
-        color: d.color || 'amber',
+        color: d.color || 'dark',
+        isEditMode: d.isEditMode ?? false,
+        erTheme: d.erTheme,
       };
       textContent.value = d.text || '';
     }
@@ -209,9 +282,13 @@ onMounted(() => {
       if (current) {
         nodeData.value = {
           text: current.text || '',
-          color: current.color || 'amber',
+          color: current.color || 'dark',
+          isEditMode: current.isEditMode ?? false,
+          erTheme: current.erTheme,
         };
-        textContent.value = current.text || '';
+        if (textContent.value !== (current.text || '')) {
+          textContent.value = current.text || '';
+        }
       }
     });
 

@@ -375,7 +375,7 @@ export const useWorkspaceStore = defineStore('workspace', () => {
       }
     }
 
-    const tabId = `tab-er-${Date.now()}`;
+    const tabId = `tab-er-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
     const title = options.title || (options.rootTable ? `ER: ${options.rootTable}` : 'ER Diagram');
     const newTab: ErDiagramTab = {
       id: tabId,

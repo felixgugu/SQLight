@@ -1,16 +1,24 @@
 <template>
   <div
-    class="w-full h-full bg-dark-850/95 backdrop-blur border border-dark-700 hover:border-brand-500/70 rounded-lg shadow-xl shadow-black/40 overflow-hidden flex flex-col font-sans transition-all select-none group"
-    :class="isSelected ? 'ring-2 ring-brand-400 border-brand-400 shadow-brand-500/20' : ''"
+    class="w-full h-full backdrop-blur rounded-lg overflow-hidden flex flex-col font-sans transition-all select-none group relative border"
+    :class="[
+      isLightTheme
+        ? 'bg-white/95 border-slate-400 hover:border-brand-500/70 shadow-md shadow-slate-300/40 text-slate-800'
+        : 'bg-dark-850/95 border-dark-700 hover:border-brand-500/70 shadow-xl shadow-black/40 text-dark-100',
+      isSelected
+        ? (isLightTheme ? 'ring-2 ring-brand-500 border-brand-500 shadow-brand-500/20' : 'ring-2 ring-brand-400 border-brand-400 shadow-brand-500/20')
+        : ''
+    ]"
   >
     <!-- Table Header -->
     <div
-      class="h-8 bg-dark-800 border-b border-dark-700/80 px-2.5 flex items-center justify-between flex-shrink-0 cursor-move"
+      class="h-8 px-2.5 flex items-center justify-between flex-shrink-0 cursor-move border-b"
+      :class="isLightTheme ? 'bg-slate-100 border-slate-300' : 'bg-dark-800 border-dark-700/80'"
     >
       <div class="flex items-center space-x-1.5 min-w-0 flex-1">
-        <Table2 class="w-3.5 h-3.5 flex-shrink-0 text-emerald-400" />
-        <span class="text-xxs text-dark-400 font-mono truncate flex-shrink-0">{{ nodeData.schema }}.</span>
-        <span class="text-xs font-semibold text-dark-100 truncate flex-1 font-mono" :title="`${nodeData.schema}.${nodeData.table}`">
+        <Table2 class="w-3.5 h-3.5 flex-shrink-0" :class="isLightTheme ? 'text-emerald-600' : 'text-emerald-400'" />
+        <span class="text-xxs font-mono truncate flex-shrink-0" :class="isLightTheme ? 'text-slate-400' : 'text-dark-400'">{{ nodeData.schema }}.</span>
+        <span class="text-xs font-semibold truncate flex-1 font-mono" :class="isLightTheme ? 'text-slate-800' : 'text-dark-100'" :title="`${nodeData.schema}.${nodeData.table}`">
           {{ nodeData.table }}
         </span>
       </div>
@@ -20,7 +28,8 @@
         <button
           type="button"
           @click.stop="removeTable"
-          class="p-1 rounded text-dark-400 hover:text-rose-400 hover:bg-dark-750 transition-colors"
+          class="p-1 rounded transition-colors"
+          :class="isLightTheme ? 'text-slate-400 hover:text-rose-600 hover:bg-slate-200' : 'text-dark-400 hover:text-rose-400 hover:bg-dark-750'"
           title="從畫布移除此表"
         >
           <X class="w-3 h-3" />
@@ -29,14 +38,21 @@
     </div>
 
     <!-- Columns List Body -->
-    <div class="flex-1 overflow-y-auto overflow-x-hidden divide-y divide-dark-800/60 text-xxs font-mono">
+    <div
+      class="flex-1 overflow-x-hidden overflow-y-hidden text-xxs font-mono divide-y"
+      :class="isLightTheme ? 'divide-slate-100' : 'divide-dark-800/60'"
+    >
       <div
         v-for="col in visibleColumns"
         :key="col.name"
-        class="h-6 px-2 flex items-center justify-between hover:bg-dark-750/70 transition-colors relative"
+        class="h-6 px-2 flex items-center justify-between transition-colors relative"
         :class="[
-          col.isPrimaryKey ? 'bg-amber-500/5' : (col.isForeignKey ? 'bg-sky-500/5' : ''),
-          nodeData.isEditMode && !isColumnChecked(col.name) ? 'bg-dark-950/40' : ''
+          isLightTheme
+            ? (col.isPrimaryKey ? 'bg-amber-50/70' : (col.isForeignKey ? 'bg-sky-50/70' : 'hover:bg-slate-50'))
+            : (col.isPrimaryKey ? 'bg-amber-500/5' : (col.isForeignKey ? 'bg-sky-500/5' : 'hover:bg-dark-750/70')),
+          nodeData.isEditMode && !isColumnChecked(col.name)
+            ? (isLightTheme ? 'bg-slate-100/60' : 'bg-dark-950/40')
+            : ''
         ]"
         :title="`${col.name} (${col.dataType}${col.maxLength ? `(${col.maxLength})` : ''}) ${col.isNullable ? 'NULL' : 'NOT NULL'}`"
       >
@@ -49,7 +65,8 @@
             :checked="isColumnChecked(col.name)"
             :disabled="isColumnConnected(col.name)"
             @click.stop="toggleColumn(col.name)"
-            class="w-3 h-3 rounded bg-dark-900 border border-dark-600 text-amber-500 focus:ring-0 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed flex-shrink-0"
+            class="w-3 h-3 rounded cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed flex-shrink-0"
+            :class="isLightTheme ? 'bg-white border-slate-300 text-amber-600' : 'bg-dark-900 border-dark-600 text-amber-500'"
             :title="
               isColumnConnected(col.name)
                 ? '此欄位已有外鍵或關聯連線，不可隱藏'
@@ -60,22 +77,22 @@
           />
 
           <!-- PK / FK / Default Icon -->
-          <Key v-if="col.isPrimaryKey" class="w-2.5 h-2.5 text-amber-400 flex-shrink-0" />
-          <Link2 v-else-if="col.isForeignKey" class="w-2.5 h-2.5 text-sky-400 flex-shrink-0" />
+          <Key v-if="col.isPrimaryKey" class="w-2.5 h-2.5 flex-shrink-0" :class="isLightTheme ? 'text-amber-600' : 'text-amber-400'" />
+          <Link2 v-else-if="col.isForeignKey" class="w-2.5 h-2.5 flex-shrink-0" :class="isLightTheme ? 'text-sky-600' : 'text-sky-400'" />
           <div v-else class="w-2.5 h-2.5 flex items-center justify-center flex-shrink-0">
-            <span class="w-1 h-1 rounded-full bg-dark-500"></span>
+            <span class="w-1 h-1 rounded-full" :class="isLightTheme ? 'bg-slate-400' : 'bg-dark-500'"></span>
           </div>
 
           <span
             class="truncate"
             :class="[
               nodeData.isEditMode && !isColumnChecked(col.name)
-                ? 'text-[#cccccc]'
+                ? (isLightTheme ? 'text-slate-400 line-through' : 'text-[#cccccc]')
                 : col.isPrimaryKey
-                ? 'text-amber-200 font-semibold'
+                ? (isLightTheme ? 'text-amber-700 font-semibold' : 'text-amber-200 font-semibold')
                 : col.isForeignKey
-                ? 'text-sky-200'
-                : 'text-dark-200'
+                ? (isLightTheme ? 'text-sky-700' : 'text-sky-200')
+                : (isLightTheme ? 'text-slate-700' : 'text-dark-200')
             ]"
           >
             {{ col.name }}
@@ -85,7 +102,9 @@
         <!-- Right Column Info: Data Type -->
         <div
           class="flex items-center space-x-1 flex-shrink-0 text-[10px]"
-          :class="nodeData.isEditMode && !isColumnChecked(col.name) ? 'text-[#cccccc]/70' : 'text-dark-400'"
+          :class="nodeData.isEditMode && !isColumnChecked(col.name)
+            ? (isLightTheme ? 'text-slate-400/70' : 'text-[#cccccc]/70')
+            : (isLightTheme ? 'text-slate-400' : 'text-dark-400')"
         >
           <span class="truncate max-w-[80px]" :title="col.dataType">
             {{ formatDataType(col) }}
@@ -98,10 +117,11 @@
     <!-- Edit Mode Sub-Toolbar (Column Selection Controls) -->
     <div
       v-if="nodeData.isEditMode"
-      class="h-6 px-2 bg-dark-900/90 border-t border-dark-750 flex items-center justify-between text-xxs select-none font-sans flex-shrink-0"
+      class="h-6 px-2 border-t flex items-center justify-between text-xxs select-none font-sans flex-shrink-0"
+      :class="isLightTheme ? 'bg-slate-50 border-slate-300 text-slate-500' : 'bg-dark-900/90 border-dark-750 text-dark-400'"
     >
-      <div class="flex items-center space-x-1 text-dark-400">
-        <CheckSquare class="w-3 h-3 text-amber-400 flex-shrink-0" />
+      <div class="flex items-center space-x-1">
+        <CheckSquare class="w-3 h-3 flex-shrink-0" :class="isLightTheme ? 'text-amber-600' : 'text-amber-400'" />
         <span class="text-[10px]">欄位 ({{ checkedCount }}/{{ nodeData.columns.length }})</span>
       </div>
 
@@ -109,7 +129,8 @@
         <button
           type="button"
           @click.stop="checkAllColumns"
-          class="px-1.5 py-0.5 rounded text-[10px] bg-dark-800 hover:bg-dark-750 text-dark-200 hover:text-white transition-colors cursor-pointer border border-dark-700"
+          class="px-1.5 py-0.5 rounded text-[10px] transition-colors cursor-pointer border"
+          :class="isLightTheme ? 'bg-white hover:bg-slate-100 text-slate-700 border-slate-200' : 'bg-dark-800 hover:bg-dark-750 text-dark-200 hover:text-white border-dark-700'"
           title="全部勾選顯示"
         >
           全選
@@ -117,12 +138,32 @@
         <button
           type="button"
           @click.stop="uncheckAllColumns"
-          class="px-1.5 py-0.5 rounded text-[10px] bg-dark-800 hover:bg-dark-750 text-dark-200 hover:text-white transition-colors cursor-pointer border border-dark-700"
+          class="px-1.5 py-0.5 rounded text-[10px] transition-colors cursor-pointer border"
+          :class="isLightTheme ? 'bg-white hover:bg-slate-100 text-slate-700 border-slate-200' : 'bg-dark-800 hover:bg-dark-750 text-dark-200 hover:text-white border-dark-700'"
           title="全部取消 (已有連線的欄位將自動保留)"
         >
           全取消
         </button>
       </div>
+    </div>
+
+    <!-- Drag Resize Grip Handle (View Mode Only, Height/Length Only) -->
+    <div
+      v-if="!nodeData.isEditMode"
+      @mousedown.stop="startResize"
+      @dblclick.stop="resetHeight"
+      class="absolute bottom-0 right-0 w-3.5 h-3.5 flex items-center justify-center cursor-ns-resize select-none opacity-40 hover:opacity-100 z-10 transition-opacity"
+      :class="isLightTheme ? 'text-slate-400 hover:text-slate-700' : 'text-dark-400 hover:text-dark-100'"
+      title="拖曳以縮放長度 (高度)；雙擊重設為最適高度"
+    >
+      <svg class="w-2.5 h-2.5" viewBox="0 0 10 10" fill="currentColor">
+        <circle cx="8" cy="8" r="1" />
+        <circle cx="5" cy="8" r="1" />
+        <circle cx="8" cy="5" r="1" />
+        <circle cx="2" cy="8" r="1" />
+        <circle cx="5" cy="5" r="1" />
+        <circle cx="8" cy="2" r="1" />
+      </svg>
     </div>
   </div>
 </template>
@@ -132,6 +173,7 @@ import { computed, inject, ref, onMounted } from 'vue';
 import { Table2, Key, Link2, X, CheckSquare } from 'lucide-vue-next';
 import type { Node } from '@antv/x6';
 import type { ColumnItem } from '@/types/schema';
+import { useSettingsStore } from '@/stores/settingsStore';
 
 export interface ErTableColumn extends ColumnItem {
   isForeignKey?: boolean;
@@ -145,10 +187,14 @@ export interface ErTableNodeData {
   columns: ErTableColumn[];
   checkedColumns?: string[];
   isEditMode?: boolean;
+  customHeight?: number;
+  erTheme?: 'dark' | 'light';
 }
 
 const getNode = inject<() => Node>('getNode');
 const node = getNode ? getNode() : null;
+
+const settingsStore = useSettingsStore();
 
 const nodeData = ref<ErTableNodeData>({
   schema: 'dbo',
@@ -159,6 +205,8 @@ const nodeData = ref<ErTableNodeData>({
   checkedColumns: undefined,
   isEditMode: false,
 });
+
+const isLightTheme = computed(() => (nodeData.value.erTheme || settingsStore.erTheme) === 'light');
 
 const isSelected = ref(false);
 const connectedCols = ref<Set<string>>(new Set());
@@ -296,5 +344,65 @@ function removeTable() {
   if (node) {
     node.remove();
   }
+}
+
+function getMinSafeHeight(): number {
+  refreshConnectedCols();
+  const HEADER_HEIGHT = 32;
+  const ROW_HEIGHT = 24;
+  const BORDER_OFFSET = 1;
+  let maxIdx = -1;
+  const cols = visibleColumns.value;
+  for (let i = 0; i < cols.length; i++) {
+    const col = cols[i];
+    if (col && connectedCols.value.has(col.name)) {
+      maxIdx = i;
+    }
+  }
+  if (maxIdx >= 0) {
+    return BORDER_OFFSET * 2 + HEADER_HEIGHT + (maxIdx + 1) * ROW_HEIGHT;
+  }
+  return 60;
+}
+
+function startResize(e: MouseEvent) {
+  if (!node) return;
+  e.preventDefault();
+  e.stopPropagation();
+
+  const graph = node.model?.graph;
+  const zoom = graph ? graph.zoom() : 1;
+  const startY = e.clientY;
+  const currentSize = node.size();
+  const startH = currentSize.height;
+  const startW = currentSize.width;
+  const minSafeH = getMinSafeHeight();
+
+  function onMouseMove(moveEvent: MouseEvent) {
+    const dy = (moveEvent.clientY - startY) / zoom;
+    const newH = Math.max(minSafeH, Math.round(startH + dy));
+    node?.setSize({ width: startW, height: newH });
+  }
+
+  function onMouseUp(upEvent: MouseEvent) {
+    window.removeEventListener('mousemove', onMouseMove);
+    window.removeEventListener('mouseup', onMouseUp);
+
+    const dy = (upEvent.clientY - startY) / zoom;
+    const finalH = Math.max(minSafeH, Math.round(startH + dy));
+    node?.setSize({ width: startW, height: finalH });
+
+    const current = node?.getData<ErTableNodeData>() || {};
+    node?.setData({ ...current, customHeight: finalH }, { overwrite: true });
+  }
+
+  window.addEventListener('mousemove', onMouseMove);
+  window.addEventListener('mouseup', onMouseUp);
+}
+
+function resetHeight() {
+  if (!node) return;
+  const current = node.getData<ErTableNodeData>() || {};
+  node.setData({ ...current, customHeight: undefined }, { overwrite: true });
 }
 </script>

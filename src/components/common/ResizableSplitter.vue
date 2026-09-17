@@ -8,6 +8,7 @@
       isDragging ? 'bg-brand-500' : 'bg-dark-700 hover:bg-dark-600'
     ]"
     @pointerdown="$emit('pointerdown', $event)"
+    @dblclick="$emit('dblclick', $event)"
   >
     <!-- Visual grip indicator line on hover -->
     <div
@@ -29,5 +30,6 @@ defineProps<{
 
 defineEmits<{
   (e: 'pointerdown', event: PointerEvent): void;
+  (e: 'dblclick', event: MouseEvent): void;
 }>();
 </script>

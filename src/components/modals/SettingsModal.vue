@@ -138,8 +138,8 @@
           <!-- Active SQL Tab Color -->
           <div class="pt-3 border-t border-dark-800 space-y-3">
             <div>
-              <label class="font-medium text-dark-100 block">當前選取分頁顏色 (Active Tab Colors)</label>
-              <span class="text-xxs text-dark-400">自訂上方 SQL 編輯分頁在選取啟用時的前景文字與背景顏色</span>
+              <label class="font-medium text-dark-100 block">當前 SQL 查詢分頁顏色 (Active SQL Tab Colors)</label>
+              <span class="text-xxs text-dark-400">自訂上方 SQL 查詢分頁在選取啟用時的前景文字與背景顏色（各類別分頁均搭配專屬色彩體系）</span>
             </div>
 
             <!-- Color controls: Background & Foreground -->

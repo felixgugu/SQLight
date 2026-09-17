@@ -374,7 +374,7 @@
                         @click="toggleTable(conn.id, db, table.schema, table.name)"
                         @contextmenu.prevent="openContextMenu($event, conn.id, db, table.schema, table.name, 'TABLE')"
                         :class="[
-                          'flex items-center space-x-1 px-1.5 py-0.5 rounded cursor-pointer group transition-all duration-150',
+                          'flex items-center space-x-1 px-1.5 py-0.5 rounded cursor-pointer select-none group transition-all duration-150',
                           activeLocatedKey === tableKey(conn.id, db, table.schema, table.name)
                             ? 'bg-brand-500/25 ring-1 ring-brand-400 text-brand-100 font-semibold shadow-md shadow-brand-500/10'
                             : 'hover:bg-dark-750 text-dark-300 hover:text-dark-100'
@@ -488,10 +488,12 @@
                       <!-- View Item -->
                       <div
                         :id="`tree-node-${tableKey(conn.id, db, view.schema, view.name)}`"
+                        draggable="true"
+                        @dragstart="handleTableDragStart($event, conn.id, db, view.schema, view.name)"
                         @click="toggleTable(conn.id, db, view.schema, view.name)"
                         @contextmenu.prevent="openContextMenu($event, conn.id, db, view.schema, view.name, 'VIEW')"
                         :class="[
-                          'flex items-center space-x-1 px-1.5 py-0.5 rounded cursor-pointer group transition-all duration-150',
+                          'flex items-center space-x-1 px-1.5 py-0.5 rounded cursor-pointer select-none group transition-all duration-150',
                           activeLocatedKey === tableKey(conn.id, db, view.schema, view.name)
                             ? 'bg-purple-500/25 ring-1 ring-purple-400 text-purple-100 font-semibold shadow-md shadow-purple-500/10'
                             : 'hover:bg-dark-750 text-dark-300 hover:text-dark-100'
@@ -1596,11 +1598,14 @@ async function handleOpenStructure() {
 
 function handleTableDragStart(e: DragEvent, connId: string, db: string, schema: string, table: string) {
   if (!e.dataTransfer) return;
+  const dbPrefix = db ? `[${db}].` : '';
+  const sql = `SELECT TOP 1000\n  *\nFROM ${dbPrefix}[${schema}].[${table}];\n`;
   e.dataTransfer.setData(
     'application/sqlight-table',
-    JSON.stringify({ connId, db, schema, table })
+    JSON.stringify({ connId, db, schema, table, sql })
   );
-  e.dataTransfer.effectAllowed = 'copy';
+  e.dataTransfer.setData('text/plain', sql);
+  e.dataTransfer.effectAllowed = 'copyMove';
 }
 
 async function handleOpenErDiagram(depth: 1 | 2 = 2) {

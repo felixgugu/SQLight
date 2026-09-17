@@ -37,6 +37,7 @@
         direction="horizontal"
         :is-dragging="sidebarSplitter.isDragging.value"
         @pointerdown="sidebarSplitter.onPointerDown"
+        @dragover.prevent
       />
 
       <!-- Right Area: Main Editor & Bottom Results Panel -->
@@ -52,6 +53,7 @@
             direction="vertical"
             :is-dragging="bottomSplitter.isDragging.value"
             @pointerdown="bottomSplitter.onPointerDown"
+            @dblclick="toggleMaximizeBottomPanel"
           />
 
           <div
@@ -219,14 +221,28 @@ const sidebarSplitter = useSplitter({
   maxSize: 500,
 });
 
-// Resizable bottom dock (height: min 120px, max 550px, initial 240px, reverse dragging)
+// Resizable bottom dock (height: min 100px, dynamic max up to window height - 100px, initial 240px, reverse dragging)
 const bottomSplitter = useSplitter({
   direction: 'vertical',
   initialSize: 240,
-  minSize: 120,
-  maxSize: 550,
+  minSize: 100,
+  maxSize: () => Math.max(200, window.innerHeight - 100),
   reverse: true,
 });
+
+let preMaximizedBottomHeight = 240;
+
+function toggleMaximizeBottomPanel() {
+  const maxH = Math.max(200, window.innerHeight - 100);
+  if (bottomSplitter.size.value >= maxH - 40) {
+    // Already maximized, restore to previous size or default 240px
+    bottomSplitter.size.value = Math.max(100, preMaximizedBottomHeight || 240);
+  } else {
+    // Save current size and maximize
+    preMaximizedBottomHeight = bottomSplitter.size.value;
+    bottomSplitter.size.value = maxH;
+  }
+}
 
 function handleRunQuery(mode: 'current' | 'all' = 'current') {
   mainWorkspaceRef.value?.runQuery(mode);

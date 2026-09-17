@@ -1,20 +1,28 @@
 <template>
   <div
-    class="w-full h-full flex flex-col bg-dark-950 text-dark-100 overflow-hidden select-none relative font-sans"
+    class="w-full h-full flex flex-col overflow-hidden select-none relative font-sans transition-colors duration-200"
+    :class="isLightTheme ? 'bg-slate-50 text-slate-800' : 'bg-dark-950 text-dark-100'"
     @click="closeMenus"
   >
     <!-- ER Diagram Top Toolbar -->
-    <div class="h-10 bg-dark-900 border-b border-dark-750 px-3 flex items-center justify-between flex-shrink-0 z-20">
+    <div
+      class="h-10 px-3 flex items-center justify-between flex-shrink-0 z-20 border-b transition-colors duration-200"
+      :class="isLightTheme ? 'bg-white border-slate-200 shadow-2xs' : 'bg-dark-900 border-dark-750'"
+    >
       <!-- Left Controls: Info & Relation Depth & Layout -->
       <div class="flex items-center space-x-2">
         <!-- Root Table Badge -->
-        <div v-if="tab.rootTable" class="flex items-center space-x-1.5 px-2 py-1 bg-dark-800 border border-dark-700 rounded text-xs">
-          <Database class="w-3.5 h-3.5 text-brand-400" />
-          <span class="text-dark-400 text-xxs font-mono">{{ tab.rootSchema }}.</span>
-          <span class="text-dark-100 font-semibold font-mono">{{ tab.rootTable }}</span>
+        <div
+          v-if="tab.rootTable"
+          class="flex items-center space-x-1.5 px-2 py-1 rounded text-xs border"
+          :class="isLightTheme ? 'bg-slate-100 border-slate-200' : 'bg-dark-800 border-dark-700'"
+        >
+          <Database class="w-3.5 h-3.5 text-brand-500" />
+          <span class="text-xxs font-mono" :class="isLightTheme ? 'text-slate-400' : 'text-dark-400'">{{ tab.rootSchema }}.</span>
+          <span class="font-semibold font-mono" :class="isLightTheme ? 'text-slate-800' : 'text-dark-100'">{{ tab.rootTable }}</span>
         </div>
 
-        <div class="h-4 w-px bg-dark-750 mx-1"></div>
+        <div class="h-4 w-px mx-1" :class="isLightTheme ? 'bg-slate-200' : 'bg-dark-750'"></div>
 
 
         <!-- Edit Mode Toggle Button -->
@@ -24,17 +32,21 @@
           :class="[
             'h-7 px-2.5 rounded text-xs flex items-center space-x-1.5 transition-all cursor-pointer font-medium border shadow-xs',
             isEditMode
-              ? 'bg-amber-600 hover:bg-amber-500 text-white border-amber-500 shadow-amber-500/20 ring-1 ring-amber-400/50'
-              : 'bg-dark-800 hover:bg-dark-750 text-dark-300 hover:text-dark-100 border-dark-700'
+              ? 'bg-amber-500 hover:bg-amber-600 text-white border-amber-600 shadow-amber-500/20 ring-1 ring-amber-400/50'
+              : (isLightTheme
+                  ? 'bg-white hover:bg-slate-50 text-slate-600 hover:text-slate-900 border-slate-200'
+                  : 'bg-dark-800 hover:bg-dark-750 text-dark-300 hover:text-dark-100 border-dark-700')
           ]"
           :title="isEditMode ? '目前為編輯模式：可自由拖曳連線與勾選隱藏欄位 (點擊切換為檢視模式)' : '目前為檢視模式：僅可移動卡片 (點擊開啟編輯模式)'"
         >
-          <component :is="isEditMode ? Edit3 : Eye" class="w-3.5 h-3.5" :class="isEditMode ? 'text-amber-200 animate-pulse' : 'text-dark-400'" />
+          <component :is="isEditMode ? Edit3 : Eye" class="w-3.5 h-3.5" :class="isEditMode ? 'text-white animate-pulse' : (isLightTheme ? 'text-slate-400' : 'text-dark-400')" />
           <span>{{ isEditMode ? '編輯模式' : '檢視模式' }}</span>
           <span
             :class="[
               'text-[9px] px-1 py-0.2 rounded font-mono font-bold leading-none',
-              isEditMode ? 'bg-amber-800 text-amber-100' : 'bg-dark-750 text-dark-400'
+              isEditMode
+                ? 'bg-amber-700 text-amber-100'
+                : (isLightTheme ? 'bg-slate-100 text-slate-500' : 'bg-dark-750 text-dark-400')
             ]"
           >
             {{ isEditMode ? 'ON' : 'OFF' }}
@@ -45,10 +57,13 @@
         <button
           type="button"
           @click="applyAutoLayout(layoutDirection)"
-          class="h-7 px-2.5 bg-dark-800 hover:bg-dark-750 text-dark-200 hover:text-white border border-dark-700 rounded text-xs flex items-center space-x-1.5 transition-colors cursor-pointer shadow-xs"
+          class="h-7 px-2.5 rounded text-xs flex items-center space-x-1.5 transition-colors cursor-pointer shadow-xs border"
+          :class="isLightTheme
+            ? 'bg-white hover:bg-slate-50 text-slate-700 hover:text-slate-900 border-slate-200'
+            : 'bg-dark-800 hover:bg-dark-750 text-dark-200 hover:text-white border-dark-700'"
           title="以階層拓撲演算法自動重新排列所有資料表"
         >
-          <LayoutGrid class="w-3.5 h-3.5 text-brand-400" />
+          <LayoutGrid class="w-3.5 h-3.5 text-brand-500" />
           <span>自動排版</span>
         </button>
 
@@ -56,10 +71,13 @@
         <button
           type="button"
           @click="toggleLayoutDirection"
-          class="h-7 px-2 bg-dark-800 hover:bg-dark-750 text-dark-300 hover:text-dark-100 border border-dark-700 rounded text-xs flex items-center space-x-1 transition-colors cursor-pointer"
+          class="h-7 px-2 rounded text-xs flex items-center space-x-1 transition-colors cursor-pointer border"
+          :class="isLightTheme
+            ? 'bg-white hover:bg-slate-50 text-slate-600 hover:text-slate-900 border-slate-200'
+            : 'bg-dark-800 hover:bg-dark-750 text-dark-300 hover:text-dark-100 border-dark-700'"
           :title="`目前方向：${layoutDirection === 'LR' ? '水平左右 (LR)' : '垂直上下 (TB)'}，點擊切換`"
         >
-          <component :is="layoutDirection === 'LR' ? ArrowRightLeft : ArrowUpDown" class="w-3.5 h-3.5 text-dark-400" />
+          <component :is="layoutDirection === 'LR' ? ArrowRightLeft : ArrowUpDown" class="w-3.5 h-3.5" :class="isLightTheme ? 'text-slate-400' : 'text-dark-400'" />
           <span class="text-xxs font-mono">{{ layoutDirection }}</span>
         </button>
 
@@ -67,34 +85,29 @@
         <button
           type="button"
           @click="handleAddTextNode"
-          class="h-7 px-2.5 bg-dark-800 hover:bg-dark-750 text-dark-200 hover:text-white border border-dark-700 rounded text-xs flex items-center space-x-1.5 transition-colors cursor-pointer shadow-xs"
+          class="h-7 px-2.5 rounded text-xs flex items-center space-x-1.5 transition-colors cursor-pointer shadow-xs border"
+          :class="isLightTheme
+            ? 'bg-white hover:bg-slate-50 text-slate-700 hover:text-slate-900 border-slate-200'
+            : 'bg-dark-800 hover:bg-dark-750 text-dark-200 hover:text-white border-dark-700'"
           title="在畫布上新增文字說明 / 備註便箋"
         >
-          <Type class="w-3.5 h-3.5 text-amber-400" />
+          <Type class="w-3.5 h-3.5" :class="isLightTheme ? 'text-slate-600' : 'text-zinc-400'" />
           <span>文字</span>
-        </button>
-
-        <!-- Refresh Data Button -->
-        <button
-          v-if="tab.rootTable"
-          type="button"
-          @click="loadDiagramData"
-          :disabled="isLoading"
-          class="h-7 px-2 bg-dark-800 hover:bg-dark-750 text-dark-300 hover:text-dark-100 border border-dark-700 rounded text-xs flex items-center transition-colors cursor-pointer"
-          title="重新整理資料表與外鍵結構"
-        >
-          <RefreshCw class="w-3.5 h-3.5 text-dark-400" :class="isLoading ? 'animate-spin text-brand-400' : ''" />
         </button>
       </div>
 
-      <!-- Right Controls: Zoom, Export -->
+      <!-- Right Controls: Zoom, Theme, Export -->
       <div class="flex items-center space-x-2">
         <!-- Zoom Controls -->
-        <div class="flex items-center bg-dark-800 border border-dark-700 rounded overflow-hidden">
+        <div
+          class="flex items-center rounded overflow-hidden border"
+          :class="isLightTheme ? 'bg-white border-slate-200' : 'bg-dark-800 border-dark-700'"
+        >
           <button
             type="button"
             @click="handleZoomOut"
-            class="p-1.5 hover:bg-dark-750 text-dark-300 hover:text-white transition-colors cursor-pointer"
+            class="p-1.5 transition-colors cursor-pointer"
+            :class="isLightTheme ? 'hover:bg-slate-100 text-slate-600 hover:text-slate-900' : 'hover:bg-dark-750 text-dark-300 hover:text-white'"
             title="縮小 (Ctrl + 滾輪下滾)"
           >
             <ZoomOut class="w-3.5 h-3.5" />
@@ -102,7 +115,8 @@
           <button
             type="button"
             @click="handleZoomReset"
-            class="px-1.5 py-1 hover:bg-dark-750 text-dark-300 hover:text-white text-xxs font-mono transition-colors min-w-[42px] text-center cursor-pointer"
+            class="px-1.5 py-1 text-xxs font-mono transition-colors min-w-[42px] text-center cursor-pointer"
+            :class="isLightTheme ? 'hover:bg-slate-100 text-slate-700 hover:text-slate-900' : 'hover:bg-dark-750 text-dark-300 hover:text-white'"
             title="重設縮放 100%"
           >
             {{ Math.round(zoomLevel * 100) }}%
@@ -110,7 +124,8 @@
           <button
             type="button"
             @click="handleZoomIn"
-            class="p-1.5 hover:bg-dark-750 text-dark-300 hover:text-white transition-colors cursor-pointer"
+            class="p-1.5 transition-colors cursor-pointer"
+            :class="isLightTheme ? 'hover:bg-slate-100 text-slate-600 hover:text-slate-900' : 'hover:bg-dark-750 text-dark-300 hover:text-white'"
             title="放大 (Ctrl + 滾輪上滾)"
           >
             <ZoomIn class="w-3.5 h-3.5" />
@@ -118,14 +133,41 @@
           <button
             type="button"
             @click="handleZoomFit"
-            class="p-1.5 hover:bg-dark-750 text-dark-300 hover:text-white transition-colors border-l border-dark-750 cursor-pointer"
+            class="p-1.5 transition-colors border-l cursor-pointer"
+            :class="isLightTheme ? 'hover:bg-slate-100 text-slate-600 hover:text-slate-900 border-slate-200' : 'hover:bg-dark-750 text-dark-300 hover:text-white border-dark-750'"
             title="最適大小 (Fit)"
           >
             <Maximize2 class="w-3.5 h-3.5" />
           </button>
         </div>
 
-        <div class="h-4 w-px bg-dark-750 mx-1"></div>
+        <div class="h-4 w-px mx-1" :class="isLightTheme ? 'bg-slate-200' : 'bg-dark-750'"></div>
+
+        <!-- Theme Toggle Button (Dark / Light) -->
+        <button
+          type="button"
+          @click="toggleTheme"
+          class="h-7 px-2.5 rounded text-xs flex items-center space-x-1.5 transition-colors cursor-pointer border shadow-xs"
+          :class="isLightTheme
+            ? 'bg-white hover:bg-slate-50 text-slate-700 hover:text-slate-900 border-slate-200'
+            : 'bg-dark-800 hover:bg-dark-750 text-dark-200 hover:text-white border-dark-700'"
+          :title="`佈景切換：目前為${isLightTheme ? '淺色系' : '深色系'} (點擊切換為${isLightTheme ? '深色系' : '淺色系'})`"
+        >
+          <component
+            :is="isLightTheme ? Sun : Moon"
+            class="w-3.5 h-3.5"
+            :class="isLightTheme ? 'text-amber-500' : 'text-indigo-400'"
+          />
+          <span>佈景切換</span>
+          <span
+            class="text-[9px] px-1 py-0.2 rounded font-mono font-bold leading-none"
+            :class="isLightTheme ? 'bg-amber-100 text-amber-800' : 'bg-dark-750 text-indigo-300'"
+          >
+            {{ isLightTheme ? '淺色' : '深色' }}
+          </span>
+        </button>
+
+        <div class="h-4 w-px mx-1" :class="isLightTheme ? 'bg-slate-200' : 'bg-dark-750'"></div>
 
         <!-- Export Dropdown -->
         <div class="relative">
@@ -142,33 +184,40 @@
           <!-- Export Menu Popover -->
           <div
             v-if="isExportMenuOpen"
-            class="absolute right-0 top-full mt-1.5 w-48 bg-dark-850 border border-dark-700 rounded-md shadow-2xl py-1 text-xs text-dark-200 z-50 animate-in fade-in zoom-in-95 duration-100"
+            class="absolute right-0 top-full mt-1.5 w-48 rounded-md shadow-2xl py-1 text-xs z-50 animate-in fade-in zoom-in-95 duration-100 border"
+            :class="isLightTheme ? 'bg-white border-slate-200 text-slate-700' : 'bg-dark-850 border-dark-700 text-dark-200'"
           >
-            <div class="px-2.5 py-1 text-xxs text-dark-400 border-b border-dark-750 font-medium">
+            <div
+              class="px-2.5 py-1 text-xxs border-b font-medium"
+              :class="isLightTheme ? 'text-slate-400 border-slate-100' : 'text-dark-400 border-dark-750'"
+            >
               匯出 ER 圖形與定義
             </div>
             <button
               type="button"
               @click="exportAsPng"
-              class="w-full text-left px-2.5 py-1.5 hover:bg-dark-750 hover:text-white flex items-center space-x-2 transition-colors cursor-pointer"
+              class="w-full text-left px-2.5 py-1.5 flex items-center space-x-2 transition-colors cursor-pointer"
+              :class="isLightTheme ? 'hover:bg-slate-100 hover:text-slate-900' : 'hover:bg-dark-750 hover:text-white'"
             >
-              <Image class="w-3.5 h-3.5 text-emerald-400" />
+              <Image class="w-3.5 h-3.5 text-emerald-500" />
               <span>匯出 PNG 圖檔 (高解析)</span>
             </button>
             <button
               type="button"
               @click="exportAsSvg"
-              class="w-full text-left px-2.5 py-1.5 hover:bg-dark-750 hover:text-white flex items-center space-x-2 transition-colors cursor-pointer"
+              class="w-full text-left px-2.5 py-1.5 flex items-center space-x-2 transition-colors cursor-pointer"
+              :class="isLightTheme ? 'hover:bg-slate-100 hover:text-slate-900' : 'hover:bg-dark-750 hover:text-white'"
             >
-              <FileCode class="w-3.5 h-3.5 text-sky-400" />
+              <FileCode class="w-3.5 h-3.5 text-sky-500" />
               <span>匯出 SVG 向量圖</span>
             </button>
             <button
               type="button"
               @click="exportAsJson"
-              class="w-full text-left px-2.5 py-1.5 hover:bg-dark-750 hover:text-white flex items-center space-x-2 transition-colors text-amber-300 cursor-pointer"
+              class="w-full text-left px-2.5 py-1.5 flex items-center space-x-2 transition-colors cursor-pointer"
+              :class="isLightTheme ? 'hover:bg-slate-100 text-amber-600' : 'hover:bg-dark-750 text-amber-300 hover:text-white'"
             >
-              <FileJson class="w-3.5 h-3.5 text-amber-400" />
+              <FileJson class="w-3.5 h-3.5 text-amber-500" />
               <span>匯出原始碼 (.sqlight-er.json)</span>
             </button>
           </div>
@@ -180,11 +229,17 @@
     <div
       ref="dropZoneRef"
       @dragover.prevent="handleDragOver"
+      @dragleave="handleDragLeave"
       @drop="handleDropTable"
-      class="flex-1 w-full h-full relative overflow-hidden bg-dark-950 cursor-grab active:cursor-grabbing"
+      class="flex-1 w-full h-full relative overflow-hidden cursor-grab active:cursor-grabbing transition-colors duration-200"
+      :class="isLightTheme ? 'bg-slate-100' : 'bg-dark-950'"
     >
       <!-- AntV X6 Mount Point -->
-      <div ref="graphContainerRef" class="w-full h-full"></div>
+      <div
+        ref="graphContainerRef"
+        class="w-full h-full transition-opacity duration-150"
+        :class="isGraphReady ? 'opacity-100' : 'opacity-0'"
+      ></div>
 
       <!-- Drag Over Visual Overlay Hint -->
       <div
@@ -200,34 +255,39 @@
       <!-- Loading Spinner Indicator -->
       <div
         v-if="isLoading"
-        class="absolute inset-0 bg-dark-950/70 z-40 flex flex-col items-center justify-center space-y-2 backdrop-blur-xs"
+        class="absolute inset-0 z-40 flex flex-col items-center justify-center space-y-2 backdrop-blur-xs"
+        :class="isLightTheme ? 'bg-slate-100/70' : 'bg-dark-950/70'"
       >
-        <Loader2 class="w-8 h-8 animate-spin text-brand-400" />
-        <span class="text-xs text-dark-300">{{ loadingMessage }}</span>
+        <Loader2 class="w-8 h-8 animate-spin text-brand-500" />
+        <span class="text-xs" :class="isLightTheme ? 'text-slate-600' : 'text-dark-300'">{{ loadingMessage }}</span>
       </div>
 
       <!-- Empty State Hint (if 0 nodes) -->
       <div
         v-if="!isLoading && nodeCount === 0"
-        class="absolute inset-0 flex flex-col items-center justify-center text-dark-500 text-xs space-y-2 pointer-events-none"
+        class="absolute inset-0 flex flex-col items-center justify-center text-xs space-y-2 pointer-events-none"
+        :class="isLightTheme ? 'text-slate-400' : 'text-dark-500'"
       >
-        <Layers class="w-10 h-10 text-dark-600" />
+        <Layers class="w-10 h-10" :class="isLightTheme ? 'text-slate-300' : 'text-dark-600'" />
         <span>畫布尚無資料表</span>
-        <span class="text-dark-600 text-xxs">可從左側資料庫清單拖拉資料表，或由右鍵選單加入</span>
+        <span class="text-xxs" :class="isLightTheme ? 'text-slate-400' : 'text-dark-600'">可從左側資料庫清單拖拉資料表，或由右鍵選單加入</span>
       </div>
 
       <!-- Floating Stats & Linking Tip (Bottom Left) -->
-      <div class="absolute bottom-3 left-3 bg-dark-900/90 backdrop-blur border border-dark-750 px-3 py-1.5 rounded-md text-[11px] text-dark-300 flex items-center space-x-3 pointer-events-none z-10 font-mono shadow-lg">
-        <span>資料表：<strong class="text-dark-100">{{ nodeCount }}</strong></span>
-        <span class="text-dark-600">•</span>
-        <span>關聯線：<strong class="text-dark-100">{{ edgeCount }}</strong></span>
-        <span class="text-dark-600">•</span>
-        <span v-if="isEditMode" class="text-amber-300 flex items-center space-x-1">
-          <Edit3 class="w-3 h-3 text-amber-400" />
+      <div
+        class="absolute bottom-3 left-3 backdrop-blur px-3 py-1.5 rounded-md text-[11px] flex items-center space-x-3 pointer-events-none z-10 font-mono shadow-lg border"
+        :class="isLightTheme ? 'bg-white/90 border-slate-200 text-slate-600 shadow-slate-200/50' : 'bg-dark-900/90 border-dark-750 text-dark-300'"
+      >
+        <span>資料表：<strong :class="isLightTheme ? 'text-slate-900' : 'text-dark-100'">{{ nodeCount }}</strong></span>
+        <span :class="isLightTheme ? 'text-slate-300' : 'text-dark-600'">•</span>
+        <span>關聯線：<strong :class="isLightTheme ? 'text-slate-900' : 'text-dark-100'">{{ edgeCount }}</strong></span>
+        <span :class="isLightTheme ? 'text-slate-300' : 'text-dark-600'">•</span>
+        <span v-if="isEditMode" class="flex items-center space-x-1" :class="isLightTheme ? 'text-amber-700 font-medium' : 'text-amber-300'">
+          <Edit3 class="w-3 h-3 text-amber-500" />
           <span>編輯模式：可勾選欄位隱藏/顯示，拖曳圓點自由連線，單擊徽章切換屬性</span>
         </span>
-        <span v-else class="text-dark-400 flex items-center space-x-1">
-          <Eye class="w-3 h-3 text-dark-400" />
+        <span v-else class="flex items-center space-x-1" :class="isLightTheme ? 'text-slate-500' : 'text-dark-400'">
+          <Eye class="w-3 h-3" :class="isLightTheme ? 'text-slate-400' : 'text-dark-400'" />
           <span>檢視模式：僅可平移與移動資料表 (未勾選欄位已隱藏)。點擊上方「編輯模式」可開始連線與設定欄位</span>
         </span>
       </div>
@@ -236,32 +296,33 @@
       <div
         v-if="edgeMenu.visible"
         :style="{ top: `${edgeMenu.y}px`, left: `${edgeMenu.x}px` }"
-        class="fixed z-50 bg-dark-850/95 backdrop-blur border border-dark-700 rounded-lg shadow-2xl py-1.5 w-64 text-xs font-sans text-dark-200 select-none animate-in fade-in zoom-in-95 duration-100 font-mono"
+        class="fixed z-50 backdrop-blur border rounded-lg shadow-2xl py-1.5 w-64 text-xs font-sans select-none animate-in fade-in zoom-in-95 duration-100 font-mono"
+        :class="isLightTheme ? 'bg-white/95 border-slate-200 text-slate-700 shadow-slate-300/60' : 'bg-dark-850/95 border-dark-700 text-dark-200'"
         @click.stop
       >
         <!-- Header Info -->
-        <div class="px-3 py-1.5 border-b border-dark-750 text-[11px]">
-          <div class="flex items-center space-x-1.5 text-brand-400 font-semibold mb-1 font-sans">
+        <div class="px-3 py-1.5 border-b text-[11px]" :class="isLightTheme ? 'border-slate-100' : 'border-dark-750'">
+          <div class="flex items-center space-x-1.5 font-semibold mb-1 font-sans" :class="isLightTheme ? 'text-brand-600' : 'text-brand-400'">
             <Link2 class="w-3.5 h-3.5" />
             <span>關聯設定 (Relation Properties)</span>
           </div>
-          <div class="truncate text-dark-400 text-[10px] space-y-0.5">
+          <div class="truncate text-[10px] space-y-0.5" :class="isLightTheme ? 'text-slate-500' : 'text-dark-400'">
             <div class="flex items-center space-x-1">
-              <span class="text-dark-500 w-10 flex-shrink-0 font-sans">來源：</span>
-              <span class="text-dark-100 font-medium truncate">{{ edgeMenu.sourceTable }}.{{ edgeMenu.sourceColumn }}</span>
+              <span class="w-10 flex-shrink-0 font-sans" :class="isLightTheme ? 'text-slate-400' : 'text-dark-500'">來源：</span>
+              <span class="font-medium truncate" :class="isLightTheme ? 'text-slate-800' : 'text-dark-100'">{{ edgeMenu.sourceTable }}.{{ edgeMenu.sourceColumn }}</span>
             </div>
             <div class="flex items-center space-x-1">
-              <span class="text-dark-500 w-10 flex-shrink-0 font-sans">目標：</span>
-              <span class="text-dark-100 font-medium truncate">{{ edgeMenu.targetTable }}.{{ edgeMenu.targetColumn }}</span>
+              <span class="w-10 flex-shrink-0 font-sans" :class="isLightTheme ? 'text-slate-400' : 'text-dark-500'">目標：</span>
+              <span class="font-medium truncate" :class="isLightTheme ? 'text-slate-800' : 'text-dark-100'">{{ edgeMenu.targetTable }}.{{ edgeMenu.targetColumn }}</span>
             </div>
           </div>
         </div>
 
         <!-- Cardinality Selection -->
-        <div class="px-3 py-2 border-b border-dark-750">
-          <div class="text-[10px] text-dark-400 mb-1.5 font-sans flex items-center justify-between">
+        <div class="px-3 py-2 border-b" :class="isLightTheme ? 'border-slate-100' : 'border-dark-750'">
+          <div class="text-[10px] mb-1.5 font-sans flex items-center justify-between" :class="isLightTheme ? 'text-slate-500' : 'text-dark-400'">
             <span>關聯屬性 (Cardinality)</span>
-            <span class="text-brand-300 font-bold font-mono">{{ edgeMenu.cardinality }}</span>
+            <span class="font-bold font-mono" :class="isLightTheme ? 'text-brand-600' : 'text-brand-300'">{{ edgeMenu.cardinality }}</span>
           </div>
           <div class="grid grid-cols-2 gap-1.5 text-xxs">
             <button
@@ -270,12 +331,12 @@
               :class="[
                 'px-2 py-1 rounded text-center border transition-colors flex items-center justify-between cursor-pointer',
                 edgeMenu.cardinality === '1:N'
-                  ? 'bg-brand-500/25 text-brand-200 border-brand-500/60 font-semibold ring-1 ring-brand-500/40'
-                  : 'bg-dark-800 text-dark-300 border-dark-700 hover:bg-dark-750'
+                  ? (isLightTheme ? 'bg-brand-50 text-brand-700 border-brand-300 font-semibold ring-1 ring-brand-200' : 'bg-brand-500/25 text-brand-200 border-brand-500/60 font-semibold ring-1 ring-brand-500/40')
+                  : (isLightTheme ? 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100' : 'bg-dark-800 text-dark-300 border-dark-700 hover:bg-dark-750')
               ]"
             >
               <span>1 對多</span>
-              <span class="text-dark-400 font-mono">1:N</span>
+              <span class="font-mono" :class="isLightTheme ? 'text-slate-400' : 'text-dark-400'">1:N</span>
             </button>
             <button
               type="button"
@@ -283,12 +344,12 @@
               :class="[
                 'px-2 py-1 rounded text-center border transition-colors flex items-center justify-between cursor-pointer',
                 edgeMenu.cardinality === '1:1'
-                  ? 'bg-brand-500/25 text-brand-200 border-brand-500/60 font-semibold ring-1 ring-brand-500/40'
-                  : 'bg-dark-800 text-dark-300 border-dark-700 hover:bg-dark-750'
-              ]"
+                  ? (isLightTheme ? 'bg-brand-50 text-brand-700 border-brand-300 font-semibold ring-1 ring-brand-200' : 'bg-brand-500/25 text-brand-200 border-brand-500/60 font-semibold ring-1 ring-brand-500/40')
+                  : (isLightTheme ? 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100' : 'bg-dark-800 text-dark-300 border-dark-700 hover:bg-dark-750')
+            ]"
             >
               <span>1 對 1</span>
-              <span class="text-dark-400 font-mono">1:1</span>
+              <span class="font-mono" :class="isLightTheme ? 'text-slate-400' : 'text-dark-400'">1:1</span>
             </button>
             <button
               type="button"
@@ -296,12 +357,12 @@
               :class="[
                 'px-2 py-1 rounded text-center border transition-colors flex items-center justify-between cursor-pointer',
                 edgeMenu.cardinality === 'N:1'
-                  ? 'bg-brand-500/25 text-brand-200 border-brand-500/60 font-semibold ring-1 ring-brand-500/40'
-                  : 'bg-dark-800 text-dark-300 border-dark-700 hover:bg-dark-750'
-              ]"
+                  ? (isLightTheme ? 'bg-brand-50 text-brand-700 border-brand-300 font-semibold ring-1 ring-brand-200' : 'bg-brand-500/25 text-brand-200 border-brand-500/60 font-semibold ring-1 ring-brand-500/40')
+                  : (isLightTheme ? 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100' : 'bg-dark-800 text-dark-300 border-dark-700 hover:bg-dark-750')
+            ]"
             >
               <span>多對 1</span>
-              <span class="text-dark-400 font-mono">N:1</span>
+              <span class="font-mono" :class="isLightTheme ? 'text-slate-400' : 'text-dark-400'">N:1</span>
             </button>
             <button
               type="button"
@@ -309,12 +370,12 @@
               :class="[
                 'px-2 py-1 rounded text-center border transition-colors flex items-center justify-between cursor-pointer',
                 edgeMenu.cardinality === 'N:M'
-                  ? 'bg-brand-500/25 text-brand-200 border-brand-500/60 font-semibold ring-1 ring-brand-500/40'
-                  : 'bg-dark-800 text-dark-300 border-dark-700 hover:bg-dark-750'
-              ]"
+                  ? (isLightTheme ? 'bg-brand-50 text-brand-700 border-brand-300 font-semibold ring-1 ring-brand-200' : 'bg-brand-500/25 text-brand-200 border-brand-500/60 font-semibold ring-1 ring-brand-500/40')
+                  : (isLightTheme ? 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100' : 'bg-dark-800 text-dark-300 border-dark-700 hover:bg-dark-750')
+            ]"
             >
               <span>多對多</span>
-              <span class="text-dark-400 font-mono">N:M</span>
+              <span class="font-mono" :class="isLightTheme ? 'text-slate-400' : 'text-dark-400'">N:M</span>
             </button>
           </div>
         </div>
@@ -324,9 +385,10 @@
           <button
             type="button"
             @click="reverseMenuEdge"
-            class="w-full text-left px-3 py-1.5 hover:bg-dark-750 hover:text-white flex items-center space-x-2 transition-colors cursor-pointer text-sky-300"
+            class="w-full text-left px-3 py-1.5 flex items-center space-x-2 transition-colors cursor-pointer"
+            :class="isLightTheme ? 'hover:bg-slate-100 text-sky-600' : 'hover:bg-dark-750 text-sky-300 hover:text-white'"
           >
-            <ArrowRightLeft class="w-3.5 h-3.5 text-sky-400" />
+            <ArrowRightLeft class="w-3.5 h-3.5" :class="isLightTheme ? 'text-sky-600' : 'text-sky-400'" />
             <span>反轉連線方向</span>
           </button>
 
@@ -334,18 +396,20 @@
           <button
             type="button"
             @click="generateForeignKeySql"
-            class="w-full text-left px-3 py-1.5 hover:bg-dark-750 hover:text-white flex items-center space-x-2 transition-colors text-emerald-300 cursor-pointer"
+            class="w-full text-left px-3 py-1.5 flex items-center space-x-2 transition-colors cursor-pointer"
+            :class="isLightTheme ? 'hover:bg-slate-100 text-emerald-700' : 'hover:bg-dark-750 text-emerald-300 hover:text-white'"
           >
-            <FileCode class="w-3.5 h-3.5 text-emerald-400" />
+            <FileCode class="w-3.5 h-3.5" :class="isLightTheme ? 'text-emerald-600' : 'text-emerald-400'" />
             <span>複製外鍵 SQL 腳本 (ALTER TABLE)</span>
           </button>
 
           <button
             type="button"
             @click="deleteMenuEdge"
-            class="w-full text-left px-3 py-1.5 hover:bg-dark-750 hover:text-white flex items-center space-x-2 transition-colors text-rose-400 cursor-pointer"
+            class="w-full text-left px-3 py-1.5 flex items-center space-x-2 transition-colors cursor-pointer text-rose-500 hover:text-rose-600"
+            :class="isLightTheme ? 'hover:bg-slate-100' : 'hover:bg-dark-750'"
           >
-            <Trash2 class="w-3.5 h-3.5 text-rose-400" />
+            <Trash2 class="w-3.5 h-3.5" />
             <span>刪除此關聯線 (Delete)</span>
           </button>
         </div>
@@ -355,11 +419,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted, onBeforeUnmount, shallowRef, nextTick } from 'vue';
+import { ref, reactive, computed, onMounted, onBeforeUnmount, shallowRef, nextTick } from 'vue';
 import {
   Database,
   LayoutGrid,
-  RefreshCw,
   ZoomIn,
   ZoomOut,
   Maximize2,
@@ -378,14 +441,17 @@ import {
   Eye,
   Edit3,
   Type,
+  Sun,
+  Moon,
 } from 'lucide-vue-next';
 import { Graph, Export } from '@antv/x6';
 import { register } from '@antv/x6-vue-shape';
 import dagre from 'dagre';
 import ErTableNode, { type ErTableNodeData, type ErTableColumn } from './ErTableNode.vue';
-import ErTextNode from './ErTextNode.vue';
+import ErTextNode, { type ErTextNodeData } from './ErTextNode.vue';
 import { useWorkspaceStore } from '@/stores/workspaceStore';
 import { useConnectionStore } from '@/stores/connectionStore';
+import { useSettingsStore } from '@/stores/settingsStore';
 import { schemaService } from '@/services/schemaService';
 import { saveDataUriToFile, saveSvgToFile, saveErDiagramToFile, getAppStylesheets } from '@/utils/fileStorage';
 import type { ErDiagramTab } from '@/types/workspace';
@@ -480,6 +546,9 @@ const props = defineProps<{
 
 const workspaceStore = useWorkspaceStore();
 const connectionStore = useConnectionStore();
+const settingsStore = useSettingsStore();
+
+const isLightTheme = computed(() => settingsStore.erTheme === 'light');
 
 const graphContainerRef = ref<HTMLDivElement | null>(null);
 const dropZoneRef = ref<HTMLDivElement | null>(null);
@@ -490,6 +559,7 @@ const loadingMessage = ref('正在載入 ER 圖表...');
 const isDragOver = ref(false);
 const isExportMenuOpen = ref(false);
 const zoomLevel = ref(1);
+const isGraphReady = ref(false);
 const nodeCount = ref(0);
 const edgeCount = ref(0);
 const currentDepth = ref<1 | 2>(props.tab.depth || 2);
@@ -521,11 +591,16 @@ onMounted(async () => {
   initGraph();
 
   if (props.tab.initialData) {
-    // Restore from opened file
-    restoreFromInitialData(props.tab.initialData);
+    if (props.tab.initialData.theme && (props.tab.initialData.theme === 'dark' || props.tab.initialData.theme === 'light')) {
+      settingsStore.erTheme = props.tab.initialData.theme;
+    }
+    // Restore from opened file or tab switch
+    restoreFromInitialData(props.tab.initialData, !props.tab.fileName);
   } else if (props.tab.rootTable) {
     // Load fresh ER model from DB
     await loadDiagramData();
+  } else {
+    isGraphReady.value = true;
   }
 
   // Register global listener for "加入至當前 ER 圖"
@@ -540,11 +615,16 @@ onBeforeUnmount(() => {
   if (graphInstance.value) {
     // Snapshot the current canvas state back to the tab so that switching
     // tabs and returning restores exactly what the user had (including any
-    // manually added tables, connections, and layout adjustments).
+    // manually added tables, connections, layout adjustments, zoom, and pan).
     try {
+      const currentZoom = graphInstance.value.zoom();
+      const currentTrans = graphInstance.value.translate();
       const snapshot = {
         exportedAt: new Date().toISOString(),
         graph: graphInstance.value.toJSON(),
+        zoom: currentZoom,
+        translation: currentTrans,
+        theme: settingsStore.erTheme,
       };
       workspaceStore.updateTabData(props.tab.id, { initialData: snapshot } as any);
     } catch (e) {
@@ -564,9 +644,14 @@ function closeMenus() {
 function initGraph() {
   if (!graphContainerRef.value) return;
 
+  const isLight = isLightTheme.value;
+
   const graph: Graph = new Graph({
     container: graphContainerRef.value,
     autoResize: true,
+    background: {
+      color: isLight ? '#f8fafc' : '#0c0d14',
+    },
     panning: {
       enabled: true,
       eventTypes: ['leftMouseDown'],
@@ -583,7 +668,7 @@ function initGraph() {
       visible: true,
       type: 'dot',
       args: {
-        color: '#26283b',
+        color: isLight ? '#cbd5e1' : '#26283b',
         thickness: 1,
       },
     },
@@ -641,7 +726,7 @@ function initGraph() {
           },
           attrs: {
             line: {
-              stroke: '#818cf8',
+              stroke: isLight ? '#4f46e5' : '#818cf8',
               strokeWidth: 1.5,
             },
           },
@@ -814,8 +899,13 @@ function applyEdgeCardinality(
   constraintName?: string
 ) {
   const [srcCard, tgtCard] = cardinality.split(':');
+  const isLight = isLightTheme.value;
+  const edgeColor = isLight ? '#4f46e5' : '#818cf8';
 
   edge.setData({ ...edge.getData(), cardinality, constraintName });
+
+  // Update line stroke
+  edge.attr('line/stroke', edgeColor);
 
   // Update labels: source-end badge and target-end badge only
   edge.setLabels([
@@ -824,16 +914,16 @@ function applyEdgeCardinality(
       attrs: {
         text: {
           text: srcCard,
-          fill: '#cbd5e1',
+          fill: isLight ? '#1e293b' : '#cbd5e1',
           fontSize: 10,
           fontWeight: 'bold',
           fontFamily: 'monospace',
         },
         rect: {
-          fill: '#181825',
+          fill: isLight ? '#ffffff' : '#181825',
           rx: 3,
           ry: 3,
-          stroke: '#475569',
+          stroke: isLight ? '#cbd5e1' : '#475569',
           strokeWidth: 1,
         },
       },
@@ -844,16 +934,16 @@ function applyEdgeCardinality(
       attrs: {
         text: {
           text: tgtCard,
-          fill: '#cbd5e1',
+          fill: isLight ? '#1e293b' : '#cbd5e1',
           fontSize: 10,
           fontWeight: 'bold',
           fontFamily: 'monospace',
         },
         rect: {
-          fill: '#181825',
+          fill: isLight ? '#ffffff' : '#181825',
           rx: 3,
           ry: 3,
-          stroke: '#475569',
+          stroke: isLight ? '#cbd5e1' : '#475569',
           strokeWidth: 1,
         },
       },
@@ -867,14 +957,14 @@ function applyEdgeCardinality(
       name: 'block',
       width: 7,
       height: 7,
-      fill: '#818cf8',
-      stroke: '#818cf8',
+      fill: edgeColor,
+      stroke: edgeColor,
     });
   } else {
     edge.attr('line/targetMarker', {
       name: 'path',
       d: 'M 0 -6 L 0 6',
-      stroke: '#818cf8',
+      stroke: edgeColor,
       strokeWidth: 2,
     });
   }
@@ -884,17 +974,59 @@ function applyEdgeCardinality(
       name: 'block',
       width: 7,
       height: 7,
-      fill: '#818cf8',
-      stroke: '#818cf8',
+      fill: edgeColor,
+      stroke: edgeColor,
     });
   } else {
     edge.attr('line/sourceMarker', {
       name: 'path',
       d: 'M 0 -6 L 0 6',
-      stroke: '#818cf8',
+      stroke: edgeColor,
       strokeWidth: 2,
     });
   }
+}
+
+function applyGraphTheme(theme: 'dark' | 'light') {
+  const graph = graphInstance.value;
+  if (!graph) return;
+
+  const isLight = theme === 'light';
+
+  // 1. Draw X6 Background
+  graph.drawBackground({
+    color: isLight ? '#f8fafc' : '#0c0d14',
+  });
+
+  // 2. Draw X6 Grid
+  graph.drawGrid({
+    type: 'dot',
+    args: {
+      color: isLight ? '#cbd5e1' : '#26283b',
+      thickness: 1,
+    },
+  });
+
+  // 3. Update all edges and their badges
+  for (const edge of graph.getEdges()) {
+    const d = edge.getData();
+    applyEdgeCardinality(edge, d?.cardinality || '1:N', d?.constraintName);
+  }
+
+  // 4. Update all table and text nodes with the new theme
+  for (const node of graph.getNodes()) {
+    const d = node.getData<any>();
+    if (d) {
+      node.setData({ ...d, erTheme: theme }, { overwrite: true });
+    }
+  }
+}
+
+function toggleTheme() {
+  const nextTheme: 'dark' | 'light' = isLightTheme.value ? 'dark' : 'light';
+  settingsStore.erTheme = nextTheme;
+  applyGraphTheme(nextTheme);
+  workspaceStore.showToast(nextTheme === 'light' ? '已切換為淺色佈景' : '已切換為深色佈景', 'info', 1500);
 }
 
 // ========================
@@ -1037,11 +1169,27 @@ function updateNodeLayoutAndPorts(node: any, isEdit: boolean) {
   const FOOTER_HEIGHT = isEdit ? 24 : 0;
   const newHeight = Math.max(BORDER_OFFSET * 2 + HEADER_HEIGHT + visibleCols.length * ROW_HEIGHT + FOOTER_HEIGHT, 60);
 
+  // In Edit Mode: Always enforce natural full height (Auto-Fit) for 100% accurate field-level wiring.
+  // In View Mode: Respect customHeight if set, with connected columns safety protection.
+  let targetHeight = newHeight;
+  if (!isEdit && data.customHeight !== undefined) {
+    let maxConnectedIdx = -1;
+    visibleCols.forEach((c, idx) => {
+      if (connectedPortIds.has(c.name)) {
+        maxConnectedIdx = idx;
+      }
+    });
+    const minSafeH = maxConnectedIdx >= 0
+      ? BORDER_OFFSET * 2 + HEADER_HEIGHT + (maxConnectedIdx + 1) * ROW_HEIGHT
+      : 60;
+    targetHeight = Math.max(minSafeH, data.customHeight);
+  }
+
   const currentSize = node.size();
-  if (!currentSize || currentSize.height !== newHeight) {
+  if (!currentSize || currentSize.height !== targetHeight) {
     node.setSize({
       width: currentSize?.width || 260,
-      height: newHeight,
+      height: targetHeight,
     });
   }
 
@@ -1126,6 +1274,11 @@ function toggleEditMode() {
         node.setData({ ...data, isEditMode: isEditMode.value }, { overwrite: true });
       }
       updateNodeLayoutAndPorts(node, isEditMode.value);
+    } else if (node.shape === 'er-text-node') {
+      const data = node.getData<ErTextNodeData>();
+      if (data) {
+        node.setData({ ...data, isEditMode: isEditMode.value }, { overwrite: true });
+      }
     }
   }
 
@@ -1236,6 +1389,7 @@ async function loadDiagramData() {
     workspaceStore.showToast(`載入 ER 圖失敗：${err instanceof Error ? err.message : String(err)}`, 'error');
   } finally {
     isLoading.value = false;
+    isGraphReady.value = true;
   }
 }
 
@@ -1329,6 +1483,7 @@ function renderTablesAndEdges(
       columns: tbl.columns,
       checkedColumns,
       isEditMode: isEditMode.value,
+      erTheme: settingsStore.erTheme,
     };
 
     return {
@@ -1375,7 +1530,7 @@ function renderTablesAndEdges(
         },
         attrs: {
           line: {
-            stroke: '#818cf8',
+            stroke: isLightTheme.value ? '#4f46e5' : '#818cf8',
             strokeWidth: 1.5,
           },
         },
@@ -1415,10 +1570,9 @@ function renderTablesAndEdges(
 
   updateStats();
 
-  // Smooth fit to canvas
-  setTimeout(() => {
-    graph.zoomToFit({ padding: 50, maxScale: 1.1 });
-  }, 100);
+  // Smooth fit to canvas synchronously while loading spinner is active
+  graph.zoomToFit({ padding: 50, maxScale: 1.1 });
+  isGraphReady.value = true;
 }
 
 function applyAutoLayout(direction: 'LR' | 'TB' = 'LR') {
@@ -1467,10 +1621,28 @@ function toggleLayoutDirection() {
 // Drag & Drop / Add Tables
 // ========================
 function handleDragOver(e: DragEvent) {
-  if (e.dataTransfer?.types.includes('application/sqlight-table')) {
+  if (!e.dataTransfer) return;
+  const types = e.dataTransfer.types;
+  if (!types) return;
+  const typeArray = Array.from(types);
+  const hasTable =
+    typeArray.includes('application/sqlight-table') ||
+    (types as any).contains?.('application/sqlight-table');
+
+  if (hasTable) {
+    e.preventDefault();
     e.dataTransfer.dropEffect = 'copy';
     isDragOver.value = true;
   }
+}
+
+function handleDragLeave(e: DragEvent) {
+  const currentTarget = e.currentTarget as HTMLElement | null;
+  const relatedTarget = e.relatedTarget as HTMLElement | null;
+  if (currentTarget && relatedTarget && currentTarget.contains(relatedTarget)) {
+    return;
+  }
+  isDragOver.value = false;
 }
 
 async function handleDropTable(e: DragEvent) {
@@ -1490,20 +1662,20 @@ async function handleDropTable(e: DragEvent) {
     if (!graph) return;
 
     const localPoint = graph.clientToLocal(e.clientX, e.clientY);
-    await addTableToGraph(tableInfo.schema, tableInfo.table, localPoint.x, localPoint.y);
+    await addTableToGraph(tableInfo.schema, tableInfo.table, localPoint.x, localPoint.y, tableInfo.connId, tableInfo.db);
   } catch (err) {
     console.error('Failed to parse dropped table:', err);
   }
 }
 
-function handleAddTableEvent(e: CustomEvent<{ schema: string; table: string }>) {
+function handleAddTableEvent(e: CustomEvent<{ schema: string; table: string; connId?: string; database?: string }>) {
   if (!e.detail) return;
   if (workspaceStore.activeTab?.id === props.tab.id) {
-    addTableToGraph(e.detail.schema, e.detail.table);
+    addTableToGraph(e.detail.schema, e.detail.table, undefined, undefined, e.detail.connId, e.detail.database);
   }
 }
 
-async function addTableToGraph(schema: string, table: string, x?: number, y?: number) {
+async function addTableToGraph(schema: string, table: string, x?: number, y?: number, connIdOverride?: string, dbOverride?: string) {
   const graph = graphInstance.value;
   if (!graph) return;
 
@@ -1518,8 +1690,13 @@ async function addTableToGraph(schema: string, table: string, x?: number, y?: nu
     return;
   }
 
-  const connId = props.tab.connectionId || connectionStore.activeConnectionId;
-  const db = props.tab.database || connectionStore.activeDatabase;
+  if (props.tab.connectionId && connIdOverride && props.tab.connectionId !== connIdOverride) {
+    workspaceStore.showToast('無法跨不同資料庫連線加入資料表', 'warning', 3000);
+    return;
+  }
+
+  const connId = props.tab.connectionId || connIdOverride || connectionStore.activeConnectionId;
+  const db = props.tab.database || dbOverride || connectionStore.activeDatabase;
   if (!connId) return;
 
   try {
@@ -1562,6 +1739,7 @@ async function addTableToGraph(schema: string, table: string, x?: number, y?: nu
       columns: enrichedCols,
       checkedColumns,
       isEditMode: isEditMode.value,
+      erTheme: settingsStore.erTheme,
     };
 
     const finalX = x !== undefined ? x : 120 + Math.random() * 80;
@@ -1614,7 +1792,7 @@ async function addTableToGraph(schema: string, table: string, x?: number, y?: nu
     workspaceStore.showToast(`已新增資料表：${schema}.${table}`, 'success', 2000);
   } catch (err) {
     console.error('Failed to add table to ER diagram:', err);
-    workspaceStore.showToast('新增資料表失敗', 'error');
+    workspaceStore.showToast('加入資料表失敗', 'error');
   }
 }
 
@@ -1644,7 +1822,9 @@ function handleAddTextNode() {
     height: 120,
     data: {
       text: '',
-      color: 'amber',
+      color: 'dark',
+      isEditMode: isEditMode.value,
+      erTheme: settingsStore.erTheme,
     },
   });
 
@@ -1699,7 +1879,7 @@ function exportAsPng() {
       },
       {
         padding: 40,
-        backgroundColor: '#0f111a',
+        backgroundColor: isLightTheme.value ? '#f8fafc' : '#0f111a',
         quality: 1.0,
         ratio: 2, // 2x high resolution (Retina quality)
         copyStyles: true,
@@ -1771,13 +1951,13 @@ function exportAsSvg() {
             });
           });
 
-          // 2. Insert solid dark background rect behind all content
+          // 2. Insert solid background rect behind all content
           const bgRect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
           bgRect.setAttribute('x', `${viewBox.x}`);
           bgRect.setAttribute('y', `${viewBox.y}`);
           bgRect.setAttribute('width', `${viewBox.width}`);
           bgRect.setAttribute('height', `${viewBox.height}`);
-          bgRect.setAttribute('fill', '#0f111a');
+          bgRect.setAttribute('fill', isLightTheme.value ? '#f8fafc' : '#0f111a');
           clonedSVG.insertBefore(bgRect, clonedSVG.firstChild);
 
           // 3. Ensure essential SVG namespaces on root element
@@ -1808,7 +1988,10 @@ async function exportAsJson() {
     rootTable: props.tab.rootTable,
     depth: currentDepth.value,
     exportedAt: new Date().toISOString(),
+    theme: settingsStore.erTheme,
     graph: graph.toJSON(),
+    zoom: graph.zoom(),
+    translation: graph.translate(),
   };
 
   const jsonStr = JSON.stringify(payload, null, 2);
@@ -1823,11 +2006,15 @@ async function exportAsJson() {
   }
 }
 
-function restoreFromInitialData(data: any) {
+function restoreFromInitialData(data: any, silent = false) {
   const graph = graphInstance.value;
   if (!graph) return;
 
   try {
+    if (data.theme && (data.theme === 'dark' || data.theme === 'light')) {
+      settingsStore.erTheme = data.theme;
+    }
+
     const graphData = data.graph || data;
     graph.fromJSON(graphData);
 
@@ -1842,17 +2029,33 @@ function restoreFromInitialData(data: any) {
       if (node.shape === 'er-table-node') {
         const d = node.getData<ErTableNodeData>();
         if (d) {
-          node.setData({ ...d, isEditMode: isEditMode.value }, { overwrite: true });
+          node.setData({ ...d, isEditMode: isEditMode.value, erTheme: settingsStore.erTheme }, { overwrite: true });
         }
         updateNodeLayoutAndPorts(node, isEditMode.value);
+      } else if (node.shape === 'er-text-node') {
+        const d = node.getData<ErTextNodeData>();
+        if (d) {
+          node.setData({ ...d, isEditMode: isEditMode.value, erTheme: settingsStore.erTheme }, { overwrite: true });
+        }
       }
     }
 
+    applyGraphTheme(settingsStore.erTheme);
     updateStats();
-    setTimeout(() => {
+
+    // If snapshot contains previous zoom and pan coordinates, restore them synchronously
+    if (typeof data.zoom === 'number' && data.translation && typeof data.translation.tx === 'number' && typeof data.translation.ty === 'number') {
+      graph.zoomTo(data.zoom);
+      graph.translate(data.translation.tx, data.translation.ty);
+    } else {
+      // First time opening or legacy file without saved viewport coordinates
       graph.zoomToFit({ padding: 50, maxScale: 1.1 });
-    }, 100);
-    workspaceStore.showToast('已還原 ER 模型圖', 'success');
+    }
+
+    isGraphReady.value = true;
+    if (!silent) {
+      workspaceStore.showToast('已還原 ER 模型圖', 'success');
+    }
   } catch (err) {
     console.error('Failed to restore ER diagram from file:', err);
     workspaceStore.showToast('載入圖檔結構失敗', 'error');

@@ -1,227 +1,290 @@
 # SQLight 未來功能擴充與優化建議藍圖 (Feature Recommendations Blueprint)
 
-> 本文件彙整針對 **SQLight** 桌面管理客戶端的後續功能擴充與優化建議，從「高頻實用性」、「資料安全性」與「專業 DBA 深度」三個維度進行評估與排序，作為後續版本演進之規劃指南。
+> **版本**：v0.2.0-draft  
+> **更新時間**：2026-09-16  
+> **適用架構**：Tauri v2 + Rust (Tiberius TDS) + Vue 3 + Monaco Editor + AG Grid Community  
 
 ---
 
 ## 📖 目錄 (Table of Contents)
 
-1. [執行摘要 (Executive Summary)](#1-執行摘要-executive-summary)
-2. [🥇 第一梯隊：立竿見影、最高頻實用功能 (Top Priority)](#2--第一梯隊立竿見影最高頻實用功能-top-priority)
-   - [2.1 🔴 生產環境防呆警示與連線標籤 (Environment Badge & Production Safe Guard)](#21--生產環境防呆警示與連線標籤-environment-badge--production-safe-guard)
-   - [2.2 ⚡ 快速物件檢索器 (Quick Object Finder / Spotlight `Ctrl + P`)](#22--快速物件檢索器-quick-object-finder--spotlight-ctrl--p)
-   - [2.3 💾 實體檔案串流匯出精靈 (Export to Excel / CSV / JSON / SQL Script)](#23--實體檔案串流匯出精靈-export-to-excel--csv--json--sql-script)
-   - [2.4 🛑 長時間查詢中斷與取消機制 (Cancel Query / Task Killer)](#24--長時間查詢中斷與取消機制-cancel-query--task-killer)
-3. [🥈 第二梯隊：專業 DBA 與性能調校神兵利器 (Pro DBA & Performance Tuning)](#3--第二梯隊專業-dba-與性能調校神兵利器-pro-dba--performance-tuning)
-   - [3.1 📊 執行統計與 IO 分析器 (Execution Stats & IO Analyzer)](#31--執行統計與-io-分析器-execution-stats--io-analyzer)
-   - [3.2 🧱 資料表結構進階檢視（索引、外鍵、檢查約束）](#32--資料表結構進階檢視索引外鍵檢查約束)
-   - [3.3 🔍 雙結果集資料比對工具 (Result Diff & Data Compare)](#33--雙結果集資料比對工具-result-diff--data-compare)
-4. [🥉 第三梯隊：極致細節與團隊生產力 (Productivity & UX Polish)](#4--第三梯隊極致細節與團隊生產力-productivity--ux-polish)
-   - [4.1 📝 自訂 SQL 代碼範本庫 (User Custom Snippets & Favorites)](#41--自訂-sql-代碼範本庫-user-custom-snippets--favorites)
-   - [4.2 🔗 外鍵關聯快速跳轉 (FK Quick Jump & Reference Navigation)](#42--外鍵關聯快速跳轉-fk-quick-jump--reference-navigation)
-   - [4.3 🔐 加密連線設定檔匯出/匯入 (Portable Encrypted Profiles)](#43--加密連線設定檔匯出匯入-portable-encrypted-profiles)
-   - [4.4 ✏️ 儲存格行內直接編輯與安全變更 (Inline Editing with Safe Patch)](#44--儲存格行內直接編輯與安全變更-inline-editing-with-safe-patch)
-5. [建議實作路線圖 (Implementation Roadmap)](#5-建議實作路線圖-implementation-roadmap)
+1. [執行摘要與現況評估 (Executive Summary & Status Review)](#1-執行摘要與現況評估-executive-summary--status-review)
+2. [🎉 已落地交付之里程碑功能 (Completed Milestones)](#2--已落地交付之里程碑功能-completed-milestones)
+3. [🥇 第一梯隊：安全守護與核心外銷 (P0 - Security & Core Data Export)](#3--第一梯隊安全守護與核心外銷-p0---security--core-data-export)
+   - [3.1 🔴 生產環境防呆警示與危險操作攔截 (Production Safe Guard & Environment Badge)](#31--生產環境防呆警示與危險操作攔截-production-safe-guard--environment-badge)
+   - [3.2 💾 實體檔案串流匯出精靈 (Native File Stream Exporter: Excel / CSV / JSON / SQL)](#32--實體檔案串流匯出精靈-native-file-stream-exporter-excel--csv--json--sql)
+   - [3.3 🔐 連線設定檔安全加密匯入/匯出 (AES-256 Portable Encrypted Profiles)](#33--連線設定檔安全加密匯入匯出-aes-256-portable-encrypted-profiles)
+4. [🥈 第二梯隊：專業 DBA 與結構深度洞察 (P1 - Pro DBA & Schema Deep Dive)](#4--第二梯隊專業-dba-與結構深度洞察-p1---pro-dba--schema-deep-dive)
+   - [4.1 🧱 資料表結構進階檢視（索引管理、外鍵、檢查約束、觸發程序）](#41--資料表結構進階檢視索引管理外鍵檢查約束觸發程序)
+   - [4.2 🔍 雙結果集資料比對工具 (Result Diff & Data Comparator)](#42--雙結果集資料比對工具-result-diff--data-comparator)
+   - [4.3 🔗 外鍵關聯快速跳轉與資料穿透 (FK Quick Peek & Navigation)](#43--外鍵關聯快速跳轉與資料穿透-fk-quick-peek--navigation)
+   - [4.4 ✏️ 資料瀏覽器 (`TableDataViewer`) 補齊行內編輯與「新增資料列」](#44--資料瀏覽器-tabledataviewer-補齊行內編輯與新增資料列)
+5. [🥉 第三梯隊：巨量效能調校與現代 AI 體驗 (P2 - Scale, Performance & AI)](#5--第三梯隊巨量效能調校與現代-ai-體驗-p2---scale-performance--ai)
+   - [5.1 ⚡ 伺服器端分頁與鍵值串流 (Server-side Pagination & Keyset Fetching)](#51--伺服器端分頁與鍵值串流-server-side-pagination--keyset-fetching)
+   - [5.2 🤖 現代 AI SQL 助手 (BYOK LLM: 自然語言轉換、語法診斷與優化建議)](#52--現代-ai-sql-助手-byok-llm-自然語言轉換語法診斷與優化建議)
+   - [5.3 📊 資料庫即時活動與鎖定監控儀表板 (Live Activity & Locks Monitor Dashboard)](#53--資料庫即時活動與鎖定監控儀表板-live-activity--locks-monitor-dashboard)
+6. [建議實作路線圖 (Implementation Roadmap)](#6-建議實作路線圖-implementation-roadmap)
 
 ---
 
-## 1. 執行摘要 (Executive Summary)
+## 1. 執行摘要與現況評估 (Executive Summary & Status Review)
 
-**SQLight** 目前已奠定了極為優秀的技術基礎：
-- **極速輕巧**：Tauri v2 + Rust 原生核心，免除肥重 JVM/Electron 開銷。
-- **編輯極致**：Monaco Editor 整合 T-SQL Monarch 語法分析、DBA 診斷工具箱、自訂醒目分頁配色。
-- **百萬渲染**：AG Grid Community 搭配虛擬滾動、框選統計列、多格式快速匯出。
-- **結構洞察**：專屬資料表結構檢視器（12 大中繼屬性、主鍵/自動識別標記）。
-- **嚴謹安全**：複合主鍵完整性驗證、自動交易保護 (`BEGIN TRAN ... ROLLBACK`)、`@@ROWCOUNT <> 1` 誤殺防護。
+**SQLight** 經過快速迭代，已建構起極佳的桌面端架構優勢：
+- 🚀 **極致啟動與記憶體表現**：採用 Tauri v2 + Rust 原生非同步核心，擺脫 Electron/JVM 動輒 500MB~1GB 的記憶體開銷。
+- 💻 **流暢的編程與資料互動**：Monaco Editor 與 AG Grid Community 整合順暢，支援多結果集歷史、多欄選取統計、Excel 級別的複製粘貼。
+- 🛡️ **安全交易防護網**：複合主鍵完整性嚴格驗證、自動交易保護 (`BEGIN TRAN ... ROLLBACK`)、`@@ROWCOUNT <> 1` 誤殺攔截。
 
-為進一步將 SQLight 打造成市場上最受信賴且稱手的 SQL Server 桌面客戶端，本藍圖規劃了 11 項極具實用價值的進階功能。
+在過去的藍圖中，許多原列為評估的項目已相繼研發落地（如 Spotlight 搜尋、查詢中斷與 Task Killer、IO 統計分析、自訂 SQL 範本庫、結果表格行內直接編輯等）。  
+本修訂版藍圖針對**目前最新程式碼實作現況**進行全面體檢，剔除已完成項目，並依據實務生產痛點、使用者操作反饋與大型企業專案需求，重新梳理出下一階段最具商業與工程價值的優化方向。
 
 ---
 
-## 2. 🥇 第一梯隊：立竿見影、最高頻實用功能 (Top Priority)
+## 2. 🎉 已落地交付之里程碑功能 (Completed Milestones)
 
-### 2.1 🔴 生產環境防呆警示與連線標籤 (Environment Badge & Production Safe Guard)
+以下項目已於近期版本中完成實作、通過單元測試並整合入主分支，現已納入專案常態維護：
+
+| 功能項目 | 所屬模組 | 實作成效與重點亮點 |
+| :--- | :--- | :--- |
+| **⚡ 快速物件檢索器 (Spotlight `Ctrl+P`)** | `QuickObjectFinderModal.vue` | 支援 PascalCase/子序列模糊匹配、類型前綴篩選、彩標分類與直覺鍵盤捷徑導航。 |
+| **🛑 長時間查詢中斷與取消 (Task Killer)** | `query_commands.rs`, `queryStore.ts` | 微秒級釋放細粒度連線鎖，按下 <kbd>Alt+Break</kbd> / <kbd>Esc</kbd> 即刻終止本地讀取並透過獨立連線發送 `KILL <spid>;`。 |
+| **📊 執行統計與 IO 分析器** | `ExecutionStatsViewer.vue`, `statsParser.ts` | 解析 `STATISTICS IO, TIME`，呈現 5 大核心 KPI、單表 8KB 容量換算進度條與 Markdown 調校報告匯出。 |
+| **🌐 實際執行計畫圖形檢視器** | `ExecutionPlanViewer.vue`, `planXmlParser.ts` | 抽離 XML Showplan，整合 `html-query-plan` 渲染算子圖形樹、相對成本百分比並支援匯出 `.sqlplan`。 |
+| **🚀 客戶端 GO 批次分割引擎** | `sqlStatementExtractor.ts` | 狀態機掃描略過註解與字串內的 `GO`，支援多批次 DDL/DML 循序執行與訊息匯整。 |
+| **🎯 物件總管游標快速定位** | `sqlIdentifierExtractor.ts`, `AppSidebar.vue` | 精準擷取游標/選取區物件識別字，側邊欄自動清除過濾遮蔽、連鎖展開、背景載入並置中光暈高亮。 |
+| **📚 常用 SQL 範本庫與同層文件** | `SqlTemplateModal.vue`, `template_commands.rs` | 內建 4 大類常用/進階/維護語法，支援可攜版同層實體 `sql_custom_templates.json` 熱重載與 CRUD。 |
+| **✏️ 結果表格行內編輯與安全批次變更** | `ResultGrid.vue`, `tableEditability.ts` | 雙擊儲存格直接編輯、琥珀色修訂提示、嚴格 PK 驗證、Monaco 語法審查確認對話框與交易回滾防護。 |
+| **🛠️ 資料表結構 ALTER 產生器** | `TableStructureViewer.vue`, `alterTableGenerator.ts` | 支援右鍵產生 `ALTER COLUMN`、`DROP COLUMN`、`ADD COLUMN` 等標準 T-SQL 變更腳本。 |
+| **🔍 物件總管 ComboBox 歷史記憶過濾** | `AppSidebar.vue`, `filterHistory.ts` | 側邊欄過濾框升級為 ComboBox，支援 30 筆 LRU 歷史搜尋記錄、一鍵清除與鍵盤歷史選取。 |
+
+---
+
+## 3. 🥇 第一梯隊：安全守護與核心外銷 (P0 - Security & Core Data Export)
+
+### 3.1 🔴 生產環境防呆警示與危險操作攔截 (Production Safe Guard & Environment Badge)
 
 #### 痛點描述
-工程師或 DBA 最具毀滅性的操作事故，往往源自於「以為自己在測試環境，卻在正式環境誤執行了 UPDATE、DELETE 或 DROP」。
+在現代多環境開發流程中，工程師常同時開啟本機開發庫 (Dev)、測試庫 (Staging) 與正式生產庫 (Prod)。一旦在生產環境誤執行了無 `WHERE` 條件的 `UPDATE`、`DELETE` 或誤執行了 `DROP TABLE` / `TRUNCATE TABLE`，將造成不可逆的災難性資料遺失。
 
 #### 設計方案
-1. **連線設定擴充環境屬性**：
+1. **連線設定擴充環境識別 (Environment Profile)**：
    - 🔴 **Production (生產環境)**
    - 🟡 **Staging / UAT (測試環境)**
    - 🟢 **Development / Local (開發環境)**
-2. **高視覺化環境警示**：
-   - 連線成功後，頂部標題列、連線下拉框與查詢分頁邊框自動套用高辨識度的環境色調。
-   - 生產環境呈現高警示鮮紅色邊框與 `[PROD]` 醒目徽章。
-3. **高風險語句二次確認攔截 (Dangerous Query Interceptor)**：
-   - 當處於生產環境時，若執行包含 `UPDATE`、`DELETE`、`DROP`、`TRUNCATE`、`ALTER` 等變更語句：
-     - 自動彈出鮮紅色全域確認對話框。
-     - 顯示目標主機位址、目標資料庫名稱、受影響 SQL 預覽。
-     - 若 `UPDATE` / `DELETE` 缺少 `WHERE` 條件，強制提示「警告：未包含 WHERE 條件，將影響全表！」。
-     - 需在輸入框中鍵入指定確認字元（如 `EXECUTE`）或點擊確認才允許送出執行。
-
-#### 技術評估
-- **前端工作量**：連線設定增設欄位、Monaco 執行前過濾器增加正規表示式檢查與 ConfirmModal。
-- **性價比**：⭐⭐⭐⭐⭐（極高，徹底杜絕人為誤操作）。
+2. **沉浸式高警示視覺渲染**：
+   - 頂部連線下拉選單、側邊欄連線圖示、以及當前活動中的 Monaco 編輯分頁頂部邊框，自動套用對應環境主題色彩（生產庫套用鮮明警示紅）。
+   - 狀態列與分頁標籤常駐醒目徽章（如 `[PROD]`、`[UAT]`）。
+3. **危險語句攔截器 (Dangerous Operation Guard)**：
+   - 當連線為 `Production` 時，使用者按下執行（<kbd>Ctrl+Enter</kbd>）時自動進行語法預先審查。
+   - 若偵測到包含 `UPDATE` 或 `DELETE` 且**未檢測到 `WHERE` 關鍵字**，強制彈出全域紅色阻絕彈窗：
+     > 「⚠️ 警告：偵測到生產環境無條件更新/刪除！此操作將影響整張資料表全部資料。」
+   - 對於 `DROP`、`TRUNCATE`、`ALTER` 等 DDL 操作，要求使用者在彈窗中**手動鍵入目標資料庫名稱或指定驗證碼 (如 `EXECUTE`)** 方可解鎖執行。
 
 ---
 
-### 2.2 ⚡ 快速物件檢索器 (Quick Object Finder / Spotlight `Ctrl + P`)
+### 3.2 💾 實體檔案串流匯出精靈 (Native File Stream Exporter: Excel / CSV / JSON / SQL)
 
 #### 痛點描述
-在大型資料庫中，資料表、檢視表與預存程序往往多達數百甚至數千個。使用者在側邊欄一層層點開資料夾、滑動滾輪尋找目標非常耗時。
+目前系統僅支援「複製至剪貼簿」。當查詢結果達到 10,000 ~ 100,000 列以上時：
+1. 剪貼簿往往因資料量過大發生記憶體溢出或崩潰。
+2. 業務同仁需要實體 `.xlsx` 或 `.csv` 檔案，手動貼入 Excel 容易發生格式跑掉、科學記號失真（如電話號碼或身分證號丟失前導 0）。
+3. Windows Excel 開啟一般 UTF-8 CSV 時常出現中文亂碼。
 
 #### 設計方案
-1. **快捷鍵呼出**：按下 <kbd>Ctrl</kbd> + <kbd>P</kbd>（或 <kbd>Ctrl</kbd> + <kbd>O</kbd>）立即於視窗正上方中央彈出懸浮搜尋面板。
-2. **模糊搜尋 (Fuzzy Search)**：
-   - 支援拼音/縮寫模糊匹配（例如輸入 `uslog` 可即時命中 `dbo.UserLoginLogs`）。
-   - 依類型分組並標示圖示：資料表 (`Table`)、檢視表 (`View`)、預存程序 (`Procedure`)、函數 (`Function`)。
-3. **鍵盤直覺操作**：
-   - <kbd>↑</kbd> / <kbd>↓</kbd> 鍵切換選取項目。
-   - <kbd>Enter</kbd> 預設開啟該表資料 (`TableDataViewer`)。
-   - <kbd>Shift</kbd> + <kbd>Enter</kbd> 開啟該表結構 (`TableStructureViewer`)。
-   - <kbd>Ctrl</kbd> + <kbd>Enter</kbd> 於新 SQL 分頁產生 `SELECT TOP 100 * FROM [schema].[name];` 並自動聚焦。
-
-#### 技術評估
-- **前端工作量**：直接複用 `schemaStore` 中已快取的物件清單，配合微型模糊匹配演算法，效能極高（毫秒級反應）。
-- **性價比**：⭐⭐⭐⭐⭐（使用者每天使用數十次的高頻神器）。
-
----
-
-### 2.3 💾 實體檔案串流匯出精靈 (Export to Excel / CSV / JSON / SQL Script)
-
-#### 痛點描述
-目前系統支援將表格選取區域複製為 TSV、JSON、Markdown。然而當查詢筆數達到數萬至數十萬筆時，剪貼簿無法承受龐大資料量，且常常需要實體檔案提供給業務或匯入其他系統。
-
-#### 設計方案
-1. **工具列新增「匯出檔案 (Export to File)」下拉按鈕**：
-   - 📊 **Excel 工作表 (.xlsx)**：支援自動套用欄位標題樣式與適當數值格式。
-   - 📄 **CSV / TSV 檔案 (.csv)**：支援自訂分隔符，並自動加入 **UTF-8 with BOM**（解決 Windows Excel 開啟中文亂碼問題）。
-   - 📦 **JSON 檔案 (.json)**：格式化輸出為物件陣列檔案。
-   - 📝 **SQL 插入腳本 (.sql)**：自動產出整批具備交易保護的 `INSERT INTO ... VALUES (...)` 腳本檔案。
+1. **工具列與右鍵選單新增「匯出實體檔案 (Export to File)」**：
+   - 📊 **Excel 活頁簿 (.xlsx)**：支援將當前結果集或全部結果集直接產出為真實 Excel 檔案，保留型別（字串保持為文字避免被轉成科學記號）、欄位寬度自動微調、首列凍結與標題加粗。
+   - 📄 **CSV / TSV 檔案 (.csv)**：支援**自動寫入 UTF-8 BOM 檔頭 (`0xEF, 0xBB, 0xBF`)**，確保繁體中文/簡體中文於 Excel 開啟時 100% 不亂碼；支援逗號、Tab、分號自訂分隔符。
+   - 📦 **JSON 格式檔案 (.json)**：整份結果集格式化為 `[ { "col": val }, ... ]` 實體檔案儲存。
+   - 📝 **SQL 批次插入腳本 (.sql)**：將查詢結果自動產生為帶有 `SET IDENTITY_INSERT ON/OFF`、每 1,000 筆分批的 `INSERT INTO ... VALUES` 腳本檔案。
 2. **串流式保存 (Stream Saving)**：
-   - 透過 Tauri Dialog 呼叫系統存檔對話框選擇路徑。
-   - 支援大資料集分塊（Chunking）寫入本機硬碟，避免前端記憶體耗盡。
-
-#### 技術評估
-- **前端/後端工作量**：前端整合 `xlsx` 函式庫或由 Rust 後端直接接收資料流寫檔。
-- **性價比**：⭐⭐⭐⭐（實務工作必備）。
+   - 整合 Tauri 的 `save` 對話框選擇本機路徑。
+   - 大資料量時採用分塊（Chunking）方式寫入硬碟，並在狀態列顯示匯出進度條，避免前端主執行緒凍結。
 
 ---
 
-### 2.4 🛑 長時間查詢中斷與取消機制 (Cancel Query / Task Killer)
+### 3.3 🔐 連線設定檔安全加密匯入/匯出 (AES-256 Portable Encrypted Profiles)
 
 #### 痛點描述
-當下錯查詢條件（例如缺乏 JOIN 關聯導致笛卡兒積、或者在數千萬列的大表執行了全表掃描），查詢長時間佔用連線且鎖定資料庫資源時，使用者只能無奈乾等或強行關閉程式。
+- SQLight 目前透過作業系統 Keychain 保存密碼，連線設定則存於 `%LOCALAPPDATA%`。
+- 當使用者更換電腦、重灌系統，或團隊內部需要共享一組資料庫連線清單時，無法方便地遷移設定，每次都要重新手動填寫 Host、Port、帳號、密碼。
 
 #### 設計方案
-1. **動態取消按鈕**：
-   - 當發起查詢且 `isExecuting === true` 時，頂部的執行按鈕自動切換為紅色閃爍的「**取消執行 (Cancel Query)**」按鈕。
-2. **後端連線中斷處理**：
-   - Rust 端在執行查詢時記錄該查詢對應的伺服器工作階段 ID (`SPID`)。
-   - 點擊取消時，立即在背景獨立通道發送 `KILL <spid>`，或中斷當前 Tiberius TCP 資料流，秒級終止伺服器端耗能作業並釋放 Shared/Exclusive Locks。
-
-#### 技術評估
-- **後端工作量**：Rust `src-tauri` 增加 `cancel_query` 命令與連線任務代碼對應。
-- **性價比**：⭐⭐⭐⭐（保障資料庫伺服器健康的關鍵機制）。
+1. **連線管理器「匯出連線設定檔 (Export Profiles)」**：
+   - 使用者可勾選欲匯出的連線設定。
+   - 提示設定一組「主密碼 (Master Password)」。
+   - 系統利用 `AES-256-GCM` 搭配 `PBKDF2` / `Argon2` 金鑰衍生演算法，將包含密碼在內的連線組態加密產出為副檔名為 `.sqlight.enc` 的安全設定檔。
+2. **「匯入連線設定檔 (Import Profiles)」**：
+   - 選擇檔案並輸入主密碼進行解密驗證。
+   - 提供連線衝突比對介面（覆蓋、略過、重新命名保留兩者），一鍵將密碼安全寫入新環境的 OS Keychain。
 
 ---
 
-## 3. 🥈 第二梯隊：專業 DBA 與性能調校神兵利器 (Pro DBA & Performance Tuning)
+## 4. 🥈 第二梯隊：專業 DBA 與結構深度洞察 (P1 - Pro DBA & Schema Deep Dive)
 
-### 3.1 📊 執行統計與 IO 分析器 (Execution Stats & IO Analyzer)
-
-#### 痛點描述
-在進行 SQL 效能優化時，僅看執行秒數往往受快取影響而失真。專業 DBA 最重視的指標是 **邏輯讀取量 (Logical Reads)** 與 **CPU 耗時**。
-
-#### 設計方案
-1. **底層統計探針**：
-   - 執行時自動啟用 `SET STATISTICS IO, TIME ON;`。
-2. **統計資訊視覺化面板**：
-   - 下方結果面板新增「**效能統計 (Execution Stats)**」分頁。
-   - 結構化解析 SQL Server 傳回的訊息字串，將各資料表的讀取量整理為視覺化表格：
-     - **Logical Reads**（邏輯讀取，越低越好，代表索引覆蓋佳）
-     - **Physical Reads**（磁碟物理讀取）
-     - **Read-Ahead Reads**（預先讀取量）
-     - **CPU Time vs. Elapsed Time**（CPU 時間與實際流逝時間）
-   - 以彩色進度條標記出「消耗最大資源的資料表」，一眼揪出效能瓶頸。
-
-#### 技術評估
-- **前端工作量**：純文字 Regex 剖析器 + 簡易進度條表格，開發成本極低但專業價值極大。
-- **性價比**：⭐⭐⭐⭐⭐。
-
----
-
-### 3.2 🧱 資料表結構進階檢視（索引、外鍵、檢查約束）
+### 4.1 🧱 資料表結構進階檢視（索引管理、外鍵、檢查約束、觸發程序）
 
 #### 痛點描述
-目前的 `TableStructureViewer` 聚焦於欄位清單。但在資料庫設計與故障排查時，索引狀態與外鍵關聯同樣至關重要。
+目前 `TableStructureViewer` 專注於 12 大欄位中繼屬性。但在進行資料庫日常維護、效能調優與 Schema 設計時，工程師與 DBA 必須深入掌握**索引佈局、外鍵關聯、檢查條件與觸發器**。
 
 #### 設計方案
-在資料表結構檢視器中擴充次級標籤列（Sub-Tabs）：
-1. 📋 **欄位清單 (Columns)**：現有之 12 大屬性完整清單。
+在 `TableStructureViewer` 頂部增設次級標籤導覽列 (Sub-Tabs)：
+1. 📋 **欄位清單 (Columns)**：現有 12 大中繼資料表（Ordinal, PK, Type, Nullable, Identity, Default 等）。
 2. 🗂️ **索引清單 (Indexes)**：
-   - 索引名稱、類型（聚集 Clustered / 非聚集 Non-Clustered）、是否唯一 (Unique)、主鍵索引標記。
-   - 鍵值欄位 (Key Columns) 與包含欄位 (Included Columns)。
-   - 右鍵選單支援：「重新組織索引 (Reorganize)」、「重建索引 (Rebuild)」。
+   - 呈現索引名稱、類型（聚集 Clustered / 非聚集 Non-Clustered / 唯一 Unique / 空間空間 / 欄位存放區 Columnstore）。
+   - 鍵值欄位清單 (Key Columns)、包含欄位清單 (Included Columns, `INCLUDE`)、篩選述詞 (Filter Definition)。
+   - 即時顯示索引破碎度百分比 (`Fragmentation %`)、頁面數與大小。
+   - 右鍵操作選單：支援一鍵產生 `REORGANIZE`、`REBUILD WITH (ONLINE = ON)` 或 `DROP INDEX` 語句。
 3. 🔗 **外鍵關聯 (Foreign Keys)**：
-   - 外鍵名稱、本表欄位、參照目標資料表與目標主鍵欄位。
-   - 連動規則：`ON DELETE CASCADE/NO ACTION`、`ON UPDATE CASCADE/NO ACTION`。
-4. 🛡️ **約束條件 (Check Constraints & Defaults)**：
-   - 檢查約束運算式（例如 `[Age] >= 0`）。
-
-#### 技術評估
-- **後端/查詢工作量**：利用 `sys.indexes`、`sys.index_columns` 與 `sys.foreign_keys` 撰寫一次性查詢即可取得完整結構。
-- **性價比**：⭐⭐⭐⭐。
+   - 外鍵約束名稱、本表參照欄位、目標關聯表、目標主鍵欄位。
+   - 連動規則狀態：`ON UPDATE CASCADE/NO ACTION`、`ON DELETE CASCADE/SET NULL`。
+4. 🛡️ **條件約束 (Check Constraints & Defaults)**：
+   - 約束名稱、約束定義條件式（如 `[Status] IN ('A', 'I', 'D')`）、是否啟用或信任狀態。
+5. ⚡ **觸發程序 (Triggers)**：
+   - 觸發程序名稱、事件類型 (`AFTER INSERT` / `AFTER UPDATE` / `INSTEAD OF`)、啟用狀態，支援雙擊檢視觸發程序原始碼。
 
 ---
 
-### 3.3 🔍 雙結果集資料比對工具 (Result Diff & Data Compare)
+### 4.2 🔍 雙結果集資料比對工具 (Result Diff & Data Comparator)
 
 #### 痛點描述
-在重構複雜預存程序或改寫 SQL 時，開發者需要確保「改寫前與改寫後的查詢結果完全一模一樣」。
+在進行下列工作情境時，缺乏直觀的比對工具是開發者的大痛點：
+- 重構舊版大型 Stored Procedure 或複雜 CTE 查詢時，需要驗證「重構前後輸出的資料筆數與每個欄位值是否 100% 完全相同」。
+- 排查正式環境與測試環境資料不一致問題時。
 
 #### 設計方案
-1. **分頁右鍵選單新增「比對結果 (Compare with Tab...)」**：
-   - 選擇要進行比對的兩個 Results 分頁。
-2. **雙欄視覺化比對視圖 (Side-by-Side Diff Grid)**：
-   - 自動比對總列數、欄位型別與順序。
-   - 依據主鍵或第一欄作為基準鍵進行逐列對齊。
-   - 數值變動的儲存格以柔和的黃色/紅色高亮顯示，並標明舊值與新值。
-
-#### 技術評估
-- **前端工作量**：前端在記憶體中比對兩組 row 陣列並渲染差分標記。
-- **性價比**：⭐⭐⭐。
-
----
-
-## 4. 🥉 第三梯隊：極致細節與團隊生產力 (Productivity & UX Polish)
-
-### 4.1 📝 自訂 SQL 代碼範本庫 (User Custom Snippets & Favorites)
-- **概念**：除了內建的 `sel`、`ins`、`upd`，允許使用者在「設定」中新增自己常用的專案代碼片段（例如常用的權限檢查、標準審核欄位、多表關聯樣板），於編輯器中輸入前綴即可展開。
-- **最愛查詢 (Saved Queries)**：支援將常用維護語句收藏至側邊欄「我的收藏」，點擊直接載入。
-
-### 4.2 🔗 外鍵關聯快速跳轉 (FK Quick Jump & Reference Navigation)
-- **概念**：在結果表格或資料瀏覽器中，當游標停留在外鍵欄位時顯示小箭頭圖示；點擊後直接於新分頁開啟所關聯的父表，並自動過濾出對應的關聯列。
-
-### 4.3 🔐 加密連線設定檔匯出/匯入 (Portable Encrypted Profiles)
-- **概念**：更換工作電腦或設定新環境時，可將已儲存的伺服器連線設定匯出為 `.json` 檔案。支援主密碼（Master Password）以 AES-256 加密保存的敏感認證資訊，並可安全一鍵匯入。
-
-### 4.4 ✏️ 儲存格行內直接編輯與安全變更 (Inline Editing with Safe Patch)
-- **概念**：雙擊結果表格中的特定儲存格進行直接修改。修改後的儲存格以藍色標示為 Pending，點擊「套用變更 (Apply)」時，自動利用現有的「複合主鍵安全 DML 引擎」產出具備交易保護的單筆 `UPDATE` 語句，提示確認後執行並即時重新整理。
+1. **入口方式**：
+   - 於下方任何一個 Results 分頁標籤按右鍵，選擇「**與其他結果分頁比對 (Compare with Tab...)**」。
+2. **雙欄/單欄差分視覺化檢視 (Diff Grid)**：
+   - 自動對齊兩組結果集的欄位結構與總列數。
+   - 支援指定基準比對鍵（Primary Key 或特定欄位），若未指定則依行號逐列對齊。
+   - **高亮差異標記**：
+     - 🟩 僅存在於左側/右側的列（新增/刪除列）。
+     - 🟨 內容不同的儲存格（標示：`舊值 ➔ 新值`），並於懸浮卡片顯示差異字串。
+   - 頂部顯示摘要統計（如：98% 相同，2 筆資料差異，0 筆欄位結構不符）。
 
 ---
 
-## 5. 建議實作路線圖 (Implementation Roadmap)
+### 4.3 🔗 外鍵關聯快速跳轉與資料穿透 (FK Quick Peek & Navigation)
 
-| 階段 | 目標版本 | 規劃核心項目 | 預期效益 |
-| :---: | :---: | :--- | :--- |
-| **Phase 1** | **v0.2.0** | 1. 🔴 **生產環境防呆警示 (Production Safe Guard)**<br>2. ⚡ **快速物件檢索器 (Ctrl+P Spotlight)** | 大幅消除生產誤操作風險，將物件尋找時間縮短 80%。 |
-| **Phase 2** | **v0.3.0** | 1. 💾 **實體檔案串流匯出 (Excel / CSV / SQL)**<br>2. 🛑 **長時間查詢取消機制 (Cancel Query)** | 補齊大數據匯出短板，避免卡死連線提升穩定性。 |
-| **Phase 3** | **v0.4.0** | 1. 📊 **執行統計與 IO 分析器 (STATISTICS IO)**<br>2. 🧱 **結構檢視器索引與外鍵分頁 (Indexes & FKs)** | 躋身專業 DBA 效能診斷工具之列。 |
-| **Phase 4** | **v0.5.0** | 1. 🔍 **雙結果集比對工具 (Result Diff)**<br>2. 📝 **自訂代碼範本庫 (Custom Snippets)** | 針對複雜查詢調校與團隊協作打造極致手感。 |
+#### 痛點描述
+在檢視訂單表 `Orders` 時，看到 `CustomerID = 1045` 或 `EmployeeID = 5`，使用者若想了解該客戶是誰，只能手動另開分頁或重新手寫 `SELECT * FROM Customers WHERE CustomerID = 1045`，流程繁瑣中斷思路。
+
+#### 設計方案
+1. **外鍵標記識別**：
+   - 資料表格載入時，比對 Schema 中繼資料中的外鍵定義。
+   - 凡屬於外鍵的欄位，標題或儲存格旁顯示微型的藍色關聯小圖示（`ExternalLink`）。
+2. **快速懸浮預覽 (Quick Peek)**：
+   - 滑鼠懸停於外鍵儲存格時，彈出小懸浮卡片，非同步讀取並展示對應父表的首要資訊（如客戶名稱、電話、地址）。
+3. **一鍵跳轉關聯查詢 (Jump to Referenced Row)**：
+   - 點擊外鍵圖示或右鍵選單「**跳轉至關聯資料 (Go to Referenced Table)**」：
+   - 自動於新分頁開啟該父表，並自動附加 `WHERE CustomerID = '1045'` 條件精確定位。
 
 ---
 
-*文件生成時間：2026-09-12*  
-*適用版本：SQLight v0.1.0+*
+### 4.4 ✏️ 資料瀏覽器 (`TableDataViewer`) 補齊行內編輯與「新增資料列」
+
+#### 痛點描述
+目前已於 `ResultGrid` 實作了儲存格行內編輯與安全批次更新。然而：
+1. 從側邊欄右鍵「開啟資料表 (Open Data)」所開啟的 `TableDataViewer` 元件尚未同步享有此功能。
+2. 現有行內編輯僅支援修改既有列，尚未支援「**新增資料列 (Insert New Row)**」。
+
+#### 設計方案
+1. **共用編輯模組**：
+   - 將 `ResultGrid` 中成熟的 `tableEditability`、修改暫存追蹤（`modifiedCellsMap`）與 `batchUpdateGenerator` 抽取為共用 Composable，讓 `TableDataViewer` 立即具備行內雙擊修改能力。
+2. **增設「+ 新增列」功能**：
+   - 表格工具列新增「新增一列 (Add Row)」按鈕。
+   - 在表格第一列插入高亮為綠色的待寫入空列，自動鎖定 Identity 欄位。
+   - 填寫完畢後點擊「提交變更」，自動產出標準、具防護的 `INSERT INTO ... VALUES (...)` 腳本供預覽與確認執行。
+
+---
+
+## 5. 🥉 第三梯隊：巨量效能調校與現代 AI 體驗 (P2 - Scale, Performance & AI)
+
+### 5.1 ⚡ 伺服器端分頁與鍵值串流 (Server-side Pagination & Keyset Fetching)
+
+#### 痛點描述
+目前系統透過全域設定的 `max_rows`（如 5,000 或 10,000 筆）進行客戶端筆數截斷。當使用者需要在數千萬筆的大型日誌表（Logs）中翻找資料時，無法有效且低耗地進行大範圍瀏覽。
+
+#### 設計方案
+1. **資料瀏覽器啟用伺服器端動態分頁 (Server-side Pagination)**：
+   - 在 `TableDataViewer` 底部增設分頁導覽控制條（第一頁、上一頁、頁碼、下一頁、每頁筆數：100 / 500 / 1,000）。
+   - 底層自動運用 T-SQL `OFFSET ... ROWS FETCH NEXT ... ROWS ONLY`，或基於主鍵的 Keyset Pagination 進行高效伺服器端翻頁，記憶體佔用恆定維持在個位數 MB。
+
+---
+
+### 5.2 🤖 現代 AI SQL 助手 (BYOK LLM: 自然語言轉換、語法診斷與優化建議)
+
+#### 痛點描述
+- 許多業務分析師或初階工程師不熟悉 T-SQL 複雜的視窗函數、PIVOT、或 CTE 語法。
+- 當 SQL 執行報錯（如 Msg 8120 Group By 欄位未聚合、Msg 547 外鍵條件衝突）時，新手往往需要花費時間在 Google/StackOverflow 上搜尋原因。
+
+#### 設計方案
+1. **BYOK (Bring Your Own Key) 自備金鑰架構**：
+   - 在設定中提供 OpenAI / Anthropic / Gemini / 本地 Ollama 相容之 API Endpoint 與 Key 設定。
+   - 絕不上傳使用者資料表中的隱私資料內容，僅傳送使用者編寫的 SQL 語句與簡短 Schema DDL 結構。
+2. **Monaco 編輯器內建 AI 側欄或浮動面板**：
+   - 💬 **自然語言轉 SQL (Text to SQL)**：輸入「*幫我統計過去 30 天每個業務員的成交總金額並列出排名前 5 名*」，即刻產出正確的 T-SQL 程式碼並附帶反白確認。
+   - 🩺 **SQL 報錯一鍵除錯解釋 (Explain Error)**：當查詢出錯時，訊息面板旁顯示「**AI 診斷**」按鈕，點擊立即解析錯誤代碼、定位語法錯誤行號並給出修訂後的語法建議。
+   - ⚡ **慢查詢重構建議 (Optimize SQL)**：結合目前已實作的執行計畫與 IO 讀取量，讓 AI 提供索引建議或重寫子查詢為 JOIN 的調校建言。
+
+---
+
+### 5.3 📊 資料庫即時活動與鎖定監控儀表板 (Live Activity & Locks Monitor Dashboard)
+
+#### 痛點描述
+當生產資料庫突然 CPU 飆高至 100%、或者大量交易因卡死 (Blocking) 而逾時堆積時，DBA 往往需要手忙腳亂地輸入多次 `sp_who2` 或查詢多張 DMV。
+
+#### 設計方案
+1. **獨立工作區分頁：「即時伺服器活動儀表板 (Live Activity Monitor)」**：
+   - 整合即時輪詢（可自訂 3 秒 / 5 秒 / 10 秒刷新間隔或手動刷新）。
+2. **四大即時監控板塊**：
+   - 📈 **CPU 與活動工作階段趨勢圖**。
+   - 🔒 **即時阻塞鏈視覺化 (Blocking Tree)**：清楚呈現頭號元兇（Head Blocker SPID）與被阻塞的連線清單，右鍵支援一鍵 `KILL`。
+   - ⏳ **即時等待統計排行 (Top Active Waits)**：如 `PAGEIOLATCH_SH`、`WRITELOG`、`CXPACKET`。
+   - ⚡ **目前正在跑的長時間查詢 (Currently Running Queries)**：顯示已執行秒數、SQL 語句與讀取數。
+
+---
+
+## 6. 建議實作路線圖 (Implementation Roadmap)
+
+```mermaid
+flowchart LR
+  subgraph Phase1["Phase 1 (v0.2.0) - 安全與匯出核心"]
+    direction TB
+    P1A["🔴 生產環境防呆警示 (Safe Guard)"]
+    P1B["💾 實體檔案串流匯出 (Excel/CSV/JSON)"]
+    P1C["🔐 加密連線檔匯出入 (AES-256)"]
+  end
+
+  subgraph Phase2["Phase 2 (v0.3.0) - 結構與編輯深化"]
+    direction TB
+    P2A["🧱 結構進階檢視 (索引/外鍵/約束)"]
+    P2B["✏️ TableDataViewer 行內編輯與新增列"]
+    P2C["🔗 外鍵快速預覽與跳轉 (FK Jump)"]
+  end
+
+  subgraph Phase3["Phase 3 (v0.4.0) - 比對調校與巨量分頁"]
+    direction TB
+    P3A["🔍 雙結果集資料比對 (Result Diff)"]
+    P3B["⚡ 伺服器端分頁 (OFFSET-FETCH)"]
+  end
+
+  subgraph Phase4["Phase 4 (v0.5.0+) - 現代 AI 與即時監控"]
+    direction TB
+    P4A["🤖 BYOK AI SQL 助手 (Text-to-SQL / 診斷)"]
+    P4B["📊 即時活動與阻塞監控儀表板"]
+  end
+
+  Phase1 --> Phase2 --> Phase3 --> Phase4
+```
+
+| 階段 | 目標版本 | 規劃核心項目 | 預估工期 | 核心價值效益 |
+| :---: | :---: | :--- | :---: | :--- |
+| **Phase 1** | **v0.2.0** | 1. 🔴 **生產環境防呆警示與危險操作攔截**<br>2. 💾 **實體檔案串流匯出 (Excel .xlsx / CSV with BOM / SQL)**<br>3. 🔐 **連線設定檔 AES-256 加密匯出與匯入** | 1 ~ 2 週 | 徹底杜絕生產重大誤操作，補齊大數據實體存檔缺口，大幅強化設定遷移體驗。 |
+| **Phase 2** | **v0.3.0** | 1. 🧱 **資料表結構進階檢視（索引管理、外鍵、檢查約束）**<br>2. ✏️ **資料瀏覽器 (`TableDataViewer`) 補齊行內編輯與新增列**<br>3. 🔗 **外鍵關聯快速跳轉與資料穿透 (FK Navigation)** | 2 週 | 躍升為完整度極高的資料庫結構設計與快速修訂工具，日常操作流暢度翻倍。 |
+| **Phase 3** | **v0.4.0** | 1. 🔍 **雙結果集資料比對工具 (Result Diff & Data Compare)**<br>2. ⚡ **資料瀏覽器伺服器端動態分頁 (Server-side Pagination)** | 1.5 週 | 專為預存程序重構、效能優化與數千萬列大型表格檢索提供專業級支撐。 |
+| **Phase 4** | **v0.5.0+** | 1. 🤖 **現代 AI SQL 助手 (BYOK LLM 診斷與自然語言轉換)**<br>2. 📊 **資料庫即時活動與阻塞鏈監控儀表板 (Live Activity Monitor)** | 2 ~ 3 週 | 引入新一代智慧輔助編程與一站式 DBA 系統健康監控，形成市場差異化競爭力。 |
+
+---
+
+*文件更新時間：2026-09-16*  
+*維護團隊：SQLight Core Engineering Team*

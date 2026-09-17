@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia';
 import { ref, computed, watch } from 'vue';
-import type { QueryResult, QueryHistoryItem, QueryResultTab, QueryMessage, ResultSet } from '@/types/query';
+import type { QueryResult, QueryHistoryItem, QueryResultTab, QueryMessage, ResultSet, SessionMessageItem } from '@/types/query';
 import { queryService } from '@/services/queryService';
 import { useSettingsStore } from './settingsStore';
 import { useWorkspaceStore } from './workspaceStore';
@@ -16,9 +16,19 @@ import {
 import { extractShowPlanXml } from '@/utils/planXmlParser';
 
 let queryExecutionSeq = 0;
+let sessionMessageSeq = 0;
+let historySeq = 0;
 
 export function resetQueryExecutionSeq(): void {
   queryExecutionSeq = 0;
+}
+
+export function resetSessionMessageSeq(): void {
+  sessionMessageSeq = 0;
+}
+
+export function resetHistorySeq(): void {
+  historySeq = 0;
 }
 
 const STORAGE_STATS_ENABLED_KEY = 'sqlight_perf_stats_enabled';
@@ -69,6 +79,7 @@ export const useQueryStore = defineStore('query', () => {
 
   const executionError = ref<string | null>(null);
   const history = ref<QueryHistoryItem[]>([]);
+  const sessionMessages = ref<SessionMessageItem[]>([]);
   const maxRows = ref<number | null>(10000);
 
   // Performance Analysis & IO Stats State (default false)
@@ -454,9 +465,28 @@ export const useQueryStore = defineStore('query', () => {
         }
       }
 
+      // Add messages to sessionMessages (accumulate without persistence, newest in front)
+      if (result.messages && result.messages.length > 0) {
+        const newItems: SessionMessageItem[] = result.messages.map((m) => {
+          sessionMessageSeq++;
+          return {
+            id: `msg-${Date.now()}-${Math.random().toString(36).substring(2, 6)}-${sessionMessageSeq}`,
+            seq: sessionMessageSeq,
+            level: m.level,
+            message: m.message,
+            code: m.code,
+            lineNumber: m.lineNumber,
+            timestamp: m.timestamp || new Date().toISOString(),
+          };
+        });
+        sessionMessages.value.unshift(...newItems.reverse());
+      }
+
       // Add to query history
+      historySeq++;
       history.value.unshift({
         id: `hist-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+        seq: historySeq,
         connectionId,
         database,
         sql,
@@ -480,8 +510,10 @@ export const useQueryStore = defineStore('query', () => {
         executionError.value = '查詢已被使用者取消 (Query cancelled by user)';
         const timeStr = new Date().toLocaleTimeString();
 
+        historySeq++;
         history.value.unshift({
           id: `hist-${Date.now()}`,
+          seq: historySeq,
           connectionId,
           database,
           sql,
@@ -500,6 +532,15 @@ export const useQueryStore = defineStore('query', () => {
         if (activeResultTab.value) {
           activeResultTab.value.result.messages.push(cancelMessage);
         }
+
+        sessionMessageSeq++;
+        sessionMessages.value.unshift({
+          id: `msg-${Date.now()}-${sessionMessageSeq}`,
+          seq: sessionMessageSeq,
+          level: cancelMessage.level,
+          message: cancelMessage.message,
+          timestamp: cancelMessage.timestamp,
+        });
 
         try {
           const workspaceStore = useWorkspaceStore();
@@ -553,8 +594,19 @@ export const useQueryStore = defineStore('query', () => {
 
       insertNewTab(newTab);
 
+      sessionMessageSeq++;
+      sessionMessages.value.unshift({
+        id: `msg-${Date.now()}-${sessionMessageSeq}`,
+        seq: sessionMessageSeq,
+        level: 'error',
+        message: msg,
+        timestamp: new Date().toISOString(),
+      });
+
+      historySeq++;
       history.value.unshift({
         id: `hist-${Date.now()}`,
+        seq: historySeq,
         connectionId,
         database,
         sql,
@@ -671,6 +723,10 @@ export const useQueryStore = defineStore('query', () => {
     executionError.value = null;
   }
 
+  function clearMessages() {
+    sessionMessages.value = [];
+  }
+
   function clearHistory() {
     history.value = [];
   }
@@ -691,6 +747,7 @@ export const useQueryStore = defineStore('query', () => {
     cancelQuery,
     executionError,
     history,
+    sessionMessages,
     maxRows,
     isStatsEnabled,
     isShowplanEnabled,
@@ -701,6 +758,8 @@ export const useQueryStore = defineStore('query', () => {
     activeExecutionStats,
     statsHistory,
     currentExecutionSeq: computed(() => queryExecutionSeq),
+    currentSessionMessageSeq: computed(() => sessionMessageSeq),
+    currentHistorySeq: computed(() => historySeq),
     execute,
     selectResultTab,
     togglePinTab,
@@ -708,6 +767,7 @@ export const useQueryStore = defineStore('query', () => {
     deleteResultTab,
     renameResultTab,
     clearResults,
+    clearMessages,
     clearHistory,
     clearExecutionStats,
   };
