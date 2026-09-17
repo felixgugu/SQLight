@@ -140,3 +140,71 @@ test('settingsStore includes customizable active tab colors with proper defaults
   assert.equal(store.activeResultTabBgColor, '#065f46');
   assert.equal(store.activeResultTabTextColor, '#ffffff');
 });
+
+test('addErDiagramTab adds an er_diagram tab at index 0 and activates it', () => {
+  const store = useWorkspaceStore();
+  const initialCount = store.tabs.length;
+
+  store.addErDiagramTab({
+    rootSchema: 'dbo',
+    rootTable: 'Orders',
+    depth: 1,
+    connectionId: 'conn-1',
+    database: 'Northwind',
+  });
+
+  assert.equal(store.tabs.length, initialCount + 1);
+  const createdTab = store.tabs[0];
+  assert.equal(createdTab?.type, 'er_diagram');
+  assert.equal(createdTab?.title, 'ER: Orders');
+  assert.equal(store.activeTabId, createdTab?.id);
+
+  // Calling again for the same root table should activate existing without duplicate
+  store.addErDiagramTab({
+    rootSchema: 'dbo',
+    rootTable: 'Orders',
+    depth: 1,
+    connectionId: 'conn-1',
+    database: 'Northwind',
+  });
+  assert.equal(store.tabs.length, initialCount + 1);
+  assert.equal(store.activeTabId, createdTab?.id);
+});
+
+test('addErDiagramTab defaults depth to 2 when omitted', () => {
+  const store = useWorkspaceStore();
+  store.addErDiagramTab({
+    rootSchema: 'dbo',
+    rootTable: 'Products',
+    connectionId: 'conn-1',
+    database: 'Northwind',
+  });
+
+  const tab = store.tabs[0] as any;
+  assert.equal(tab.type, 'er_diagram');
+  assert.equal(tab.depth, 2);
+});
+
+test('addErDiagramTab supports restoring from file with initialData', () => {
+  const store = useWorkspaceStore();
+  const initialCount = store.tabs.length;
+
+  const mockX6Data = {
+    type: 'sqlight_er_model',
+    version: '1.0',
+    graph: { cells: [] },
+  };
+
+  store.addErDiagramTab({
+    title: 'CustomerModel.sqlight-er.json',
+    initialData: mockX6Data,
+    fileName: 'CustomerModel.sqlight-er.json',
+  });
+
+  assert.equal(store.tabs.length, initialCount + 1);
+  const createdTab = store.tabs[0];
+  assert.equal(createdTab?.type, 'er_diagram');
+  assert.equal(createdTab?.title, 'CustomerModel.sqlight-er.json');
+  assert.equal(store.activeTabId, createdTab?.id);
+});
+

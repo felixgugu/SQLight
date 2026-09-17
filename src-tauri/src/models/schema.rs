@@ -41,3 +41,16 @@ pub struct TableSchema {
     pub kind: String, // 'BASE TABLE' or 'VIEW'
     pub columns: Vec<ColumnItem>,
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ForeignKeyItem {
+    pub constraint_name: String,
+    pub from_schema: String,
+    pub from_table: String,
+    pub from_column: String,
+    pub to_schema: String,
+    pub to_table: String,
+    pub to_column: String,
+}
+

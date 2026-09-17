@@ -1,7 +1,7 @@
 use crate::drivers::DatabaseConnection;
 use crate::error::AppResult;
 use crate::models::query::{CellValue, ColumnDef, QueryMessage, QueryResult, ResultSet};
-use crate::models::schema::{ColumnItem, DatabaseItem, SchemaItem, TableItem, TableSchema};
+use crate::models::schema::{ColumnItem, DatabaseItem, ForeignKeyItem, SchemaItem, TableItem, TableSchema};
 use async_trait::async_trait;
 use chrono::{NaiveDate, NaiveDateTime, NaiveTime, Timelike, Utc};
 use std::time::Instant;
@@ -443,6 +443,104 @@ impl DatabaseConnection for SqlServerConnection {
             }
         }
         Ok(columns)
+    }
+
+    async fn get_foreign_keys(
+        &mut self,
+        database: Option<&str>,
+        schema: Option<&str>,
+        table: Option<&str>,
+    ) -> AppResult<Vec<ForeignKeyItem>> {
+        if let Some(db) = database {
+            if !db.is_empty() && self.current_database != db {
+                self.switch_database(db).await?;
+            }
+        }
+
+        let mut sql = r#"
+            SELECT 
+                fk.name AS constraint_name,
+                s_from.name AS from_schema,
+                t_from.name AS from_table,
+                c_from.name AS from_column,
+                s_to.name AS to_schema,
+                t_to.name AS to_table,
+                c_to.name AS to_column
+            FROM sys.foreign_keys fk
+            INNER JOIN sys.foreign_key_columns fkc 
+                ON fk.object_id = fkc.constraint_object_id
+            INNER JOIN sys.tables t_from 
+                ON fkc.parent_object_id = t_from.object_id
+            INNER JOIN sys.schemas s_from 
+                ON t_from.schema_id = s_from.schema_id
+            INNER JOIN sys.columns c_from 
+                ON fkc.parent_object_id = c_from.object_id 
+                AND fkc.parent_column_id = c_from.column_id
+            INNER JOIN sys.tables t_to 
+                ON fkc.referenced_object_id = t_to.object_id
+            INNER JOIN sys.schemas s_to 
+                ON t_to.schema_id = s_to.schema_id
+            INNER JOIN sys.columns c_to 
+                ON fkc.referenced_object_id = c_to.object_id 
+                AND fkc.referenced_column_id = c_to.column_id
+        "#.to_string();
+
+        if let Some(tbl) = table {
+            if !tbl.is_empty() {
+                let sanitized_table = tbl.replace('\'', "''");
+                if let Some(sch) = schema {
+                    if !sch.is_empty() {
+                        let sanitized_schema = sch.replace('\'', "''");
+                        sql.push_str(&format!(
+                            " WHERE ((s_from.name = '{}' AND t_from.name = '{}') OR (s_to.name = '{}' AND t_to.name = '{}'))",
+                            sanitized_schema, sanitized_table, sanitized_schema, sanitized_table
+                        ));
+                    } else {
+                        sql.push_str(&format!(
+                            " WHERE (t_from.name = '{}' OR t_to.name = '{}')",
+                            sanitized_table, sanitized_table
+                        ));
+                    }
+                } else {
+                    sql.push_str(&format!(
+                        " WHERE (t_from.name = '{}' OR t_to.name = '{}')",
+                        sanitized_table, sanitized_table
+                    ));
+                }
+            }
+        }
+
+        sql.push_str(" ORDER BY fk.name, fkc.constraint_column_id;");
+
+        let stream = self.client.simple_query(sql).await?;
+        let results = stream.into_results().await?;
+        let mut fks = Vec::new();
+
+        if let Some(rows) = results.first() {
+            for row in rows {
+                let constraint_name = Self::col_str(row, 0).unwrap_or("").to_string();
+                let from_schema = Self::col_str(row, 1).unwrap_or("dbo").to_string();
+                let from_table = Self::col_str(row, 2).unwrap_or("").to_string();
+                let from_column = Self::col_str(row, 3).unwrap_or("").to_string();
+                let to_schema = Self::col_str(row, 4).unwrap_or("dbo").to_string();
+                let to_table = Self::col_str(row, 5).unwrap_or("").to_string();
+                let to_column = Self::col_str(row, 6).unwrap_or("").to_string();
+
+                if !constraint_name.is_empty() && !from_table.is_empty() && !to_table.is_empty() {
+                    fks.push(ForeignKeyItem {
+                        constraint_name,
+                        from_schema,
+                        from_table,
+                        from_column,
+                        to_schema,
+                        to_table,
+                        to_column,
+                    });
+                }
+            }
+        }
+
+        Ok(fks)
     }
 
     async fn get_database_schema(&mut self, database: Option<&str>) -> AppResult<Vec<TableSchema>> {

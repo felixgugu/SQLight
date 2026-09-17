@@ -3,7 +3,7 @@ use crate::drivers::{DatabaseConnection, DatabaseDriver};
 use crate::error::{AppError, AppResult};
 use crate::models::connection::{ConnectionProfile, SaveConnectionRequest};
 use crate::models::query::QueryResult;
-use crate::models::schema::{ColumnItem, DatabaseItem, TableItem, TableSchema};
+use crate::models::schema::{ColumnItem, DatabaseItem, ForeignKeyItem, TableItem, TableSchema};
 use crate::services::credential_store::CredentialStore;
 use crate::services::storage_service::StorageService;
 use chrono::Utc;
@@ -388,6 +388,18 @@ impl ConnectionManager {
         let conn_arc = self.get_or_connect(id).await?;
         let mut conn = conn_arc.lock().await;
         conn.get_columns(database, schema, table).await
+    }
+
+    pub async fn get_foreign_keys(
+        &self,
+        id: &str,
+        database: Option<&str>,
+        schema: Option<&str>,
+        table: Option<&str>,
+    ) -> AppResult<Vec<ForeignKeyItem>> {
+        let conn_arc = self.get_or_connect(id).await?;
+        let mut conn = conn_arc.lock().await;
+        conn.get_foreign_keys(database, schema, table).await
     }
 
     pub async fn get_database_schema(

@@ -1,4 +1,4 @@
-use crate::models::schema::{ColumnItem, DatabaseItem, TableItem, TableSchema};
+use crate::models::schema::{ColumnItem, DatabaseItem, ForeignKeyItem, TableItem, TableSchema};
 use crate::services::ConnectionManager;
 use tauri::State;
 
@@ -53,6 +53,25 @@ pub async fn get_database_schema(
 ) -> Result<Vec<TableSchema>, String> {
     manager
         .get_database_schema(&connection_id, database.as_deref())
+        .await
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn get_foreign_keys(
+    connection_id: String,
+    database: Option<String>,
+    schema: Option<String>,
+    table: Option<String>,
+    manager: State<'_, ConnectionManager>,
+) -> Result<Vec<ForeignKeyItem>, String> {
+    manager
+        .get_foreign_keys(
+            &connection_id,
+            database.as_deref(),
+            schema.as_deref(),
+            table.as_deref(),
+        )
         .await
         .map_err(|e| e.to_string())
 }

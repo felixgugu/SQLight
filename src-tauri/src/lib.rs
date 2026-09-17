@@ -30,6 +30,7 @@ pub fn run() {
             get_databases,
             get_tables,
             get_columns,
+            get_foreign_keys,
             get_database_schema,
             switch_database,
             load_custom_templates,

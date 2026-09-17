@@ -369,6 +369,8 @@
                       <!-- Table Item -->
                       <div
                         :id="`tree-node-${tableKey(conn.id, db, table.schema, table.name)}`"
+                        draggable="true"
+                        @dragstart="handleTableDragStart($event, conn.id, db, table.schema, table.name)"
                         @click="toggleTable(conn.id, db, table.schema, table.name)"
                         @contextmenu.prevent="openContextMenu($event, conn.id, db, table.schema, table.name, 'TABLE')"
                         :class="[
@@ -712,6 +714,26 @@
         <span>資料表結構 (Table Structure)</span>
       </button>
 
+      <!-- Table Only: Open ER Model (只支援單一資料表右鍵選單「建立關聯實體圖」) -->
+      <button
+        v-if="contextMenu.objectType === 'TABLE'"
+        @click="handleOpenErDiagram(2)"
+        class="w-full text-left px-2.5 py-1.5 hover:bg-dark-750 hover:text-dark-100 flex items-center space-x-2 transition-colors text-cyan-300"
+      >
+        <Workflow class="w-3.5 h-3.5 text-cyan-400" />
+        <span>建立關聯實體圖 (ER Model)</span>
+      </button>
+
+      <!-- Table Only: Add to Current Active ER Diagram if activeTab is er_diagram -->
+      <button
+        v-if="contextMenu.objectType === 'TABLE' && workspaceStore.activeTab?.type === 'er_diagram'"
+        @click="handleAddToCurrentErDiagram"
+        class="w-full text-left px-2.5 py-1.5 hover:bg-dark-750 hover:text-dark-100 flex items-center space-x-2 transition-colors text-brand-300"
+      >
+        <PlusCircle class="w-3.5 h-3.5 text-brand-400" />
+        <span>加入至當前 ER 圖</span>
+      </button>
+
       <!-- Tables & Views: Generate SELECT -->
       <button
         v-if="contextMenu.objectType === 'TABLE' || contextMenu.objectType === 'VIEW'"
@@ -871,6 +893,8 @@ import {
   Clock,
   ChevronsDownUp,
   Copy,
+  Workflow,
+  PlusCircle,
 } from 'lucide-vue-next';
 import ConfirmModal from '@/components/common/ConfirmModal.vue';
 import { useConnectionStore } from '@/stores/connectionStore';
@@ -1566,6 +1590,55 @@ async function handleOpenStructure() {
     contextMenu.tableName,
     contextMenu.connId,
     contextMenu.database
+  );
+  contextMenu.visible = false;
+}
+
+function handleTableDragStart(e: DragEvent, connId: string, db: string, schema: string, table: string) {
+  if (!e.dataTransfer) return;
+  e.dataTransfer.setData(
+    'application/sqlight-table',
+    JSON.stringify({ connId, db, schema, table })
+  );
+  e.dataTransfer.effectAllowed = 'copy';
+}
+
+async function handleOpenErDiagram(depth: 1 | 2 = 2) {
+  if (contextMenu.connId && connectionStore.activeConnectionId !== contextMenu.connId) {
+    try {
+      await connectionStore.connect(contextMenu.connId);
+    } catch (e) {
+      console.warn('Connect failed:', e);
+    }
+  }
+  if (contextMenu.database && connectionStore.activeDatabase !== contextMenu.database) {
+    try {
+      await connectionStore.switchDatabase(contextMenu.database);
+    } catch (e) {
+      console.warn('Switch DB failed:', e);
+    }
+  }
+
+  workspaceStore.addErDiagramTab({
+    rootSchema: contextMenu.schema,
+    rootTable: contextMenu.tableName,
+    depth,
+    connectionId: contextMenu.connId,
+    database: contextMenu.database,
+  });
+  contextMenu.visible = false;
+}
+
+function handleAddToCurrentErDiagram() {
+  window.dispatchEvent(
+    new CustomEvent('sqlight:add-table-to-er', {
+      detail: {
+        schema: contextMenu.schema,
+        table: contextMenu.tableName,
+        connId: contextMenu.connId,
+        database: contextMenu.database,
+      },
+    })
   );
   contextMenu.visible = false;
 }

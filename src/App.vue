@@ -47,7 +47,7 @@
         </div>
 
         <!-- Vertical Splitter & Bottom Results Dock -->
-        <template v-if="workspaceStore.isBottomPanelOpen">
+        <template v-if="workspaceStore.isBottomPanelOpen && workspaceStore.activeTab?.type !== 'er_diagram'">
           <ResizableSplitter
             direction="vertical"
             :is-dragging="bottomSplitter.isDragging.value"

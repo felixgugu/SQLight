@@ -38,6 +38,16 @@ export interface TableSchema {
   columns: ColumnItem[];
 }
 
+export interface ForeignKeyItem {
+  constraintName: string;
+  fromSchema: string;
+  fromTable: string;
+  fromColumn: string;
+  toSchema: string;
+  toTable: string;
+  toColumn: string;
+}
+
 export interface SchemaTreeNode {
   id: string;
   label: string;

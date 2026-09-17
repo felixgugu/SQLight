@@ -1,4 +1,4 @@
-export type TabType = 'sql_editor' | 'table_data' | 'table_structure' | 'execution_plan';
+export type TabType = 'sql_editor' | 'table_data' | 'table_structure' | 'execution_plan' | 'er_diagram';
 
 export interface BaseTab {
   id: string;
@@ -37,10 +37,21 @@ export interface ExecutionPlanTab extends BaseTab {
   durationMs?: number;
 }
 
+export interface ErDiagramTab extends BaseTab {
+  type: 'er_diagram';
+  rootSchema?: string;
+  rootTable?: string;
+  depth: 1 | 2;
+  initialData?: any;
+  fileName?: string;
+}
+
 export type WorkspaceTab =
   | SqlEditorTab
   | TableDataTab
   | TableStructureTab
-  | ExecutionPlanTab;
+  | ExecutionPlanTab
+  | ErDiagramTab;
 
 export type BottomPanelTab = 'results' | 'messages' | 'history' | 'stats';
+

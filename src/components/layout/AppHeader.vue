@@ -391,13 +391,16 @@
 
         <button
           @click="workspaceStore.toggleBottomPanel()"
+          :disabled="workspaceStore.activeTab?.type === 'er_diagram'"
           :class="[
-            'p-1.5 rounded transition-colors border cursor-pointer',
-            workspaceStore.isBottomPanelOpen
-              ? 'bg-brand-500/20 text-brand-400 border-brand-500/40'
-              : 'bg-dark-800 text-dark-400 hover:text-dark-200 border-dark-700'
+            'p-1.5 rounded transition-colors border',
+            workspaceStore.activeTab?.type === 'er_diagram'
+              ? 'opacity-40 cursor-not-allowed bg-dark-800 text-dark-500 border-dark-750'
+              : workspaceStore.isBottomPanelOpen
+                ? 'bg-brand-500/20 text-brand-400 border-brand-500/40 cursor-pointer'
+                : 'bg-dark-800 text-dark-400 hover:text-dark-200 border-dark-700 cursor-pointer'
           ]"
-          title="切換下方結果面板 (Toggle Results Dock)"
+          :title="workspaceStore.activeTab?.type === 'er_diagram' ? 'ER 圖模式下自動隱藏下方面板' : '切換下方結果面板 (Toggle Results Dock)'"
         >
           <PanelBottom class="w-3.5 h-3.5" />
         </button>

@@ -1,5 +1,5 @@
 import { invokeCommand } from './api';
-import type { DatabaseItem, TableItem, ColumnItem, TableSchema } from '@/types/schema';
+import type { DatabaseItem, TableItem, ColumnItem, TableSchema, ForeignKeyItem } from '@/types/schema';
 
 export const schemaService = {
   async getDatabases(connectionId: string): Promise<DatabaseItem[]> {
@@ -29,6 +29,20 @@ export const schemaService = {
       schema,
       table,
       database,
+    });
+  },
+
+  async getForeignKeys(
+    connectionId: string,
+    database?: string,
+    schema?: string,
+    table?: string
+  ): Promise<ForeignKeyItem[]> {
+    return invokeCommand<ForeignKeyItem[]>('get_foreign_keys', {
+      connectionId,
+      database,
+      schema,
+      table,
     });
   },
 

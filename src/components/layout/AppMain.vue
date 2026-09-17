@@ -47,6 +47,7 @@
           <Table2 v-else-if="tab.type === 'table_data'" class="w-3.5 h-3.5 flex-shrink-0" :class="workspaceStore.activeTabId === tab.id ? 'text-white' : 'text-emerald-400'" />
           <TableProperties v-else-if="tab.type === 'table_structure'" class="w-3.5 h-3.5 flex-shrink-0" :class="workspaceStore.activeTabId === tab.id ? 'text-white' : 'text-indigo-400'" />
           <Network v-else-if="tab.type === 'execution_plan'" class="w-3.5 h-3.5 flex-shrink-0" :class="workspaceStore.activeTabId === tab.id ? 'text-white' : 'text-purple-400'" />
+          <Workflow v-else-if="tab.type === 'er_diagram'" class="w-3.5 h-3.5 flex-shrink-0" :class="workspaceStore.activeTabId === tab.id ? 'text-white' : 'text-cyan-400'" />
 
           <!-- Title Display OR Inline Rename Input -->
           <input
@@ -202,6 +203,12 @@
         :tab="workspaceStore.activeTab as ExecutionPlanTab"
       />
 
+      <!-- ER Diagram Tab -->
+      <ErDiagramViewer
+        v-else-if="workspaceStore.activeTab?.type === 'er_diagram'"
+        :tab="workspaceStore.activeTab as ErDiagramTab"
+      />
+
       <div v-else class="w-full h-full flex items-center justify-center text-dark-500 text-xs">
         <span>No active workspace tab</span>
       </div>
@@ -211,7 +218,7 @@
 
 <script setup lang="ts">
 import { ref, reactive, watch, nextTick, onBeforeUnmount } from 'vue';
-import { FileCode, Table2, TableProperties, Plus, X, Edit2, Layers, Save, Network } from 'lucide-vue-next';
+import { FileCode, Table2, TableProperties, Plus, X, Edit2, Layers, Save, Network, Workflow } from 'lucide-vue-next';
 import { useWorkspaceStore } from '@/stores/workspaceStore';
 import { useConnectionStore } from '@/stores/connectionStore';
 import { useQueryStore } from '@/stores/queryStore';
@@ -220,8 +227,9 @@ import MonacoEditor from '@/components/editor/MonacoEditor.vue';
 import TableDataViewer from '@/components/editor/TableDataViewer.vue';
 import TableStructureViewer from '@/components/editor/TableStructureViewer.vue';
 import ExecutionPlanViewer from '@/components/editor/ExecutionPlanViewer.vue';
+import ErDiagramViewer from '@/components/editor/ErDiagramViewer.vue';
 import { saveSqlToFile, openSqlFromFile } from '@/utils/fileStorage';
-import type { SqlEditorTab, TableDataTab, TableStructureTab, ExecutionPlanTab, WorkspaceTab } from '@/types/workspace';
+import type { SqlEditorTab, TableDataTab, TableStructureTab, ExecutionPlanTab, ErDiagramTab, WorkspaceTab } from '@/types/workspace';
 
 const workspaceStore = useWorkspaceStore();
 const connectionStore = useConnectionStore();
@@ -456,21 +464,31 @@ async function saveActiveTab(tabToSave?: WorkspaceTab) {
 async function openSqlFile() {
   try {
     const result = await openSqlFromFile();
-    if (result.opened && result.content !== undefined) {
+    if (result.opened) {
       const fileName = result.fileName || 'Opened.sql';
-      workspaceStore.addSqlTab(
-        result.content,
-        fileName,
-        connectionStore.activeConnectionId || undefined,
-        connectionStore.activeDatabase || 'master'
-      );
-      if (workspaceStore.activeTab) {
-        workspaceStore.activeTab.isDirty = false;
+      if (result.fileType === 'er_diagram' && result.erData) {
+        const title = fileName.replace(/\.(sqlight-er|x6)?\.json$/i, '') || 'ER Diagram';
+        workspaceStore.addErDiagramTab({
+          title,
+          initialData: result.erData,
+          fileName,
+        });
+        workspaceStore.showToast(`已開啟 ER 關聯模型：${fileName}`, 'success', 2500);
+      } else if (result.content !== undefined) {
+        workspaceStore.addSqlTab(
+          result.content,
+          fileName,
+          connectionStore.activeConnectionId || undefined,
+          connectionStore.activeDatabase || 'master'
+        );
+        if (workspaceStore.activeTab) {
+          workspaceStore.activeTab.isDirty = false;
+        }
+        workspaceStore.showToast(`已開啟 SQL 檔案：${fileName}`, 'success', 2500);
       }
-      workspaceStore.showToast(`已開啟 SQL 檔案：${fileName}`, 'success', 2500);
     }
   } catch (err) {
-    console.error('Open SQL failed:', err);
+    console.error('Open file failed:', err);
     workspaceStore.showToast('開啟檔案失敗', 'error', 3000);
   }
 }

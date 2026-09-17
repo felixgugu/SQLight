@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia';
 import { ref, computed, watch } from 'vue';
-import type { WorkspaceTab, BottomPanelTab, SqlEditorTab, TableDataTab, TableStructureTab, ExecutionPlanTab } from '@/types/workspace';
+import type { WorkspaceTab, BottomPanelTab, SqlEditorTab, TableDataTab, TableStructureTab, ExecutionPlanTab, ErDiagramTab } from '@/types/workspace';
 import { format as formatSql } from 'sql-formatter';
 import { useConnectionStore } from './connectionStore';
 
@@ -62,7 +62,8 @@ function loadSavedTabs(): WorkspaceTab[] {
             ((t as { type: unknown }).type === 'sql_editor' ||
               (t as { type: unknown }).type === 'table_data' ||
               (t as { type: unknown }).type === 'table_structure' ||
-              (t as { type: unknown }).type === 'execution_plan')
+              (t as { type: unknown }).type === 'execution_plan' ||
+              (t as { type: unknown }).type === 'er_diagram')
         );
         if (validTabs.length > 0) {
           return validTabs;
@@ -343,6 +344,56 @@ export const useWorkspaceStore = defineStore('workspace', () => {
     return newTab;
   }
 
+  function addErDiagramTab(options: {
+    title?: string;
+    rootSchema?: string;
+    rootTable?: string;
+    depth?: 1 | 2;
+    connectionId?: string;
+    database?: string;
+    initialData?: any;
+    fileName?: string;
+  }) {
+    const connectionStore = useConnectionStore();
+    const effectiveConnId = options.connectionId || connectionStore.activeConnectionId || undefined;
+    const effectiveDb = options.database || connectionStore.activeDatabase || 'master';
+    const depth = options.depth || 2;
+
+    // Check if same root table ER tab already exists
+    if (options.rootSchema && options.rootTable) {
+      const existing = tabs.value.find(
+        (t) =>
+          t.type === 'er_diagram' &&
+          (t as ErDiagramTab).rootSchema === options.rootSchema &&
+          (t as ErDiagramTab).rootTable === options.rootTable &&
+          (!t.connectionId || t.connectionId === effectiveConnId) &&
+          (!t.database || t.database === effectiveDb)
+      );
+      if (existing) {
+        setActiveTab(existing.id);
+        return;
+      }
+    }
+
+    const tabId = `tab-er-${Date.now()}`;
+    const title = options.title || (options.rootTable ? `ER: ${options.rootTable}` : 'ER Diagram');
+    const newTab: ErDiagramTab = {
+      id: tabId,
+      type: 'er_diagram',
+      title,
+      rootSchema: options.rootSchema,
+      rootTable: options.rootTable,
+      depth,
+      connectionId: effectiveConnId,
+      database: effectiveDb,
+      initialData: options.initialData,
+      fileName: options.fileName,
+      isDirty: false,
+    };
+    tabs.value.unshift(newTab);
+    activeTabId.value = tabId;
+  }
+
   function closeTab(tabId: string) {
     const index = tabs.value.findIndex((t) => t.id === tabId);
     if (index === -1) return;
@@ -367,6 +418,14 @@ export const useWorkspaceStore = defineStore('workspace', () => {
     if (tab && tab.type === 'sql_editor') {
       tab.query = query;
       tab.isDirty = true;
+    }
+  }
+
+  function updateTabData(tabId: string, patch: Partial<WorkspaceTab>) {
+    const idx = tabs.value.findIndex((t) => t.id === tabId);
+    if (idx !== -1) {
+      tabs.value[idx] = { ...tabs.value[idx], ...patch } as WorkspaceTab;
+      saveTabsToStorage(tabs.value);
     }
   }
 
@@ -479,11 +538,13 @@ export const useWorkspaceStore = defineStore('workspace', () => {
     addTableDataTab,
     addTableStructureTab,
     addExecutionPlanTab,
+    addErDiagramTab,
     closeTab,
     closeOtherTabs,
     reorderTabs,
     renameTab,
     updateTabContent,
+    updateTabData,
     formatActiveQuery,
     setBottomPanelTab,
     toggleBottomPanel,
