@@ -28,6 +28,13 @@
         >
           <RotateCw :class="['w-3.5 h-3.5', isRefreshing ? 'animate-spin text-brand-400' : '']" />
         </button>
+        <button
+          @click="handleCollapseAll"
+          class="p-1 hover:bg-dark-750 text-dark-400 hover:text-dark-200 rounded transition-colors"
+          title="全部收合 (Collapse All)"
+        >
+          <ChevronsDownUp class="w-3.5 h-3.5" />
+        </button>
       </div>
     </div>
 
@@ -792,6 +799,14 @@
       </button>
 
       <button
+        @click="handleDuplicateConn(connContextMenu.conn!)"
+        class="w-full text-left px-2.5 py-1.5 hover:bg-dark-750 hover:text-dark-100 flex items-center space-x-2 transition-colors"
+      >
+        <Copy class="w-3.5 h-3.5 text-emerald-400" />
+        <span>複製連線 (Duplicate)</span>
+      </button>
+
+      <button
         v-if="connectionStore.activeConnectionId === connContextMenu.conn?.id && connectionStore.status === 'connected'"
         @click="handleDisconnect"
         class="w-full text-left px-2.5 py-1.5 hover:bg-dark-750 hover:text-dark-100 flex items-center space-x-2 transition-colors border-t border-dark-750"
@@ -854,6 +869,8 @@ import {
   LocateFixed,
   History,
   Clock,
+  ChevronsDownUp,
+  Copy,
 } from 'lucide-vue-next';
 import ConfirmModal from '@/components/common/ConfirmModal.vue';
 import { useConnectionStore } from '@/stores/connectionStore';
@@ -862,6 +879,7 @@ import { useSchemaStore } from '@/stores/schemaStore';
 import { schemaService } from '@/services/schemaService';
 import { wrapIdentifierIfNeeded } from '@/utils/sqlParser';
 import { generateCreateTableDdl } from '@/utils/ddlGenerator';
+import { collapseAllTreeNodes } from '@/utils/explorerTreeState';
 import {
   loadFilterHistory,
   saveFilterHistory,
@@ -876,6 +894,7 @@ import type { ExtractedTableIdentifier } from '@/utils/sqlIdentifierExtractor';
 const emit = defineEmits<{
   (e: 'open-connection-modal'): void;
   (e: 'edit-connection', profile: ConnectionProfile): void;
+  (e: 'duplicate-connection', profile: ConnectionProfile): void;
   (e: 'request-locate-table'): void;
 }>();
 
@@ -1085,6 +1104,34 @@ let highlightTimer: ReturnType<typeof setTimeout> | null = null;
 
 function handleLocateCurrentTable() {
   emit('request-locate-table');
+}
+
+function handleCollapseAll() {
+  const knownConnectionIds = connectionStore.connections.map((c) => c.id);
+  collapseAllTreeNodes(
+    {
+      expandedConns,
+      expandedDbs,
+      expandedFolders,
+      expandedTables,
+    },
+    {
+      collapseConnections: true,
+      knownConnectionIds,
+    }
+  );
+
+  // If a filter query is active, clear it so nodes aren't forced open by the search
+  if (filterQuery.value) {
+    filterQuery.value = '';
+    isHistoryDropdownOpen.value = false;
+    highlightedHistoryIndex.value = -1;
+  }
+
+  // Clear any active locate highlight
+  if (activeLocatedKey.value) {
+    activeLocatedKey.value = null;
+  }
 }
 
 function isFolderExpanded(connId: string, db: string, folder: 'tables' | 'views' | 'procs' | 'funcs'): boolean {
@@ -1340,6 +1387,11 @@ async function handleRefreshConn(conn: ConnectionProfile) {
 function handleEditConn(conn: ConnectionProfile) {
   connContextMenu.visible = false;
   emit('edit-connection', conn);
+}
+
+function handleDuplicateConn(conn: ConnectionProfile) {
+  connContextMenu.visible = false;
+  emit('duplicate-connection', conn);
 }
 
 async function handleDisconnect() {
@@ -1819,5 +1871,6 @@ async function locateTable(options: ExtractedTableIdentifier & { database?: stri
 
 defineExpose({
   locateTable,
+  collapseAll: handleCollapseAll,
 });
 </script>

@@ -26,6 +26,7 @@
           ref="sidebarRef"
           @open-connection-modal="handleOpenNewConnection"
           @edit-connection="handleEditConnection"
+          @duplicate-connection="handleDuplicateConnection"
           @request-locate-table="handleLocateTableRequest"
         />
       </div>
@@ -70,6 +71,7 @@
     <ConnectionModal
       :is-open="isConnectionModalOpen"
       :edit-profile="editingProfile"
+      :initial-profile="initialConnectionProfile"
       @close="handleCloseConnectionModal"
     />
 
@@ -124,7 +126,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onBeforeUnmount } from 'vue';
+import { ref, nextTick, onMounted, onBeforeUnmount } from 'vue';
 import { CheckCircle2, AlertTriangle, XCircle, Info } from 'lucide-vue-next';
 import AppHeader from '@/components/layout/AppHeader.vue';
 import AppSidebar from '@/components/layout/AppSidebar.vue';
@@ -149,6 +151,7 @@ const isSettingsModalOpen = ref(false);
 const isQuickFinderOpen = ref(false);
 const isSqlTemplatesOpen = ref(false);
 const editingProfile = ref<ConnectionProfile | null>(null);
+const initialConnectionProfile = ref<ConnectionProfile | null>(null);
 const mainWorkspaceRef = ref<InstanceType<typeof AppMain> | null>(null);
 const sidebarRef = ref<InstanceType<typeof AppSidebar> | null>(null);
 
@@ -186,17 +189,26 @@ function handleOpenTemplateInNewTab(template: SqlTemplate) {
 
 function handleOpenNewConnection() {
   editingProfile.value = null;
+  initialConnectionProfile.value = null;
   isConnectionModalOpen.value = true;
 }
 
 function handleEditConnection(profile: ConnectionProfile) {
   editingProfile.value = profile;
+  initialConnectionProfile.value = null;
+  isConnectionModalOpen.value = true;
+}
+
+function handleDuplicateConnection(profile: ConnectionProfile) {
+  editingProfile.value = null;
+  initialConnectionProfile.value = profile;
   isConnectionModalOpen.value = true;
 }
 
 function handleCloseConnectionModal() {
   isConnectionModalOpen.value = false;
   editingProfile.value = null;
+  initialConnectionProfile.value = null;
 }
 
 // Resizable sidebar (width: min 180px, max 500px, initial 260px)
@@ -291,12 +303,26 @@ function handleGlobalKeydown(e: KeyboardEvent) {
     return;
   }
 
+  // Ctrl/Cmd + N -> Add New Query Tab
+  if ((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey && (e.key === 'n' || e.key === 'N')) {
+    e.preventDefault();
+    handleNewQueryTab();
+    return;
+  }
+
   // Ctrl/Cmd + P -> Quick Object Finder (Spotlight)
   if ((e.ctrlKey || e.metaKey) && !e.shiftKey && (e.key === 'p' || e.key === 'P')) {
     e.preventDefault();
     isQuickFinderOpen.value = !isQuickFinderOpen.value;
     return;
   }
+}
+
+function handleNewQueryTab() {
+  workspaceStore.addSqlTab();
+  nextTick(() => {
+    mainWorkspaceRef.value?.scrollToStart();
+  });
 }
 
 function handleOpenQuickFinder() {
@@ -309,6 +335,7 @@ function handleOpenSqlTemplates() {
 
 onMounted(() => {
   window.addEventListener('keydown', handleGlobalKeydown);
+  window.addEventListener('sqlight:new-query-tab', handleNewQueryTab);
   window.addEventListener('sqlight:open-quick-finder', handleOpenQuickFinder);
   window.addEventListener('sqlight:open-sql-templates', handleOpenSqlTemplates);
   window.addEventListener('sqlight:locate-table-at-cursor', handleLocateTableRequest);
@@ -316,6 +343,7 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   window.removeEventListener('keydown', handleGlobalKeydown);
+  window.removeEventListener('sqlight:new-query-tab', handleNewQueryTab);
   window.removeEventListener('sqlight:open-quick-finder', handleOpenQuickFinder);
   window.removeEventListener('sqlight:open-sql-templates', handleOpenSqlTemplates);
   window.removeEventListener('sqlight:locate-table-at-cursor', handleLocateTableRequest);

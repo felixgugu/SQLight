@@ -69,11 +69,24 @@ impl ConnectionManager {
             });
         }
 
-        if let Some(ref password) = req.password {
-            if !password.is_empty() {
-                let _ = self.credential_store.save_password(&id, password);
+        let has_explicit_password = req
+            .password
+            .as_ref()
+            .map(|p| !p.is_empty())
+            .unwrap_or(false);
+
+        if has_explicit_password {
+            let password = req.password.as_ref().unwrap();
+            let _ = self.credential_store.save_password(&id, password);
+            if let Ok(mut cache) = self.password_cache.lock() {
+                cache.insert(id.clone(), password.clone());
+            }
+        } else if let Some(ref source_id) = req.copy_password_from {
+            let source_pwd = self.get_password(source_id);
+            if !source_pwd.is_empty() {
+                let _ = self.credential_store.save_password(&id, &source_pwd);
                 if let Ok(mut cache) = self.password_cache.lock() {
-                    cache.insert(id.clone(), password.clone());
+                    cache.insert(id.clone(), source_pwd);
                 }
             }
         }
@@ -135,7 +148,19 @@ impl ConnectionManager {
             updated_at: String::new(),
         };
 
-        let password = req.password.unwrap_or_default();
+        let password = if let Some(ref p) = req.password {
+            if !p.is_empty() {
+                p.clone()
+            } else if let Some(ref source_id) = req.copy_password_from {
+                self.get_password(source_id)
+            } else {
+                String::new()
+            }
+        } else if let Some(ref source_id) = req.copy_password_from {
+            self.get_password(source_id)
+        } else {
+            String::new()
+        };
         let driver = SqlServerDriver::new();
         driver.test_connection(&temp_profile, &password).await
     }

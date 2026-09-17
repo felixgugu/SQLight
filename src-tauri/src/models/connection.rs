@@ -47,4 +47,6 @@ pub struct SaveConnectionRequest {
     pub password: Option<String>,
     pub encrypt: bool,
     pub trust_server_certificate: bool,
+    #[serde(default)]
+    pub copy_password_from: Option<String>,
 }

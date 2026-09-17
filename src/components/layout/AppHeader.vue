@@ -218,7 +218,7 @@
         <button
           @click="workspaceStore.addSqlTab()"
           class="p-1.5 bg-dark-800 hover:bg-dark-750 text-dark-300 hover:text-dark-100 rounded border border-dark-700 transition-colors cursor-pointer flex items-center justify-center"
-          title="開啟新查詢分頁 (New SQL Query Tab)"
+          title="開啟新查詢分頁 (Ctrl + N)"
         >
           <Plus class="w-3.5 h-3.5 text-brand-500" />
         </button>

@@ -1,105 +1,111 @@
 <template>
   <main class="h-full flex flex-col bg-dark-900 overflow-hidden">
     <!-- Workspace Tab Bar -->
-    <div
-      ref="queryTabsBarRef"
-      @wheel="handleTabsWheel"
-      class="h-9 bg-dark-850 border-b border-dark-700 flex items-center px-1 space-x-1 overflow-x-auto select-none flex-shrink-0"
-    >
-      <!-- Tabs List -->
-      <div
-        v-for="(tab, idx) in workspaceStore.tabs"
-        :key="tab.id"
-        @pointerdown="onTabPointerDown($event, idx)"
-        @click="handleTabClick(tab.id)"
-        @contextmenu.prevent="openTabContextMenu($event, tab)"
-        :class="[
-          'query-tab-item h-7 px-2.5 flex items-center space-x-2 text-xs rounded-t border-t border-x cursor-grab active:cursor-grabbing transition-all duration-100 group max-w-[260px] select-none touch-none',
-          workspaceStore.activeTabId === tab.id
-            ? 'font-medium shadow-xs border-dark-700'
-            : 'bg-dark-800/80 text-dark-400 hover:text-dark-200 border-transparent hover:bg-dark-800',
-          isPointerDragging && dragSourceIndex === idx ? 'opacity-35 border-dashed border-brand-400 scale-95' : '',
-          dropHoverIndex === idx && isPointerDragging && dropHoverIndex !== dragSourceIndex ? 'border-brand-400 bg-brand-500/25 ring-1 ring-brand-400 scale-102' : ''
-        ]"
-        :style="workspaceStore.activeTabId === tab.id ? {
-          backgroundColor: settingsStore.activeSqlTabBgColor,
-          color: settingsStore.activeSqlTabTextColor,
-          borderColor: settingsStore.activeSqlTabBgColor,
-        } : {}"
-        :title="getTabTooltip(tab)"
-      >
-        <FileCode v-if="tab.type === 'sql_editor'" class="w-3.5 h-3.5 flex-shrink-0" :class="workspaceStore.activeTabId === tab.id ? 'text-white' : 'text-brand-400'" />
-        <Table2 v-else-if="tab.type === 'table_data'" class="w-3.5 h-3.5 flex-shrink-0" :class="workspaceStore.activeTabId === tab.id ? 'text-white' : 'text-emerald-400'" />
-        <TableProperties v-else-if="tab.type === 'table_structure'" class="w-3.5 h-3.5 flex-shrink-0" :class="workspaceStore.activeTabId === tab.id ? 'text-white' : 'text-indigo-400'" />
-        <Network v-else-if="tab.type === 'execution_plan'" class="w-3.5 h-3.5 flex-shrink-0" :class="workspaceStore.activeTabId === tab.id ? 'text-white' : 'text-purple-400'" />
-
-        <!-- Title Display OR Inline Rename Input -->
-        <input
-          v-if="editingTabId === tab.id"
-          ref="renameInputRef"
-          v-model="editingTabTitle"
-          @click.stop
-          @pointerdown.stop
-          @keydown.enter.stop="saveRenameTab(tab.id)"
-          @keydown.esc.stop="cancelRenameTab"
-          @blur="saveRenameTab(tab.id)"
-          class="bg-dark-800 border border-brand-500 text-dark-100 rounded px-1.5 py-0.5 text-xs font-sans focus:outline-none w-28 flex-1 min-w-0"
-        />
-        <div
-          v-else
-          @dblclick.stop="startRenameTab(tab)"
-          class="flex items-center space-x-1.5 min-w-0 flex-1 truncate"
-        >
-          <span class="truncate">
-            {{ tab.title }}
-          </span>
-          <!-- Database badge -->
-          <span
-            v-if="tab.database"
-            :class="[
-              'text-[10px] font-mono px-1 py-0.2 rounded border flex-shrink-0 transition-colors',
-              workspaceStore.activeTabId === tab.id
-                ? 'bg-black/25 text-white/90 border-white/20'
-                : 'text-dark-400 bg-dark-850 border-dark-750/70 group-hover:border-dark-650'
-            ]"
-          >
-            {{ tab.database }}
-          </span>
-        </div>
-
-        <!-- Dirty Indicator -->
-        <span
-          v-if="tab.isDirty && editingTabId !== tab.id"
-          class="w-1.5 h-1.5 rounded-full bg-amber-400 flex-shrink-0"
-          title="未儲存變更 (Unsaved changes)"
-        />
-
-        <!-- Close Tab Button -->
-        <button
-          v-if="editingTabId !== tab.id"
-          type="button"
-          @click.stop="workspaceStore.closeTab(tab.id)"
-          :class="[
-            'p-0.5 rounded-full opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 cursor-pointer',
-            workspaceStore.activeTabId === tab.id
-              ? 'text-white/80 hover:text-white hover:bg-black/30'
-              : 'text-dark-500 hover:text-dark-200 hover:bg-dark-700'
-          ]"
-          title="關閉分頁 (Close tab)"
-        >
-          <X class="w-3 h-3" />
-        </button>
-      </div>
-
-      <!-- Add New Query Tab Button -->
+    <div class="h-9 bg-dark-850 border-b border-dark-700 flex items-center px-1.5 space-x-1 select-none flex-shrink-0 overflow-hidden">
+      <!-- Fixed Left: Add New Query Tab Button -->
       <button
         type="button"
-        @click="workspaceStore.addSqlTab()"
-        class="p-1 text-dark-500 hover:text-dark-200 hover:bg-dark-750 rounded transition-colors cursor-pointer"
-        title="新增查詢分頁 (Add new SQL tab)"
+        @click="handleAddNewTab"
+        class="h-7 px-2 text-dark-400 hover:text-dark-100 hover:bg-dark-750 active:bg-dark-700 rounded transition-colors flex items-center space-x-1 cursor-pointer flex-shrink-0 border border-dark-750/70 shadow-xs"
+        title="新增查詢分頁 (Ctrl+N)"
       >
-        <Plus class="w-3.5 h-3.5" />
+        <Plus class="w-3.5 h-3.5 text-brand-400" />
       </button>
+
+      <!-- Vertical Divider -->
+      <div class="h-4 w-px bg-dark-750 mx-0.5 flex-shrink-0"></div>
+
+      <!-- Scrollable Tabs List -->
+      <div
+        ref="queryTabsBarRef"
+        @wheel="handleTabsWheel"
+        class="query-tabs-scroll flex-1 flex items-center space-x-1 overflow-x-auto overflow-y-hidden select-none h-full"
+      >
+        <!-- Tabs List -->
+        <div
+          v-for="(tab, idx) in workspaceStore.tabs"
+          :key="tab.id"
+          @pointerdown="onTabPointerDown($event, idx)"
+          @click="handleTabClick(tab.id)"
+          @contextmenu.prevent="openTabContextMenu($event, tab)"
+          :class="[
+            'query-tab-item h-7 px-2.5 flex items-center space-x-2 text-xs rounded-t border-t border-x cursor-grab active:cursor-grabbing transition-all duration-100 group max-w-[260px] select-none touch-none flex-shrink-0',
+            workspaceStore.activeTabId === tab.id
+              ? 'font-medium shadow-xs border-dark-700'
+              : 'bg-dark-800/80 text-dark-400 hover:text-dark-200 border-transparent hover:bg-dark-800',
+            isPointerDragging && dragSourceIndex === idx ? 'opacity-35 border-dashed border-brand-400 scale-95' : '',
+            dropHoverIndex === idx && isPointerDragging && dropHoverIndex !== dragSourceIndex ? 'border-brand-400 bg-brand-500/25 ring-1 ring-brand-400 scale-102' : ''
+          ]"
+          :style="workspaceStore.activeTabId === tab.id ? {
+            backgroundColor: settingsStore.activeSqlTabBgColor,
+            color: settingsStore.activeSqlTabTextColor,
+            borderColor: settingsStore.activeSqlTabBgColor,
+          } : {}"
+          :title="getTabTooltip(tab)"
+        >
+          <FileCode v-if="tab.type === 'sql_editor'" class="w-3.5 h-3.5 flex-shrink-0" :class="workspaceStore.activeTabId === tab.id ? 'text-white' : 'text-brand-400'" />
+          <Table2 v-else-if="tab.type === 'table_data'" class="w-3.5 h-3.5 flex-shrink-0" :class="workspaceStore.activeTabId === tab.id ? 'text-white' : 'text-emerald-400'" />
+          <TableProperties v-else-if="tab.type === 'table_structure'" class="w-3.5 h-3.5 flex-shrink-0" :class="workspaceStore.activeTabId === tab.id ? 'text-white' : 'text-indigo-400'" />
+          <Network v-else-if="tab.type === 'execution_plan'" class="w-3.5 h-3.5 flex-shrink-0" :class="workspaceStore.activeTabId === tab.id ? 'text-white' : 'text-purple-400'" />
+
+          <!-- Title Display OR Inline Rename Input -->
+          <input
+            v-if="editingTabId === tab.id"
+            ref="renameInputRef"
+            v-model="editingTabTitle"
+            @click.stop
+            @pointerdown.stop
+            @keydown.enter.stop="saveRenameTab(tab.id)"
+            @keydown.esc.stop="cancelRenameTab"
+            @blur="saveRenameTab(tab.id)"
+            class="bg-dark-800 border border-brand-500 text-dark-100 rounded px-1.5 py-0.5 text-xs font-sans focus:outline-none w-28 flex-1 min-w-0"
+          />
+          <div
+            v-else
+            @dblclick.stop="startRenameTab(tab)"
+            class="flex items-center space-x-1.5 min-w-0 flex-1 truncate"
+          >
+            <span class="truncate">
+              {{ tab.title }}
+            </span>
+            <!-- Database badge -->
+            <span
+              v-if="tab.database"
+              :class="[
+                'text-[10px] font-mono px-1 py-0.2 rounded border flex-shrink-0 transition-colors',
+                workspaceStore.activeTabId === tab.id
+                  ? 'bg-black/25 text-white/90 border-white/20'
+                  : 'text-dark-400 bg-dark-850 border-dark-750/70 group-hover:border-dark-650'
+              ]"
+            >
+              {{ tab.database }}
+            </span>
+          </div>
+
+          <!-- Dirty Indicator -->
+          <span
+            v-if="tab.isDirty && editingTabId !== tab.id"
+            class="w-1.5 h-1.5 rounded-full bg-amber-400 flex-shrink-0"
+            title="未儲存變更 (Unsaved changes)"
+          />
+
+          <!-- Close Tab Button -->
+          <button
+            v-if="editingTabId !== tab.id"
+            type="button"
+            @click.stop="workspaceStore.closeTab(tab.id)"
+            :class="[
+              'p-0.5 rounded-full opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 cursor-pointer',
+              workspaceStore.activeTabId === tab.id
+                ? 'text-white/80 hover:text-white hover:bg-black/30'
+                : 'text-dark-500 hover:text-dark-200 hover:bg-dark-700'
+            ]"
+            title="關閉分頁 (Close tab)"
+          >
+            <X class="w-3 h-3" />
+          </button>
+        </div>
+      </div>
     </div>
 
     <!-- Query Tab Context Menu Backdrop -->
@@ -204,7 +210,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, nextTick, onBeforeUnmount } from 'vue';
+import { ref, reactive, watch, nextTick, onBeforeUnmount } from 'vue';
 import { FileCode, Table2, TableProperties, Plus, X, Edit2, Layers, Save, Network } from 'lucide-vue-next';
 import { useWorkspaceStore } from '@/stores/workspaceStore';
 import { useConnectionStore } from '@/stores/connectionStore';
@@ -530,6 +536,30 @@ function getTableNameAtCursor() {
   return monacoRef.value?.getTableNameAtCursor() ?? null;
 }
 
+function scrollToStart() {
+  if (queryTabsBarRef.value) {
+    queryTabsBarRef.value.scrollLeft = 0;
+  }
+}
+
+function handleAddNewTab() {
+  workspaceStore.addSqlTab();
+  nextTick(() => {
+    scrollToStart();
+  });
+}
+
+watch(
+  () => workspaceStore.activeTabId,
+  (newId) => {
+    if (workspaceStore.tabs[0]?.id === newId) {
+      nextTick(() => {
+        scrollToStart();
+      });
+    }
+  }
+);
+
 onBeforeUnmount(() => {
   window.removeEventListener('pointermove', onDocumentPointerMove);
   window.removeEventListener('pointerup', onDocumentPointerUp);
@@ -545,6 +575,34 @@ defineExpose({
   openSqlFile,
   insertTextAtCursor,
   getTableNameAtCursor,
+  scrollToStart,
 });
 </script>
+
+<style scoped>
+.query-tabs-scroll {
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+}
+
+.query-tabs-scroll::-webkit-scrollbar {
+  height: 4px;
+  width: 0px;
+}
+
+.query-tabs-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.query-tabs-scroll::-webkit-scrollbar-thumb {
+  background: #3c3c4e;
+  border-radius: 2px;
+}
+
+.query-tabs-scroll::-webkit-scrollbar-thumb:hover {
+  background: #525266;
+}
+</style>
 

@@ -12,6 +12,7 @@ export interface SaveConnectionPayload {
   password?: string;
   encrypt: boolean;
   trustServerCertificate: boolean;
+  copyPasswordFrom?: string;
 }
 
 export const connectionService = {

@@ -235,7 +235,7 @@ export const useWorkspaceStore = defineStore('workspace', () => {
       database: effectiveDb,
       isDirty: false,
     };
-    tabs.value.push(newTab);
+    tabs.value.unshift(newTab);
     activeTabId.value = tabId;
   }
 
@@ -273,7 +273,7 @@ export const useWorkspaceStore = defineStore('workspace', () => {
       database: effectiveDb,
       isDirty: false,
     };
-    tabs.value.push(newTab);
+    tabs.value.unshift(newTab);
     activeTabId.value = tabId;
   }
 
@@ -311,7 +311,7 @@ export const useWorkspaceStore = defineStore('workspace', () => {
       database: effectiveDb,
       isDirty: false,
     };
-    tabs.value.push(newTab);
+    tabs.value.unshift(newTab);
     activeTabId.value = tabId;
   }
 
@@ -338,7 +338,7 @@ export const useWorkspaceStore = defineStore('workspace', () => {
       database: effectiveDb,
       isDirty: false,
     };
-    tabs.value.push(newTab);
+    tabs.value.unshift(newTab);
     activeTabId.value = tabId;
     return newTab;
   }

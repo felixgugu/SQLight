@@ -23,14 +23,14 @@ beforeEach(() => {
   resetQueryExecutionSeq();
 });
 
-test('addTableStructureTab adds a tab with type table_structure and switches active tab', () => {
+test('addTableStructureTab adds a tab at index 0 (leftmost) and switches active tab', () => {
   const store = useWorkspaceStore();
   const initialCount = store.tabs.length;
 
   store.addTableStructureTab('dbo', 'Employees', 'conn-1', 'AdventureWorks');
 
   assert.equal(store.tabs.length, initialCount + 1);
-  const createdTab = store.tabs[store.tabs.length - 1];
+  const createdTab = store.tabs[0];
   assert.equal(createdTab?.type, 'table_structure');
   assert.equal(createdTab?.title, 'dbo.Employees (Structure)');
   assert.equal(store.activeTabId, createdTab?.id);
@@ -39,6 +39,36 @@ test('addTableStructureTab adds a tab with type table_structure and switches act
   store.addTableStructureTab('dbo', 'Employees', 'conn-1', 'AdventureWorks');
   assert.equal(store.tabs.length, initialCount + 1);
   assert.equal(store.activeTabId, createdTab?.id);
+});
+
+test('newly added tabs are always placed at the front (index 0 / leftmost)', () => {
+  const store = useWorkspaceStore();
+
+  // Initial tab exists
+  assert.ok(store.tabs.length >= 1);
+  const originalFirstId = store.tabs[0].id;
+
+  // 1. Add new SQL tab
+  store.addSqlTab('SELECT 1;', 'Query 10.sql');
+  assert.equal(store.tabs[0].title, 'Query 10.sql');
+  assert.equal(store.activeTabId, store.tabs[0].id);
+  assert.equal(store.tabs[1].id, originalFirstId);
+
+  // 2. Add another SQL tab
+  store.addSqlTab('SELECT 2;', 'Query 11.sql');
+  assert.equal(store.tabs[0].title, 'Query 11.sql');
+  assert.equal(store.tabs[1].title, 'Query 10.sql');
+  assert.equal(store.activeTabId, store.tabs[0].id);
+
+  // 3. Add Table Data tab
+  store.addTableDataTab('sales', 'Customers', 'conn-1', 'TestDB');
+  assert.equal(store.tabs[0].title, 'sales.Customers (Data)');
+  assert.equal(store.activeTabId, store.tabs[0].id);
+
+  // 4. Add Execution Plan tab
+  store.addExecutionPlanTab('<ShowPlanXML />', 'SELECT 1;', 'Plan Alpha');
+  assert.equal(store.tabs[0].title, 'Plan Alpha');
+  assert.equal(store.activeTabId, store.tabs[0].id);
 });
 
 test('queryExecutionSeq increments sequentially and titles follow $SEQ.$Tabname $rowNumber r', async () => {

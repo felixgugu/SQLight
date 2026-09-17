@@ -11,7 +11,7 @@
         <div class="flex items-center space-x-2">
           <Database class="w-4 h-4 text-brand-400" />
           <h3 class="font-semibold text-sm text-dark-100">
-            {{ editProfile ? 'Edit SQL Server Connection' : 'New SQL Server Connection' }}
+            {{ editProfile ? 'Edit SQL Server Connection' : (initialProfile ? 'Duplicate SQL Server Connection' : 'New SQL Server Connection') }}
           </h3>
         </div>
         <button
@@ -98,7 +98,7 @@
             <input
               v-model="form.password"
               type="password"
-              :placeholder="editProfile ? '•••••••• (Leave blank to keep existing)' : 'Enter password'"
+              :placeholder="editProfile ? '•••••••• (Leave blank to keep existing)' : (initialProfile ? '•••••••• (Leave blank to reuse copied password)' : 'Enter password')"
               class="w-full bg-dark-900 border border-dark-700 rounded px-3 py-1.5 text-dark-100 focus:outline-none focus:border-brand-500 font-mono transition-colors"
             />
           </div>
@@ -173,10 +173,12 @@ import { reactive, ref, watch, computed } from 'vue';
 import { Database, X, RotateCw, CheckCircle2, AlertCircle } from 'lucide-vue-next';
 import type { ConnectionProfile } from '@/types/connection';
 import { useConnectionStore } from '@/stores/connectionStore';
+import { generateDuplicateConnectionName } from '@/utils/connectionNameHelper';
 
 const props = defineProps<{
   isOpen: boolean;
   editProfile?: ConnectionProfile | null;
+  initialProfile?: ConnectionProfile | null;
 }>();
 
 const emit = defineEmits<{
@@ -206,17 +208,31 @@ const isDuplicateName = computed(() => {
 });
 
 watch(
-  () => props.editProfile,
-  (profile) => {
-    if (profile) {
-      form.name = profile.name;
-      form.host = profile.host;
-      form.port = profile.port;
-      form.database = profile.database;
-      form.username = profile.username;
+  () => [props.isOpen, props.editProfile, props.initialProfile],
+  () => {
+    if (!props.isOpen) return;
+
+    if (props.editProfile) {
+      form.name = props.editProfile.name;
+      form.host = props.editProfile.host;
+      form.port = props.editProfile.port;
+      form.database = props.editProfile.database;
+      form.username = props.editProfile.username;
       form.password = '';
-      form.encrypt = profile.encrypt;
-      form.trustServerCertificate = profile.trustServerCertificate;
+      form.encrypt = props.editProfile.encrypt;
+      form.trustServerCertificate = props.editProfile.trustServerCertificate;
+    } else if (props.initialProfile) {
+      form.name = generateDuplicateConnectionName(
+        props.initialProfile.name,
+        connectionStore.connections.map((c) => c.name)
+      );
+      form.host = props.initialProfile.host;
+      form.port = props.initialProfile.port;
+      form.database = props.initialProfile.database;
+      form.username = props.initialProfile.username;
+      form.password = '';
+      form.encrypt = props.initialProfile.encrypt;
+      form.trustServerCertificate = props.initialProfile.trustServerCertificate;
     } else {
       form.name = 'New SQL Server';
       form.host = 'localhost';
@@ -241,6 +257,7 @@ async function handleTest() {
   isTesting.value = true;
   testResult.value = null;
   try {
+    const copyFrom = props.initialProfile && !form.password.trim() ? props.initialProfile.id : undefined;
     await connectionStore.testConnection({
       id: props.editProfile?.id,
       name: form.name,
@@ -252,6 +269,7 @@ async function handleTest() {
       password: form.password,
       encrypt: form.encrypt,
       trustServerCertificate: form.trustServerCertificate,
+      copyPasswordFrom: copyFrom,
     });
     testResult.value = { success: true, message: 'Connected to Microsoft SQL Server successfully.' };
   } catch (err: unknown) {
@@ -267,6 +285,7 @@ async function handleTest() {
 async function handleSave() {
   isSaving.value = true;
   try {
+    const copyFrom = props.initialProfile && !form.password.trim() ? props.initialProfile.id : undefined;
     const saved = await connectionStore.saveConnection({
       id: props.editProfile?.id,
       name: form.name,
@@ -278,6 +297,7 @@ async function handleSave() {
       password: form.password,
       encrypt: form.encrypt,
       trustServerCertificate: form.trustServerCertificate,
+      copyPasswordFrom: copyFrom,
     });
     await connectionStore.connect(saved.id);
     emit('saved', saved);
