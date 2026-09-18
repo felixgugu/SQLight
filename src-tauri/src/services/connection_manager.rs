@@ -95,6 +95,7 @@ impl ConnectionManager {
         let profile = ConnectionProfile {
             id: id.clone(),
             name: trimmed_name.to_string(),
+            alias: req.alias.clone(),
             engine: req.engine,
             host: req.host,
             port: req.port,
@@ -140,6 +141,7 @@ impl ConnectionManager {
         let temp_profile = ConnectionProfile {
             id: "test".to_string(),
             name: req.name,
+            alias: req.alias,
             engine: req.engine,
             host: req.host,
             port: req.port,

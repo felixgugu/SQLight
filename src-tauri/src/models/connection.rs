@@ -10,6 +10,8 @@ pub enum DatabaseEngine {
 #[serde(rename_all = "camelCase")]
 pub struct ConnectionConfig {
     pub name: String,
+    #[serde(default)]
+    pub alias: Option<String>,
     pub host: String,
     pub port: u16,
     pub database: String,
@@ -27,6 +29,8 @@ pub struct ConnectionConfig {
 pub struct ConnectionProfile {
     pub id: String,
     pub name: String,
+    #[serde(default)]
+    pub alias: Option<String>,
     pub engine: DatabaseEngine,
     pub host: String,
     pub port: u16,
@@ -47,6 +51,8 @@ pub struct ConnectionProfile {
 pub struct SaveConnectionRequest {
     pub id: Option<String>,
     pub name: String,
+    #[serde(default)]
+    pub alias: Option<String>,
     pub engine: DatabaseEngine,
     pub host: String,
     pub port: u16,

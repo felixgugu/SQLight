@@ -38,7 +38,7 @@
           @dragleave.stop="handleTabItemDragLeave($event, tab)"
           @drop.stop.prevent="handleTabItemDrop($event, tab)"
           :class="[
-            'query-tab-item h-7 px-2.5 flex items-center space-x-2 text-xs rounded-t border-x cursor-grab active:cursor-grabbing transition-all duration-100 group max-w-[260px] select-none touch-none flex-shrink-0',
+            'query-tab-item h-7 px-2.5 flex items-center space-x-2 text-xs rounded-t border-x cursor-grab active:cursor-grabbing transition-all duration-100 group max-w-[280px] select-none touch-none flex-shrink-0',
             workspaceStore.activeTabId === tab.id ? 'font-medium shadow-sm active-tab' : 'inactive-tab shadow-xs',
             isPointerDragging && dragSourceIndex === idx ? 'opacity-35 border-dashed border-brand-400 scale-95' : '',
             dropHoverIndex === idx && isPointerDragging && dropHoverIndex !== dragSourceIndex ? 'border-brand-400 bg-brand-500/25 ring-1 ring-brand-400 scale-102' : '',
@@ -68,7 +68,7 @@
           <div
             v-else
             @dblclick.stop="startRenameTab(tab)"
-            class="flex items-center space-x-1.5 min-w-0 flex-1 truncate"
+            class="flex items-center space-x-1.5 min-w-0 flex-1"
           >
             <!-- Tab Connection Color Dot -->
             <span
@@ -77,24 +77,26 @@
               :style="{ backgroundColor: getTabConnectionColor(tab) }"
               :title="`連線標籤色彩: ${getTabConnectionColor(tab)}`"
             />
+            <!-- Tab Name (left-aligned) -->
             <span
-              class="truncate"
+              class="truncate min-w-0"
               :style="getTabTitleStyle(tab)"
             >
               {{ tab.title }}
             </span>
-            <!-- Database badge -->
+            <!-- Alias badge (right-aligned via ml-auto) -->
             <span
-              v-if="tab.database"
-              class="text-[10px] font-mono px-1 py-0.2 rounded border flex-shrink-0 transition-colors"
+              v-if="getTabConnectionAlias(tab)"
+              class="text-[10px] font-mono px-1.5 py-0.2 rounded border flex-shrink-0 ml-auto transition-colors max-w-[80px] truncate"
               :class="workspaceStore.activeTabId === tab.id
                 ? 'text-white/95 border-white/20'
                 : 'text-slate-300 border-white/10 group-hover:text-white group-hover:border-white/20'"
               :style="{
                 backgroundColor: 'var(--tab-badge-bg)',
               }"
+              :title="`連線別名: ${getTabConnectionAlias(tab)}`"
             >
-              {{ tab.database }}
+              {{ getTabConnectionAlias(tab) }}
             </span>
           </div>
 
@@ -382,6 +384,13 @@ function getTabConnectionColor(tab: WorkspaceTab): string | undefined {
   return conn?.color || undefined;
 }
 
+function getTabConnectionAlias(tab: WorkspaceTab): string | undefined {
+  const connId = tab.connectionId || (workspaceStore.activeTabId === tab.id ? connectionStore.activeConnectionId : null);
+  if (!connId) return undefined;
+  const conn = connectionStore.getConnectionById(connId) || connectionStore.connections.find((c) => c.id === connId);
+  return conn?.alias?.trim() || undefined;
+}
+
 function getTabTitleStyle(tab: WorkspaceTab): Record<string, string> {
   const color = getTabConnectionColor(tab);
   if (!color) return {};
@@ -516,8 +525,9 @@ function handleContextMenuCloseOthers() {
 function getTabTooltip(tab: WorkspaceTab): string {
   const conn = connectionStore.connections.find((c) => c.id === tab.connectionId);
   const connName = conn?.name || (tab.connectionId ? 'Unknown Connection' : '未指定連線');
+  const aliasPart = conn?.alias ? ` (別名: ${conn.alias})` : '';
   const dbName = tab.database || 'master';
-  return `${tab.title}\n連線: ${connName}\n資料庫: ${dbName}\n(雙擊或右鍵重新命名此分頁)`;
+  return `${tab.title}\n連線: ${connName}${aliasPart}\n資料庫: ${dbName}\n(雙擊或右鍵重新命名此分頁)`;
 }
 
 async function saveActiveTab(tabToSave?: WorkspaceTab) {

@@ -166,14 +166,15 @@
       >
         <!-- Connection Header Item -->
         <div
-          @click="selectConnection(conn.id)"
+          @click="toggleConnectionExpand(conn.id)"
           @contextmenu.prevent="openConnContextMenu($event, conn)"
           :class="[
             'flex items-center space-x-1 px-1.5 py-1 rounded cursor-pointer group transition-colors relative',
             connectionStore.activeConnectionId === conn.id ? 'bg-dark-800 text-dark-100' : 'hover:bg-dark-750 text-dark-300'
           ]"
+          :title="`${conn.name} - 點擊展開/收合 (切換工作連線請使用上方選單)`"
         >
-          <!-- Direction chevron: ONLY clicking this expands/collapses! -->
+          <!-- Direction chevron -->
           <button
             type="button"
             @click.stop="toggleConnectionExpand(conn.id)"
@@ -196,12 +197,14 @@
 
           <span class="font-sans font-medium truncate flex-1">{{ conn.name }}</span>
 
-          <!-- Status indicator (when connected) -->
+          <!-- Status indicator (when active in workspace) -->
           <span
             v-if="connectionStore.activeConnectionId === conn.id && connectionStore.status === 'connected'"
-            class="w-2 h-2 rounded-full bg-emerald-500 flex-shrink-0 shadow-xs shadow-emerald-500/50 mr-1"
-            title="Connected"
-          />
+            class="text-[9px] px-1 py-0.2 rounded bg-emerald-500/20 text-emerald-300 font-sans border border-emerald-500/30 flex-shrink-0 mr-1"
+            title="目前工作區使用中連線"
+          >
+            使用中
+          </span>
 
           <!-- Action Buttons on Hover -->
           <div
@@ -239,13 +242,14 @@
           >
             <!-- Database Item -->
             <div
-              @click="selectDatabase(conn.id, db)"
+              @click="toggleDatabaseExpand(conn.id, db)"
               :class="[
                 'flex items-center space-x-1 px-1.5 py-0.5 rounded cursor-pointer transition-colors group',
                 connectionStore.activeConnectionId === conn.id && connectionStore.activeDatabase === db
-                  ? 'bg-brand-500/20 text-brand-300 font-semibold'
+                  ? 'bg-amber-500/20 text-amber-200 font-semibold'
                   : 'text-dark-300 hover:bg-dark-750 hover:text-dark-100'
               ]"
+              :title="`${db} - 點擊展開/收合 (切換工作資料庫請使用上方選單)`"
             >
               <!-- Direction Chevron Button -->
               <button
@@ -261,6 +265,14 @@
               </button>
               <Database class="w-3 h-3 text-amber-400/80 flex-shrink-0" />
               <span class="truncate flex-1">{{ db }}</span>
+              <!-- Active database indicator -->
+              <span
+                v-if="connectionStore.activeConnectionId === conn.id && connectionStore.activeDatabase === db"
+                class="text-[9px] px-1 py-0.2 rounded bg-amber-500/20 text-amber-300 font-sans border border-amber-500/30 flex-shrink-0 mr-1"
+                title="目前工作區使用中資料庫"
+              >
+                使用中
+              </span>
             </div>
 
             <!-- Database Categories & Object Tree -->
@@ -541,7 +553,6 @@
                       v-for="proc in getFilteredProcedures(conn.id, db)"
                       :key="`${conn.id}:${db}:${proc.schema}.${proc.name}`"
                       :id="`tree-node-${tableKey(conn.id, db, proc.schema, proc.name)}`"
-                      @click="selectDatabase(conn.id, db)"
                       @contextmenu.prevent="openContextMenu($event, conn.id, db, proc.schema, proc.name, 'PROCEDURE')"
                       @dblclick="handleViewDefinition(conn.id, db, proc.schema, proc.name)"
                       :class="[
@@ -600,7 +611,6 @@
                       v-for="func in getFilteredFunctions(conn.id, db)"
                       :key="`${conn.id}:${db}:${func.schema}.${func.name}`"
                       :id="`tree-node-${tableKey(conn.id, db, func.schema, func.name)}`"
-                      @click="selectDatabase(conn.id, db)"
                       @contextmenu.prevent="openContextMenu($event, conn.id, db, func.schema, func.name, 'FUNCTION')"
                       @dblclick="handleViewDefinition(conn.id, db, func.schema, func.name)"
                       :class="[
@@ -841,6 +851,7 @@ import { useWorkspaceStore } from '@/stores/workspaceStore';
 import { useSchemaStore } from '@/stores/schemaStore';
 import { useSettingsStore } from '@/stores/settingsStore';
 import { schemaService } from '@/services/schemaService';
+import { connectionService } from '@/services/connectionService';
 import { wrapIdentifierIfNeeded } from '@/utils/sqlParser';
 import { generateCreateTableDdl } from '@/utils/ddlGenerator';
 import { collapseAllTreeNodes } from '@/utils/explorerTreeState';
@@ -1243,9 +1254,8 @@ onMounted(async () => {
 
 async function loadDatabaseTables(connId: string, db: string, force = false) {
   try {
-    if (connectionStore.activeConnectionId !== connId || connectionStore.status !== 'connected') {
-      await connectionStore.connect(connId);
-    }
+    // Ensure backend session exists without mutating frontend activeConnectionId or activeDatabase
+    await connectionService.connect(connId);
     await Promise.all([
       schemaStore.loadDatabaseTables(connId, db, force),
       schemaStore.loadDatabaseRoutines(connId, db, force),
@@ -1325,38 +1335,12 @@ function toggleConnectionExpand(connId: string) {
   expandedConns[connId] = !expandedConns[connId];
 }
 
-async function selectConnection(connId: string) {
-  if (connectionStore.activeConnectionId === connId && connectionStore.status === 'connected') {
-    return;
-  }
-  try {
-    await connectionStore.connect(connId);
-    workspaceStore.updateActiveTabConnection(connId, connectionStore.activeDatabase);
-  } catch (err) {
-    console.warn('Failed to connect on select:', err);
-  }
-}
-
 async function toggleDatabaseExpand(connId: string, db: string) {
   const dbKey = `${connId}:${db}`;
   expandedDbs[dbKey] = !expandedDbs[dbKey];
   if (expandedDbs[dbKey]) {
     await loadDatabaseTables(connId, db);
   }
-}
-
-async function selectDatabase(connId: string, db: string) {
-  if (connectionStore.activeConnectionId !== connId || connectionStore.status !== 'connected') {
-    try {
-      await connectionStore.connect(connId);
-      workspaceStore.updateActiveTabConnection(connId, db);
-    } catch (err) {
-      console.warn('Failed to connect on selectDatabase:', err);
-      return;
-    }
-  }
-  await connectionStore.switchDatabase(db);
-  workspaceStore.updateActiveTabDatabase(db);
 }
 
 function tableKey(connId: string, db: string, schema: string, tableName: string) {

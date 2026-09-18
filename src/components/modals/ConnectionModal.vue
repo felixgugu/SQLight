@@ -24,26 +24,39 @@
 
       <!-- Modal Body -->
       <form @submit.prevent="handleSave" class="p-5 space-y-4 text-xs">
-        <!-- Connection Name -->
-        <div>
-          <div class="flex items-center justify-between mb-1">
-            <label class="block text-dark-300 font-medium">連線名稱 (Connection Name)</label>
-            <span v-if="isDuplicateName" class="text-rose-400 text-xxs font-medium">
-              * 此名稱已被使用，請更換名稱
-            </span>
+        <!-- Connection Name & Alias Row -->
+        <div class="grid grid-cols-3 gap-3">
+          <div class="col-span-2">
+            <div class="flex items-center justify-between mb-1">
+              <label class="block text-dark-300 font-medium">連線名稱 (Connection Name)</label>
+              <span v-if="isDuplicateName" class="text-rose-400 text-xxs font-medium">
+                * 此名稱已被使用，請更換名稱
+              </span>
+            </div>
+            <input
+              v-model="form.name"
+              type="text"
+              required
+              placeholder="e.g. Local Development MSSQL"
+              :class="[
+                'w-full bg-dark-900 border rounded px-3 py-1.5 text-dark-100 focus:outline-none transition-colors',
+                isDuplicateName
+                  ? 'border-rose-500 focus:border-rose-400'
+                  : 'border-dark-700 focus:border-brand-500'
+              ]"
+            />
           </div>
-          <input
-            v-model="form.name"
-            type="text"
-            required
-            placeholder="e.g. Local Development MSSQL"
-            :class="[
-              'w-full bg-dark-900 border rounded px-3 py-1.5 text-dark-100 focus:outline-none transition-colors',
-              isDuplicateName
-                ? 'border-rose-500 focus:border-rose-400'
-                : 'border-dark-700 focus:border-brand-500'
-            ]"
-          />
+          <div>
+            <div class="flex items-center justify-between mb-1">
+              <label class="block text-dark-300 font-medium">別名 (Alias)</label>
+            </div>
+            <input
+              v-model="form.alias"
+              type="text"
+              placeholder="e.g. PROD, DEV"
+              class="w-full bg-dark-900 border border-dark-700 rounded px-3 py-1.5 text-dark-100 focus:outline-none focus:border-brand-500 font-mono transition-colors"
+            />
+          </div>
         </div>
 
         <!-- Tab Color Picker -->
@@ -107,6 +120,13 @@
                 :class="!form.color ? 'text-dark-200' : ''"
               >
                 {{ form.name.trim() || 'Query 1' }}
+              </span>
+              <span
+                v-if="form.alias.trim()"
+                class="text-[10px] font-mono px-1 py-0.2 rounded border flex-shrink-0 text-slate-300 border-white/10"
+                :style="{ backgroundColor: 'rgba(255,255,255,0.08)' }"
+              >
+                {{ form.alias.trim() }}
               </span>
             </div>
           </div>
@@ -285,6 +305,7 @@ const PRESET_COLORS = [
 
 const form = reactive({
   name: '',
+  alias: '',
   host: 'localhost',
   port: 1433,
   database: 'master',
@@ -311,6 +332,7 @@ watch(
 
     if (props.editProfile) {
       form.name = props.editProfile.name;
+      form.alias = props.editProfile.alias || '';
       form.host = props.editProfile.host;
       form.port = props.editProfile.port;
       form.database = props.editProfile.database;
@@ -325,6 +347,7 @@ watch(
         props.initialProfile.name,
         connectionStore.connections.map((c) => c.name)
       );
+      form.alias = props.initialProfile.alias || '';
       form.host = props.initialProfile.host;
       form.port = props.initialProfile.port;
       form.database = props.initialProfile.database;
@@ -336,6 +359,7 @@ watch(
       form.modificationPrompt = props.initialProfile.modificationPrompt ?? false;
     } else {
       form.name = 'New SQL Server';
+      form.alias = '';
       form.host = 'localhost';
       form.port = 1433;
       form.database = 'master';
@@ -364,6 +388,7 @@ async function handleTest() {
     await connectionStore.testConnection({
       id: props.editProfile?.id,
       name: form.name,
+      alias: form.alias.trim() || undefined,
       engine: 'mssql',
       host: form.host,
       port: form.port,
@@ -394,6 +419,7 @@ async function handleSave() {
     const saved = await connectionStore.saveConnection({
       id: props.editProfile?.id,
       name: form.name,
+      alias: form.alias.trim() || undefined,
       engine: 'mssql',
       host: form.host,
       port: form.port,

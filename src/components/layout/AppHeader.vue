@@ -24,22 +24,35 @@
           type="button"
           @click="isConnDropdownOpen = !isConnDropdownOpen"
           :class="[
-            'flex items-center space-x-1.5 bg-dark-800 hover:bg-dark-750 px-2.5 py-1 rounded border transition-colors cursor-pointer text-xs',
-            isConnDropdownOpen ? 'border-brand-500 bg-dark-750 text-dark-100' : 'border-dark-700 text-dark-200'
+            'flex items-center space-x-2 px-2.5 py-1 rounded-md border transition-all cursor-pointer text-xs font-sans shadow-xs',
+            connectionStore.status === 'connected' && connectionStore.activeConnection
+              ? 'bg-brand-950/70 border-brand-500/50 hover:border-brand-400 text-brand-100 hover:bg-brand-900/60 ring-1 ring-brand-500/30'
+              : 'bg-dark-800 border-dark-600 hover:border-dark-500 text-dark-200 hover:bg-dark-750'
           ]"
+          :style="activeConnStyle"
           title="切換連線 (Switch Connection)"
         >
           <!-- Connection indicator / server icon -->
           <span
             v-if="connectionStore.status === 'connected' && connectionStore.activeConnection"
-            class="w-2 h-2 rounded-full bg-emerald-500 flex-shrink-0 shadow-xs shadow-emerald-500/50"
+            class="w-2 h-2 rounded-full bg-emerald-400 flex-shrink-0 shadow-sm shadow-emerald-400/80 animate-pulse"
           />
           <Server v-else class="w-3.5 h-3.5 text-dark-400 flex-shrink-0" />
 
-          <span class="font-medium max-w-[160px] truncate">
+          <span class="font-semibold max-w-[150px] truncate text-white">
             {{ connectionStore.activeConnection?.name ?? 'Select Connection' }}
           </span>
-          <ChevronDown :class="['w-3 h-3 text-dark-400 transition-transform duration-150', isConnDropdownOpen ? 'rotate-180 text-brand-400' : '']" />
+
+          <!-- Active Connection Alias Badge -->
+          <span
+            v-if="connectionStore.activeConnection?.alias"
+            class="text-[10px] font-mono px-1.5 py-0.2 rounded bg-brand-500/25 border border-brand-400/30 text-brand-200 flex-shrink-0 truncate max-w-[70px]"
+            :title="`連線別名: ${connectionStore.activeConnection.alias}`"
+          >
+            {{ connectionStore.activeConnection.alias }}
+          </span>
+
+          <ChevronDown :class="['w-3 h-3 transition-transform duration-150', isConnDropdownOpen ? 'rotate-180 text-brand-300' : 'text-brand-400/80']" />
         </button>
 
         <!-- Dropdown Menu -->
@@ -85,7 +98,15 @@
 
               <!-- Connection Name & Info -->
               <div class="flex-1 min-w-0 flex flex-col">
-                <span class="font-medium truncate leading-tight">{{ conn.name }}</span>
+                <div class="flex items-center space-x-1.5">
+                  <span class="font-medium truncate leading-tight">{{ conn.name }}</span>
+                  <span
+                    v-if="conn.alias"
+                    class="text-[9px] font-mono px-1 py-0.2 rounded bg-brand-500/20 text-brand-300 border border-brand-500/30"
+                  >
+                    {{ conn.alias }}
+                  </span>
+                </div>
                 <span class="text-xxs text-dark-400 font-mono truncate leading-tight mt-0.5">
                   {{ conn.username ? `${conn.username}@` : '' }}{{ conn.host }}:{{ conn.port }}
                 </span>
@@ -113,22 +134,29 @@
         </div>
       </div>
 
-      <!-- Active Database Selector Dropdown -->
-      <div class="relative">
-        <select
-          :value="connectionStore.activeDatabase"
-          @change="onDatabaseChange"
-          class="bg-dark-800 hover:bg-dark-750 text-dark-200 font-mono px-2 py-1 rounded border border-dark-700 text-xs focus:outline-none focus:border-brand-500 cursor-pointer appearance-none pr-6"
+      <!-- Active Database Selector Dropdown (Prominent Amber Pill) -->
+      <div class="relative flex items-center">
+        <div
+          class="flex items-center bg-amber-950/50 hover:bg-amber-950/70 border border-amber-500/50 hover:border-amber-400/80 rounded-md px-2 py-1 text-xs transition-all shadow-xs ring-1 ring-amber-500/20 group"
+          title="切換目前工作區使用的資料庫 (Switch Active Database)"
         >
-          <option
-            v-for="db in filteredAvailableDatabases"
-            :key="db"
-            :value="db"
+          <Database class="w-3.5 h-3.5 text-amber-400 flex-shrink-0 mr-1.5 group-hover:scale-105 transition-transform" />
+          <select
+            :value="connectionStore.activeDatabase"
+            @change="onDatabaseChange"
+            class="bg-transparent text-amber-200 hover:text-amber-100 font-mono font-medium text-xs focus:outline-none cursor-pointer appearance-none pr-5 transition-colors"
           >
-            {{ db }}
-          </option>
-        </select>
-        <ChevronDown class="w-3 h-3 text-dark-400 absolute right-1.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+            <option
+              v-for="db in filteredAvailableDatabases"
+              :key="db"
+              :value="db"
+              class="bg-dark-850 text-dark-100 font-mono"
+            >
+              {{ db }}
+            </option>
+          </select>
+          <ChevronDown class="w-3 h-3 text-amber-400/80 absolute right-2 pointer-events-none group-hover:text-amber-300 transition-colors" />
+        </div>
       </div>
     </div>
 
@@ -422,6 +450,7 @@
 import { ref, computed } from 'vue';
 import {
   Server,
+  Database,
   ChevronDown,
   Play,
   PlaySquare,
@@ -452,6 +481,15 @@ const workspaceStore = useWorkspaceStore();
 const connectionStore = useConnectionStore();
 const queryStore = useQueryStore();
 const settingsStore = useSettingsStore();
+
+const activeConnStyle = computed(() => {
+  const conn = connectionStore.activeConnection;
+  if (!conn?.color) return {};
+  return {
+    borderColor: `${conn.color}aa`,
+    boxShadow: `0 0 0 1px ${conn.color}44, 0 1px 3px 0 rgba(0, 0, 0, 0.3)`,
+  };
+});
 
 const filteredAvailableDatabases = computed(() => {
   const current = connectionStore.activeDatabase;

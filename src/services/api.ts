@@ -61,6 +61,7 @@ function mockInvoke<T>(cmd: string, args?: Record<string, unknown>): Promise<T> 
       return Promise.resolve({
         id: (req.id as string) || `conn-${Date.now()}`,
         name: req.name as string,
+        alias: (req.alias as string) || undefined,
         engine: 'mssql',
         host: req.host as string,
         port: (req.port as number) || 1433,

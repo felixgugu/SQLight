@@ -204,6 +204,7 @@ export const useConnectionStore = defineStore('connection', () => {
     const updated = await connectionService.saveConnection({
       id: existing.id,
       name: trimmed,
+      alias: existing.alias,
       engine: existing.engine,
       host: existing.host,
       port: existing.port,

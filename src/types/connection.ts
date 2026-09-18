@@ -2,6 +2,7 @@ export type DatabaseEngine = 'mssql';
 
 export interface ConnectionConfig {
   name: string;
+  alias?: string;
   host: string;
   port: number;
   database: string;

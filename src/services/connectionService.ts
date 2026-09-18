@@ -4,6 +4,7 @@ import type { ConnectionProfile } from '@/types/connection';
 export interface SaveConnectionPayload {
   id?: string;
   name: string;
+  alias?: string;
   engine: 'mssql';
   host: string;
   port: number;

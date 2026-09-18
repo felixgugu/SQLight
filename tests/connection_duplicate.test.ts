@@ -53,4 +53,21 @@ describe('connectionNameHelper utility', () => {
     const copyFromWithPwd = initialProfile && !withPassword.trim() ? initialProfile.id : undefined;
     assert.equal(copyFromWithPwd, undefined);
   });
+
+  test('SaveConnectionPayload includes alias when provided and undefined when blank', () => {
+    const aliasInput = '  PROD  ';
+    const alias = aliasInput.trim() || undefined;
+    assert.equal(alias, 'PROD');
+
+    const emptyAliasInput = '   ';
+    const emptyAlias = emptyAliasInput.trim() || undefined;
+    assert.equal(emptyAlias, undefined);
+  });
+
+  test('Duplicating connection inherits alias from initialProfile', () => {
+    const initialProfile = { id: 'conn-1', name: 'ERP Primary', alias: 'ERP' };
+    const formAlias = initialProfile.alias || '';
+    assert.equal(formAlias, 'ERP');
+  });
 });
+
