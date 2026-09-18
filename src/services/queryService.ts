@@ -35,4 +35,12 @@ export const queryService = {
       connectionId,
     });
   },
+
+  async openQueryLogFile(): Promise<string> {
+    return invokeCommand<string>('open_query_log_file');
+  },
+
+  async getQueryLogPath(): Promise<string> {
+    return invokeCommand<string>('get_query_log_path');
+  },
 };

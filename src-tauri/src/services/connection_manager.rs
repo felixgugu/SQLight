@@ -2,9 +2,10 @@ use crate::drivers::mssql::SqlServerDriver;
 use crate::drivers::{DatabaseConnection, DatabaseDriver};
 use crate::error::{AppError, AppResult};
 use crate::models::connection::{ConnectionProfile, SaveConnectionRequest};
-use crate::models::query::QueryResult;
+use crate::models::query::{QueryMessage, QueryResult};
 use crate::models::schema::{ColumnItem, DatabaseItem, ForeignKeyItem, TableItem, TableSchema};
 use crate::services::credential_store::CredentialStore;
+use crate::services::query_logger::QueryLogger;
 use crate::services::storage_service::StorageService;
 use chrono::Utc;
 use std::collections::HashMap;
@@ -278,12 +279,28 @@ impl ConnectionManager {
         }
 
         let mut conn = conn_arc.lock().await;
+        let db_name = conn.current_database().to_string();
         let query_fut = conn.execute_query(sql, max_rows);
 
         let res = tokio::select! {
             biased;
             _ = &mut cancel_rx => {
                 // Query was cancelled by user!
+                QueryLogger::log_query(
+                    id,
+                    &db_name,
+                    sql,
+                    &[QueryMessage {
+                        level: "warning".to_string(),
+                        message: "Query was cancelled by user".to_string(),
+                        code: None,
+                        line_number: None,
+                        timestamp: Utc::now().to_rfc3339(),
+                    }],
+                    0,
+                    "CANCELLED",
+                );
+
                 // TCP stream is dirty due to mid-flight cancel; remove from pool
                 {
                     let mut conns = self.active_connections.lock().await;
@@ -298,6 +315,36 @@ impl ConnectionManager {
                 Err(AppError::QueryCancelled)
             }
             query_res = query_fut => {
+                match &query_res {
+                    Ok(result) => {
+                        let has_error = result.messages.iter().any(|m| m.level == "error");
+                        let status = if has_error { "ERROR" } else { "SUCCESS" };
+                        QueryLogger::log_query(
+                            id,
+                            &db_name,
+                            sql,
+                            &result.messages,
+                            result.execution_time_ms,
+                            status,
+                        );
+                    }
+                    Err(err) => {
+                        QueryLogger::log_query(
+                            id,
+                            &db_name,
+                            sql,
+                            &[QueryMessage {
+                                level: "error".to_string(),
+                                message: err.to_string(),
+                                code: None,
+                                line_number: None,
+                                timestamp: Utc::now().to_rfc3339(),
+                            }],
+                            0,
+                            "ERROR",
+                        );
+                    }
+                }
                 query_res
             }
         };

@@ -12,6 +12,11 @@ use services::ConnectionManager;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    // Initialize/clear the query log file on each application launch
+    if let Err(e) = services::QueryLogger::init() {
+        eprintln!("[SQLight] Failed to initialize query log file: {}", e);
+    }
+
     let connection_manager = ConnectionManager::new();
 
     tauri::Builder::default()
@@ -27,6 +32,8 @@ pub fn run() {
             execute_query,
             cancel_query,
             get_connection_spid,
+            open_query_log_file,
+            get_query_log_path,
             get_databases,
             get_tables,
             get_columns,

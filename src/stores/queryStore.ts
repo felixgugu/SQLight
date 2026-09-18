@@ -5,7 +5,7 @@ import { queryService } from '@/services/queryService';
 import { useSettingsStore } from './settingsStore';
 import { useWorkspaceStore } from './workspaceStore';
 import { parseTargetTableFromSql } from '@/utils/sqlGenerator';
-import { splitSqlBatches } from '@/utils/sqlStatementExtractor';
+import { splitSqlBatches, splitSqlStatements } from '@/utils/sqlStatementExtractor';
 import {
   buildExecutionStats,
   wrapQueryWithPerfTelemetry,
@@ -410,7 +410,9 @@ export const useQueryStore = defineStore('query', () => {
       }
 
       const hasError = result.messages.some((m) => m.level === 'error');
-      const rowCount = result.resultSets[0]?.rowCount ?? result.affectedRows ?? 0;
+      const rowCount = result.resultSets.length > 0
+        ? result.resultSets.reduce((sum, rs) => sum + (rs.rowCount ?? rs.rows?.length ?? 0), 0)
+        : (result.affectedRows ?? 0);
       const timeStr = new Date().toLocaleTimeString();
       const parsed = parseTargetTableFromSql(sql);
       const tableName = parsed?.tableName || extractFirstTableName(sql);
@@ -418,9 +420,10 @@ export const useQueryStore = defineStore('query', () => {
 
       queryExecutionSeq++;
       const seq = queryExecutionSeq;
+      const setsLabel = result.resultSets.length > 1 ? ` [${result.resultSets.length} sets]` : '';
       const tabTitle = isShowplan
-        ? `${seq}.${tableName} [Plan] ${rowCount}r`
-        : `${seq}.${tableName} ${rowCount}r`;
+        ? `${seq}.${tableName} [Plan]${setsLabel} ${rowCount}r`
+        : `${seq}.${tableName}${setsLabel} ${rowCount}r`;
 
       const newTab: QueryResultTab = {
         id: `tab-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
@@ -735,6 +738,75 @@ export const useQueryStore = defineStore('query', () => {
     activeExecutionStats.value = null;
   }
 
+  async function refreshTabResultSet(
+    tabId: string,
+    setIndex: number = 0
+  ): Promise<{ success: boolean; rowCount: number; error?: string }> {
+    const tab = resultTabs.value.find((t) => t.id === tabId);
+    if (!tab) {
+      return { success: false, rowCount: 0, error: '查無對應之查詢結果分頁' };
+    }
+
+    const connId = tab.connectionId;
+    const db = tab.database;
+    if (!connId || !db) {
+      return { success: false, rowCount: 0, error: '無法取得當前連線或資料庫資訊' };
+    }
+
+    const startTime = Date.now();
+    try {
+      let targetSql = tab.sql;
+      const isMultiSet = tab.result.resultSets.length > 1;
+
+      if (isMultiSet) {
+        const statements = splitSqlStatements(tab.sql);
+        if (statements.length === tab.result.resultSets.length && statements[setIndex]) {
+          targetSql = statements[setIndex]!;
+        }
+      }
+
+      const limit = maxRows.value != null && maxRows.value > 0 ? maxRows.value : undefined;
+      let res: QueryResult;
+
+      try {
+        res = await queryService.executeQuery(connId, db, targetSql, limit);
+      } catch (subErr) {
+        if (targetSql !== tab.sql) {
+          res = await queryService.executeQuery(connId, db, tab.sql, limit);
+        } else {
+          throw subErr;
+        }
+      }
+
+      const duration = res.executionTimeMs || (Date.now() - startTime);
+
+      // In-place update of target result set or all result sets
+      if (res.resultSets.length === 1 && isMultiSet && targetSql !== tab.sql && tab.result.resultSets[setIndex]) {
+        tab.result.resultSets[setIndex] = res.resultSets[0]!;
+      } else {
+        tab.result.resultSets = res.resultSets;
+        tab.result.affectedRows = res.affectedRows;
+      }
+
+      tab.rowCount = tab.result.resultSets.reduce(
+        (sum, rs) => sum + (rs.rowCount ?? rs.rows?.length ?? 0),
+        0
+      );
+      tab.durationMs = duration;
+      tab.executedAt = new Date().toLocaleTimeString();
+
+      if (res.messages && res.messages.length > 0) {
+        tab.result.messages = res.messages;
+      }
+
+      const refreshedCount = tab.result.resultSets[setIndex]?.rowCount ?? tab.rowCount;
+      return { success: true, rowCount: refreshedCount };
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      return { success: false, rowCount: 0, error: msg };
+    }
+  }
+
   return {
     resultTabs,
     activeResultTabId,
@@ -761,6 +833,7 @@ export const useQueryStore = defineStore('query', () => {
     currentSessionMessageSeq: computed(() => sessionMessageSeq),
     currentHistorySeq: computed(() => historySeq),
     execute,
+    refreshTabResultSet,
     selectResultTab,
     togglePinTab,
     reorderResultTabs,

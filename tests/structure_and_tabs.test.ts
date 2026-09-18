@@ -5,6 +5,7 @@ import { useWorkspaceStore } from '../src/stores/workspaceStore';
 import { useQueryStore, resetQueryExecutionSeq } from '../src/stores/queryStore';
 import { useSettingsStore } from '../src/stores/settingsStore';
 import { queryService } from '../src/services/queryService';
+import { splitSqlStatements } from '../src/utils/sqlStatementExtractor';
 import type { QueryResult } from '../src/types/query';
 
 const data = new Map<string, string>();
@@ -116,6 +117,68 @@ test('queryExecutionSeq increments sequentially and titles follow $SEQ.$Tabname 
   assert.equal(store.resultTabs[0]?.rowCount, 0);
 });
 
+test('queryStore aggregates rowCount across multiple resultSets and adds [N sets] to tab title', async () => {
+  const store = useQueryStore();
+
+  // Multi-query with 2 result sets (18 and 27 rows)
+  queryService.executeQuery = async () => {
+    return {
+      resultSets: [
+        {
+          columns: [{ name: 'Id', dataType: 'int', nullable: false, ordinal: 0 }],
+          rows: Array.from({ length: 18 }, (_, i) => [i + 1]),
+          rowCount: 18,
+        },
+        {
+          columns: [{ name: 'Code', dataType: 'varchar', nullable: true, ordinal: 0 }],
+          rows: Array.from({ length: 27 }, (_, i) => [`code-${i + 1}`]),
+          rowCount: 27,
+        },
+      ],
+      messages: [],
+      affectedRows: 0,
+      executionTimeMs: 25,
+    } as QueryResult;
+  };
+
+  await store.execute('conn-1', 'master', 'SELECT TOP 1000 * FROM tblLoginData; SELECT TOP 100 * FROM tblServiceEntry;');
+  assert.equal(store.resultTabs.length, 1);
+  assert.equal(store.resultTabs[0]?.rowCount, 45); // 18 + 27
+  assert.equal(store.resultTabs[0]?.title, '1.tblLoginData [2 sets] 45r');
+
+  // Multi-query with 3 result sets (18, 27, 30 rows)
+  queryService.executeQuery = async () => {
+    return {
+      resultSets: [
+        {
+          columns: [{ name: 'Id', dataType: 'int', nullable: false, ordinal: 0 }],
+          rows: Array.from({ length: 18 }, (_, i) => [i + 1]),
+          rowCount: 18,
+        },
+        {
+          columns: [{ name: 'Code', dataType: 'varchar', nullable: true, ordinal: 0 }],
+          rows: Array.from({ length: 27 }, (_, i) => [`code-${i + 1}`]),
+          rowCount: 27,
+        },
+        {
+          columns: [{ name: 'UserId', dataType: 'int', nullable: false, ordinal: 0 }],
+          rows: Array.from({ length: 30 }, (_, i) => [100 + i]),
+          rowCount: 30,
+        },
+      ],
+      messages: [],
+      affectedRows: 0,
+      executionTimeMs: 38,
+    } as QueryResult;
+  };
+
+  await store.execute('conn-1', 'master', 'SELECT * FROM tbl1; SELECT * FROM tbl2; SELECT * FROM tbl3;');
+  assert.equal(store.resultTabs.length, 2);
+  assert.equal(store.resultTabs[0]?.rowCount, 75); // 18 + 27 + 30
+  assert.equal(store.resultTabs[0]?.title, '2.tbl1 [3 sets] 75r');
+});
+
+
 test('settingsStore includes customizable active tab colors with proper defaults and reset', () => {
   const store = useSettingsStore();
 
@@ -206,5 +269,123 @@ test('addErDiagramTab supports restoring from file with initialData', () => {
   assert.equal(createdTab?.type, 'er_diagram');
   assert.equal(createdTab?.title, 'CustomerModel.sqlight-er.json');
   assert.equal(store.activeTabId, createdTab?.id);
+});
+
+test('splitSqlStatements correctly splits multiple statements by top-level semicolon', () => {
+  const sql = `
+    SELECT TOP 1000 * FROM [Info360_AICC].[dbo].[tblLoginData];
+    -- comment with ; semicolon
+    SELECT TOP 100 * FROM [tblServiceEntry] WHERE note = 'abc;123';
+    /* multi-line comment ; */
+    SELECT 1 AS [col;name];
+  `;
+
+  const stmts = splitSqlStatements(sql);
+  assert.equal(stmts.length, 3);
+  assert.match(stmts[0]!, /tblLoginData/);
+  assert.match(stmts[1]!, /tblServiceEntry/);
+  assert.match(stmts[2]!, /SELECT 1/);
+});
+
+test('refreshTabResultSet re-runs query SQL and updates tab in-place for single result set', async () => {
+  const store = useQueryStore();
+
+  let executionCount = 0;
+  queryService.executeQuery = async () => {
+    executionCount++;
+    const rowCount = executionCount === 1 ? 10 : 25;
+    return {
+      resultSets: [
+        {
+          columns: [{ name: 'Id', dataType: 'int', nullable: false, ordinal: 0 }],
+          rows: Array.from({ length: rowCount }, (_, i) => [i + 1]),
+          rowCount,
+        },
+      ],
+      messages: [{ level: 'info', message: `Executed #${executionCount}`, timestamp: new Date().toISOString() }],
+      affectedRows: 0,
+      executionTimeMs: 12,
+    } as QueryResult;
+  };
+
+  // Initial execution
+  await store.execute('conn-1', 'master', 'SELECT * FROM Customers;');
+  assert.equal(store.resultTabs.length, 1);
+  const tabId = store.resultTabs[0]!.id;
+  assert.equal(store.resultTabs[0]!.rowCount, 10);
+
+  // Refresh
+  const refreshRes = await store.refreshTabResultSet(tabId, 0);
+  assert.equal(refreshRes.success, true);
+  assert.equal(refreshRes.rowCount, 25);
+  // Still 1 tab (updated in-place!)
+  assert.equal(store.resultTabs.length, 1);
+  assert.equal(store.resultTabs[0]!.id, tabId);
+  assert.equal(store.resultTabs[0]!.rowCount, 25);
+  assert.equal(store.resultTabs[0]!.result.resultSets[0]!.rowCount, 25);
+});
+
+test('refreshTabResultSet re-runs specific statement and updates target result set in-place for multi-result set tab', async () => {
+  const store = useQueryStore();
+
+  queryService.executeQuery = async (_cId, _db, sql) => {
+    if (!sql.includes('tblLoginData') && sql.includes('tblServiceEntry')) {
+      // Re-running just the second statement
+      return {
+        resultSets: [
+          {
+            columns: [{ name: 'EntryId', dataType: 'int', nullable: false, ordinal: 0 }],
+            rows: Array.from({ length: 40 }, (_, i) => [i + 1]),
+            rowCount: 40,
+          },
+        ],
+        messages: [],
+        affectedRows: 0,
+        executionTimeMs: 15,
+      } as QueryResult;
+    }
+
+    // Initial batch returning both sets
+    return {
+      resultSets: [
+        {
+          columns: [{ name: 'LoginId', dataType: 'int', nullable: false, ordinal: 0 }],
+          rows: Array.from({ length: 18 }, (_, i) => [i + 1]),
+          rowCount: 18,
+        },
+        {
+          columns: [{ name: 'EntryId', dataType: 'int', nullable: false, ordinal: 0 }],
+          rows: Array.from({ length: 27 }, (_, i) => [i + 1]),
+          rowCount: 27,
+        },
+      ],
+      messages: [],
+      affectedRows: 0,
+      executionTimeMs: 25,
+    } as QueryResult;
+  };
+
+  await store.execute(
+    'conn-1',
+    'master',
+    'SELECT TOP 1000 * FROM [tblLoginData];\nSELECT TOP 100 * FROM [tblServiceEntry];'
+  );
+
+  assert.equal(store.resultTabs.length, 1);
+  const tabId = store.resultTabs[0]!.id;
+  assert.equal(store.resultTabs[0]!.rowCount, 45); // 18 + 27
+  assert.equal(store.resultTabs[0]!.result.resultSets[0]!.rowCount, 18);
+  assert.equal(store.resultTabs[0]!.result.resultSets[1]!.rowCount, 27);
+
+  // Refresh only Grid #1 (setIndex = 1, which is tblServiceEntry)
+  const refreshRes = await store.refreshTabResultSet(tabId, 1);
+  assert.equal(refreshRes.success, true);
+  assert.equal(refreshRes.rowCount, 40);
+
+  // Check that Grid #0 is still 18 rows, and Grid #1 is now 40 rows, total = 58!
+  assert.equal(store.resultTabs.length, 1);
+  assert.equal(store.resultTabs[0]!.result.resultSets[0]!.rowCount, 18);
+  assert.equal(store.resultTabs[0]!.result.resultSets[1]!.rowCount, 40);
+  assert.equal(store.resultTabs[0]!.rowCount, 58);
 });
 

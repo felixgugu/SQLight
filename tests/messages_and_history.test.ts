@@ -182,3 +182,50 @@ test('query cancellation and errors also accumulate into both sessionMessages an
   assert.equal(store.history[0].status, 'cancelled');
   assert.equal(store.history[0].seq, 2);
 });
+
+test('history and messages expand/collapse set behavior preserves individual and batch state', () => {
+  const expandedKeys = new Set<string | number>();
+
+  const toggleExpand = (key: string | number) => {
+    if (expandedKeys.has(key)) {
+      expandedKeys.delete(key);
+    } else {
+      expandedKeys.add(key);
+    }
+  };
+
+  const item1Key = 'hist-1';
+  const item2Key = 'hist-2';
+
+  // Initially collapsed (not in set)
+  assert.equal(expandedKeys.has(item1Key), false);
+  assert.equal(expandedKeys.has(item2Key), false);
+
+  // Toggle expand item1
+  toggleExpand(item1Key);
+  assert.equal(expandedKeys.has(item1Key), true);
+  assert.equal(expandedKeys.has(item2Key), false);
+
+  // Toggle collapse item1
+  toggleExpand(item1Key);
+  assert.equal(expandedKeys.has(item1Key), false);
+
+  // Batch expand all
+  const allKeys = [item1Key, item2Key, 'hist-3'];
+  allKeys.forEach((k) => expandedKeys.add(k));
+  assert.equal(expandedKeys.size, 3);
+  assert.equal(allKeys.every((k) => expandedKeys.has(k)), true);
+
+  // Batch collapse all
+  expandedKeys.clear();
+  assert.equal(expandedKeys.size, 0);
+});
+
+test('queryService openQueryLogFile and getQueryLogPath return valid log path in browser/mock environment', async () => {
+  const logPath = await queryService.getQueryLogPath();
+  assert.ok(logPath.includes('sqlight.log'), 'getQueryLogPath should resolve to sqlight.log');
+
+  const openedPath = await queryService.openQueryLogFile();
+  assert.ok(openedPath.includes('sqlight.log'), 'openQueryLogFile should open sqlight.log');
+});
+

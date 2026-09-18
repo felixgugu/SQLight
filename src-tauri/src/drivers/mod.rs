@@ -9,6 +9,7 @@ pub mod mssql;
 #[async_trait]
 pub trait DatabaseConnection: Send + Sync {
     fn spid(&self) -> u32 { 0 }
+    fn current_database(&self) -> &str { "" }
     async fn execute_query(&mut self, sql: &str, max_rows: Option<usize>) -> AppResult<QueryResult>;
     async fn get_databases(&mut self) -> AppResult<Vec<DatabaseItem>>;
     async fn get_schemas(&mut self, database: Option<&str>) -> AppResult<Vec<SchemaItem>>;

@@ -342,3 +342,141 @@ export function splitSqlBatches(fullText: string): string[] {
 
   return batches;
 }
+
+/**
+ * Splits SQL text into individual statements by top-level semicolons.
+ * Protects semicolons inside:
+ * - Single-quoted strings: '...' (with '' escapes)
+ * - Bracketed identifiers: [...] (with ]] escapes)
+ * - Quoted identifiers: "..." (with "" escapes)
+ * - Single-line comments: -- ...
+ * - Multi-line comments: /* ... *\/ (including nested)
+ */
+export function splitSqlStatements(fullText: string): string[] {
+  if (!fullText || !fullText.trim()) return [];
+
+  const statements: string[] = [];
+  let current = '';
+  let inSingleQuote = false;
+  let inBracket = false;
+  let inDoubleQuote = false;
+  let commentDepth = 0;
+  let inLineComment = false;
+
+  const len = fullText.length;
+  for (let i = 0; i < len; i++) {
+    const ch = fullText[i]!;
+    const nextCh = i + 1 < len ? fullText[i + 1]! : '';
+
+    if (inLineComment) {
+      current += ch;
+      if (ch === '\n') {
+        inLineComment = false;
+      }
+      continue;
+    }
+
+    if (commentDepth > 0) {
+      current += ch;
+      if (ch === '/' && nextCh === '*') {
+        commentDepth++;
+        current += nextCh;
+        i++;
+      } else if (ch === '*' && nextCh === '/') {
+        commentDepth--;
+        current += nextCh;
+        i++;
+      }
+      continue;
+    }
+
+    if (ch === '-' && nextCh === '-') {
+      inLineComment = true;
+      current += ch + nextCh;
+      i++;
+      continue;
+    }
+
+    if (ch === '/' && nextCh === '*') {
+      commentDepth = 1;
+      current += ch + nextCh;
+      i++;
+      continue;
+    }
+
+    if (inSingleQuote) {
+      current += ch;
+      if (ch === "'") {
+        if (nextCh === "'") {
+          current += nextCh;
+          i++;
+        } else {
+          inSingleQuote = false;
+        }
+      }
+      continue;
+    }
+
+    if (inBracket) {
+      current += ch;
+      if (ch === ']') {
+        if (nextCh === ']') {
+          current += nextCh;
+          i++;
+        } else {
+          inBracket = false;
+        }
+      }
+      continue;
+    }
+
+    if (inDoubleQuote) {
+      current += ch;
+      if (ch === '"') {
+        if (nextCh === '"') {
+          current += nextCh;
+          i++;
+        } else {
+          inDoubleQuote = false;
+        }
+      }
+      continue;
+    }
+
+    if (ch === "'") {
+      inSingleQuote = true;
+      current += ch;
+      continue;
+    }
+
+    if (ch === '[') {
+      inBracket = true;
+      current += ch;
+      continue;
+    }
+
+    if (ch === '"') {
+      inDoubleQuote = true;
+      current += ch;
+      continue;
+    }
+
+    if (ch === ';') {
+      const trimmed = current.trim();
+      if (trimmed) {
+        statements.push(trimmed);
+      }
+      current = '';
+      continue;
+    }
+
+    current += ch;
+  }
+
+  const finalTrimmed = current.trim();
+  if (finalTrimmed) {
+    statements.push(finalTrimmed);
+  }
+
+  return statements;
+}

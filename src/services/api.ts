@@ -274,6 +274,13 @@ function mockInvoke<T>(cmd: string, args?: Record<string, unknown>): Promise<T> 
     case 'open_custom_templates_file':
       return Promise.resolve('./sql_custom_templates.json' as unknown as T);
 
+    case 'open_query_log_file':
+      console.info('[Dev/Browser] Opening mock query log file: ./sqlight.log');
+      return Promise.resolve('./sqlight.log' as unknown as T);
+
+    case 'get_query_log_path':
+      return Promise.resolve('./sqlight.log' as unknown as T);
+
     default:
       return Promise.reject(new Error(`Unknown command '${cmd}'`));
   }

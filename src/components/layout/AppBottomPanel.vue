@@ -38,6 +38,12 @@
         </span>
         <span v-if="queryStore.activeResultTab">
           Rows: <strong class="text-emerald-400">{{ queryStore.activeResultTab.rowCount }}</strong>
+          <span
+            v-if="queryStore.activeResultTab.result.resultSets.length > 1"
+            class="text-dark-400 font-normal ml-1"
+          >
+            ({{ queryStore.activeResultTab.result.resultSets.map(r => r.rowCount ?? r.rows?.length ?? 0).join(' + ') }})
+          </span>
         </span>
         <span v-else-if="queryStore.activeResult">
           Duration: <strong class="text-brand-400">{{ queryStore.activeResult.executionTimeMs }}ms</strong>

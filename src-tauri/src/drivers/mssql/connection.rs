@@ -199,6 +199,10 @@ impl DatabaseConnection for SqlServerConnection {
         self.spid
     }
 
+    fn current_database(&self) -> &str {
+        &self.current_database
+    }
+
     async fn execute_query(&mut self, sql: &str, max_rows: Option<usize>) -> AppResult<QueryResult> {
         let start = Instant::now();
 

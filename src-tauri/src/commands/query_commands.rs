@@ -38,3 +38,14 @@ pub async fn get_connection_spid(
         .await
         .map_err(|e| e.to_string())
 }
+
+#[tauri::command]
+pub async fn open_query_log_file() -> Result<String, String> {
+    crate::services::QueryLogger::open_log_file().map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn get_query_log_path() -> Result<String, String> {
+    let path = crate::services::QueryLogger::resolve_log_path();
+    Ok(path.to_string_lossy().to_string())
+}
