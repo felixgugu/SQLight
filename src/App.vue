@@ -338,6 +338,7 @@ function handleNewQueryTab() {
   workspaceStore.addSqlTab();
   nextTick(() => {
     mainWorkspaceRef.value?.scrollToStart();
+    mainWorkspaceRef.value?.focusEditor();
   });
 }
 

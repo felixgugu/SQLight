@@ -8,6 +8,8 @@ export interface ConnectionConfig {
   username: string;
   encrypt: boolean;
   trustServerCertificate: boolean;
+  color?: string;
+  modificationPrompt?: boolean;
 }
 
 export interface ConnectionProfile extends ConnectionConfig {

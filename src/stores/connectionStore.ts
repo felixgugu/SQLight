@@ -107,6 +107,11 @@ export const useConnectionStore = defineStore('connection', () => {
     return connections.value.find((c) => c.id === activeConnectionId.value) ?? null;
   });
 
+  function getConnectionById(id?: string | null): ConnectionProfile | null {
+    if (!id) return null;
+    return connections.value.find((c) => c.id === id) ?? null;
+  }
+
   function isNameDuplicate(name: string, excludeId?: string): boolean {
     const trimmed = name.trim().toLowerCase();
     if (!trimmed) return false;
@@ -206,6 +211,8 @@ export const useConnectionStore = defineStore('connection', () => {
       username: existing.username,
       encrypt: existing.encrypt,
       trustServerCertificate: existing.trustServerCertificate,
+      color: existing.color,
+      modificationPrompt: existing.modificationPrompt,
     });
     await loadConnections();
     return updated;
@@ -384,6 +391,7 @@ export const useConnectionStore = defineStore('connection', () => {
     isLoading,
     errorMessage,
     isNameDuplicate,
+    getConnectionById,
     getDatabases,
     loadConnections,
     saveConnection,

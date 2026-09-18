@@ -16,6 +16,10 @@ pub struct ConnectionConfig {
     pub username: String,
     pub encrypt: bool,
     pub trust_server_certificate: bool,
+    #[serde(default)]
+    pub color: Option<String>,
+    #[serde(default)]
+    pub modification_prompt: Option<bool>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -32,6 +36,10 @@ pub struct ConnectionProfile {
     pub trust_server_certificate: bool,
     pub created_at: String,
     pub updated_at: String,
+    #[serde(default)]
+    pub color: Option<String>,
+    #[serde(default)]
+    pub modification_prompt: Option<bool>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -49,4 +57,8 @@ pub struct SaveConnectionRequest {
     pub trust_server_certificate: bool,
     #[serde(default)]
     pub copy_password_from: Option<String>,
+    #[serde(default)]
+    pub color: Option<String>,
+    #[serde(default)]
+    pub modification_prompt: Option<bool>,
 }

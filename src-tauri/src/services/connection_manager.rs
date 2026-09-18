@@ -104,6 +104,8 @@ impl ConnectionManager {
             trust_server_certificate: req.trust_server_certificate,
             created_at: now.clone(),
             updated_at: now,
+            color: req.color,
+            modification_prompt: req.modification_prompt,
         };
 
         if let Some(idx) = profiles.iter().position(|p| p.id == id) {
@@ -147,6 +149,8 @@ impl ConnectionManager {
             trust_server_certificate: req.trust_server_certificate,
             created_at: String::new(),
             updated_at: String::new(),
+            color: req.color,
+            modification_prompt: req.modification_prompt,
         };
 
         let password = if let Some(ref p) = req.password {

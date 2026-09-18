@@ -589,6 +589,12 @@ onMounted(() => {
 
   editorContainer.value.addEventListener('dragover', dragOverHandler, true);
   editorContainer.value.addEventListener('drop', dropHandler, true);
+
+  if (!props.readOnly) {
+    setTimeout(() => {
+      focus(1, 1);
+    }, 50);
+  }
 });
 
 // Sync editor options when settingsStore changes
@@ -694,6 +700,13 @@ onBeforeUnmount(() => {
   }
 });
 
+function focus(lineNumber = 1, column = 1) {
+  if (editorInstance) {
+    editorInstance.focus();
+    editorInstance.setPosition(new monaco.Position(lineNumber, column));
+  }
+}
+
 defineExpose({
   getExecutableQuery,
   getStatementAtCursor,
@@ -702,6 +715,7 @@ defineExpose({
   formatCode,
   insertTextAtCursor,
   getTableNameAtCursor,
+  focus,
 });
 </script>
 

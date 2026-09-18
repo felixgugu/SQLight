@@ -70,7 +70,17 @@
             @dblclick.stop="startRenameTab(tab)"
             class="flex items-center space-x-1.5 min-w-0 flex-1 truncate"
           >
-            <span class="truncate">
+            <!-- Tab Connection Color Dot -->
+            <span
+              v-if="getTabConnectionColor(tab)"
+              class="w-2 h-2 rounded-full shrink-0 ring-1 ring-black/40 shadow-xs"
+              :style="{ backgroundColor: getTabConnectionColor(tab) }"
+              :title="`連線標籤色彩: ${getTabConnectionColor(tab)}`"
+            />
+            <span
+              class="truncate"
+              :style="getTabTitleStyle(tab)"
+            >
               {{ tab.title }}
             </span>
             <!-- Database badge -->
@@ -220,6 +230,18 @@
         <span>No active workspace tab</span>
       </div>
     </div>
+
+    <!-- Dangerous Query Double-Confirmation Modal -->
+    <DangerousQueryModal
+      :is-open="dangerousModalState.isOpen"
+      :step="dangerousModalState.step"
+      :connection-name="dangerousModalState.connectionName"
+      :database-name="dangerousModalState.databaseName"
+      :detected-keywords="dangerousModalState.detectedKeywords"
+      :sql="dangerousModalState.sql"
+      @proceed="handleDangerousModalProceed"
+      @cancel="handleDangerousModalCancel"
+    />
   </main>
 </template>
 
@@ -235,8 +257,10 @@ import TableDataViewer from '@/components/editor/TableDataViewer.vue';
 import TableStructureViewer from '@/components/editor/TableStructureViewer.vue';
 import ExecutionPlanViewer from '@/components/editor/ExecutionPlanViewer.vue';
 import ErDiagramViewer from '@/components/editor/ErDiagramViewer.vue';
+import DangerousQueryModal from '@/components/modals/DangerousQueryModal.vue';
 import { saveSqlToFile, openSqlFromFile } from '@/utils/fileStorage';
 import { getTabThemeStyle } from '@/utils/tabTheme';
+import { detectDangerousSqlStatements } from '@/utils/sqlGuard';
 import type { SqlEditorTab, TableDataTab, TableStructureTab, ExecutionPlanTab, ErDiagramTab, WorkspaceTab } from '@/types/workspace';
 
 const workspaceStore = useWorkspaceStore();
@@ -351,6 +375,22 @@ function handleTabClick(tabId: string) {
   workspaceStore.setActiveTab(tabId);
 }
 
+function getTabConnectionColor(tab: WorkspaceTab): string | undefined {
+  const connId = tab.connectionId || (workspaceStore.activeTabId === tab.id ? connectionStore.activeConnectionId : null);
+  if (!connId) return undefined;
+  const conn = connectionStore.getConnectionById(connId) || connectionStore.connections.find((c) => c.id === connId);
+  return conn?.color || undefined;
+}
+
+function getTabTitleStyle(tab: WorkspaceTab): Record<string, string> {
+  const color = getTabConnectionColor(tab);
+  if (!color) return {};
+  return {
+    color,
+    fontWeight: '600',
+  };
+}
+
 function getTabItemStyle(tab: WorkspaceTab, idx: number) {
   const isActive = workspaceStore.activeTabId === tab.id;
   const isDropHover = dropHoverIndex.value === idx && isPointerDragging.value && dropHoverIndex.value !== dragSourceIndex.value;
@@ -362,12 +402,22 @@ function getTabItemStyle(tab: WorkspaceTab, idx: number) {
     };
   }
 
-  return getTabThemeStyle(
+  const baseStyle = getTabThemeStyle(
     tab.type,
     isActive,
     settingsStore.activeSqlTabBgColor,
     settingsStore.activeSqlTabTextColor
   );
+
+  const connColor = getTabConnectionColor(tab);
+  if (connColor) {
+    baseStyle['--tab-top-accent'] = connColor;
+    if (isActive) {
+      baseStyle['--tab-border'] = connColor;
+    }
+  }
+
+  return baseStyle;
 }
 
 // ========================
@@ -540,6 +590,57 @@ function formatCode() {
   }
 }
 
+// ========================
+// Dangerous Query Double-Confirmation Safe Guard
+// ========================
+const dangerousModalState = reactive<{
+  isOpen: boolean;
+  step: 1 | 2;
+  connectionName: string;
+  databaseName: string;
+  detectedKeywords: string[];
+  sql: string;
+  pendingExecute: (() => Promise<void>) | null;
+}>({
+  isOpen: false,
+  step: 1,
+  connectionName: '',
+  databaseName: '',
+  detectedKeywords: [],
+  sql: '',
+  pendingExecute: null,
+});
+
+function handleDangerousModalProceed() {
+  if (dangerousModalState.step === 1) {
+    dangerousModalState.step = 2;
+  } else {
+    dangerousModalState.isOpen = false;
+    const fn = dangerousModalState.pendingExecute;
+    dangerousModalState.pendingExecute = null;
+    if (fn) {
+      fn();
+    }
+  }
+}
+
+function handleDangerousModalCancel() {
+  dangerousModalState.isOpen = false;
+  dangerousModalState.pendingExecute = null;
+  workspaceStore.showToast('已取消執行危險指令', 'info', 2500);
+}
+
+async function executeSql(connId: string, db: string, targetSql: string) {
+  const result = await queryStore.execute(connId, db, targetSql);
+
+  // Auto-switch to Results or Messages (if DDL/DML has 0 result sets or error, show Messages like SSMS)
+  if (result && (result.messages.some((m) => m.level === 'error') || result.resultSets.length === 0)) {
+    workspaceStore.setBottomPanelTab('messages');
+  } else {
+    workspaceStore.setBottomPanelTab('results');
+  }
+}
+
 async function runQuery(mode: 'current' | 'all' = 'current', queryOverride?: string) {
   let targetSql = queryOverride;
   if (!targetSql && monacoRef.value) {
@@ -554,14 +655,23 @@ async function runQuery(mode: 'current' | 'all' = 'current', queryOverride?: str
   const connId = connectionStore.activeConnectionId || 'default';
   const db = connectionStore.activeDatabase || 'master';
 
-  const result = await queryStore.execute(connId, db, targetSql);
-
-  // Auto-switch to Results or Messages (if DDL/DML has 0 result sets or error, show Messages like SSMS)
-  if (result && (result.messages.some((m) => m.level === 'error') || result.resultSets.length === 0)) {
-    workspaceStore.setBottomPanelTab('messages');
-  } else {
-    workspaceStore.setBottomPanelTab('results');
+  // Check safety guard if modificationPrompt is enabled on active connection
+  const activeConn = connectionStore.getConnectionById(connId) || connectionStore.activeConnection;
+  if (activeConn?.modificationPrompt) {
+    const check = detectDangerousSqlStatements(targetSql);
+    if (check.isDangerous) {
+      dangerousModalState.connectionName = activeConn.name;
+      dangerousModalState.databaseName = db;
+      dangerousModalState.detectedKeywords = check.detectedKeywords;
+      dangerousModalState.sql = targetSql;
+      dangerousModalState.step = 1;
+      dangerousModalState.pendingExecute = () => executeSql(connId, db, targetSql);
+      dangerousModalState.isOpen = true;
+      return;
+    }
   }
+
+  await executeSql(connId, db, targetSql);
 }
 
 function insertTextAtCursor(text: string, title?: string) {
@@ -587,10 +697,17 @@ function scrollToStart() {
   }
 }
 
+function focusEditor(line = 1, col = 1) {
+  nextTick(() => {
+    monacoRef.value?.focus(line, col);
+  });
+}
+
 function handleAddNewTab() {
   workspaceStore.addSqlTab();
   nextTick(() => {
     scrollToStart();
+    focusEditor();
   });
 }
 
@@ -780,6 +897,11 @@ watch(
         scrollToStart();
       });
     }
+    if (workspaceStore.activeTab?.type === 'sql_editor') {
+      nextTick(() => {
+        focusEditor();
+      });
+    }
   }
 );
 
@@ -803,6 +925,7 @@ defineExpose({
   insertTextAtCursor,
   getTableNameAtCursor,
   scrollToStart,
+  focusEditor,
 });
 </script>
 

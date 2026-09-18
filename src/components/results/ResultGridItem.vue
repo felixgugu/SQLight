@@ -442,22 +442,37 @@
     <div
       v-if="commitModal.visible"
       class="fixed inset-0 z-50 bg-black/65 flex items-center justify-center p-4 sm:p-6 backdrop-blur-xs select-none"
-      @click.self="commitModal.visible = false"
+      @click.self="closeCommitModal"
     >
-      <div class="bg-dark-850 border border-dark-700 rounded-lg shadow-2xl w-[92vw] max-w-5xl h-[88vh] max-h-[850px] flex flex-col overflow-hidden text-sans">
+      <div
+        class="bg-dark-850 border rounded-lg shadow-2xl w-[92vw] max-w-5xl h-[88vh] max-h-[850px] flex flex-col overflow-hidden text-sans transition-colors"
+        :class="requiresModificationPrompt ? (commitModal.confirmStep === 2 ? 'border-rose-600/80 shadow-rose-950/40' : 'border-amber-600/80 shadow-amber-950/30') : 'border-dark-700'"
+      >
         <!-- Modal Header -->
-        <div class="px-5 py-3.5 border-b border-dark-750 flex items-center justify-between bg-dark-800 flex-shrink-0">
+        <div
+          class="px-5 py-3.5 border-b border-dark-750 flex items-center justify-between flex-shrink-0"
+          :class="requiresModificationPrompt && commitModal.confirmStep === 2 ? 'bg-rose-950/30 border-rose-900/50' : 'bg-dark-800'"
+        >
           <div class="flex items-center space-x-2.5">
-            <div class="w-7 h-7 rounded-md bg-emerald-950/80 border border-emerald-700/60 flex items-center justify-center">
-              <CheckCircle2 class="w-4 h-4 text-emerald-400" />
+            <div
+              class="w-7 h-7 rounded-md flex items-center justify-center"
+              :class="requiresModificationPrompt ? (commitModal.confirmStep === 2 ? 'bg-rose-950/80 border border-rose-700/60' : 'bg-amber-950/80 border border-amber-700/60') : 'bg-emerald-950/80 border border-emerald-700/60'"
+            >
+              <ShieldAlert v-if="requiresModificationPrompt && commitModal.confirmStep === 2" class="w-4 h-4 text-rose-400 animate-pulse" />
+              <AlertTriangle v-else-if="requiresModificationPrompt" class="w-4 h-4 text-amber-400" />
+              <CheckCircle2 v-else class="w-4 h-4 text-emerald-400" />
             </div>
             <div>
-              <h3 class="font-semibold text-sm text-dark-100 leading-tight">確認提交資料變更 (Commit Changes)</h3>
-              <p class="text-xxs text-dark-400 mt-0.5">請確認以下即將寫入資料庫的交易 T-SQL 語法與異動範圍</p>
+              <h3 class="font-semibold text-sm text-dark-100 leading-tight">
+                {{ requiresModificationPrompt ? (commitModal.confirmStep === 2 ? '確認提交資料變更 (高危最終確認 2/2)' : '確認提交資料變更 (修改提示 1/2)') : '確認提交資料變更 (Commit Changes)' }}
+              </h3>
+              <p class="text-xxs text-dark-400 mt-0.5">
+                {{ requiresModificationPrompt ? (commitModal.confirmStep === 2 ? '注意：此操作將直接更動目標資料庫！資料修改後可能無法復原' : '連線已啟用修改提示保護，請核實即將寫入資料庫的交易語法與異動範圍') : '請確認以下即將寫入資料庫的交易 T-SQL 語法與異動範圍' }}
+              </p>
             </div>
           </div>
           <button
-            @click="commitModal.visible = false"
+            @click="closeCommitModal"
             class="text-dark-400 hover:text-dark-200 p-1.5 rounded hover:bg-dark-700 transition-colors cursor-pointer"
             title="關閉 (Esc)"
           >
@@ -513,17 +528,69 @@
 
         <!-- Modal Footer -->
         <div class="px-5 py-3 border-t border-dark-750 flex items-center justify-between bg-dark-800 flex-shrink-0">
-          <div class="text-xxs text-dark-400">
+          <!-- Left: High Risk Warning / Standard Note -->
+          <div v-if="requiresModificationPrompt" class="flex-1 min-w-0 mr-4">
+            <div
+              v-if="commitModal.confirmStep === 1"
+              class="flex items-center space-x-2 px-3 py-1.5 rounded bg-amber-950/40 border border-amber-800/60 text-amber-300 text-xxs leading-normal"
+            >
+              <AlertTriangle class="w-4 h-4 text-amber-400 shrink-0" />
+              <span>
+                <strong>高危提醒 (1/2)：</strong>連線「{{ currentConnection?.name }}」已啟用修改提示防護。此操作將直接更動資料庫，需進行 <strong>2 次重複確認</strong> 才可提交！
+              </span>
+            </div>
+            <div
+              v-else
+              class="flex items-center space-x-2 px-3 py-1.5 rounded bg-rose-950/60 border border-rose-700/80 text-rose-200 text-xxs leading-normal animate-pulse"
+            >
+              <AlertOctagon class="w-4 h-4 text-rose-400 shrink-0" />
+              <span>
+                <strong class="text-white">高危提醒 (2/2 最終確認)：</strong>即將對目標資料表實施實體資料更動！資料修改後可能無法復原，請再次核實無誤後點擊執行。
+              </span>
+            </div>
+          </div>
+          <div v-else class="text-xxs text-dark-400">
             提示：所有異動包含在同一交易 (BEGIN TRAN) 中，任何錯誤均完整復原
           </div>
-          <div class="flex items-center space-x-2">
+
+          <!-- Right: Buttons -->
+          <div class="flex items-center space-x-2 shrink-0">
             <button
-              @click="commitModal.visible = false"
-              class="px-3 py-1.5 rounded border border-dark-700 hover:bg-dark-750 text-dark-300 text-xs transition-colors cursor-pointer"
+              type="button"
+              @click="closeCommitModal"
+              class="px-3 py-1.5 rounded border border-dark-700 hover:bg-dark-750 text-dark-300 hover:text-dark-100 text-xs transition-colors cursor-pointer"
             >
-              取消
+              {{ requiresModificationPrompt && commitModal.confirmStep === 2 ? '放棄提交 (Esc)' : '取消' }}
             </button>
+
+            <!-- Guarded Step 1 Button -->
             <button
+              v-if="requiresModificationPrompt && commitModal.confirmStep === 1"
+              type="button"
+              @click="commitModal.confirmStep = 2"
+              class="px-4 py-1.5 rounded bg-amber-600 hover:bg-amber-500 text-white font-semibold text-xs flex items-center space-x-1.5 transition-colors cursor-pointer shadow-sm"
+            >
+              <span>初次確認提交 (1/2)</span>
+              <ArrowRight class="w-3.5 h-3.5" />
+            </button>
+
+            <!-- Guarded Step 2 Button -->
+            <button
+              v-else-if="requiresModificationPrompt && commitModal.confirmStep === 2"
+              type="button"
+              @click="executeCommit"
+              :disabled="commitModal.isExecuting"
+              class="px-4 py-1.5 rounded bg-rose-600 hover:bg-rose-500 active:bg-rose-700 disabled:opacity-50 text-white font-bold text-xs flex items-center space-x-1.5 transition-colors cursor-pointer shadow-md shadow-rose-950/50"
+            >
+              <Loader2 v-if="commitModal.isExecuting" class="w-3.5 h-3.5 animate-spin" />
+              <AlertTriangle v-else class="w-3.5 h-3.5" />
+              <span>{{ commitModal.isExecuting ? '提交執行中...' : '確定立即提交 (最終確認 2/2)' }}</span>
+            </button>
+
+            <!-- Standard Commit Button -->
+            <button
+              v-else
+              type="button"
               @click="executeCommit"
               :disabled="commitModal.isExecuting"
               class="px-4 py-1.5 rounded bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-medium text-xs flex items-center space-x-1.5 transition-colors cursor-pointer shadow-sm"
@@ -568,6 +635,9 @@ import {
   Maximize2,
   Minimize2,
   Table,
+  AlertOctagon,
+  ShieldAlert,
+  ArrowRight,
 } from 'lucide-vue-next';
 import { AgGridVue } from 'ag-grid-vue3';
 import {
@@ -629,6 +699,16 @@ const gridApi = ref<GridApi | null>(null);
 const gridContainerRef = ref<HTMLDivElement | null>(null);
 
 const currentTab = computed(() => props.queryTab ?? queryStore.activeResultTab);
+
+const currentConnection = computed(() => {
+  const connId = currentTab.value?.connectionId || connectionStore.activeConnectionId;
+  return connectionStore.getConnectionById(connId) || connectionStore.activeConnection;
+});
+
+const requiresModificationPrompt = computed(() => {
+  return currentConnection.value?.modificationPrompt ?? false;
+});
+
 const isRefreshing = ref(false);
 
 async function handleRefresh() {
@@ -770,7 +850,14 @@ const commitModal = reactive({
   sql: '',
   rowCount: 0,
   cellCount: 0,
+  confirmStep: 1 as 1 | 2,
 });
+
+function closeCommitModal() {
+  commitModal.visible = false;
+  commitModal.confirmStep = 1;
+  commitModal.error = '';
+}
 
 function handleRevertChanges() {
   if (modifiedCount.value === 0 || !props.resultSet) return;
@@ -818,6 +905,7 @@ function openCommitModal() {
     commitModal.cellCount = modifiedCount.value;
     commitModal.error = '';
     commitModal.isExecuting = false;
+    commitModal.confirmStep = 1;
     commitModal.visible = true;
   } catch (err: any) {
     workspaceStore.showToast(`產生更新語法失敗: ${err?.message || err}`, 'error', 3500);
@@ -844,7 +932,7 @@ async function executeCommit() {
     const cellCnt = commitModal.cellCount;
     modifiedCells.value = {};
     gridApi.value?.refreshCells({ force: true });
-    commitModal.visible = false;
+    closeCommitModal();
     workspaceStore.showToast(`成功提交！已更新 ${rowCnt} 筆資料 (共 ${cellCnt} 格)`, 'success', 3000);
   } catch (err: any) {
     commitModal.error = err?.message || String(err);

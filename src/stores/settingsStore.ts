@@ -1,5 +1,16 @@
 import { defineStore } from 'pinia';
 import { ref, watch } from 'vue';
+import {
+  type FilterRule,
+  type FilterTarget,
+  type HiddenTableRule,
+  isTableHiddenByRules,
+  isDatabaseHiddenByRules,
+  testFilterPatternByRules,
+  testTablePatternByRules,
+} from '@/utils/tableFilter';
+
+export type { FilterRule, FilterTarget, HiddenTableRule };
 
 export interface AppSettings {
   editorFontSize: number;
@@ -14,6 +25,7 @@ export interface AppSettings {
   activeResultTabBgColor: string;
   activeResultTabTextColor: string;
   erTheme: 'dark' | 'light';
+  hiddenTableRules?: FilterRule[];
 }
 
 const STORAGE_KEY = 'sqlight_app_settings';
@@ -31,6 +43,7 @@ const DEFAULT_SETTINGS: AppSettings = {
   activeResultTabBgColor: '#065f46',
   activeResultTabTextColor: '#ffffff',
   erTheme: 'dark',
+  hiddenTableRules: [],
 };
 
 function loadSettings(): AppSettings {
@@ -38,6 +51,12 @@ function loadSettings(): AppSettings {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) {
       const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed.hiddenTableRules)) {
+        parsed.hiddenTableRules = parsed.hiddenTableRules.map((r: any) => ({
+          ...r,
+          target: r.target || 'all',
+        }));
+      }
       return { ...DEFAULT_SETTINGS, ...parsed };
     }
   } catch (e) {
@@ -61,6 +80,86 @@ export const useSettingsStore = defineStore('settings', () => {
   const activeResultTabBgColor = ref<string>(initial.activeResultTabBgColor || '#065f46');
   const activeResultTabTextColor = ref<string>(initial.activeResultTabTextColor || '#ffffff');
   const erTheme = ref<'dark' | 'light'>(initial.erTheme || 'dark');
+  const hiddenTableRules = ref<FilterRule[]>(
+    initial.hiddenTableRules
+      ? initial.hiddenTableRules.map((r) => ({ ...r, target: r.target || 'all' }))
+      : []
+  );
+
+  function addFilterRule(pattern: string, target: FilterTarget = 'all', description?: string) {
+    const trimmed = pattern.trim();
+    if (!trimmed) return;
+    hiddenTableRules.value.push({
+      id: 'rule_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7),
+      pattern: trimmed,
+      target,
+      enabled: true,
+      description: description?.trim() || undefined,
+    });
+  }
+
+  function addHiddenTableRule(pattern: string, description?: string) {
+    addFilterRule(pattern, 'all', description);
+  }
+
+  function removeHiddenTableRule(id: string) {
+    hiddenTableRules.value = hiddenTableRules.value.filter((r) => r.id !== id);
+  }
+
+  function toggleHiddenTableRule(id: string, enabled?: boolean) {
+    const rule = hiddenTableRules.value.find((r) => r.id === id);
+    if (rule) {
+      rule.enabled = enabled !== undefined ? enabled : !rule.enabled;
+    }
+  }
+
+  function updateFilterRule(
+    id: string,
+    updates: {
+      pattern?: string;
+      target?: FilterTarget;
+      enabled?: boolean;
+      description?: string;
+    }
+  ) {
+    const rule = hiddenTableRules.value.find((r) => r.id === id);
+    if (!rule) return;
+    if (updates.pattern !== undefined) {
+      const trimmed = updates.pattern.trim();
+      if (trimmed) {
+        rule.pattern = trimmed;
+      }
+    }
+    if (updates.target !== undefined) {
+      rule.target = updates.target;
+    }
+    if (updates.enabled !== undefined) {
+      rule.enabled = updates.enabled;
+    }
+    if (updates.description !== undefined) {
+      rule.description = updates.description.trim() || undefined;
+    }
+  }
+
+  function isTableHidden(tableName: string, schema?: string): boolean {
+    return isTableHiddenByRules(hiddenTableRules.value, tableName, schema);
+  }
+
+  function isDatabaseHidden(databaseName: string): boolean {
+    return isDatabaseHiddenByRules(hiddenTableRules.value, databaseName);
+  }
+
+  function testFilterPattern(
+    name: string,
+    target: 'database' | 'table',
+    schema?: string
+  ): { isHidden: boolean; matchedPattern?: string; matchedTarget?: FilterTarget } {
+    return testFilterPatternByRules(hiddenTableRules.value, name, target, schema);
+  }
+
+  function testTablePattern(tableName: string, schema?: string): { isHidden: boolean; matchedPattern?: string } {
+    return testTablePatternByRules(hiddenTableRules.value, tableName, schema);
+  }
 
   function saveSettings() {
     const data: AppSettings = {
@@ -76,6 +175,7 @@ export const useSettingsStore = defineStore('settings', () => {
       activeResultTabBgColor: activeResultTabBgColor.value,
       activeResultTabTextColor: activeResultTabTextColor.value,
       erTheme: erTheme.value,
+      hiddenTableRules: hiddenTableRules.value,
     };
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
@@ -99,10 +199,12 @@ export const useSettingsStore = defineStore('settings', () => {
       activeResultTabBgColor,
       activeResultTabTextColor,
       erTheme,
+      hiddenTableRules,
     ],
     () => {
       saveSettings();
-    }
+    },
+    { deep: true }
   );
 
   function resetToDefaults() {
@@ -118,6 +220,7 @@ export const useSettingsStore = defineStore('settings', () => {
     activeResultTabBgColor.value = DEFAULT_SETTINGS.activeResultTabBgColor;
     activeResultTabTextColor.value = DEFAULT_SETTINGS.activeResultTabTextColor;
     erTheme.value = DEFAULT_SETTINGS.erTheme;
+    hiddenTableRules.value = [];
   }
 
   return {
@@ -133,6 +236,18 @@ export const useSettingsStore = defineStore('settings', () => {
     activeResultTabBgColor,
     activeResultTabTextColor,
     erTheme,
+    hiddenTableRules,
+    addFilterRule,
+    addHiddenTableRule,
+    updateFilterRule,
+    removeFilterRule: removeHiddenTableRule,
+    removeHiddenTableRule,
+    toggleFilterRule: toggleHiddenTableRule,
+    toggleHiddenTableRule,
+    isTableHidden,
+    isDatabaseHidden,
+    testFilterPattern,
+    testTablePattern,
     saveSettings,
     resetToDefaults,
   };

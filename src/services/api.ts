@@ -68,6 +68,8 @@ function mockInvoke<T>(cmd: string, args?: Record<string, unknown>): Promise<T> 
         username: req.username as string,
         encrypt: !!req.encrypt,
         trustServerCertificate: !!req.trustServerCertificate,
+        color: (req.color as string) || undefined,
+        modificationPrompt: !!req.modificationPrompt,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       } as unknown as T);

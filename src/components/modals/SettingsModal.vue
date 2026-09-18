@@ -5,7 +5,7 @@
     @click.self="$emit('close')"
   >
     <div
-      class="bg-dark-850 border border-dark-700 rounded-lg shadow-2xl w-[620px] h-[520px] max-w-[95vw] max-h-[90vh] overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-150"
+      class="bg-dark-850 border border-dark-700 rounded-lg shadow-2xl w-[860px] h-[660px] max-w-[95vw] max-h-[92vh] overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-150"
     >
       <!-- Modal Header -->
       <div class="px-5 py-3.5 border-b border-dark-750 flex items-center justify-between flex-shrink-0 bg-dark-800">
@@ -355,7 +355,10 @@
           </div>
         </div>
 
-        <!-- Tab 3: About & Shortcuts -->
+        <!-- Tab 3: Table Filter -->
+        <TableFilterTab v-else-if="activeTab === 'table_filter'" />
+
+        <!-- Tab 4: About & Shortcuts -->
         <div v-else-if="activeTab === 'about'" class="space-y-4">
           <div class="bg-dark-900 border border-dark-750 p-3.5 rounded space-y-2">
             <div class="flex items-center space-x-2">
@@ -489,8 +492,9 @@
 
 <script setup lang="ts">
 import { ref } from 'vue';
-import { Settings, X, Code2, TableProperties, Info, FileCode, Pin } from 'lucide-vue-next';
+import { Settings, X, Code2, TableProperties, Info, FileCode, Pin, EyeOff } from 'lucide-vue-next';
 import { useSettingsStore } from '@/stores/settingsStore';
+import TableFilterTab from './TableFilterTab.vue';
 
 defineProps<{
   isOpen: boolean;
@@ -501,11 +505,12 @@ defineEmits<{
 }>();
 
 const settingsStore = useSettingsStore();
-const activeTab = ref<'editor' | 'results' | 'about'>('editor');
+const activeTab = ref<'editor' | 'results' | 'table_filter' | 'about'>('editor');
 
 const tabs = [
   { id: 'editor' as const, label: '編輯器 (Editor)', icon: Code2 },
   { id: 'results' as const, label: '查詢與結果 (Results)', icon: TableProperties },
+  { id: 'table_filter' as const, label: '名稱過濾 (Object Filter)', icon: EyeOff },
   { id: 'about' as const, label: '關於 (About)', icon: Info },
 ];
 

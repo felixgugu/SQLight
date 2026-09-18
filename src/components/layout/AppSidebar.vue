@@ -194,62 +194,17 @@
             ]"
           />
 
-          <!-- Normal Name Display OR Inline Rename Input -->
-          <div
-            v-if="inlineEditingId === conn.id"
-            class="flex-1 flex flex-col min-w-0 mr-1"
-            @click.stop
-          >
-            <div class="flex items-center space-x-1">
-              <input
-                ref="inlineInputRef"
-                v-model="inlineEditingName"
-                @keydown.enter.stop="saveInlineRename(conn)"
-                @keydown.esc.stop="cancelInlineRename"
-                @blur="handleInlineBlur(conn)"
-                type="text"
-                :class="[
-                  'w-full bg-dark-900 border rounded px-1.5 py-0.5 text-xs text-dark-100 focus:outline-none font-sans',
-                  inlineError ? 'border-rose-500 focus:border-rose-400' : 'border-brand-500'
-                ]"
-              />
-              <button
-                type="button"
-                @mousedown.prevent
-                @click.stop="saveInlineRename(conn)"
-                :disabled="!!inlineError || !inlineEditingName.trim()"
-                class="p-0.5 text-emerald-400 hover:text-emerald-300 disabled:opacity-30 flex-shrink-0"
-                title="確定 (Enter)"
-              >
-                <Check class="w-3.5 h-3.5" />
-              </button>
-              <button
-                type="button"
-                @mousedown.prevent
-                @click.stop="cancelInlineRename"
-                class="p-0.5 text-dark-400 hover:text-dark-200 flex-shrink-0"
-                title="取消 (Esc)"
-              >
-                <X class="w-3.5 h-3.5" />
-              </button>
-            </div>
-            <span v-if="inlineError" class="text-rose-400 text-xxs mt-0.5 truncate font-sans">
-              {{ inlineError }}
-            </span>
-          </div>
-
-          <span v-else class="font-sans font-medium truncate flex-1">{{ conn.name }}</span>
+          <span class="font-sans font-medium truncate flex-1">{{ conn.name }}</span>
 
           <!-- Status indicator (when connected) -->
           <span
-            v-if="connectionStore.activeConnectionId === conn.id && connectionStore.status === 'connected' && inlineEditingId !== conn.id"
+            v-if="connectionStore.activeConnectionId === conn.id && connectionStore.status === 'connected'"
             class="w-2 h-2 rounded-full bg-emerald-500 flex-shrink-0 shadow-xs shadow-emerald-500/50 mr-1"
             title="Connected"
           />
 
           <!-- Action Buttons on Hover -->
           <div
-            v-if="inlineEditingId !== conn.id"
             class="hidden group-hover:flex items-center space-x-0.5 flex-shrink-0 ml-1"
             @click.stop
           >
@@ -263,24 +218,14 @@
               <RotateCw :class="['w-3 h-3', refreshingConnId === conn.id ? 'animate-spin text-brand-400' : '']" />
             </button>
 
-            <!-- Inline Rename -->
+            <!-- Edit Connection Settings -->
             <button
               type="button"
-              @click.stop="startInlineRename(conn)"
+              @click.stop="handleEditConn(conn)"
               class="p-1 hover:bg-dark-700 text-dark-400 hover:text-dark-200 rounded transition-colors"
-              title="修改名稱 (Rename)"
+              title="編輯設定 (Edit)"
             >
-              <Pencil class="w-3 h-3" />
-            </button>
-
-            <!-- Delete connection -->
-            <button
-              type="button"
-              @click.stop="handlePromptDelete(conn)"
-              class="p-1 hover:bg-dark-700 text-dark-400 hover:text-rose-400 rounded transition-colors"
-              title="刪除連線 (Delete)"
-            >
-              <Trash2 class="w-3 h-3" />
+              <Settings class="w-3 h-3" />
             </button>
           </div>
         </div>
@@ -288,7 +233,7 @@
         <!-- Connection Children: Databases -->
         <div v-if="expandedConns[conn.id]" class="pl-3.5 mt-1 space-y-0.5 border-l border-dark-750 ml-2">
           <div
-            v-for="db in connectionStore.getDatabases(conn.id)"
+            v-for="db in getFilteredDatabases(conn.id)"
             :key="db"
             class="space-y-0.5"
           >
@@ -806,13 +751,6 @@
         <span>重新整理 (Refresh)</span>
       </button>
 
-      <button
-        @click="startInlineRename(connContextMenu.conn!)"
-        class="w-full text-left px-2.5 py-1.5 hover:bg-dark-750 hover:text-dark-100 flex items-center space-x-2 transition-colors"
-      >
-        <Pencil class="w-3.5 h-3.5 text-sky-400" />
-        <span>修改名稱 (Rename)</span>
-      </button>
 
       <button
         @click="handleEditConn(connContextMenu.conn!)"
@@ -865,7 +803,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, reactive, nextTick, watch } from 'vue';
+import { ref, onMounted, onUnmounted, reactive, nextTick, watch } from 'vue';
 import {
   Server,
   Plus,
@@ -880,9 +818,8 @@ import {
   Key,
   Columns,
   FileCode,
-  Pencil,
+  Settings,
   Trash2,
-  Check,
   X,
   Unplug,
   Folder,
@@ -902,6 +839,7 @@ import ConfirmModal from '@/components/common/ConfirmModal.vue';
 import { useConnectionStore } from '@/stores/connectionStore';
 import { useWorkspaceStore } from '@/stores/workspaceStore';
 import { useSchemaStore } from '@/stores/schemaStore';
+import { useSettingsStore } from '@/stores/settingsStore';
 import { schemaService } from '@/services/schemaService';
 import { wrapIdentifierIfNeeded } from '@/utils/sqlParser';
 import { generateCreateTableDdl } from '@/utils/ddlGenerator';
@@ -927,6 +865,7 @@ const emit = defineEmits<{
 const connectionStore = useConnectionStore();
 const workspaceStore = useWorkspaceStore();
 const schemaStore = useSchemaStore();
+const settingsStore = useSettingsStore();
 
 function isPendingColumn(colName: string): boolean {
   if (!workspaceStore.pendingColumnToInsert) return false;
@@ -1176,9 +1115,21 @@ function toggleFolder(connId: string, db: string, folder: 'tables' | 'views' | '
   expandedFolders[key] = !isFolderExpanded(connId, db, folder);
 }
 
+function getFilteredDatabases(connId: string): string[] {
+  const dbs = connectionStore.getDatabases(connId);
+  return dbs.filter((db) => {
+    if (connectionStore.activeConnectionId === connId && connectionStore.activeDatabase === db) {
+      return true;
+    }
+    return !settingsStore.isDatabaseHidden(db);
+  });
+}
+
 function getFilteredTables(connId: string, db: string): TableItem[] {
   const key = `${connId}:${db}`;
-  const list = (tablesByDb[key] || []).filter((t) => t.kind === 'BASE TABLE');
+  const list = (tablesByDb[key] || []).filter(
+    (t) => t.kind === 'BASE TABLE' && !settingsStore.isTableHidden(t.name, t.schema)
+  );
   const q = filterQuery.value.trim().toLowerCase();
   if (!q) return list;
   return list.filter(
@@ -1216,65 +1167,6 @@ function getFilteredFunctions(connId: string, db: string): RoutineItem[] {
   );
 }
 
-// Inline rename state
-const inlineEditingId = ref<string | null>(null);
-const inlineEditingName = ref('');
-const inlineInputRef = ref<HTMLInputElement | null>(null);
-
-const inlineError = computed(() => {
-  if (!inlineEditingId.value) return null;
-  const trimmed = inlineEditingName.value.trim();
-  if (!trimmed) {
-    return '名稱不可為空';
-  }
-  if (connectionStore.isNameDuplicate(trimmed, inlineEditingId.value)) {
-    return '此名稱已被使用';
-  }
-  return null;
-});
-
-function startInlineRename(conn: ConnectionProfile) {
-  connContextMenu.visible = false;
-  inlineEditingId.value = conn.id;
-  inlineEditingName.value = conn.name;
-  nextTick(() => {
-    inlineInputRef.value?.focus();
-    inlineInputRef.value?.select();
-  });
-}
-
-async function saveInlineRename(conn: ConnectionProfile) {
-  if (inlineError.value) return;
-  const trimmed = inlineEditingName.value.trim();
-  if (!trimmed) return;
-  if (trimmed === conn.name) {
-    inlineEditingId.value = null;
-    return;
-  }
-  try {
-    await connectionStore.renameConnection(conn.id, trimmed);
-    inlineEditingId.value = null;
-  } catch (err) {
-    console.error('Rename failed:', err);
-  }
-}
-
-function cancelInlineRename() {
-  inlineEditingId.value = null;
-  inlineEditingName.value = '';
-}
-
-function handleInlineBlur(conn: ConnectionProfile) {
-  setTimeout(() => {
-    if (inlineEditingId.value === conn.id) {
-      if (!inlineError.value && inlineEditingName.value.trim() && inlineEditingName.value.trim() !== conn.name) {
-        saveInlineRename(conn);
-      } else {
-        cancelInlineRename();
-      }
-    }
-  }, 150);
-}
 
 // Delete connection state
 const isDeleteModalOpen = ref(false);
@@ -1430,12 +1322,10 @@ async function handleDisconnect() {
 }
 
 function toggleConnectionExpand(connId: string) {
-  if (inlineEditingId.value === connId) return;
   expandedConns[connId] = !expandedConns[connId];
 }
 
 async function selectConnection(connId: string) {
-  if (inlineEditingId.value === connId) return;
   if (connectionStore.activeConnectionId === connId && connectionStore.status === 'connected') {
     return;
   }

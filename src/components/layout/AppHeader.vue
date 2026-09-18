@@ -121,7 +121,7 @@
           class="bg-dark-800 hover:bg-dark-750 text-dark-200 font-mono px-2 py-1 rounded border border-dark-700 text-xs focus:outline-none focus:border-brand-500 cursor-pointer appearance-none pr-6"
         >
           <option
-            v-for="db in connectionStore.availableDatabases"
+            v-for="db in filteredAvailableDatabases"
             :key="db"
             :value="db"
           >
@@ -419,7 +419,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
 import {
   Server,
   ChevronDown,
@@ -445,11 +445,20 @@ import {
 import { useWorkspaceStore } from '@/stores/workspaceStore';
 import { useConnectionStore } from '@/stores/connectionStore';
 import { useQueryStore } from '@/stores/queryStore';
+import { useSettingsStore } from '@/stores/settingsStore';
 import { DBA_QUERIES, type DbaQueryItem } from '@/utils/dbaQueries';
 
 const workspaceStore = useWorkspaceStore();
 const connectionStore = useConnectionStore();
 const queryStore = useQueryStore();
+const settingsStore = useSettingsStore();
+
+const filteredAvailableDatabases = computed(() => {
+  const current = connectionStore.activeDatabase;
+  return connectionStore.availableDatabases.filter(
+    (db) => db === current || !settingsStore.isDatabaseHidden(db)
+  );
+});
 
 const isConnDropdownOpen = ref(false);
 const isDbaDropdownOpen = ref(false);

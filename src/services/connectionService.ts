@@ -13,6 +13,8 @@ export interface SaveConnectionPayload {
   encrypt: boolean;
   trustServerCertificate: boolean;
   copyPasswordFrom?: string;
+  color?: string;
+  modificationPrompt?: boolean;
 }
 
 export const connectionService = {

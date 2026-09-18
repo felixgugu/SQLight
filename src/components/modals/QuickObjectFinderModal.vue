@@ -338,6 +338,7 @@ import {
 import { useConnectionStore } from '@/stores/connectionStore';
 import { useWorkspaceStore } from '@/stores/workspaceStore';
 import { useSchemaStore } from '@/stores/schemaStore';
+import { useSettingsStore } from '@/stores/settingsStore';
 import {
   filterAndRankQuickObjects,
   highlightMatchedChunks,
@@ -357,6 +358,7 @@ const emit = defineEmits<{
 const connectionStore = useConnectionStore();
 const workspaceStore = useWorkspaceStore();
 const schemaStore = useSchemaStore();
+const settingsStore = useSettingsStore();
 
 const searchQuery = ref('');
 const activeIndex = ref(0);
@@ -375,7 +377,8 @@ const currentDatabase = ref('');
 
 const availableDatabases = computed(() => {
   if (!connectionStore.activeConnectionId) return [];
-  return connectionStore.getDatabases(connectionStore.activeConnectionId);
+  const list = connectionStore.getDatabases(connectionStore.activeConnectionId);
+  return list.filter((db) => db === currentDatabase.value || !settingsStore.isDatabaseHidden(db));
 });
 
 const isLoading = computed(() => {
@@ -386,12 +389,18 @@ const isLoading = computed(() => {
   return !!(schemaStore.loadingTablesByDb[key] || schemaStore.loadingRoutinesByDb[key]);
 });
 
-// All objects loaded for active connection & selected database
+// All objects loaded for active connection & selected database (excluding hidden tables)
 const rawObjects = computed<QuickFinderItem[]>(() => {
   const cId = connectionStore.activeConnectionId;
   const db = currentDatabase.value || connectionStore.activeDatabase;
   if (!cId || !db) return [];
-  return schemaStore.getDatabaseObjects(cId, db);
+  const list = schemaStore.getDatabaseObjects(cId, db);
+  return list.filter((o) => {
+    if (o.type === 'table') {
+      return !settingsStore.isTableHidden(o.name, o.schema);
+    }
+    return true;
+  });
 });
 
 const filterChips = computed(() => {

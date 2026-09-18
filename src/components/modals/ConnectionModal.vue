@@ -46,6 +46,72 @@
           />
         </div>
 
+        <!-- Tab Color Picker -->
+        <div>
+          <div class="flex items-center justify-between mb-1.5">
+            <label class="block text-dark-300 font-medium">分頁標籤自訂顏色 (Tab Color)</label>
+            <span v-if="form.color" class="text-xxs text-dark-400 font-mono">{{ form.color }}</span>
+          </div>
+          <div class="flex items-center space-x-2 bg-dark-900/60 p-2 rounded border border-dark-750">
+            <!-- Preset Color Palette -->
+            <div class="flex items-center space-x-1.5">
+              <button
+                v-for="preset in PRESET_COLORS"
+                :key="preset"
+                type="button"
+                @click="form.color = preset"
+                :style="{ backgroundColor: preset }"
+                :class="[
+                  'w-5 h-5 rounded-full border transition-all cursor-pointer',
+                  form.color.toLowerCase() === preset.toLowerCase()
+                    ? 'border-white scale-125 ring-2 ring-white/30 shadow-xs'
+                    : 'border-dark-600 hover:scale-115 opacity-80 hover:opacity-100'
+                ]"
+                :title="preset"
+              />
+            </div>
+
+            <!-- Custom Color Picker -->
+            <label class="relative cursor-pointer flex items-center justify-center w-6 h-6 rounded border border-dark-600 bg-dark-900 hover:border-dark-400 transition-colors" title="自訂顏色 (Custom Color)">
+              <input
+                type="color"
+                v-model="form.color"
+                class="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
+              />
+              <span
+                class="w-3.5 h-3.5 rounded-sm border border-white/20"
+                :style="{ backgroundColor: form.color || '#64748b' }"
+              />
+            </label>
+
+            <!-- Clear button -->
+            <button
+              v-if="form.color"
+              type="button"
+              @click="form.color = ''"
+              class="text-xxs text-dark-400 hover:text-dark-200 px-1.5 py-0.5 rounded border border-dark-700 hover:bg-dark-750 transition-colors cursor-pointer"
+            >
+              清除
+            </button>
+
+            <!-- Tab Preview Badge -->
+            <div class="ml-auto flex items-center space-x-1.5 px-2.5 py-1 rounded bg-dark-850 border border-dark-700 text-xxs select-none">
+              <span class="text-dark-500">頁籤預覽:</span>
+              <span
+                class="w-2 h-2 rounded-full shrink-0"
+                :style="{ backgroundColor: form.color || '#64748b' }"
+              />
+              <span
+                class="font-medium truncate max-w-[110px]"
+                :style="{ color: form.color || undefined }"
+                :class="!form.color ? 'text-dark-200' : ''"
+              >
+                {{ form.name.trim() || 'Query 1' }}
+              </span>
+            </div>
+          </div>
+        </div>
+
         <!-- Host & Port Row -->
         <div class="grid grid-cols-3 gap-3">
           <div class="col-span-2">
@@ -104,8 +170,26 @@
           </div>
         </div>
 
-        <!-- Security Flags -->
-        <div class="pt-2 border-t border-dark-750 space-y-2">
+        <!-- Security & Protection Flags -->
+        <div class="pt-2 border-t border-dark-750 space-y-2.5">
+          <!-- Modification Prompt Safe Guard -->
+          <label class="flex items-start space-x-2.5 p-2 rounded bg-amber-950/20 border border-amber-900/40 cursor-pointer hover:bg-amber-950/30 transition-colors">
+            <input
+              v-model="form.modificationPrompt"
+              type="checkbox"
+              class="mt-0.5 rounded bg-dark-900 border-dark-700 text-amber-500 focus:ring-0 focus:outline-none"
+            />
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center space-x-1.5">
+                <span class="font-semibold text-amber-300">修改提示 (危險指令二次確認保護)</span>
+                <span class="px-1.5 py-0.2 bg-amber-500/20 text-amber-300 border border-amber-500/40 rounded text-xxs font-mono">SAFE GUARD</span>
+              </div>
+              <p class="text-xxs text-dark-400 mt-0.5 leading-relaxed">
+                勾選後，在此連線執行 <code class="text-amber-300 font-mono">UPDATE</code>、<code class="text-amber-300 font-mono">INSERT</code>、<code class="text-amber-300 font-mono">DELETE</code>、<code class="text-amber-300 font-mono">ALTER</code>、<code class="text-amber-300 font-mono">CREATE</code>、<code class="text-amber-300 font-mono">DROP</code>、<code class="text-amber-300 font-mono">TRUNCATE</code> 等危險指令時，必須連續確認 2 次才可執行，避免改錯資料。
+              </p>
+            </div>
+          </label>
+
           <label class="flex items-center space-x-2 cursor-pointer text-dark-300 hover:text-dark-100">
             <input
               v-model="form.encrypt"
@@ -188,6 +272,17 @@ const emit = defineEmits<{
 
 const connectionStore = useConnectionStore();
 
+const PRESET_COLORS = [
+  '#ef4444', // Red
+  '#f97316', // Orange
+  '#eab308', // Yellow
+  '#10b981', // Emerald
+  '#06b6d4', // Cyan
+  '#3b82f6', // Blue
+  '#8b5cf6', // Violet
+  '#ec4899', // Pink
+];
+
 const form = reactive({
   name: '',
   host: 'localhost',
@@ -197,6 +292,8 @@ const form = reactive({
   password: '',
   encrypt: false,
   trustServerCertificate: true,
+  color: '',
+  modificationPrompt: false,
 });
 
 const isTesting = ref(false);
@@ -221,6 +318,8 @@ watch(
       form.password = '';
       form.encrypt = props.editProfile.encrypt;
       form.trustServerCertificate = props.editProfile.trustServerCertificate;
+      form.color = props.editProfile.color || '';
+      form.modificationPrompt = props.editProfile.modificationPrompt ?? false;
     } else if (props.initialProfile) {
       form.name = generateDuplicateConnectionName(
         props.initialProfile.name,
@@ -233,6 +332,8 @@ watch(
       form.password = '';
       form.encrypt = props.initialProfile.encrypt;
       form.trustServerCertificate = props.initialProfile.trustServerCertificate;
+      form.color = props.initialProfile.color || '';
+      form.modificationPrompt = props.initialProfile.modificationPrompt ?? false;
     } else {
       form.name = 'New SQL Server';
       form.host = 'localhost';
@@ -242,6 +343,8 @@ watch(
       form.password = '';
       form.encrypt = false;
       form.trustServerCertificate = true;
+      form.color = '';
+      form.modificationPrompt = false;
     }
     testResult.value = null;
   },
@@ -269,6 +372,8 @@ async function handleTest() {
       password: form.password,
       encrypt: form.encrypt,
       trustServerCertificate: form.trustServerCertificate,
+      color: form.color.trim() || undefined,
+      modificationPrompt: form.modificationPrompt,
       copyPasswordFrom: copyFrom,
     });
     testResult.value = { success: true, message: 'Connected to Microsoft SQL Server successfully.' };
@@ -297,6 +402,8 @@ async function handleSave() {
       password: form.password,
       encrypt: form.encrypt,
       trustServerCertificate: form.trustServerCertificate,
+      color: form.color.trim() || undefined,
+      modificationPrompt: form.modificationPrompt,
       copyPasswordFrom: copyFrom,
     });
     await connectionStore.connect(saved.id);

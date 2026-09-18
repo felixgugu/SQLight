@@ -5,6 +5,10 @@
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>SQLight</title>
+    <script>
+      // Early guard to suppress system/browser context menu
+      window.addEventListener('contextmenu', (e) => e.preventDefault());
+    </script>
   </head>
   <body class="bg-dark-900 text-dark-100 select-none overflow-hidden antialiased">
     <div id="app" class="w-screen h-screen flex flex-col overflow-hidden"></div>

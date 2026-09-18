@@ -32,17 +32,7 @@ const DEFAULT_INITIAL_TAB: SqlEditorTab = {
   id: 'tab-initial-sql-1',
   type: 'sql_editor',
   title: 'Query 1.sql',
-  query: `-- Welcome to SQLight!
--- Press Ctrl+Enter to execute selected query or entire editor.
--- Press Shift+Alt+F to format SQL.
-
-SELECT 
-    name AS DatabaseName,
-    database_id,
-    create_date
-FROM sys.databases
-ORDER BY name;
-`,
+  query: '',
   isDirty: false,
 };
 
@@ -231,7 +221,7 @@ export const useWorkspaceStore = defineStore('workspace', () => {
       id: tabId,
       type: 'sql_editor',
       title: title ?? `Query ${nextNum}.sql`,
-      query: initialQuery || `SELECT TOP 100 * FROM sys.tables;`,
+      query: initialQuery ?? '',
       connectionId: effectiveConnId,
       database: effectiveDb,
       isDirty: false,
