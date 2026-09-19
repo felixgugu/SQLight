@@ -212,7 +212,7 @@
     >
       <AgGridVue
         class="w-full h-full"
-        :theme="sqlightGridTheme"
+        :theme="activeGridTheme"
         :row-data="resultSet.rows"
         :column-defs="columnDefs"
         :quick-filter-text="quickFilter"
@@ -238,7 +238,7 @@
         <template v-if="selectionStats">
           <div class="flex items-center space-x-1 font-semibold text-brand-300 flex-shrink-0">
             <span>選取:</span>
-            <span v-if="selectedColumnsCount > 1" class="text-amber-300 font-mono">
+            <span v-if="selectedColumnsCount > 1" class="text-amber-800 dark:text-amber-300 font-mono">
               {{ selectedColumnsCount }} 欄
             </span>
             <span class="font-mono text-dark-100">
@@ -260,7 +260,7 @@
             </div>
             <span class="text-dark-600 flex-shrink-0">|</span>
             <div class="flex-shrink-0">
-              最小值 (Min): <strong class="font-mono text-amber-400">{{ formatAggregateNumber(selectionStats.min) }}</strong>
+              最小值 (Min): <strong class="font-mono text-amber-700 dark:text-amber-400">{{ formatAggregateNumber(selectionStats.min) }}</strong>
             </div>
             <span class="text-dark-600 flex-shrink-0">|</span>
             <div class="flex-shrink-0">
@@ -353,7 +353,7 @@
         <button
           v-if="isCurrentCellNullable && contextMenu.cellValue !== null"
           @click="setCellNull"
-          class="w-full text-left px-2.5 py-1.5 hover:bg-dark-750 hover:text-amber-300 flex items-center space-x-2 transition-colors text-amber-400"
+          class="w-full text-left px-2.5 py-1.5 hover:bg-dark-750 hover:text-amber-800 dark:hover:text-amber-300 flex items-center space-x-2 transition-colors text-amber-700 dark:text-amber-400"
         >
           <Slash class="w-3.5 h-3.5" />
           <span>設為 NULL (Set NULL)</span>
@@ -361,7 +361,7 @@
         <button
           v-if="isCurrentCellModified"
           @click="revertSingleCell"
-          class="w-full text-left px-2.5 py-1.5 hover:bg-dark-750 hover:text-amber-300 flex items-center space-x-2 transition-colors text-amber-400"
+          class="w-full text-left px-2.5 py-1.5 hover:bg-dark-750 hover:text-amber-800 dark:hover:text-amber-300 flex items-center space-x-2 transition-colors text-amber-700 dark:text-amber-400"
         >
           <Undo2 class="w-3.5 h-3.5" />
           <span>退回此儲存格修改 (Revert Cell)</span>
@@ -402,7 +402,7 @@
         @click="handleGenerateDml('UPDATE')"
         class="w-full text-left px-2.5 py-1.5 hover:bg-dark-750 hover:text-dark-100 flex items-center space-x-2 transition-colors"
       >
-        <Edit3 class="w-3.5 h-3.5 text-amber-400" />
+        <Edit3 class="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
         <span>建立 UPDATE 語法</span>
       </button>
 
@@ -420,8 +420,8 @@
         @click="togglePinColumn"
         class="w-full text-left px-2.5 py-1.5 hover:bg-dark-750 hover:text-dark-100 flex items-center space-x-2 transition-colors"
       >
-        <PinOff v-if="isColPinned" class="w-3.5 h-3.5 text-amber-400" />
-        <Pin v-else class="w-3.5 h-3.5 text-amber-400" />
+        <PinOff v-if="isColPinned" class="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
+        <Pin v-else class="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
         <span>{{ isColPinned ? '取消凍結此欄 (Unpin)' : '凍結此欄於左側 (Pin Left)' }}</span>
       </button>
 
@@ -472,10 +472,10 @@
         <div class="flex items-center space-x-2.5">
           <div
             class="w-7 h-7 rounded-md flex items-center justify-center"
-            :class="requiresModificationPrompt ? (commitModal.confirmStep === 2 ? 'bg-rose-950/80 border border-rose-700/60' : 'bg-amber-950/80 border border-amber-700/60') : 'bg-emerald-950/80 border border-emerald-700/60'"
+            :class="requiresModificationPrompt ? (commitModal.confirmStep === 2 ? 'bg-rose-950/80 border border-rose-700/60' : 'bg-amber-500/20 border border-amber-500/40') : 'bg-emerald-950/80 border border-emerald-700/60'"
           >
             <i v-if="requiresModificationPrompt && commitModal.confirmStep === 2" class="pi pi-exclamation-triangle text-rose-400 animate-pulse text-sm"></i>
-            <i v-else-if="requiresModificationPrompt" class="pi pi-exclamation-triangle text-amber-400 text-sm"></i>
+            <i v-else-if="requiresModificationPrompt" class="pi pi-exclamation-triangle text-amber-600 dark:text-amber-400 text-sm"></i>
             <i v-else class="pi pi-check text-emerald-400 text-sm"></i>
           </div>
           <div>
@@ -510,7 +510,7 @@
           <div class="flex items-center space-x-3 text-dark-300 text-xxs">
             <span>異動列數: <strong class="text-emerald-400 font-semibold text-xs">{{ commitModal.rowCount }}</strong> 列</span>
             <span class="text-dark-600">|</span>
-            <span>異動格數: <strong class="text-amber-400 font-semibold text-xs">{{ commitModal.cellCount }}</strong> 格</span>
+            <span>異動格數: <strong class="text-amber-700 dark:text-amber-400 font-semibold text-xs">{{ commitModal.cellCount }}</strong> 格</span>
           </div>
         </div>
 
@@ -553,9 +553,9 @@
         <div v-if="requiresModificationPrompt" class="flex-1 min-w-0 mr-4">
           <div
             v-if="commitModal.confirmStep === 1"
-            class="flex items-center space-x-2 px-3 py-1.5 rounded bg-amber-950/40 border border-amber-800/60 text-amber-300 text-xxs leading-normal"
+            class="flex items-center space-x-2 px-3 py-1.5 rounded bg-amber-500/15 border border-amber-500/30 text-amber-800 dark:text-amber-300 text-xxs leading-normal"
           >
-            <i class="pi pi-exclamation-triangle text-amber-400 shrink-0 text-sm"></i>
+            <i class="pi pi-exclamation-triangle text-amber-600 dark:text-amber-400 shrink-0 text-sm"></i>
             <span>
               <strong>高危提醒 (1/2)：</strong>連線「{{ currentConnection?.name }}」已啟用修改提示防護。此操作將直接更動資料庫，需進行 <strong>2 次重複確認</strong> 才可提交！
             </span>
@@ -663,7 +663,8 @@ import {
   type CellContextMenuEvent,
   type ICellRendererParams,
 } from 'ag-grid-community';
-import { sqlightGridTheme } from '@/styles/gridTheme';
+import { sqlightDarkGridTheme, sqlightLightGridTheme } from '@/styles/gridTheme';
+import { useSettingsStore } from '@/stores/settingsStore';
 import { useQueryStore } from '@/stores/queryStore';
 import { useWorkspaceStore } from '@/stores/workspaceStore';
 import { useConnectionStore } from '@/stores/connectionStore';
@@ -703,10 +704,15 @@ defineEmits<{
   (e: 'toggle-maximize'): void;
 }>();
 
+const settingsStore = useSettingsStore();
 const queryStore = useQueryStore();
 const workspaceStore = useWorkspaceStore();
 const connectionStore = useConnectionStore();
 const schemaStore = useSchemaStore();
+
+const activeGridTheme = computed(() => {
+  return settingsStore.colorMode === 'light' ? sqlightLightGridTheme : sqlightDarkGridTheme;
+});
 
 const quickFilter = ref('');
 const gridApi = ref<GridApi | null>(null);

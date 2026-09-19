@@ -31,7 +31,7 @@ onMounted(() => {
   editorInstance = monaco.editor.create(container.value, {
     value: props.code,
     language: props.language,
-    theme: 'sqlight-dark',
+    theme: settingsStore.colorMode === 'light' ? 'sqlight-light' : 'sqlight-dark',
     readOnly: props.readOnly,
     domReadOnly: props.readOnly,
     automaticLayout: true,

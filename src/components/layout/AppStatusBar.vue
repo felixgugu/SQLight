@@ -18,8 +18,8 @@
       <div class="h-3 w-px bg-dark-750" />
 
       <div class="flex items-center space-x-1">
-        <i class="pi pi-database text-amber-400 text-xxs" />
-        <span class="text-dark-300 font-mono">{{ connectionStore.activeDatabase }}</span>
+        <i class="pi pi-database text-amber-600 dark:text-amber-400 text-xxs" />
+        <span class="text-amber-800 dark:text-amber-200 font-mono font-medium">{{ connectionStore.activeDatabase }}</span>
       </div>
 
       <template v-if="connectionStore.activeSpid">

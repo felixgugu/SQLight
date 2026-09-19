@@ -24,8 +24,8 @@
       <div class="h-7 bg-dark-850 border-b border-dark-750 flex items-center justify-between px-2 flex-shrink-0">
         <!-- Left: Result Sets Overview / Tabbed Buttons -->
         <div class="flex items-center space-x-1.5 min-w-0">
-          <div class="flex items-center space-x-1 text-xxs font-sans text-brand-300 font-medium px-1.5 py-0.5 rounded bg-dark-800 border border-dark-700">
-            <Layers class="w-3 h-3 text-brand-400" />
+          <div class="flex items-center space-x-1 text-xxs font-sans text-primary font-medium px-1.5 py-0.5 rounded bg-dark-800 border border-dark-700">
+            <Layers class="w-3 h-3 text-primary" />
             <span>{{ resultSets.length }} Result Sets (共 {{ totalRowsSum.toLocaleString() }} 筆)</span>
           </div>
 
@@ -38,24 +38,24 @@
               :class="[
                 'h-5.5 px-2 rounded text-xxs font-medium transition-colors flex items-center space-x-1 cursor-pointer flex-shrink-0',
                 activeTabIndex === idx
-                  ? 'bg-dark-750 text-brand-300 font-semibold shadow-xs border border-dark-600'
-                  : 'text-dark-400 hover:text-dark-200 hover:bg-dark-800'
+                  ? 'bg-primary/15 text-primary border border-primary/40 font-semibold shadow-xs'
+                  : 'text-dark-400 hover:text-dark-100 hover:bg-dark-800 border border-transparent'
               ]"
             >
               <span>Result #{{ idx + 1 }}</span>
-              <span class="text-dark-400 font-mono">({{ set.rowCount ?? set.rows.length }})</span>
+              <span :class="activeTabIndex === idx ? 'text-primary/70 font-semibold' : 'text-dark-400'" class="font-mono">({{ set.rowCount ?? set.rows.length }})</span>
             </button>
           </div>
 
           <!-- Notice when a grid is maximized in Stacked mode -->
           <div
             v-else-if="maximizedIndex !== null"
-            class="flex items-center space-x-1.5 text-xxs text-amber-300 bg-amber-950/40 border border-amber-800/50 px-2 py-0.5 rounded"
+            class="flex items-center space-x-1.5 text-xxs text-amber-800 dark:text-amber-300 bg-amber-500/15 border border-amber-500/30 px-2 py-0.5 rounded"
           >
             <span>已最大化 Result #{{ maximizedIndex + 1 }}</span>
             <button
               @click="maximizedIndex = null"
-              class="text-amber-400 hover:text-amber-200 underline cursor-pointer"
+              class="text-amber-700 dark:text-amber-400 hover:text-amber-600 dark:hover:text-amber-200 underline cursor-pointer font-medium"
             >
               還原多網格
             </button>
@@ -83,7 +83,7 @@
             class="px-2 py-0.5 rounded text-xxs bg-dark-800 hover:bg-dark-750 text-dark-300 hover:text-dark-100 border border-dark-700 transition-colors flex items-center space-x-1 cursor-pointer"
             :title="viewMode === 'stacked' ? '切換為分頁標籤檢視 (Tabs)' : '切換為 SSMS 垂直多網格檢視 (Stacked)'"
           >
-            <component :is="viewMode === 'stacked' ? Rows : LayoutGrid" class="w-2.5 h-2.5 text-brand-400" />
+            <component :is="viewMode === 'stacked' ? Rows : LayoutGrid" class="w-2.5 h-2.5 text-primary" />
             <span>{{ viewMode === 'stacked' ? 'SSMS 堆疊' : '分頁檢視' }}</span>
           </button>
         </div>

@@ -1,6 +1,6 @@
-import { themeQuartz, colorSchemeDark } from 'ag-grid-community';
+import { themeQuartz, colorSchemeDark, colorSchemeLight } from 'ag-grid-community';
 
-export const sqlightGridTheme = themeQuartz
+export const sqlightDarkGridTheme = themeQuartz
   .withPart(colorSchemeDark)
   .withParams({
     backgroundColor: '#18181b',
@@ -17,3 +17,24 @@ export const sqlightGridTheme = themeQuartz
     headerHeight: 30,
     accentColor: '#0284c7',
   });
+
+export const sqlightLightGridTheme = themeQuartz
+  .withPart(colorSchemeLight)
+  .withParams({
+    backgroundColor: '#ffffff',
+    headerBackgroundColor: '#f8fafc',
+    headerTextColor: '#475569',
+    foregroundColor: '#0f172a',
+    borderColor: '#e2e8f0',
+    rowHoverColor: '#f1f5f9',
+    selectedRowBackgroundColor: '#e0f2fe',
+    fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
+    fontSize: 12,
+    headerFontSize: 11,
+    rowHeight: 28,
+    headerHeight: 30,
+    accentColor: '#0284c7',
+  });
+
+// Backward compatibility alias
+export const sqlightGridTheme = sqlightDarkGridTheme;

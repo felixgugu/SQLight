@@ -10,9 +10,18 @@ import {
   testTablePatternByRules,
 } from '@/utils/tableFilter';
 
-export type { FilterRule, FilterTarget, HiddenTableRule };
+import { themeManager, type ThemePresetName } from '@/services/themeManager';
+
+export type { FilterRule, FilterTarget, HiddenTableRule, ThemePresetName };
 
 export interface AppSettings {
+  // Theme & Appearance
+  colorMode: 'dark' | 'light';
+  themePreset: ThemePresetName;
+  primaryColor: string;
+  surfaceColor: string;
+  ripple: boolean;
+
   editorFontSize: number;
   editorFontFamily: string;
   editorWordWrap: 'on' | 'off';
@@ -31,6 +40,12 @@ export interface AppSettings {
 const STORAGE_KEY = 'sqlight_app_settings';
 
 const DEFAULT_SETTINGS: AppSettings = {
+  colorMode: 'dark',
+  themePreset: 'Aura',
+  primaryColor: 'blue',
+  surfaceColor: 'slate',
+  ripple: true,
+
   editorFontSize: 13,
   editorFontFamily: '"Fira Code", Consolas, Monaco, monospace',
   editorWordWrap: 'on',
@@ -68,6 +83,12 @@ function loadSettings(): AppSettings {
 export const useSettingsStore = defineStore('settings', () => {
   const initial = loadSettings();
 
+  const colorMode = ref<'dark' | 'light'>(initial.colorMode || 'dark');
+  const themePreset = ref<ThemePresetName>(initial.themePreset || 'Aura');
+  const primaryColor = ref<string>(initial.primaryColor || 'blue');
+  const surfaceColor = ref<string>(initial.surfaceColor || 'slate');
+  const ripple = ref<boolean>(initial.ripple ?? true);
+
   const editorFontSize = ref<number>(initial.editorFontSize);
   const editorFontFamily = ref<string>(initial.editorFontFamily);
   const editorWordWrap = ref<'on' | 'off'>(initial.editorWordWrap);
@@ -85,6 +106,32 @@ export const useSettingsStore = defineStore('settings', () => {
       ? initial.hiddenTableRules.map((r) => ({ ...r, target: r.target || 'all' }))
       : []
   );
+
+  function setColorMode(mode: 'dark' | 'light') {
+    colorMode.value = mode;
+    erTheme.value = mode;
+    themeManager.applyColorMode(mode);
+  }
+
+  function setThemePreset(preset: ThemePresetName) {
+    themePreset.value = preset;
+    themeManager.applyThemePreset(preset, primaryColor.value, surfaceColor.value);
+  }
+
+  function setPrimaryColor(color: string) {
+    primaryColor.value = color;
+    themeManager.applyPrimaryColor(color);
+  }
+
+  function setSurfaceColor(surface: string) {
+    surfaceColor.value = surface;
+    themeManager.applySurfaceColor(surface);
+  }
+
+  function setRipple(enabled: boolean, primevueConfig?: any) {
+    ripple.value = enabled;
+    themeManager.applyRipple(enabled, primevueConfig);
+  }
 
   function addFilterRule(pattern: string, target: FilterTarget = 'all', description?: string) {
     const trimmed = pattern.trim();
@@ -163,6 +210,11 @@ export const useSettingsStore = defineStore('settings', () => {
 
   function saveSettings() {
     const data: AppSettings = {
+      colorMode: colorMode.value,
+      themePreset: themePreset.value,
+      primaryColor: primaryColor.value,
+      surfaceColor: surfaceColor.value,
+      ripple: ripple.value,
       editorFontSize: editorFontSize.value,
       editorFontFamily: editorFontFamily.value,
       editorWordWrap: editorWordWrap.value,
@@ -187,6 +239,11 @@ export const useSettingsStore = defineStore('settings', () => {
   // Watch for any changes to auto-persist
   watch(
     [
+      colorMode,
+      themePreset,
+      primaryColor,
+      surfaceColor,
+      ripple,
       editorFontSize,
       editorFontFamily,
       editorWordWrap,
@@ -208,6 +265,12 @@ export const useSettingsStore = defineStore('settings', () => {
   );
 
   function resetToDefaults() {
+    setColorMode(DEFAULT_SETTINGS.colorMode);
+    setThemePreset(DEFAULT_SETTINGS.themePreset);
+    setPrimaryColor(DEFAULT_SETTINGS.primaryColor);
+    setSurfaceColor(DEFAULT_SETTINGS.surfaceColor);
+    setRipple(DEFAULT_SETTINGS.ripple);
+
     editorFontSize.value = DEFAULT_SETTINGS.editorFontSize;
     editorFontFamily.value = DEFAULT_SETTINGS.editorFontFamily;
     editorWordWrap.value = DEFAULT_SETTINGS.editorWordWrap;
@@ -224,6 +287,16 @@ export const useSettingsStore = defineStore('settings', () => {
   }
 
   return {
+    colorMode,
+    themePreset,
+    primaryColor,
+    surfaceColor,
+    ripple,
+    setColorMode,
+    setThemePreset,
+    setPrimaryColor,
+    setSurfaceColor,
+    setRipple,
     editorFontSize,
     editorFontFamily,
     editorWordWrap,

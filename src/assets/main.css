@@ -7,6 +7,43 @@
     box-sizing: border-box;
   }
 
+  :root {
+    /* ==========================================================================
+       Light Mode Semantic Palette (Channels for rgb(var(...) / <alpha>))
+       ========================================================================== */
+    --color-dark-950: 241 245 249;   /* Slate 100 - Inner canvas / backdrop */
+    --color-dark-900: 255 255 255;   /* Pure White - Main app background */
+    --color-dark-850: 248 250 252;   /* Slate 50 - Outer background (toolbars, header, sidebar, status) */
+    --color-dark-800: 241 245 249;   /* Slate 100 - Panel background, secondary surface */
+    --color-dark-750: 226 232 240;   /* Slate 200 - Surface background, active rows */
+    --color-dark-700: 203 213 225;   /* Slate 300 - Border color / divider */
+    --color-dark-600: 148 163 184;   /* Slate 400 - Hover border */
+    --color-dark-500: 100 116 139;   /* Slate 500 - Muted text / icon */
+    --color-dark-400: 71 85 105;     /* Slate 600 - Secondary text */
+    --color-dark-300: 51 65 85;      /* Slate 700 - Body text */
+    --color-dark-200: 30 41 59;      /* Slate 800 - High contrast text */
+    --color-dark-100: 15 23 42;      /* Slate 900 - Brightest / prominent text */
+  }
+
+  html.dark,
+  .dark {
+    /* ==========================================================================
+       Dark Mode Semantic Palette (Original SQLight Deep Charcoal Theme)
+       ========================================================================== */
+    --color-dark-950: 12 13 18;      /* Deepest dark */
+    --color-dark-900: 20 20 24;      /* #141418 Deepest background (e.g. status bar, title bar) */
+    --color-dark-850: 24 24 31;      /* #18181f Outer background (toolbar, sidebar) */
+    --color-dark-800: 30 30 38;      /* #1e1e26 Panel background (sidebar, bottom panel) */
+    --color-dark-750: 37 37 48;      /* #252530 Surface background (active tab, header) */
+    --color-dark-700: 45 45 58;      /* #2d2d3a Border color / divider */
+    --color-dark-600: 60 60 78;      /* #3c3c4e Hover border */
+    --color-dark-500: 82 82 102;     /* #525266 Muted text / icon */
+    --color-dark-400: 139 139 158;   /* #8b8b9e Secondary text */
+    --color-dark-300: 180 180 196;   /* #b4b4c4 Body text */
+    --color-dark-200: 209 213 219;   /* #d1d5db High contrast text */
+    --color-dark-100: 240 240 245;   /* #f0f0f5 Brightest text */
+  }
+
   html, body {
     margin: 0;
     padding: 0;
@@ -15,9 +52,17 @@
     overflow: hidden;
     user-select: none;
     -webkit-user-select: none;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  }
+
+  html.dark, body.dark, html.dark body {
     background-color: #141418;
     color: #f0f0f5;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  }
+
+  html:not(.dark), html:not(.dark) body {
+    background-color: #f8fafc;
+    color: #1e293b;
   }
 
   /* Custom Desktop Scrollbar */
@@ -26,17 +71,27 @@
     height: 8px;
   }
 
-  ::-webkit-scrollbar-track {
+  html.dark ::-webkit-scrollbar-track {
     background: #18181f;
   }
+  html:not(.dark) ::-webkit-scrollbar-track {
+    background: #f1f5f9;
+  }
 
-  ::-webkit-scrollbar-thumb {
+  html.dark ::-webkit-scrollbar-thumb {
     background: #3c3c4e;
     border-radius: 4px;
   }
+  html:not(.dark) ::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 4px;
+  }
 
-  ::-webkit-scrollbar-thumb:hover {
+  html.dark ::-webkit-scrollbar-thumb:hover {
     background: #525266;
+  }
+  html:not(.dark) ::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
   }
 }
 
@@ -96,10 +151,20 @@
 /* Dropdown Overlay Panels (Teleported to body) */
 .p-select-overlay {
   font-size: 0.75rem !important; /* 12px */
+  border-radius: 0.375rem !important;
+}
+
+html.dark .p-select-overlay,
+.dark .p-select-overlay {
   background-color: #1a1a24 !important;
   border: 1px solid #3c3c4e !important;
-  border-radius: 0.375rem !important;
   box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.6), 0 8px 10px -6px rgba(0, 0, 0, 0.6) !important;
+}
+
+html:not(.dark) .p-select-overlay {
+  background-color: #ffffff !important;
+  border: 1px solid #e2e8f0 !important;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1) !important;
 }
 
 .p-select-overlay .p-select-list {
@@ -111,46 +176,95 @@
   font-size: 0.75rem !important; /* 12px */
   padding: 0.3125rem 0.5rem !important; /* 5px 8px */
   border-radius: 0.25rem !important;
-  color: #d1d5db !important;
   min-height: auto !important;
   line-height: 1.25rem !important;
+}
+
+html.dark .p-select-overlay .p-select-option,
+.dark .p-select-overlay .p-select-option {
+  color: #d1d5db !important;
+}
+
+html:not(.dark) .p-select-overlay .p-select-option {
+  color: #334155 !important;
 }
 
 .p-select-overlay .p-select-option .p-select-option-label {
   font-size: 0.75rem !important;
 }
 
-.p-select-overlay .p-select-option:not(.p-select-option-selected):not(.p-disabled):hover,
-.p-select-overlay .p-select-option:not(.p-select-option-selected):not(.p-disabled).p-focus {
+html.dark .p-select-overlay .p-select-option:not(.p-select-option-selected):not(.p-disabled):hover,
+html.dark .p-select-overlay .p-select-option:not(.p-select-option-selected):not(.p-disabled).p-focus,
+.dark .p-select-overlay .p-select-option:not(.p-select-option-selected):not(.p-disabled):hover,
+.dark .p-select-overlay .p-select-option:not(.p-select-option-selected):not(.p-disabled).p-focus {
   background-color: #2a2a3a !important;
   color: #ffffff !important;
 }
 
-.p-select-overlay .p-select-option.p-select-option-selected {
+html:not(.dark) .p-select-overlay .p-select-option:not(.p-select-option-selected):not(.p-disabled):hover,
+html:not(.dark) .p-select-overlay .p-select-option:not(.p-select-option-selected):not(.p-disabled).p-focus {
+  background-color: #f1f5f9 !important;
+  color: #0f172a !important;
+}
+
+html.dark .p-select-overlay .p-select-option.p-select-option-selected,
+.dark .p-select-overlay .p-select-option.p-select-option-selected {
   background-color: #3b82f633 !important;
   color: #60a5fa !important;
   font-weight: 500 !important;
 }
 
-.p-select-overlay .p-select-option.p-select-option-selected.p-focus {
+html:not(.dark) .p-select-overlay .p-select-option.p-select-option-selected {
+  background-color: #3b82f620 !important;
+  color: #2563eb !important;
+  font-weight: 500 !important;
+}
+
+html.dark .p-select-overlay .p-select-option.p-select-option-selected.p-focus,
+.dark .p-select-overlay .p-select-option.p-select-option-selected.p-focus {
   background-color: #3b82f64d !important;
   color: #93c5fd !important;
 }
 
-.p-select-overlay .p-select-empty-message {
+html:not(.dark) .p-select-overlay .p-select-option.p-select-option-selected.p-focus {
+  background-color: #3b82f633 !important;
+  color: #1d4ed8 !important;
+}
+
+html.dark .p-select-overlay .p-select-empty-message,
+.dark .p-select-overlay .p-select-empty-message {
   font-size: 0.75rem !important;
   padding: 0.375rem 0.5rem !important;
   color: #6b7280 !important;
+}
+
+html:not(.dark) .p-select-overlay .p-select-empty-message {
+  font-size: 0.75rem !important;
+  padding: 0.375rem 0.5rem !important;
+  color: #94a3b8 !important;
 }
 
 /* Context Menu & Popup Menus Density */
 .p-contextmenu,
 .p-menu {
   font-size: 0.75rem !important; /* 12px */
+  border-radius: 0.375rem !important;
+}
+
+html.dark .p-contextmenu,
+html.dark .p-menu,
+.dark .p-contextmenu,
+.dark .p-menu {
   background-color: #1a1a24 !important;
   border: 1px solid #3c3c4e !important;
-  border-radius: 0.375rem !important;
   box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.6), 0 8px 10px -6px rgba(0, 0, 0, 0.6) !important;
+}
+
+html:not(.dark) .p-contextmenu,
+html:not(.dark) .p-menu {
+  background-color: #ffffff !important;
+  border: 1px solid #e2e8f0 !important;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1) !important;
 }
 
 .p-contextmenu-root-list,
@@ -164,16 +278,39 @@
   font-size: 0.75rem !important; /* 12px */
   padding: 0.3125rem 0.5rem !important;
   border-radius: 0.25rem !important;
-  color: #d1d5db !important;
   line-height: 1.25rem !important;
 }
 
-.p-contextmenu-item-link:hover,
-.p-menu-item-link:hover,
-.p-contextmenu-item.p-focus > .p-contextmenu-item-content,
-.p-menu-item.p-focus .p-menu-item-content {
+html.dark .p-contextmenu-item-link,
+html.dark .p-menu-item-link,
+.dark .p-contextmenu-item-link,
+.dark .p-menu-item-link {
+  color: #d1d5db !important;
+}
+
+html:not(.dark) .p-contextmenu-item-link,
+html:not(.dark) .p-menu-item-link {
+  color: #334155 !important;
+}
+
+html.dark .p-contextmenu-item-link:hover,
+html.dark .p-menu-item-link:hover,
+html.dark .p-contextmenu-item.p-focus > .p-contextmenu-item-content,
+html.dark .p-menu-item.p-focus .p-menu-item-content,
+.dark .p-contextmenu-item-link:hover,
+.dark .p-menu-item-link:hover,
+.dark .p-contextmenu-item.p-focus > .p-contextmenu-item-content,
+.dark .p-menu-item.p-focus .p-menu-item-content {
   background-color: #2a2a3a !important;
   color: #ffffff !important;
+}
+
+html:not(.dark) .p-contextmenu-item-link:hover,
+html:not(.dark) .p-menu-item-link:hover,
+html:not(.dark) .p-contextmenu-item.p-focus > .p-contextmenu-item-content,
+html:not(.dark) .p-menu-item.p-focus .p-menu-item-content {
+  background-color: #f1f5f9 !important;
+  color: #0f172a !important;
 }
 
 .p-contextmenu-item-icon,
@@ -225,4 +362,167 @@
   border-radius: 0.375rem !important;
   border: none !important;
   box-shadow: none !important;
+}
+
+/* ==========================================================================
+   Compact Floating Tooltips Density & Typography (v-tooltip, ag-tooltip, qp-tooltip)
+   ========================================================================== */
+.p-tooltip {
+  font-size: 0.6875rem !important; /* 11px */
+  max-width: 22rem !important;
+  z-index: 11000 !important;
+}
+
+.p-tooltip .p-tooltip-text {
+  font-size: 0.6875rem !important; /* 11px */
+  line-height: 1rem !important;
+  padding: 0.25rem 0.5rem !important; /* 4px 8px */
+  border-radius: 0.25rem !important;
+  font-weight: 400 !important;
+  white-space: pre-line !important;
+  word-break: break-word !important;
+  letter-spacing: 0.01em !important;
+}
+
+html.dark .p-tooltip .p-tooltip-text,
+.dark .p-tooltip .p-tooltip-text {
+  background-color: #1e1e28 !important;
+  color: #f0f0f5 !important;
+  border: 1px solid #3c3c4e !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5) !important;
+}
+
+html:not(.dark) .p-tooltip .p-tooltip-text {
+  background-color: #ffffff !important;
+  color: #1e293b !important;
+  border: 1px solid #cbd5e1 !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12) !important;
+}
+
+/* Tooltip Arrow positioning and color */
+.p-tooltip-arrow {
+  border-width: 0.25rem !important;
+}
+
+html.dark .p-tooltip-right .p-tooltip-arrow,
+.dark .p-tooltip-right .p-tooltip-arrow {
+  border-right-color: #1e1e28 !important;
+}
+html:not(.dark) .p-tooltip-right .p-tooltip-arrow {
+  border-right-color: #ffffff !important;
+}
+
+html.dark .p-tooltip-left .p-tooltip-arrow,
+.dark .p-tooltip-left .p-tooltip-arrow {
+  border-left-color: #1e1e28 !important;
+}
+html:not(.dark) .p-tooltip-left .p-tooltip-arrow {
+  border-left-color: #ffffff !important;
+}
+
+html.dark .p-tooltip-top .p-tooltip-arrow,
+.dark .p-tooltip-top .p-tooltip-arrow {
+  border-top-color: #1e1e28 !important;
+}
+html:not(.dark) .p-tooltip-top .p-tooltip-arrow {
+  border-top-color: #ffffff !important;
+}
+
+html.dark .p-tooltip-bottom .p-tooltip-arrow,
+.dark .p-tooltip-bottom .p-tooltip-arrow {
+  border-bottom-color: #1e1e28 !important;
+}
+html:not(.dark) .p-tooltip-bottom .p-tooltip-arrow {
+  border-bottom-color: #ffffff !important;
+}
+
+/* External specialized tooltips (AG Grid & HTML Query Plan) */
+.ag-theme-quartz .ag-tooltip,
+.ag-theme-quartz-dark .ag-tooltip,
+.ag-tooltip {
+  font-size: 0.6875rem !important; /* 11px */
+  padding: 0.25rem 0.5rem !important;
+  border-radius: 0.25rem !important;
+  line-height: 1rem !important;
+}
+
+.qp-tooltip {
+  font-size: 0.6875rem !important; /* 11px */
+  padding: 0.375rem 0.625rem !important;
+  border-radius: 0.25rem !important;
+  line-height: 1rem !important;
+}
+
+/* ==========================================================================
+   PrimeVue Toast Notification Density & Typography (Compact Bottom-Right)
+   ========================================================================== */
+.p-toast {
+  width: 20rem !important; /* Compact 320px width instead of default 400px */
+  max-width: calc(100vw - 2rem) !important;
+  z-index: 12000 !important;
+}
+
+.p-toast-bottom-right {
+  bottom: 2rem !important; /* Float 32px above the 24px bottom status bar */
+  right: 1rem !important;  /* 16px from right edge */
+}
+
+.p-toast-message {
+  margin: 0 0 0.5rem 0 !important;
+  border-radius: 0.375rem !important;
+  border-width: 1px !important;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.35), 0 8px 10px -6px rgba(0, 0, 0, 0.35) !important;
+}
+
+.p-toast-message-content {
+  padding: 0.5rem 0.625rem !important; /* Compact 8px 10px */
+  gap: 0.5rem !important;
+  align-items: flex-start !important;
+}
+
+.p-toast-message-icon {
+  font-size: 0.875rem !important; /* 14px instead of 18px-24px */
+  width: 0.875rem !important;
+  height: 0.875rem !important;
+  margin-top: 0.125rem !important;
+  flex-shrink: 0 !important;
+}
+
+.p-toast-message-text {
+  gap: 0.125rem !important;
+  flex: 1 1 auto !important;
+  min-width: 0 !important;
+}
+
+.p-toast-summary {
+  font-size: 0.6875rem !important; /* 11px */
+  font-weight: 600 !important;
+  line-height: 1rem !important;
+}
+
+.p-toast-detail {
+  font-size: 0.6875rem !important; /* 11px */
+  line-height: 0.9375rem !important;
+  margin-top: 0 !important;
+  word-break: break-word !important;
+}
+
+/* Toast Close Button: Compact flat rounded rect without circular frame */
+.p-toast-close-button {
+  width: 1.25rem !important;
+  height: 1.25rem !important;
+  border-radius: 0.25rem !important;
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+  margin: 0 !important;
+  right: 0 !important;
+  flex-shrink: 0 !important;
+  transition: background-color 0.15s ease !important;
+}
+
+.p-toast-close-icon {
+  font-size: 0.625rem !important; /* 10px */
+  width: 0.625rem !important;
+  height: 0.625rem !important;
 }

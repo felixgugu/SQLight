@@ -273,6 +273,7 @@ import {
 } from 'lucide-vue-next';
 import type { ExecutionPlanTab } from '@/types/workspace';
 import { useWorkspaceStore } from '@/stores/workspaceStore';
+import { useSettingsStore } from '@/stores/settingsStore';
 import { formatXml } from '@/utils/planXmlParser';
 import { savePlanToFile } from '@/utils/fileStorage';
 
@@ -286,10 +287,29 @@ const props = defineProps<{
 }>();
 
 const workspaceStore = useWorkspaceStore();
+const settingsStore = useSettingsStore();
 
 const PLAN_THEME_STORAGE_KEY = 'sqlight_plan_theme';
 const planTheme = ref<'dark' | 'classic'>(
-  (localStorage.getItem(PLAN_THEME_STORAGE_KEY) as 'dark' | 'classic') || 'dark'
+  settingsStore.colorMode === 'light'
+    ? 'classic'
+    : (localStorage.getItem(PLAN_THEME_STORAGE_KEY) as 'dark' | 'classic') || 'dark'
+);
+
+// Watch for global colorMode changes to sync execution plan diagram
+watch(
+  () => settingsStore.colorMode,
+  (mode) => {
+    const target = mode === 'light' ? 'classic' : 'dark';
+    if (planTheme.value !== target) {
+      planTheme.value = target;
+      nextTick(() => {
+        if (viewMode.value === 'diagram' && isMounted) {
+          renderPlan();
+        }
+      });
+    }
+  }
 );
 
 const viewMode = ref<'diagram' | 'xml'>('diagram');

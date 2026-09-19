@@ -56,7 +56,7 @@
           item.status === 'error'
             ? 'bg-rose-950/20 border-rose-900/60 text-rose-300 hover:border-rose-700/80'
             : item.status === 'cancelled'
-            ? 'bg-amber-950/20 border-amber-900/60 text-amber-300 hover:border-amber-700/80'
+            ? 'bg-amber-500/15 border-amber-500/30 text-amber-800 dark:text-amber-300 hover:border-amber-600/50'
             : 'bg-dark-850/60 border-dark-750 text-dark-200 hover:border-dark-600 hover:bg-dark-850/90'
         ]"
       >

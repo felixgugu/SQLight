@@ -139,11 +139,13 @@ export function getTabThemeStyle(
   type: TabType,
   isActive: boolean,
   customSqlBg?: string,
-  customSqlText?: string
+  customSqlText?: string,
+  isLight = false
 ): Record<string, string> {
   const theme = TAB_CATEGORY_THEMES[type] || TAB_CATEGORY_THEMES.sql_editor;
 
   if (isActive) {
+    const isCustom = Boolean(type === 'sql_editor' && customSqlBg && customSqlBg !== '#1e40af');
     const bg = type === 'sql_editor' && customSqlBg ? customSqlBg : theme.active.bg;
     const text = type === 'sql_editor' && customSqlText ? customSqlText : theme.active.text;
     const border = type === 'sql_editor' && customSqlBg ? customSqlBg : theme.active.border;
@@ -159,18 +161,20 @@ export function getTabThemeStyle(
       '--tab-hover-text': text,
       '--tab-badge-bg': theme.active.badgeBg,
       '--tab-icon-color': text,
+      '--tab-active-surface': isCustom ? bg : (isLight ? '#ffffff' : 'rgb(var(--color-dark-900))'),
+      '--tab-active-text': isCustom && customSqlText ? customSqlText : (isLight ? '#0f172a' : '#f0f0f5'),
     };
   }
 
   return {
-    '--tab-bg': theme.inactive.bg,
-    '--tab-hover-bg': theme.inactive.hoverBg,
-    '--tab-border': theme.inactive.border,
-    '--tab-hover-border': theme.inactive.hoverBorder,
+    '--tab-bg': isLight ? 'rgba(226, 232, 240, 0.6)' : theme.inactive.bg,
+    '--tab-hover-bg': isLight ? 'rgba(203, 213, 225, 0.7)' : theme.inactive.hoverBg,
+    '--tab-border': isLight ? 'rgba(203, 213, 225, 0.8)' : theme.inactive.border,
+    '--tab-hover-border': isLight ? 'rgba(148, 163, 184, 0.9)' : theme.inactive.hoverBorder,
     '--tab-top-accent': theme.inactive.topAccent,
-    '--tab-text': theme.inactive.text,
-    '--tab-hover-text': theme.inactive.hoverText,
-    '--tab-badge-bg': theme.inactive.badgeBg,
+    '--tab-text': isLight ? '#475569' : theme.inactive.text,
+    '--tab-hover-text': isLight ? '#0f172a' : theme.inactive.hoverText,
+    '--tab-badge-bg': isLight ? 'rgba(203, 213, 225, 0.8)' : theme.inactive.badgeBg,
     '--tab-icon-color': theme.iconColor,
   };
 }

@@ -49,11 +49,11 @@
           :style="getTabItemStyle(tab, idx)"
           :title="getTabTooltip(tab)"
         >
-          <FileCode v-if="tab.type === 'sql_editor'" class="w-3.5 h-3.5 flex-shrink-0 transition-colors" :class="workspaceStore.activeTabId === tab.id ? 'text-white' : 'text-blue-400'" />
-          <Table2 v-else-if="tab.type === 'table_data'" class="w-3.5 h-3.5 flex-shrink-0 transition-colors" :class="workspaceStore.activeTabId === tab.id ? 'text-white' : 'text-emerald-400'" />
-          <TableProperties v-else-if="tab.type === 'table_structure'" class="w-3.5 h-3.5 flex-shrink-0 transition-colors" :class="workspaceStore.activeTabId === tab.id ? 'text-white' : 'text-indigo-400'" />
-          <Network v-else-if="tab.type === 'execution_plan'" class="w-3.5 h-3.5 flex-shrink-0 transition-colors" :class="workspaceStore.activeTabId === tab.id ? 'text-white' : 'text-purple-400'" />
-          <Workflow v-else-if="tab.type === 'er_diagram'" class="w-3.5 h-3.5 flex-shrink-0 transition-colors" :class="workspaceStore.activeTabId === tab.id ? 'text-white' : 'text-cyan-400'" />
+          <FileCode v-if="tab.type === 'sql_editor'" class="w-3.5 h-3.5 flex-shrink-0 transition-colors" :class="workspaceStore.activeTabId === tab.id ? 'text-primary' : 'text-primary/70'" />
+          <Table2 v-else-if="tab.type === 'table_data'" class="w-3.5 h-3.5 flex-shrink-0 transition-colors" :class="workspaceStore.activeTabId === tab.id ? 'text-emerald-500 dark:text-emerald-400' : 'text-emerald-500/70'" />
+          <TableProperties v-else-if="tab.type === 'table_structure'" class="w-3.5 h-3.5 flex-shrink-0 transition-colors" :class="workspaceStore.activeTabId === tab.id ? 'text-indigo-500 dark:text-indigo-400' : 'text-indigo-500/70'" />
+          <Network v-else-if="tab.type === 'execution_plan'" class="w-3.5 h-3.5 flex-shrink-0 transition-colors" :class="workspaceStore.activeTabId === tab.id ? 'text-purple-500 dark:text-purple-400' : 'text-purple-500/70'" />
+          <Workflow v-else-if="tab.type === 'er_diagram'" class="w-3.5 h-3.5 flex-shrink-0 transition-colors" :class="workspaceStore.activeTabId === tab.id ? 'text-cyan-500 dark:text-cyan-400' : 'text-cyan-500/70'" />
 
           <!-- Title Display OR Inline Rename Input -->
           <input
@@ -110,8 +110,7 @@
             severity="secondary"
             size="small"
             text
-            rounded
-            class="!h-4 !w-4 !p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+            class="!h-4 !w-4 !p-0 !rounded-xs opacity-0 group-hover:opacity-100 hover:!bg-rose-500/20 hover:!text-rose-400 transition-all"
             v-tooltip.bottom="'關閉分頁 (Close tab)'"
             @click.stop="workspaceStore.closeTab(tab.id)"
           />
@@ -358,7 +357,8 @@ function getTabItemStyle(tab: WorkspaceTab, idx: number) {
     tab.type,
     isActive,
     settingsStore.activeSqlTabBgColor,
-    settingsStore.activeSqlTabTextColor
+    settingsStore.activeSqlTabTextColor,
+    settingsStore.colorMode === 'light'
   );
 
   const connColor = getTabConnectionColor(tab);
@@ -366,6 +366,11 @@ function getTabItemStyle(tab: WorkspaceTab, idx: number) {
     baseStyle['--tab-top-accent'] = connColor;
     if (isActive) {
       baseStyle['--tab-border'] = connColor;
+    }
+  } else if (tab.type === 'sql_editor') {
+    const isCustom = Boolean(settingsStore.activeSqlTabBgColor && settingsStore.activeSqlTabBgColor !== '#1e40af');
+    if (!isCustom) {
+      baseStyle['--tab-top-accent'] = 'var(--p-primary-color, #3b82f6)';
     }
   }
 
@@ -909,12 +914,15 @@ defineExpose({
 
 <style scoped>
 .query-tab-item {
+  position: relative;
   background-color: var(--tab-bg);
   border-top-width: 2px;
   border-top-color: var(--tab-top-accent);
   border-left-color: var(--tab-border);
   border-right-color: var(--tab-border);
   color: var(--tab-text);
+  border-radius: 6px 6px 0 0;
+  transition: all 0.15s ease;
 }
 
 .query-tab-item:hover {
@@ -923,6 +931,16 @@ defineExpose({
   border-left-color: var(--tab-hover-border);
   border-right-color: var(--tab-hover-border);
   color: var(--tab-hover-text);
+}
+
+.query-tab-item.active-tab {
+  background-color: var(--tab-active-surface, rgb(var(--color-dark-900))) !important;
+  color: var(--tab-active-text, rgb(var(--color-dark-100))) !important;
+  border-left-color: rgb(var(--color-dark-700)) !important;
+  border-right-color: rgb(var(--color-dark-700)) !important;
+  margin-bottom: -1px;
+  z-index: 10;
+  box-shadow: 0 -1px 3px rgba(0, 0, 0, 0.06);
 }
 
 .query-tabs-scroll {

@@ -101,7 +101,7 @@
     >
       <AgGridVue
         class="w-full h-full"
-        :theme="sqlightGridTheme"
+        :theme="activeGridTheme"
         :row-data="columns"
         :column-defs="columnDefs"
         :quick-filter-text="quickFilter"
@@ -126,7 +126,7 @@
         <template v-if="selectionStats">
           <div class="flex items-center space-x-1 font-semibold text-brand-300 flex-shrink-0">
             <span>選取:</span>
-            <span v-if="selectedColumnsCount > 1" class="text-amber-300 font-mono">
+            <span v-if="selectedColumnsCount > 1" class="text-amber-800 dark:text-amber-300 font-mono">
               {{ selectedColumnsCount }} 欄
             </span>
             <span class="font-mono text-dark-100">
@@ -169,7 +169,7 @@
           <div class="flex items-center space-x-2 text-dark-400">
             <span>共 <strong class="font-mono text-indigo-300">{{ columns.length }}</strong> 個欄位</span>
             <span class="text-dark-600">|</span>
-            <span><strong class="font-mono text-amber-300">{{ pkCount }}</strong> 個主鍵欄位</span>
+            <span><strong class="font-mono text-amber-800 dark:text-amber-300">{{ pkCount }}</strong> 個主鍵欄位</span>
             <span class="text-dark-600">|</span>
             <span><strong class="font-mono text-sky-300">{{ identityCount }}</strong> 個自動識別欄位</span>
             <span class="text-dark-600">|</span>
@@ -247,7 +247,7 @@
           class="flex-1 text-left px-2.5 py-1.5 hover:text-dark-100 flex items-center space-x-2 transition-colors min-w-0"
           title="在新查詢分頁開啟 ALTER COLUMN 語法"
         >
-          <Pencil class="w-3.5 h-3.5 text-amber-400 flex-shrink-0" />
+          <Pencil class="w-3.5 h-3.5 text-amber-600 dark:text-amber-400 flex-shrink-0" />
           <span class="truncate">修改欄位 (ALTER COLUMN...)</span>
         </button>
         <button
@@ -408,10 +408,11 @@ import {
   type CellContextMenuEvent,
   type ICellRendererParams,
 } from 'ag-grid-community';
-import { sqlightGridTheme } from '@/styles/gridTheme';
+import { sqlightDarkGridTheme, sqlightLightGridTheme } from '@/styles/gridTheme';
 import { queryService } from '@/services/queryService';
 import { useConnectionStore } from '@/stores/connectionStore';
 import { useWorkspaceStore } from '@/stores/workspaceStore';
+import { useSettingsStore } from '@/stores/settingsStore';
 import { escapeHtml } from '@/composables/useColumnAutoWidth';
 import { useGridSelection } from '@/composables/useGridSelection';
 import { useGridExport } from '@/composables/useGridExport';
@@ -425,8 +426,13 @@ const props = defineProps<{
   tableName: string;
 }>();
 
+const settingsStore = useSettingsStore();
 const connectionStore = useConnectionStore();
 const workspaceStore = useWorkspaceStore();
+
+const activeGridTheme = computed(() => {
+  return settingsStore.colorMode === 'light' ? sqlightLightGridTheme : sqlightDarkGridTheme;
+});
 
 export interface ColumnStructureRow {
   ordinal: number;
@@ -577,7 +583,7 @@ const columnDefs = computed<ColDef[]>(() => {
       cellClass: 'text-center flex items-center justify-center',
       cellRenderer: (params: ICellRendererParams) => {
         if (params.value === 1) {
-          return `<span class="px-1 py-0.2 rounded font-bold font-mono text-[10px] bg-amber-500/20 text-amber-300 border border-amber-500/30">PK</span>`;
+          return `<span class="px-1 py-0.2 rounded font-bold font-mono text-[10px] bg-amber-500/20 text-amber-800 dark:text-amber-300 border border-amber-500/30">PK</span>`;
         }
         return '';
       },
@@ -591,7 +597,7 @@ const columnDefs = computed<ColDef[]>(() => {
       filter: 'agTextColumnFilter',
       cellRenderer: (params: ICellRendererParams) => {
         const isPk = params.data?.isPrimaryKey === 1;
-        const colorClass = isPk ? 'text-amber-300 font-bold' : 'text-dark-100 font-medium';
+        const colorClass = isPk ? 'text-amber-800 dark:text-amber-300 font-bold' : 'text-dark-100 font-medium';
         return `<span class="font-mono text-xs ${colorClass}">${escapeHtml(String(params.value ?? ''))}</span>`;
       },
     },

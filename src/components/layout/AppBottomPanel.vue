@@ -83,11 +83,7 @@
               isPointerDragging && dragSourceIndex === idx ? 'opacity-35 border-dashed border-brand-400 scale-95' : '',
               dropHoverIndex === idx && isPointerDragging && dropHoverIndex !== dragSourceIndex ? 'border-brand-400 bg-brand-500/25 ring-1 ring-brand-400 scale-102' : ''
             ]"
-            :style="queryStore.activeResultTabId === rtab.id ? {
-              backgroundColor: settingsStore.activeResultTabBgColor,
-              color: settingsStore.activeResultTabTextColor,
-              borderColor: settingsStore.activeResultTabBgColor,
-            } : {}"
+            :style="getResultTabStyle(rtab)"
             :title="`${rtab.title}\n執行時間: ${rtab.executedAt} (${rtab.durationMs}ms)\n筆數: ${rtab.rowCount} rows\n\nSQL 語句:\n${rtab.sql}`"
           >
             <!-- Pin / Unpin Button -->
@@ -97,8 +93,8 @@
               :class="[
                 'p-0.5 rounded transition-colors cursor-pointer',
                 rtab.isPinned
-                  ? 'text-amber-300'
-                  : (queryStore.activeResultTabId === rtab.id ? 'text-white/70 hover:text-white' : 'text-dark-500 hover:text-dark-300 opacity-60 group-hover:opacity-100')
+                  ? 'text-amber-500 dark:text-amber-400'
+                  : (queryStore.activeResultTabId === rtab.id ? 'text-dark-400 hover:text-dark-100' : 'text-dark-500 hover:text-dark-300 opacity-60 group-hover:opacity-100')
               ]"
               :title="rtab.isPinned ? '已釘選（不會被自動清理，點擊解除釘選）' : '釘選此結果（保護不被自動移除）'"
             >
@@ -133,7 +129,7 @@
                 'text-xxs px-1 py-0.2 rounded font-mono flex-shrink-0 pointer-events-none',
                 rtab.result.messages.some((m) => m.level === 'error')
                   ? 'bg-rose-900/90 text-rose-200 border border-rose-700/50'
-                  : (queryStore.activeResultTabId === rtab.id ? 'bg-black/25 text-white/90' : 'bg-dark-700 text-dark-300')
+                  : (queryStore.activeResultTabId === rtab.id ? 'bg-dark-750 text-dark-200' : 'bg-dark-700 text-dark-300')
               ]"
             >
               {{ rtab.result.messages.some((m) => m.level === 'error') ? 'Err' : `${rtab.rowCount}r` }}
@@ -149,7 +145,7 @@
                 'p-0.5 rounded transition-opacity flex-shrink-0',
                 queryStore.resultTabs.length <= 1
                   ? 'opacity-20 cursor-not-allowed text-dark-600'
-                  : (queryStore.activeResultTabId === rtab.id ? 'text-white/70 hover:text-white hover:bg-black/30' : 'text-dark-500 hover:text-dark-200 hover:bg-dark-700 opacity-0 group-hover:opacity-100 cursor-pointer')
+                  : (queryStore.activeResultTabId === rtab.id ? 'text-dark-400 hover:text-rose-400 hover:bg-rose-500/15' : 'text-dark-500 hover:text-dark-200 hover:bg-dark-700 opacity-0 group-hover:opacity-100 cursor-pointer')
               ]"
               :title="queryStore.resultTabs.length <= 1 ? '最後一個查詢結果不可刪除' : '關閉此結果'"
             >
@@ -463,5 +459,31 @@ function handleResultTabsWheel(e: WheelEvent) {
 
 function onSelectHistory(sql: string) {
   workspaceStore.addSqlTab(sql);
+}
+
+function getResultTabStyle(rtab: QueryResultTab) {
+  const isActive = queryStore.activeResultTabId === rtab.id;
+  if (!isActive) return {};
+
+  const isCustomBg = Boolean(settingsStore.activeResultTabBgColor && settingsStore.activeResultTabBgColor !== '#065f46');
+  const isCustomText = Boolean(settingsStore.activeResultTabTextColor && settingsStore.activeResultTabTextColor !== '#ffffff');
+
+  if (isCustomBg || isCustomText) {
+    return {
+      backgroundColor: settingsStore.activeResultTabBgColor,
+      color: settingsStore.activeResultTabTextColor,
+      borderColor: settingsStore.activeResultTabBgColor,
+      borderTopColor: settingsStore.activeResultTabBgColor,
+    };
+  }
+
+  const isLight = settingsStore.colorMode === 'light';
+  return {
+    backgroundColor: isLight ? '#ffffff' : 'rgb(var(--color-dark-900))',
+    color: isLight ? '#0f172a' : 'rgb(var(--color-dark-100))',
+    borderColor: 'rgb(var(--color-dark-700))',
+    borderTopColor: 'var(--p-primary-color, #10b981)',
+    borderTopWidth: '2px',
+  };
 }
 </script>

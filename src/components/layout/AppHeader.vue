@@ -96,8 +96,8 @@
         >
           <template #value="slotProps">
             <div class="flex items-center space-x-1.5 min-w-0">
-              <i class="pi pi-database text-amber-400 text-xs flex-shrink-0" />
-              <span class="font-mono text-xs truncate text-amber-200">
+              <i class="pi pi-database text-amber-600 dark:text-amber-400 text-xs flex-shrink-0" />
+              <span class="font-mono text-xs truncate text-amber-800 dark:text-amber-200 font-semibold">
                 {{ slotProps.value || '選擇資料庫...' }}
               </span>
             </div>
@@ -105,8 +105,8 @@
 
           <template #option="slotProps">
             <div class="flex items-center space-x-1.5 font-mono text-xs py-0.5">
-              <i class="pi pi-database text-amber-400 text-xs flex-shrink-0" />
-              <span class="truncate">{{ slotProps.option }}</span>
+              <i class="pi pi-database text-amber-600 dark:text-amber-400 text-xs flex-shrink-0" />
+              <span class="truncate text-dark-200">{{ slotProps.option }}</span>
             </div>
           </template>
         </Select>

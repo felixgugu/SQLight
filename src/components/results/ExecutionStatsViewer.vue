@@ -5,13 +5,13 @@
       v-if="!stats"
       class="flex-1 flex flex-col items-center justify-center p-6 text-center text-dark-400 space-y-3"
     >
-      <div class="w-12 h-12 rounded-full bg-dark-800 border border-dark-700 flex items-center justify-center text-amber-400/80">
+      <div class="w-12 h-12 rounded-full bg-dark-800 border border-dark-700 flex items-center justify-center text-amber-600 dark:text-amber-400/80">
         <i class="pi pi-chart-bar text-xl"></i>
       </div>
       <div class="space-y-1 max-w-md">
         <div class="text-sm font-medium text-dark-200">尚無執行統計與 IO 分析資料</div>
         <div class="text-xs text-dark-500 leading-relaxed">
-          請於頂部工具列勾選「<span class="text-amber-400 font-semibold">效能分析</span>」後執行查詢，系統將自動擷取 CPU 耗時、各資料表邏輯/實體讀取量及伺服器等候事件。
+          請於頂部工具列勾選「<span class="text-amber-700 dark:text-amber-400 font-semibold">效能分析</span>」後執行查詢，系統將自動擷取 CPU 耗時、各資料表邏輯/實體讀取量及伺服器等候事件。
         </div>
       </div>
     </div>
@@ -21,7 +21,7 @@
       <!-- Top Bar: Timestamp, SQL info, Actions -->
       <div class="flex items-center justify-between border-b border-dark-750 pb-2 flex-shrink-0 text-xs">
         <div class="flex items-center space-x-2 truncate">
-          <span class="flex items-center space-x-1.5 text-amber-400 font-medium">
+          <span class="flex items-center space-x-1.5 text-amber-700 dark:text-amber-400 font-medium">
             <i class="pi pi-chart-bar text-xs"></i>
             <span>執行效能分析報告</span>
           </span>
@@ -67,7 +67,7 @@
           <template #content>
             <div class="flex items-center justify-between text-dark-400 text-xxs">
               <span>CPU 耗時</span>
-              <i class="pi pi-microchip text-amber-400 text-xs"></i>
+              <i class="pi pi-microchip text-amber-600 dark:text-amber-400 text-xs"></i>
             </div>
             <div class="mt-1 flex items-baseline space-x-1 font-mono">
               <span class="text-lg font-bold text-dark-100">{{ stats.cpuTimeMs }}</span>
@@ -204,7 +204,7 @@
             <Column field="tableName" header="資料表名稱" sortable class="!py-1.5 !px-3 font-sans font-medium text-dark-200" />
             <Column field="scanCount" header="掃描次數" sortable class="!py-1.5 !px-2 text-right">
               <template #body="{ data }">
-                <span :class="data.scanCount > 1 ? 'text-amber-400 font-bold' : 'text-dark-300'">
+                <span :class="data.scanCount > 1 ? 'text-amber-700 dark:text-amber-400 font-bold' : 'text-dark-300'">
                   {{ data.scanCount }}
                 </span>
               </template>
@@ -257,7 +257,7 @@
       <!-- 4. Session Wait Stats (If any wait events captured) -->
       <div v-if="stats.waitStats.length > 0" class="bg-dark-850 border border-dark-750 rounded-lg p-2.5 flex flex-col space-y-2 flex-shrink-0">
         <div class="flex items-center space-x-1.5 text-xs font-medium text-dark-200">
-          <i class="pi pi-bolt text-amber-400 text-xs"></i>
+          <i class="pi pi-bolt text-amber-600 dark:text-amber-400 text-xs"></i>
           <span>工作階段等候事件分析 (Session Wait Statistics)</span>
         </div>
 
@@ -269,7 +269,7 @@
         >
           <Column field="waitType" header="等候類型 (Wait Type)" class="!py-1 !px-2 text-dark-300 font-semibold" />
           <Column field="waitingTasksCount" header="等候次數" class="!py-1 !px-2 text-right text-dark-400" />
-          <Column field="waitTimeMs" header="總等候時間 (ms)" class="!py-1 !px-2 text-right text-amber-400 font-bold">
+          <Column field="waitTimeMs" header="總等候時間 (ms)" class="!py-1 !px-2 text-right text-amber-700 dark:text-amber-400 font-bold">
             <template #body="{ data }">
               {{ data.waitTimeMs }} ms
             </template>

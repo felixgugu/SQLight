@@ -257,7 +257,7 @@
               :class="[
                 'flex items-center space-x-1 px-1.5 py-0.5 rounded cursor-pointer transition-colors group',
                 connectionStore.activeConnectionId === conn.id && connectionStore.activeDatabase === db
-                  ? 'bg-amber-500/20 text-amber-200 font-semibold'
+                  ? 'bg-amber-500/15 text-amber-800 dark:text-amber-200 font-semibold'
                   : 'text-dark-300 hover:bg-dark-750 hover:text-dark-100'
               ]"
               :title="`${db} - 點擊展開/收合 (切換工作資料庫請使用上方選單)`"
@@ -274,12 +274,12 @@
                   class="w-2.5 h-2.5"
                 />
               </button>
-              <Database class="w-3 h-3 text-amber-400/80 flex-shrink-0" />
+              <Database class="w-3 h-3 text-amber-600 dark:text-amber-400/80 flex-shrink-0" />
               <span class="truncate flex-1">{{ db }}</span>
               <!-- Active database indicator -->
               <span
                 v-if="connectionStore.activeConnectionId === conn.id && connectionStore.activeDatabase === db"
-                class="text-[9px] px-1 py-0.2 rounded bg-amber-500/20 text-amber-300 font-sans border border-amber-500/30 flex-shrink-0 mr-1"
+                class="text-[9px] px-1 py-0.2 rounded bg-amber-500/15 text-amber-800 dark:text-amber-300 font-sans border border-amber-500/30 flex-shrink-0 mr-1"
                 title="目前工作區使用中資料庫"
               >
                 使用中
@@ -397,9 +397,9 @@
                           ]"
                           :title="`雙擊記住此欄位 (${col.name})，點擊編輯區游標處即可貼上`"
                         >
-                          <Key v-if="col.isPrimaryKey" class="w-2.5 h-2.5 text-amber-400 flex-shrink-0" />
+                          <Key v-if="col.isPrimaryKey" class="w-2.5 h-2.5 text-amber-600 dark:text-amber-400 flex-shrink-0" />
                           <Columns v-else class="w-2.5 h-2.5 text-dark-500 group-hover:text-dark-300 flex-shrink-0" />
-                          <span :class="[col.isPrimaryKey ? 'text-amber-300 font-semibold' : 'text-dark-300 group-hover:text-dark-100']" class="truncate flex-1">
+                          <span :class="[col.isPrimaryKey ? 'text-amber-800 dark:text-amber-300 font-semibold' : 'text-dark-300 group-hover:text-dark-100']" class="truncate flex-1">
                             {{ col.name }}
                           </span>
                           <span class="text-dark-500 lowercase font-sans text-xxs flex-shrink-0">

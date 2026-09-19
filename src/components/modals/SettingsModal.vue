@@ -32,8 +32,175 @@
 
     <!-- Modal Body -->
     <div class="p-6 overflow-y-auto flex-1 space-y-6 text-xs text-dark-200">
+      <!-- Tab 0: Appearance & Theme Settings -->
+      <div v-if="activeTab === 'theme'" class="space-y-6">
+        <!-- 1. Color Mode (Dark / Light) -->
+        <div class="flex items-center justify-between pb-4 border-b border-dark-800">
+          <div>
+            <label class="font-medium text-dark-100 block">深淺色彩模式 (Color Mode)</label>
+            <span class="text-xxs text-dark-400">切換深色系 (Dark) 或淺色系 (Light) 介面外觀</span>
+          </div>
+          <SelectButton
+            :model-value="settingsStore.colorMode"
+            :options="[
+              { label: '深色 (Dark)', value: 'dark', icon: 'pi pi-moon' },
+              { label: '淺色 (Light)', value: 'light', icon: 'pi pi-sun' },
+            ]"
+            option-label="label"
+            option-value="value"
+            class="!text-xs"
+            @update:model-value="val => val && settingsStore.setColorMode(val as 'dark' | 'light')"
+          >
+            <template #option="slotProps">
+              <div class="flex items-center space-x-1.5 py-0.5 px-1">
+                <i :class="slotProps.option.icon" class="text-xs" />
+                <span>{{ slotProps.option.label }}</span>
+              </div>
+            </template>
+          </SelectButton>
+        </div>
+
+        <!-- 2. Theme Preset (Aura, Lara, Nora, Material) -->
+        <div class="space-y-2 pb-4 border-b border-dark-800">
+          <div class="flex items-center justify-between">
+            <div>
+              <label class="font-medium text-dark-100 block">PrimeVue 佈景風格 (Theme Preset)</label>
+              <span class="text-xxs text-dark-400">切換 PrimeVue 官方預設主題架構風格</span>
+            </div>
+            <span class="text-xxs font-mono text-brand-400 font-semibold">{{ settingsStore.themePreset }}</span>
+          </div>
+          <div class="grid grid-cols-4 gap-2.5">
+            <button
+              v-for="preset in themePresets"
+              :key="preset.id"
+              type="button"
+              class="flex flex-col items-start p-2.5 rounded border text-left transition-all cursor-pointer"
+              :class="settingsStore.themePreset === preset.id
+                ? 'border-brand-500 bg-brand-500/10 text-dark-100 ring-1 ring-brand-500'
+                : 'border-dark-750 bg-dark-900/60 hover:border-dark-600 text-dark-300 hover:text-dark-200'"
+              @click="settingsStore.setThemePreset(preset.id)"
+            >
+              <div class="flex items-center justify-between w-full mb-1">
+                <span class="font-semibold text-xs text-dark-100">{{ preset.label }}</span>
+                <i v-if="settingsStore.themePreset === preset.id" class="pi pi-check-circle text-brand-400 text-xs" />
+              </div>
+              <span class="text-[11px] text-dark-400 leading-snug">{{ preset.desc }}</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- 3. Primary Color Palette -->
+        <div class="space-y-2.5 pb-4 border-b border-dark-800">
+          <div class="flex items-center justify-between">
+            <div>
+              <label class="font-medium text-dark-100 block">主要色彩基調 (Primary Palette)</label>
+              <span class="text-xxs text-dark-400">按鈕、焦點邊框、啟用指示等核心元件之主色調</span>
+            </div>
+            <span class="text-xxs font-mono text-dark-300">{{ currentPrimaryLabel }}</span>
+          </div>
+
+          <div class="grid grid-cols-4 sm:grid-cols-6 gap-2">
+            <button
+              v-for="color in PRIMARY_COLOR_OPTIONS"
+              :key="color.name"
+              type="button"
+              class="flex items-center space-x-2 p-1.5 rounded border transition-all cursor-pointer text-left"
+              :class="settingsStore.primaryColor === color.name
+                ? 'border-brand-500 bg-brand-500/15 ring-1 ring-brand-500 text-dark-100'
+                : 'border-dark-750 bg-dark-900/50 hover:border-dark-600 text-dark-300 hover:text-dark-200'"
+              @click="settingsStore.setPrimaryColor(color.name)"
+            >
+              <div
+                class="w-4.5 h-4.5 rounded-full flex-shrink-0 flex items-center justify-center text-white text-[9px] shadow-xs"
+                :style="{ backgroundColor: color.color }"
+              >
+                <i v-if="settingsStore.primaryColor === color.name" class="pi pi-check" />
+              </div>
+              <span class="text-xxs truncate">{{ color.label.split(' ')[0] }}</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- 4. Surface Palette -->
+        <div class="space-y-2.5 pb-4 border-b border-dark-800">
+          <div class="flex items-center justify-between">
+            <div>
+              <label class="font-medium text-dark-100 block">表面底色傾向 (Surface Palette)</label>
+              <span class="text-xxs text-dark-400">背景、卡片與對話框表面冷暖色調</span>
+            </div>
+            <span class="text-xxs font-mono text-dark-300">{{ currentSurfaceLabel }}</span>
+          </div>
+
+          <div class="grid grid-cols-5 gap-2">
+            <button
+              v-for="surface in SURFACE_OPTIONS"
+              :key="surface.name"
+              type="button"
+              class="flex flex-col p-2 rounded border transition-all cursor-pointer text-left space-y-1.5"
+              :class="settingsStore.surfaceColor === surface.name
+                ? 'border-brand-500 bg-brand-500/15 ring-1 ring-brand-500 text-dark-100'
+                : 'border-dark-750 bg-dark-900/50 hover:border-dark-600 text-dark-300 hover:text-dark-200'"
+              @click="settingsStore.setSurfaceColor(surface.name)"
+            >
+              <div class="flex items-center justify-between w-full">
+                <span class="text-xxs font-semibold truncate">{{ surface.label.split(' ')[0] }}</span>
+                <i v-if="settingsStore.surfaceColor === surface.name" class="pi pi-check-circle text-brand-400 text-xxs" />
+              </div>
+              <div class="flex items-center space-x-1">
+                <div
+                  class="w-3.5 h-3.5 rounded border border-dark-600"
+                  :style="{ backgroundColor: surface.sampleDark }"
+                  title="Dark Surface"
+                />
+                <div
+                  class="w-3.5 h-3.5 rounded border border-dark-300"
+                  :style="{ backgroundColor: surface.sampleLight }"
+                  title="Light Surface"
+                />
+                <span class="text-[10px] text-dark-400 truncate">{{ surface.name }}</span>
+              </div>
+            </button>
+          </div>
+        </div>
+
+        <!-- 5. Ripple Effect -->
+        <div class="flex items-center justify-between pb-4 border-b border-dark-800">
+          <div>
+            <label class="font-medium text-dark-100 block">水波紋點擊特效 (Ripple Effect)</label>
+            <span class="text-xxs text-dark-400">啟用按鈕與可點選元件點擊時擴散的水波紋動畫</span>
+          </div>
+          <ToggleSwitch
+            :model-value="settingsStore.ripple"
+            @update:model-value="val => handleRippleToggle(val)"
+          />
+        </div>
+
+        <!-- 6. Live Component Preview -->
+        <div class="space-y-2 p-3.5 rounded-lg border border-dark-750 bg-dark-900/80">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-semibold text-dark-200 flex items-center space-x-1.5">
+              <i class="pi pi-eye text-brand-400" />
+              <span>主題即時預覽 (Theme Live Preview)</span>
+            </span>
+            <span class="text-xxs text-dark-400">當前風格即時反映</span>
+          </div>
+          <div class="flex flex-wrap items-center gap-2.5 pt-1">
+            <Button label="主要按鈕" icon="pi pi-check" size="small" />
+            <Button label="次要外框" severity="secondary" outlined size="small" />
+            <Button label="文字按鈕" text size="small" />
+            <Tag value="Tag 標籤" />
+            <Badge value="99+" />
+            <InputText placeholder="輸入框預覽..." size="small" class="w-32 !h-7 !text-xs" />
+            <div class="flex items-center space-x-1.5 pl-2">
+              <Checkbox :binary="true" :model-value="true" />
+              <span class="text-xxs text-dark-300">核取方塊</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- Tab 1: Editor Settings -->
-      <div v-if="activeTab === 'editor'" class="space-y-5">
+      <div v-else-if="activeTab === 'editor'" class="space-y-5">
         <!-- Font Size -->
         <div class="flex items-center justify-between">
           <div>
@@ -414,13 +581,23 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
 import Dialog from 'primevue/dialog';
 import Button from 'primevue/button';
 import Select from 'primevue/select';
+import SelectButton from 'primevue/selectbutton';
+import ToggleSwitch from 'primevue/toggleswitch';
+import Badge from 'primevue/badge';
+import Checkbox from 'primevue/checkbox';
 import InputText from 'primevue/inputtext';
 import Tag from 'primevue/tag';
+import { usePrimeVue } from 'primevue/config';
 import { useSettingsStore } from '@/stores/settingsStore';
+import {
+  PRIMARY_COLOR_OPTIONS,
+  SURFACE_OPTIONS,
+  type ThemePresetName,
+} from '@/services/themeManager';
 import TableFilterTab from './TableFilterTab.vue';
 
 defineProps<{
@@ -431,15 +608,38 @@ defineEmits<{
   (e: 'close'): void;
 }>();
 
+const primevue = usePrimeVue();
 const settingsStore = useSettingsStore();
-const activeTab = ref<'editor' | 'results' | 'table_filter' | 'about'>('editor');
+const activeTab = ref<'theme' | 'editor' | 'results' | 'table_filter' | 'about'>('theme');
 
 const tabs = [
+  { id: 'theme' as const, label: '外觀與主題 (Appearance & Theme)', icon: 'pi pi-palette' },
   { id: 'editor' as const, label: '編輯器 (Editor)', icon: 'pi pi-code' },
   { id: 'results' as const, label: '查詢與結果 (Results)', icon: 'pi pi-table' },
   { id: 'table_filter' as const, label: '名稱過濾 (Object Filter)', icon: 'pi pi-filter' },
   { id: 'about' as const, label: '關於 (About)', icon: 'pi pi-info-circle' },
 ];
+
+const themePresets: { id: ThemePresetName; label: string; desc: string }[] = [
+  { id: 'Aura', label: 'Aura (現代)', desc: '精緻圓角與柔和光澤，SQLight 預設推薦' },
+  { id: 'Lara', label: 'Lara (經典)', desc: '經典俐落 Prime 風格，清晰穩健' },
+  { id: 'Nora', label: 'Nora (極簡)', desc: '高對比扁平線條，簡約素雅' },
+  { id: 'Material', label: 'Material (質樸)', desc: 'Google Material 3 規範，流暢現代' },
+];
+
+const currentPrimaryLabel = computed(() => {
+  const match = PRIMARY_COLOR_OPTIONS.find((c) => c.name === settingsStore.primaryColor);
+  return match ? match.label : settingsStore.primaryColor;
+});
+
+const currentSurfaceLabel = computed(() => {
+  const match = SURFACE_OPTIONS.find((s) => s.name === settingsStore.surfaceColor);
+  return match ? match.label : settingsStore.surfaceColor;
+});
+
+function handleRippleToggle(val: boolean) {
+  settingsStore.setRipple(val, primevue.config);
+}
 
 const fontSizeOptions = [
   { label: '12 px', value: 12 },

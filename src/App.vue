@@ -117,14 +117,19 @@ import ConnectionModal from '@/components/modals/ConnectionModal.vue';
 import SettingsModal from '@/components/modals/SettingsModal.vue';
 import QuickObjectFinderModal from '@/components/modals/QuickObjectFinderModal.vue';
 import SqlTemplateModal from '@/components/modals/SqlTemplateModal.vue';
+import { usePrimeVue } from 'primevue/config';
 import { useSplitter } from '@/composables/useSplitter';
 import { useWorkspaceStore } from '@/stores/workspaceStore';
 import { useQueryStore } from '@/stores/queryStore';
+import { useSettingsStore } from '@/stores/settingsStore';
+import { themeManager } from '@/services/themeManager';
 import type { ConnectionProfile } from '@/types/connection';
 import type { SqlTemplate } from '@/types/sqlTemplate';
 
 const workspaceStore = useWorkspaceStore();
 const queryStore = useQueryStore();
+const settingsStore = useSettingsStore();
+const primevue = usePrimeVue();
 const toast = useToast();
 
 watch(
@@ -148,7 +153,7 @@ watch(
             ? '成功'
             : '提示',
         detail: t.message,
-        life: 3000,
+        life: t.duration || 2500,
       });
     }
   }
@@ -356,6 +361,7 @@ function handleOpenSqlTemplates() {
 }
 
 onMounted(() => {
+  themeManager.initTheme(settingsStore, primevue.config);
   window.addEventListener('keydown', handleGlobalKeydown);
   window.addEventListener('sqlight:new-query-tab', handleNewQueryTab);
   window.addEventListener('sqlight:open-quick-finder', handleOpenQuickFinder);

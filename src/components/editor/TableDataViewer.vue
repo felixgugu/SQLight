@@ -101,7 +101,7 @@
     >
       <AgGridVue
         class="w-full h-full"
-        :theme="sqlightGridTheme"
+        :theme="activeGridTheme"
         :row-data="rows"
         :column-defs="columnDefs"
         :quick-filter-text="quickFilter"
@@ -126,7 +126,7 @@
         <template v-if="selectionStats">
           <div class="flex items-center space-x-1 font-semibold text-brand-300 flex-shrink-0">
             <span>選取:</span>
-            <span v-if="selectedColumnsCount > 1" class="text-amber-300 font-mono">
+            <span v-if="selectedColumnsCount > 1" class="text-amber-800 dark:text-amber-300 font-mono">
               {{ selectedColumnsCount }} 欄
             </span>
             <span class="font-mono text-dark-100">
@@ -148,7 +148,7 @@
             </div>
             <span class="text-dark-600 flex-shrink-0">|</span>
             <div class="flex-shrink-0">
-              最小值 (Min): <strong class="font-mono text-amber-400">{{ formatAggregateNumber(selectionStats.min) }}</strong>
+              最小值 (Min): <strong class="font-mono text-amber-700 dark:text-amber-400">{{ formatAggregateNumber(selectionStats.min) }}</strong>
             </div>
             <span class="text-dark-600 flex-shrink-0">|</span>
             <div class="flex-shrink-0">
@@ -269,7 +269,7 @@
         @click="handleGenerateDml('UPDATE')"
         class="w-full text-left px-2.5 py-1.5 hover:bg-dark-750 hover:text-dark-100 flex items-center space-x-2 transition-colors"
       >
-        <Edit3 class="w-3.5 h-3.5 text-amber-400" />
+        <Edit3 class="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
         <span>建立 UPDATE 語法</span>
       </button>
 
@@ -287,8 +287,8 @@
         @click="togglePinColumn"
         class="w-full text-left px-2.5 py-1.5 hover:bg-dark-750 hover:text-dark-100 flex items-center space-x-2 transition-colors"
       >
-        <PinOff v-if="isColPinned" class="w-3.5 h-3.5 text-amber-400" />
-        <Pin v-else class="w-3.5 h-3.5 text-amber-400" />
+        <PinOff v-if="isColPinned" class="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
+        <Pin v-else class="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
         <span>{{ isColPinned ? '取消凍結此欄 (Unpin)' : '凍結此欄於左側 (Pin Left)' }}</span>
       </button>
 
@@ -349,12 +349,13 @@ import {
   type CellContextMenuEvent,
   type ICellRendererParams,
 } from 'ag-grid-community';
-import { sqlightGridTheme } from '@/styles/gridTheme';
+import { sqlightDarkGridTheme, sqlightLightGridTheme } from '@/styles/gridTheme';
 import { queryService } from '@/services/queryService';
 import { useConnectionStore } from '@/stores/connectionStore';
 import { useQueryStore } from '@/stores/queryStore';
 import { useWorkspaceStore } from '@/stores/workspaceStore';
 import { useSchemaStore } from '@/stores/schemaStore';
+import { useSettingsStore } from '@/stores/settingsStore';
 import {
   escapeHtml,
   calculateColumnWidth,
@@ -378,10 +379,16 @@ const props = defineProps<{
   tableName: string;
 }>();
 
+const settingsStore = useSettingsStore();
 const connectionStore = useConnectionStore();
 const queryStore = useQueryStore();
 const workspaceStore = useWorkspaceStore();
 const schemaStore = useSchemaStore();
+
+const activeGridTheme = computed(() => {
+  return settingsStore.colorMode === 'light' ? sqlightLightGridTheme : sqlightDarkGridTheme;
+});
+
 const isLoading = ref(false);
 const error = ref<string | null>(null);
 const columns = ref<ColumnDef[]>([]);

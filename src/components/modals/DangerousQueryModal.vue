@@ -13,7 +13,7 @@
           v-if="step === 2"
           class="pi pi-shield text-rose-400 text-lg animate-pulse"
         />
-        <i v-else class="pi pi-exclamation-triangle text-amber-400 text-lg" />
+        <i v-else class="pi pi-exclamation-triangle text-amber-600 dark:text-amber-400 text-lg" />
         <span class="font-semibold text-sm text-dark-100">
           {{ step === 2 ? '高危險變更確認 (第二次確認 2/2 — 最終確認)' : '修改提示 — 偵測到變更指令 (第一次確認 1/2)' }}
         </span>
@@ -64,7 +64,7 @@
         </div>
 
         <!-- Prompt description -->
-        <p class="text-dark-300 leading-relaxed bg-amber-950/20 border border-amber-900/40 p-2.5 rounded text-xxs">
+        <p class="text-dark-300 leading-relaxed bg-amber-500/15 border border-amber-500/30 p-2.5 rounded text-xxs">
           連線「<strong>{{ connectionName }}</strong>」已開啟「修改提示」保護機制。<br />
           為避免改錯或刪除正式資料，系統要求必須<strong>連續確認 2 次</strong>才可執行。請確認是否要進行第二次確認？
         </p>

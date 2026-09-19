@@ -28,6 +28,27 @@ export function ensureSqlightTheme() {
       'editorCursor.foreground': '#60a5fa',
     },
   });
+
+  monaco.editor.defineTheme('sqlight-light', {
+    base: 'vs',
+    inherit: true,
+    rules: [
+      { token: 'keyword', foreground: '0284c7', fontStyle: 'bold' },
+      { token: 'string', foreground: '059669' },
+      { token: 'number', foreground: 'd97706' },
+      { token: 'comment', foreground: '64748b', fontStyle: 'italic' },
+      { token: 'operator.sql', foreground: 'db2777' },
+    ],
+    colors: {
+      'editor.background': '#ffffff',
+      'editor.foreground': '#0f172a',
+      'editorLineNumber.foreground': '#94a3b8',
+      'editorLineNumber.activeForeground': '#2563eb',
+      'editor.lineHighlightBackground': '#f1f5f9',
+      'editor.selectionBackground': '#bfdbfe80',
+      'editorCursor.foreground': '#2563eb',
+    },
+  });
 }
 
 // Automatically register theme on module load

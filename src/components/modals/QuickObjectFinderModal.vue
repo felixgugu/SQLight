@@ -79,7 +79,7 @@
           </span>
           <span>/</span>
           <div class="flex items-center space-x-1">
-            <i class="pi pi-database text-amber-400 text-xs"></i>
+            <i class="pi pi-database text-amber-600 dark:text-amber-400 text-xs"></i>
             <Select
               v-if="availableDatabases.length > 0"
               v-model="currentDatabase"
@@ -89,13 +89,13 @@
               class="!text-xs !h-6 !py-0 font-mono"
             >
               <template #value="slotProps">
-                <span class="text-xs font-mono">{{ slotProps.value || 'master' }}</span>
+                <span class="text-xs font-mono text-amber-800 dark:text-amber-200 font-medium">{{ slotProps.value || 'master' }}</span>
               </template>
               <template #option="slotProps">
-                <span class="text-xs font-mono py-0.5">{{ slotProps.option }}</span>
+                <span class="text-xs font-mono py-0.5 text-dark-200">{{ slotProps.option }}</span>
               </template>
             </Select>
-            <span v-else class="text-dark-300 font-mono">{{ currentDatabase || 'master' }}</span>
+            <span v-else class="text-amber-800 dark:text-amber-200 font-medium font-mono">{{ currentDatabase || 'master' }}</span>
           </div>
         </div>
 

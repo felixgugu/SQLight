@@ -115,15 +115,15 @@
       <Fieldset legend="安全性與標籤色彩 (Security & Appearance)" class="!text-xs">
         <div class="space-y-3 pt-1">
           <!-- Modification Prompt Safe Guard -->
-          <div class="flex items-start space-x-2.5 p-2 rounded bg-amber-950/20 border border-amber-900/40">
+          <div class="flex items-start space-x-2.5 p-2 rounded bg-amber-500/15 border border-amber-500/30">
             <ToggleSwitch v-model="form.modificationPrompt" class="mt-0.5 flex-shrink-0" />
             <div class="flex-1 min-w-0">
               <div class="flex items-center space-x-1.5">
-                <span class="font-semibold text-amber-300 text-xs">修改提示 (危險指令二次確認保護)</span>
+                <span class="font-semibold text-amber-800 dark:text-amber-300 text-xs">修改提示 (危險指令二次確認保護)</span>
                 <Tag severity="warn" value="SAFE GUARD" class="!text-[9px] !px-1 !py-0 font-mono" />
               </div>
               <p class="text-xxs text-dark-400 mt-0.5 leading-relaxed">
-                勾選後，在此連線執行 <code class="text-amber-300 font-mono">UPDATE</code>、<code class="text-amber-300 font-mono">DELETE</code>、<code class="text-amber-300 font-mono">DROP</code> 等修改指令時，強制要求連續確認 2 次，防範意外誤更動。
+                勾選後，在此連線執行 <code class="text-amber-800 dark:text-amber-300 font-mono">UPDATE</code>、<code class="text-amber-800 dark:text-amber-300 font-mono">DELETE</code>、<code class="text-amber-800 dark:text-amber-300 font-mono">DROP</code> 等修改指令時，強制要求連續確認 2 次，防範意外誤更動。
               </p>
             </div>
           </div>

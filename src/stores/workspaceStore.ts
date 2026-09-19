@@ -98,6 +98,7 @@ export interface ToastMessage {
   id: string;
   message: string;
   type: 'info' | 'success' | 'warning' | 'error';
+  duration?: number;
 }
 
 export const useWorkspaceStore = defineStore('workspace', () => {
@@ -504,6 +505,7 @@ export const useWorkspaceStore = defineStore('workspace', () => {
       id: String(Date.now()),
       message,
       type,
+      duration,
     };
     toastTimer = setTimeout(() => {
       activeToast.value = null;
