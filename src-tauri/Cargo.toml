@@ -26,3 +26,4 @@ keyring = { version = "3.0", features = ["windows-native"] }
 tiberius = { version = "0.12", features = ["chrono", "tds73"] }
 async-trait = "0.1"
 dirs-next = "2.0"
+rfd = "0.17.2"

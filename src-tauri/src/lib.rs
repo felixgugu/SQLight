@@ -7,6 +7,7 @@ pub mod services;
 use commands::connection_commands::*;
 use commands::query_commands::*;
 use commands::schema_commands::*;
+use commands::sql_folder_commands::*;
 use commands::template_commands::*;
 use services::ConnectionManager;
 
@@ -43,6 +44,10 @@ pub fn run() {
             load_custom_templates,
             save_custom_templates,
             open_custom_templates_file,
+            pick_sql_folder,
+            scan_sql_folder,
+            read_sql_file,
+            write_sql_file,
         ])
 
         .run(tauri::generate_context!())

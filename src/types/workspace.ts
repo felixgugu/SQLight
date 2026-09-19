@@ -12,6 +12,7 @@ export interface SqlEditorTab extends BaseTab {
   type: 'sql_editor';
   query: string;
   cursorPosition?: { lineNumber: number; column: number };
+  filePath?: string;
 }
 
 export interface TableDataTab extends BaseTab {

@@ -377,6 +377,110 @@ function mockInvoke<T>(cmd: string, args?: Record<string, unknown>): Promise<T> 
     case 'get_query_log_path':
       return Promise.resolve('./sqlight.log' as unknown as T);
 
+    case 'pick_sql_folder': {
+      // In browser mock, provide default or prompt
+      const defaultPath = 'C:/MyScripts/SQL';
+      return Promise.resolve(defaultPath as unknown as T);
+    }
+
+    case 'scan_sql_folder': {
+      const folderPath = (args?.folderPath as string) || 'C:/MyScripts/SQL';
+      const rootName = folderPath.split(/[/\\]/).filter(Boolean).pop() || 'SQL';
+      const mockTree = {
+        name: rootName,
+        path: folderPath,
+        is_dir: true,
+        children: [
+          {
+            name: '01_Init_Tables.sql',
+            path: `${folderPath}/01_Init_Tables.sql`,
+            is_dir: false,
+            size: 2048,
+            modified_time: new Date().toISOString(),
+          },
+          {
+            name: '02_Seed_Data.sql',
+            path: `${folderPath}/02_Seed_Data.sql`,
+            is_dir: false,
+            size: 1024,
+            modified_time: new Date().toISOString(),
+          },
+          {
+            name: 'Migrations',
+            path: `${folderPath}/Migrations`,
+            is_dir: true,
+            children: [
+              {
+                name: '20260101_add_user_roles.sql',
+                path: `${folderPath}/Migrations/20260101_add_user_roles.sql`,
+                is_dir: false,
+                size: 856,
+                modified_time: new Date().toISOString(),
+              },
+              {
+                name: '20260215_optimize_indexes.sql',
+                path: `${folderPath}/Migrations/20260215_optimize_indexes.sql`,
+                is_dir: false,
+                size: 1420,
+                modified_time: new Date().toISOString(),
+              },
+            ],
+          },
+          {
+            name: 'Procedures',
+            path: `${folderPath}/Procedures`,
+            is_dir: true,
+            children: [
+              {
+                name: 'usp_GetActiveUsers.sql',
+                path: `${folderPath}/Procedures/usp_GetActiveUsers.sql`,
+                is_dir: false,
+                size: 1680,
+                modified_time: new Date().toISOString(),
+              },
+            ],
+          },
+        ],
+      };
+      return Promise.resolve(mockTree as unknown as T);
+    }
+
+    case 'read_sql_file': {
+      const filePath = (args?.filePath as string) || '';
+      try {
+        const saved = localStorage.getItem(`sqlight_mock_file_${filePath}`);
+        if (saved !== null) {
+          return Promise.resolve(saved as unknown as T);
+        }
+      } catch {}
+      const fileName = filePath.split(/[/\\]/).filter(Boolean).pop() || 'script.sql';
+      const sampleSql = `-- ============================================================
+-- SQL File: ${fileName}
+-- Path: ${filePath}
+-- ============================================================
+
+SELECT 
+    t.name AS [TableName],
+    s.name AS [SchemaName],
+    p.rows AS [RowCount]
+FROM sys.tables t
+INNER JOIN sys.schemas s ON s.schema_id = t.schema_id
+INNER JOIN sys.partitions p ON p.object_id = t.object_id AND p.index_id IN (0, 1)
+WHERE t.is_ms_shipped = 0
+ORDER BY p.rows DESC;
+`;
+      return Promise.resolve(sampleSql as unknown as T);
+    }
+
+    case 'write_sql_file': {
+      const filePath = (args?.filePath as string) || '';
+      const content = (args?.content as string) || '';
+      try {
+        localStorage.setItem(`sqlight_mock_file_${filePath}`, content);
+      } catch {}
+      return Promise.resolve(undefined as unknown as T);
+    }
+
     default:
       return Promise.reject(new Error(`Unknown command '${cmd}'`));
   }

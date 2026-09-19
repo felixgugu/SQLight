@@ -1,5 +1,5 @@
 <template>
-  <aside class="h-full bg-dark-850 flex flex-col overflow-hidden select-none border-r border-dark-700 relative">
+  <aside ref="sidebarRootRef" class="h-full bg-dark-850 flex flex-col overflow-hidden select-none border-r border-dark-700 relative">
     <!-- Sidebar Header -->
     <div class="h-9 px-3 border-b border-dark-700 flex items-center justify-between text-xs font-semibold uppercase tracking-wider text-dark-400 bg-dark-850 flex-shrink-0">
       <div class="flex items-center space-x-1.5">
@@ -652,6 +652,20 @@
       </div>
     </div>
 
+    <!-- Draggable Vertical Splitter between Explorer and SQL Files -->
+    <ResizableSplitter
+      direction="vertical"
+      :is-dragging="sqlFolderSplitter.isDragging.value"
+      @pointerdown="sqlFolderSplitter.onPointerDown"
+      @dblclick="resetFolderSplitter"
+    />
+
+    <!-- SQL Files Monitor Section -->
+    <SqlFolderExplorer
+      :style="{ height: `${sqlFolderSplitter.size.value}px` }"
+      class="flex-shrink-0"
+    />
+
     <!-- PrimeVue Context Menus -->
     <ContextMenu ref="objectMenuRef" :model="objectMenuItems" />
     <ContextMenu ref="connMenuRef" :model="connMenuItems" />
@@ -707,6 +721,9 @@ import {
 } from 'lucide-vue-next';
 import ConfirmModal from '@/components/common/ConfirmModal.vue';
 import ExportSchemaModal from '@/components/modals/ExportSchemaModal.vue';
+import ResizableSplitter from '@/components/common/ResizableSplitter.vue';
+import SqlFolderExplorer from './SqlFolderExplorer.vue';
+import { useSplitter } from '@/composables/useSplitter';
 import { useConnectionStore } from '@/stores/connectionStore';
 import { useWorkspaceStore } from '@/stores/workspaceStore';
 import { useSchemaStore } from '@/stores/schemaStore';
@@ -738,6 +755,43 @@ const connectionStore = useConnectionStore();
 const workspaceStore = useWorkspaceStore();
 const schemaStore = useSchemaStore();
 const settingsStore = useSettingsStore();
+
+const sidebarRootRef = ref<HTMLElement | null>(null);
+
+const STORAGE_FOLDER_SPLITTER_KEY = 'sqlight_sql_folder_splitter_height';
+function getSavedFolderSplitterHeight(): number {
+  try {
+    const saved = localStorage.getItem(STORAGE_FOLDER_SPLITTER_KEY);
+    if (saved) {
+      const val = parseInt(saved, 10);
+      if (!isNaN(val) && val >= 60 && val <= 800) return val;
+    }
+  } catch {}
+  return 220;
+}
+
+const sqlFolderSplitter = useSplitter({
+  direction: 'vertical',
+  initialSize: getSavedFolderSplitterHeight(),
+  minSize: 70,
+  maxSize: () => {
+    const totalH = sidebarRootRef.value?.clientHeight || 600;
+    return Math.max(100, totalH - 150);
+  },
+  reverse: true,
+  onResize: (newSize) => {
+    try {
+      localStorage.setItem(STORAGE_FOLDER_SPLITTER_KEY, String(Math.round(newSize)));
+    } catch {}
+  },
+});
+
+function resetFolderSplitter() {
+  sqlFolderSplitter.size.value = 220;
+  try {
+    localStorage.setItem(STORAGE_FOLDER_SPLITTER_KEY, '220');
+  } catch {}
+}
 
 function isPendingColumn(colName: string): boolean {
   if (!workspaceStore.pendingColumnToInsert) return false;

@@ -204,7 +204,8 @@ export const useWorkspaceStore = defineStore('workspace', () => {
     initialQuery = '',
     title?: string,
     connectionId?: string,
-    database?: string
+    database?: string,
+    filePath?: string
   ) {
     const connectionStore = useConnectionStore();
     const existingNums = tabs.value
@@ -225,10 +226,24 @@ export const useWorkspaceStore = defineStore('workspace', () => {
       query: initialQuery ?? '',
       connectionId: effectiveConnId,
       database: effectiveDb,
+      filePath,
       isDirty: false,
     };
     tabs.value.unshift(newTab);
     activeTabId.value = tabId;
+    return tabId;
+  }
+
+  function openSqlFileTab(filePath: string, fileName: string, content: string) {
+    // If a tab with this exact filePath is already open, switch to it
+    const existing = tabs.value.find(
+      (t): t is SqlEditorTab => t.type === 'sql_editor' && (t as SqlEditorTab).filePath === filePath
+    );
+    if (existing) {
+      activeTabId.value = existing.id;
+      return existing.id;
+    }
+    return addSqlTab(content, fileName, undefined, undefined, filePath);
   }
 
   function addTableDataTab(
@@ -527,6 +542,7 @@ export const useWorkspaceStore = defineStore('workspace', () => {
     updateActiveTabDatabase,
     markTabSaved,
     addSqlTab,
+    openSqlFileTab,
     addTableDataTab,
     addTableStructureTab,
     addExecutionPlanTab,

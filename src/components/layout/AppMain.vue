@@ -202,6 +202,7 @@ import ExecutionPlanViewer from '@/components/editor/ExecutionPlanViewer.vue';
 import ErDiagramViewer from '@/components/editor/ErDiagramViewer.vue';
 import DangerousQueryModal from '@/components/modals/DangerousQueryModal.vue';
 import { saveSqlToFile, openSqlFromFile } from '@/utils/fileStorage';
+import { sqlFolderService } from '@/services/sqlFolderService';
 import { getTabThemeStyle } from '@/utils/tabTheme';
 import { detectDangerousSqlStatements } from '@/utils/sqlGuard';
 import type { SqlEditorTab, TableDataTab, TableStructureTab, ExecutionPlanTab, ErDiagramTab, WorkspaceTab } from '@/types/workspace';
@@ -508,6 +509,14 @@ async function saveActiveTab(tabToSave?: WorkspaceTab) {
 
   const sqlTab = targetTab as SqlEditorTab;
   try {
+    // If the tab is associated with a monitored local SQL file, save in-place without prompting
+    if (sqlTab.filePath) {
+      await sqlFolderService.writeFile(sqlTab.filePath, sqlTab.query);
+      workspaceStore.markTabSaved(sqlTab.id);
+      workspaceStore.showToast(`已儲存：${sqlTab.title}`, 'success', 2000);
+      return;
+    }
+
     const defaultName = sqlTab.title.endsWith('.sql') ? sqlTab.title : `${sqlTab.title}.sql`;
     const result = await saveSqlToFile(sqlTab.query, defaultName);
     if (result.saved && result.fileName) {
@@ -516,7 +525,7 @@ async function saveActiveTab(tabToSave?: WorkspaceTab) {
     }
   } catch (err) {
     console.error('Save SQL failed:', err);
-    workspaceStore.showToast('另存檔案失敗', 'error', 3000);
+    workspaceStore.showToast('儲存檔案失敗', 'error', 3000);
   }
 }
 
