@@ -56,13 +56,13 @@
   }
 
   html.dark, body.dark, html.dark body {
-    background-color: #141418;
-    color: #f0f0f5;
+    background-color: rgb(var(--color-dark-900));
+    color: rgb(var(--color-dark-100));
   }
 
   html:not(.dark), html:not(.dark) body {
-    background-color: #f8fafc;
-    color: #1e293b;
+    background-color: rgb(var(--color-dark-900));
+    color: rgb(var(--color-dark-100));
   }
 
   /* Custom Desktop Scrollbar */
@@ -72,26 +72,26 @@
   }
 
   html.dark ::-webkit-scrollbar-track {
-    background: #18181f;
+    background: rgb(var(--color-dark-850));
   }
   html:not(.dark) ::-webkit-scrollbar-track {
-    background: #f1f5f9;
+    background: rgb(var(--color-dark-850));
   }
 
   html.dark ::-webkit-scrollbar-thumb {
-    background: #3c3c4e;
+    background: rgb(var(--color-dark-600));
     border-radius: 4px;
   }
   html:not(.dark) ::-webkit-scrollbar-thumb {
-    background: #cbd5e1;
+    background: rgb(var(--color-dark-600));
     border-radius: 4px;
   }
 
   html.dark ::-webkit-scrollbar-thumb:hover {
-    background: #525266;
+    background: rgb(var(--color-dark-500));
   }
   html:not(.dark) ::-webkit-scrollbar-thumb:hover {
-    background: #94a3b8;
+    background: rgb(var(--color-dark-500));
   }
 }
 

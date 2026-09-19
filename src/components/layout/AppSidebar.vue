@@ -254,13 +254,14 @@
             <!-- Database Item -->
             <div
               @click="toggleDatabaseExpand(conn.id, db)"
+              @contextmenu.prevent="openDbContextMenu($event, conn, db)"
               :class="[
                 'flex items-center space-x-1 px-1.5 py-0.5 rounded cursor-pointer transition-colors group',
                 connectionStore.activeConnectionId === conn.id && connectionStore.activeDatabase === db
                   ? 'bg-amber-500/15 text-amber-800 dark:text-amber-200 font-semibold'
                   : 'text-dark-300 hover:bg-dark-750 hover:text-dark-100'
               ]"
-              :title="`${db} - 點擊展開/收合 (切換工作資料庫請使用上方選單)`"
+              :title="`${db} - 點擊展開/收合，右鍵開啟選單 (匯出結構 CSV 等)`"
             >
               <!-- Direction Chevron Button -->
               <button
@@ -654,6 +655,16 @@
     <!-- PrimeVue Context Menus -->
     <ContextMenu ref="objectMenuRef" :model="objectMenuItems" />
     <ContextMenu ref="connMenuRef" :model="connMenuItems" />
+    <ContextMenu ref="dbMenuRef" :model="dbMenuItems" />
+
+    <!-- Export Schema CSV Modal -->
+    <ExportSchemaModal
+      :is-open="isExportSchemaModalOpen"
+      :connection-id="exportSchemaTarget.connId"
+      :database="exportSchemaTarget.database"
+      :connection-name="exportSchemaTarget.connName"
+      @close="isExportSchemaModalOpen = false"
+    />
 
     <!-- Delete Connection Confirm Modal -->
     <ConfirmModal
@@ -695,6 +706,7 @@ import {
   Clock,
 } from 'lucide-vue-next';
 import ConfirmModal from '@/components/common/ConfirmModal.vue';
+import ExportSchemaModal from '@/components/modals/ExportSchemaModal.vue';
 import { useConnectionStore } from '@/stores/connectionStore';
 import { useWorkspaceStore } from '@/stores/workspaceStore';
 import { useSchemaStore } from '@/stores/schemaStore';
@@ -1230,6 +1242,7 @@ function getTableColumns(connId: string, db: string, schema: string, tableName: 
 
 const objectMenuRef = ref();
 const connMenuRef = ref();
+const dbMenuRef = ref();
 
 const objectMenuItems = computed(() => {
   const isTable = contextMenu.objectType === 'TABLE';
@@ -1343,6 +1356,77 @@ const connMenuItems = computed(() => {
     class: '!text-rose-400',
     command: () => handlePromptDelete(conn),
   });
+
+  return items;
+});
+
+const dbContextMenu = reactive<{
+  conn: ConnectionProfile | null;
+  database: string;
+}>({
+  conn: null,
+  database: '',
+});
+
+const isExportSchemaModalOpen = ref(false);
+const exportSchemaTarget = reactive<{
+  connId: string;
+  database: string;
+  connName: string;
+}>({
+  connId: '',
+  database: '',
+  connName: '',
+});
+
+function openDbContextMenu(event: MouseEvent, conn: ConnectionProfile, db: string) {
+  dbContextMenu.conn = conn;
+  dbContextMenu.database = db;
+  dbMenuRef.value?.show(event);
+}
+
+function handleOpenExportSchemaModal(conn: ConnectionProfile, database: string) {
+  exportSchemaTarget.connId = conn.id;
+  exportSchemaTarget.database = database;
+  exportSchemaTarget.connName = conn.name;
+  isExportSchemaModalOpen.value = true;
+}
+
+const dbMenuItems = computed(() => {
+  const conn = dbContextMenu.conn;
+  const db = dbContextMenu.database;
+  if (!conn || !db) return [];
+
+  const items: any[] = [
+    {
+      label: db,
+      disabled: true,
+    },
+    { separator: true },
+    {
+      label: '匯出資料庫結構 CSV',
+      icon: 'pi pi-file-export',
+      command: () => handleOpenExportSchemaModal(conn, db),
+    },
+    {
+      label: '重新整理物件 (Refresh)',
+      icon: 'pi pi-refresh',
+      command: () => loadDatabaseTables(conn.id, db, true),
+    },
+  ];
+
+  if (connectionStore.activeConnectionId !== conn.id || connectionStore.activeDatabase !== db) {
+    items.push({
+      label: '設為目前使用資料庫 (USE)',
+      icon: 'pi pi-database',
+      command: async () => {
+        if (connectionStore.activeConnectionId !== conn.id) {
+          await connectionStore.connect(conn.id);
+        }
+        await connectionStore.switchDatabase(db);
+      },
+    });
+  }
 
   return items;
 });

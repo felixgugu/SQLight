@@ -532,6 +532,7 @@ const customCategoryOptions = [
   { label: '常用語法', value: 'basic' },
   { label: 'CTE 語法', value: 'cte' },
   { label: '進階用法', value: 'advanced' },
+  { label: '表結構探勘', value: 'inspection' },
   { label: '診斷維護', value: 'maintenance' },
 ];
 
@@ -548,6 +549,7 @@ const categoryChips = computed<{ category: SqlTemplateCategory; label: string; c
     { category: 'basic', label: '常用語法', count: counts.basic },
     { category: 'cte', label: 'CTE 語法', count: counts.cte },
     { category: 'advanced', label: '進階用法', count: counts.advanced },
+    { category: 'inspection', label: '表結構探勘', count: counts.inspection },
     { category: 'maintenance', label: '診斷維護', count: counts.maintenance },
     { category: 'custom', label: '自訂文件', count: counts.custom },
   ];
@@ -564,6 +566,8 @@ function getCategorySeverity(category: SqlTemplateCategory, isCustom?: boolean):
       return 'info';
     case 'advanced':
       return 'warn';
+    case 'inspection':
+      return 'help';
     case 'maintenance':
       return 'secondary';
     default:

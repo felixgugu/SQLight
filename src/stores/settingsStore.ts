@@ -31,8 +31,6 @@ export interface AppSettings {
   editorHighlightColor: string;
   activeSqlTabBgColor: string;
   activeSqlTabTextColor: string;
-  activeResultTabBgColor: string;
-  activeResultTabTextColor: string;
   erTheme: 'dark' | 'light';
   hiddenTableRules?: FilterRule[];
 }
@@ -55,8 +53,6 @@ const DEFAULT_SETTINGS: AppSettings = {
   editorHighlightColor: '#feffe0',
   activeSqlTabBgColor: '#1e40af',
   activeSqlTabTextColor: '#ffffff',
-  activeResultTabBgColor: '#065f46',
-  activeResultTabTextColor: '#ffffff',
   erTheme: 'dark',
   hiddenTableRules: [],
 };
@@ -98,8 +94,6 @@ export const useSettingsStore = defineStore('settings', () => {
   const editorHighlightColor = ref<string>(initial.editorHighlightColor || '#feffe0');
   const activeSqlTabBgColor = ref<string>(initial.activeSqlTabBgColor || '#1e40af');
   const activeSqlTabTextColor = ref<string>(initial.activeSqlTabTextColor || '#ffffff');
-  const activeResultTabBgColor = ref<string>(initial.activeResultTabBgColor || '#065f46');
-  const activeResultTabTextColor = ref<string>(initial.activeResultTabTextColor || '#ffffff');
   const erTheme = ref<'dark' | 'light'>(initial.erTheme || 'dark');
   const hiddenTableRules = ref<FilterRule[]>(
     initial.hiddenTableRules
@@ -224,8 +218,6 @@ export const useSettingsStore = defineStore('settings', () => {
       editorHighlightColor: editorHighlightColor.value,
       activeSqlTabBgColor: activeSqlTabBgColor.value,
       activeSqlTabTextColor: activeSqlTabTextColor.value,
-      activeResultTabBgColor: activeResultTabBgColor.value,
-      activeResultTabTextColor: activeResultTabTextColor.value,
       erTheme: erTheme.value,
       hiddenTableRules: hiddenTableRules.value,
     };
@@ -253,8 +245,6 @@ export const useSettingsStore = defineStore('settings', () => {
       editorHighlightColor,
       activeSqlTabBgColor,
       activeSqlTabTextColor,
-      activeResultTabBgColor,
-      activeResultTabTextColor,
       erTheme,
       hiddenTableRules,
     ],
@@ -280,8 +270,6 @@ export const useSettingsStore = defineStore('settings', () => {
     editorHighlightColor.value = DEFAULT_SETTINGS.editorHighlightColor;
     activeSqlTabBgColor.value = DEFAULT_SETTINGS.activeSqlTabBgColor;
     activeSqlTabTextColor.value = DEFAULT_SETTINGS.activeSqlTabTextColor;
-    activeResultTabBgColor.value = DEFAULT_SETTINGS.activeResultTabBgColor;
-    activeResultTabTextColor.value = DEFAULT_SETTINGS.activeResultTabTextColor;
     erTheme.value = DEFAULT_SETTINGS.erTheme;
     hiddenTableRules.value = [];
   }
@@ -306,8 +294,6 @@ export const useSettingsStore = defineStore('settings', () => {
     editorHighlightColor,
     activeSqlTabBgColor,
     activeSqlTabTextColor,
-    activeResultTabBgColor,
-    activeResultTabTextColor,
     erTheme,
     hiddenTableRules,
     addFilterRule,

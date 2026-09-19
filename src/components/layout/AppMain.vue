@@ -5,7 +5,7 @@
       @dragover.prevent="handleBarDragOver"
       @dragleave="handleBarDragLeave"
       @drop.prevent="handleBarDrop"
-      class="h-9 bg-dark-850 border-b border-dark-700 flex items-center px-1.5 space-x-1 select-none flex-shrink-0 overflow-hidden transition-colors"
+      class="h-9 bg-dark-850 flex items-center px-1.5 space-x-1 select-none flex-shrink-0 overflow-hidden transition-colors"
       :class="[isBarDragOver ? 'bg-dark-800 ring-1 ring-inset ring-brand-500/40' : '']"
     >
       <!-- Fixed Left: Add New Query Tab Button -->
@@ -104,16 +104,15 @@
           />
 
           <!-- Close Tab Button -->
-          <Button
+          <button
             v-if="editingTabId !== tab.id"
-            icon="pi pi-times"
-            severity="secondary"
-            size="small"
-            text
-            class="!h-4 !w-4 !p-0 !rounded-xs opacity-0 group-hover:opacity-100 hover:!bg-rose-500/20 hover:!text-rose-400 transition-all"
-            v-tooltip.bottom="'關閉分頁 (Close tab)'"
+            type="button"
             @click.stop="workspaceStore.closeTab(tab.id)"
-          />
+            class="p-0.5 rounded transition-opacity flex-shrink-0 opacity-0 group-hover:opacity-100 text-dark-400 hover:text-rose-400 hover:bg-rose-500/15 cursor-pointer"
+            title="關閉分頁 (Close tab)"
+          >
+            <X class="w-2.5 h-2.5" />
+          </button>
         </div>
       </div>
     </div>
@@ -191,7 +190,7 @@ import { ref, reactive, watch, nextTick, onBeforeUnmount, computed } from 'vue';
 import Button from 'primevue/button';
 import Tag from 'primevue/tag';
 import ContextMenu from 'primevue/contextmenu';
-import { FileCode, Table2, TableProperties, Network, Workflow } from 'lucide-vue-next';
+import { FileCode, Table2, TableProperties, Network, Workflow, X } from 'lucide-vue-next';
 import { useWorkspaceStore } from '@/stores/workspaceStore';
 import { useConnectionStore } from '@/stores/connectionStore';
 import { useQueryStore } from '@/stores/queryStore';
@@ -349,7 +348,7 @@ function getTabItemStyle(tab: WorkspaceTab, idx: number) {
 
   if (isDropHover || isDragOver) {
     return {
-      borderTopWidth: '2px',
+      borderTopWidth: '1px',
     };
   }
 
@@ -916,8 +915,8 @@ defineExpose({
 .query-tab-item {
   position: relative;
   background-color: var(--tab-bg);
-  border-top-width: 2px;
-  border-top-color: var(--tab-top-accent);
+  border-top-width: 1px;
+  border-top-color: var(--tab-border);
   border-left-color: var(--tab-border);
   border-right-color: var(--tab-border);
   color: var(--tab-text);
@@ -927,7 +926,7 @@ defineExpose({
 
 .query-tab-item:hover {
   background-color: var(--tab-hover-bg);
-  border-top-color: var(--tab-top-accent);
+  border-top-color: var(--tab-hover-border);
   border-left-color: var(--tab-hover-border);
   border-right-color: var(--tab-hover-border);
   color: var(--tab-hover-text);
@@ -936,6 +935,7 @@ defineExpose({
 .query-tab-item.active-tab {
   background-color: var(--tab-active-surface, rgb(var(--color-dark-900))) !important;
   color: var(--tab-active-text, rgb(var(--color-dark-100))) !important;
+  border-top-color: var(--tab-top-accent) !important;
   border-left-color: rgb(var(--color-dark-700)) !important;
   border-right-color: rgb(var(--color-dark-700)) !important;
   margin-bottom: -1px;

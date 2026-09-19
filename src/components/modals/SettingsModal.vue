@@ -422,90 +422,7 @@
           />
         </div>
 
-        <!-- Active Result Tab Color -->
-        <div class="pt-3 border-t border-dark-800 space-y-3">
-          <div>
-            <label class="font-medium text-dark-100 block">當前查詢結果分頁顏色 (Active Result Tab Colors)</label>
-            <span class="text-xxs text-dark-400">自訂下方查詢結果分頁在選取啟用時的前景文字與背景顏色</span>
-          </div>
 
-          <!-- Color controls: Background & Foreground -->
-          <div class="grid grid-cols-2 gap-3 bg-dark-900 p-2.5 rounded border border-dark-800">
-            <!-- Background Color -->
-            <div class="space-y-1.5">
-              <span class="text-xxs text-dark-300 block font-medium">背景顏色 (Background)</span>
-              <div class="flex items-center space-x-2">
-                <input
-                  type="color"
-                  v-model="settingsStore.activeResultTabBgColor"
-                  class="w-7 h-7 rounded border border-dark-700 bg-dark-900 cursor-pointer p-0.5"
-                  title="選擇背景顏色"
-                />
-                <InputText
-                  v-model="settingsStore.activeResultTabBgColor"
-                  class="w-20 !h-7 !bg-dark-850 !border-dark-700 !text-xs !font-mono text-center uppercase"
-                />
-              </div>
-            </div>
-
-            <!-- Text Color -->
-            <div class="space-y-1.5">
-              <span class="text-xxs text-dark-300 block font-medium">前景文字顏色 (Text Color)</span>
-              <div class="flex items-center space-x-2">
-                <input
-                  type="color"
-                  v-model="settingsStore.activeResultTabTextColor"
-                  class="w-7 h-7 rounded border border-dark-700 bg-dark-900 cursor-pointer p-0.5"
-                  title="選擇文字顏色"
-                />
-                <InputText
-                  v-model="settingsStore.activeResultTabTextColor"
-                  class="w-20 !h-7 !bg-dark-850 !border-dark-700 !text-xs !font-mono text-center uppercase"
-                />
-              </div>
-            </div>
-          </div>
-
-          <!-- Presets & Live Preview -->
-          <div class="flex items-center justify-between pt-1">
-            <!-- Presets -->
-            <div class="flex items-center space-x-1.5">
-              <span class="text-xxs text-dark-400">快速預設:</span>
-              <button
-                v-for="preset in [
-                  { name: 'Forest Emerald', bg: '#065f46', text: '#ffffff' },
-                  { name: 'Deep Teal', bg: '#0f766e', text: '#ffffff' },
-                  { name: 'Royal Blue', bg: '#1e40af', text: '#ffffff' },
-                  { name: 'Indigo Purple', bg: '#4338ca', text: '#ffffff' },
-                  { name: 'Warm Amber', bg: '#92400e', text: '#ffffff' },
-                  { name: 'Rose', bg: '#9f1239', text: '#ffffff' },
-                  { name: 'Dark Slate', bg: '#374151', text: '#ffffff' },
-                ]"
-                :key="preset.bg"
-                type="button"
-                @click="settingsStore.activeResultTabBgColor = preset.bg; settingsStore.activeResultTabTextColor = preset.text"
-                class="w-4 h-4 rounded-full border border-dark-600 hover:scale-110 transition-transform cursor-pointer"
-                :style="{ backgroundColor: preset.bg }"
-                :title="preset.name"
-              />
-            </div>
-
-            <!-- Live Preview Badge -->
-            <div class="flex items-center space-x-1.5 text-xxs">
-              <span class="text-dark-400">預覽:</span>
-              <div
-                class="h-5.5 px-2 flex items-center space-x-1.5 rounded text-xxs font-medium shadow-xs"
-                :style="{
-                  backgroundColor: settingsStore.activeResultTabBgColor,
-                  color: settingsStore.activeResultTabTextColor,
-                }"
-              >
-                <i class="pi pi-bookmark-fill text-amber-300 text-xxs" />
-                <span>1.Users 50r</span>
-              </div>
-            </div>
-          </div>
-        </div>
       </div>
 
       <!-- Tab 3: Table Filter -->
@@ -528,28 +445,99 @@
         </div>
 
         <!-- Keyboard Shortcuts -->
-        <div>
-          <div class="font-semibold text-dark-200 mb-2">常用快捷鍵 (Keyboard Shortcuts)</div>
-          <div class="grid grid-cols-2 gap-2 text-xxs font-mono">
-            <div class="bg-dark-900 p-2 rounded border border-dark-800 flex justify-between items-center">
-              <span class="text-dark-300">執行當前游標 SQL (或選取)</span>
-              <kbd class="bg-dark-800 px-1.5 py-0.5 rounded text-emerald-400 border border-dark-700">Ctrl + Enter</kbd>
+        <div class="space-y-3">
+          <div class="flex items-center justify-between">
+            <span class="font-semibold text-dark-100 text-xs">常用快捷鍵 (Keyboard Shortcuts)</span>
+            <span class="text-xxs text-dark-500 font-mono">支援 macOS (Cmd ⌘) 與 Windows/Linux (Ctrl)</span>
+          </div>
+
+          <div class="grid grid-cols-2 gap-2.5 text-xxs font-mono">
+            <!-- Group 1: 查詢執行與中斷 -->
+            <div class="bg-dark-900 p-2.5 rounded border border-dark-800 space-y-2">
+              <div class="text-[11px] font-semibold text-emerald-400 flex items-center space-x-1.5 pb-1 border-b border-dark-800">
+                <i class="pi pi-play text-xs"></i>
+                <span>查詢執行與中斷</span>
+              </div>
+              <div class="flex justify-between items-center py-0.5">
+                <span class="text-dark-300">執行當前語句 (或選取)</span>
+                <kbd class="bg-dark-800 px-1.5 py-0.5 rounded text-emerald-400 border border-dark-700">Ctrl + Enter</kbd>
+              </div>
+              <div class="flex justify-between items-center py-0.5">
+                <span class="text-dark-300">執行整頁所有 SQL</span>
+                <kbd class="bg-dark-800 px-1.5 py-0.5 rounded text-emerald-400 border border-dark-700">Ctrl+Shift+Enter</kbd>
+              </div>
+              <div class="flex justify-between items-center py-0.5">
+                <span class="text-dark-300">中斷並取消執行中查詢</span>
+                <kbd class="bg-dark-800 px-1.5 py-0.5 rounded text-rose-400 border border-dark-700">Esc / Alt+Pause</kbd>
+              </div>
             </div>
-            <div class="bg-dark-900 p-2 rounded border border-dark-800 flex justify-between items-center">
-              <span class="text-dark-300">執行全部頁面 SQL</span>
-              <kbd class="bg-dark-800 px-1.5 py-0.5 rounded text-emerald-400 border border-dark-700">Ctrl+Shift+Enter</kbd>
+
+            <!-- Group 2: 分頁與檔案操作 -->
+            <div class="bg-dark-900 p-2.5 rounded border border-dark-800 space-y-2">
+              <div class="text-[11px] font-semibold text-sky-400 flex items-center space-x-1.5 pb-1 border-b border-dark-800">
+                <i class="pi pi-folder text-xs"></i>
+                <span>分頁與檔案操作</span>
+              </div>
+              <div class="flex justify-between items-center py-0.5">
+                <span class="text-dark-300">新增 SQL 查詢分頁</span>
+                <kbd class="bg-dark-800 px-1.5 py-0.5 rounded text-sky-300 border border-dark-700">Ctrl + N</kbd>
+              </div>
+              <div class="flex justify-between items-center py-0.5">
+                <span class="text-dark-300">另存 / 儲存 SQL 檔案</span>
+                <kbd class="bg-dark-800 px-1.5 py-0.5 rounded text-sky-300 border border-dark-700">Ctrl + S</kbd>
+              </div>
+              <div class="flex justify-between items-center py-0.5">
+                <span class="text-dark-300">開啟本機 SQL 檔案</span>
+                <kbd class="bg-dark-800 px-1.5 py-0.5 rounded text-sky-300 border border-dark-700">Ctrl + O</kbd>
+              </div>
             </div>
-            <div class="bg-dark-900 p-2 rounded border border-dark-800 flex justify-between items-center">
-              <span class="text-dark-300">向下快速複製 (行/選取塊)</span>
-              <kbd class="bg-dark-800 px-1.5 py-0.5 rounded text-dark-200 border border-dark-700">Ctrl + D</kbd>
+
+            <!-- Group 3: 編輯器輔助與格式化 -->
+            <div class="bg-dark-900 p-2.5 rounded border border-dark-800 space-y-2">
+              <div class="text-[11px] font-semibold text-amber-400 flex items-center space-x-1.5 pb-1 border-b border-dark-800">
+                <i class="pi pi-code text-xs"></i>
+                <span>編輯器與格式化</span>
+              </div>
+              <div class="flex justify-between items-center py-0.5">
+                <span class="text-dark-300">程式碼智慧自動補全</span>
+                <kbd class="bg-dark-800 px-1.5 py-0.5 rounded text-amber-300 border border-dark-700">Ctrl + Space</kbd>
+              </div>
+              <div class="flex justify-between items-center py-0.5">
+                <span class="text-dark-300">格式化 SQL (選取/當前語句)</span>
+                <kbd class="bg-dark-800 px-1.5 py-0.5 rounded text-amber-300 border border-dark-700">Shift+Alt+F</kbd>
+              </div>
+              <div class="flex justify-between items-center py-0.5">
+                <span class="text-dark-300">向下快速複製 (行/選取塊)</span>
+                <kbd class="bg-dark-800 px-1.5 py-0.5 rounded text-dark-200 border border-dark-700">Ctrl + D</kbd>
+              </div>
+              <div class="flex justify-between items-center py-0.5">
+                <span class="text-dark-300">尋找 / 替換程式碼</span>
+                <kbd class="bg-dark-800 px-1.5 py-0.5 rounded text-dark-200 border border-dark-700">Ctrl+F / Ctrl+H</kbd>
+              </div>
             </div>
-            <div class="bg-dark-900 p-2 rounded border border-dark-800 flex justify-between items-center">
-              <span class="text-dark-300">格式化 SQL (選取/當前語句)</span>
-              <kbd class="bg-dark-800 px-1.5 py-0.5 rounded text-dark-200 border border-dark-700">Shift+Alt+F</kbd>
-            </div>
-            <div class="bg-dark-900 p-2 rounded border border-dark-800 flex justify-between items-center">
-              <span class="text-dark-300">程式碼智慧自動補全</span>
-              <kbd class="bg-dark-800 px-1.5 py-0.5 rounded text-dark-200 border border-dark-700">Ctrl + Space</kbd>
+
+            <!-- Group 4: 檢索、結果與圖表 -->
+            <div class="bg-dark-900 p-2.5 rounded border border-dark-800 space-y-2">
+              <div class="text-[11px] font-semibold text-cyan-400 flex items-center space-x-1.5 pb-1 border-b border-dark-800">
+                <i class="pi pi-search text-xs"></i>
+                <span>檢索、結果與圖表</span>
+              </div>
+              <div class="flex justify-between items-center py-0.5">
+                <span class="text-dark-300">快速物件檢索器 (Spotlight)</span>
+                <kbd class="bg-dark-800 px-1.5 py-0.5 rounded text-cyan-300 border border-dark-700">Ctrl + P</kbd>
+              </div>
+              <div class="flex justify-between items-center py-0.5">
+                <span class="text-dark-300">查詢結果 - 複製選取儲存格</span>
+                <kbd class="bg-dark-800 px-1.5 py-0.5 rounded text-indigo-300 border border-dark-700">Ctrl + C</kbd>
+              </div>
+              <div class="flex justify-between items-center py-0.5">
+                <span class="text-dark-300">查詢結果 - 全選所有資料列</span>
+                <kbd class="bg-dark-800 px-1.5 py-0.5 rounded text-indigo-300 border border-dark-700">Ctrl + A</kbd>
+              </div>
+              <div class="flex justify-between items-center py-0.5">
+                <span class="text-dark-300">ER 關聯圖 - 刪除所選元素</span>
+                <kbd class="bg-dark-800 px-1.5 py-0.5 rounded text-dark-200 border border-dark-700">Del / Backspace</kbd>
+              </div>
             </div>
           </div>
         </div>

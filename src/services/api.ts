@@ -89,7 +89,8 @@ function mockInvoke<T>(cmd: string, args?: Record<string, unknown>): Promise<T> 
 
     case 'execute_query': {
       const sql = ((args?.sql as string) || '').trim();
-      const isSelect = sql.toUpperCase().startsWith('SELECT');
+      const upper = sql.toUpperCase();
+      const isSelect = upper.startsWith('SELECT') || upper.startsWith('USE') && upper.includes('SELECT');
 
       if (!isSelect) {
         return Promise.resolve({
@@ -103,6 +104,98 @@ function mockInvoke<T>(cmd: string, args?: Record<string, unknown>): Promise<T> 
           ],
           affectedRows: 1,
           executionTimeMs: 16,
+        } as unknown as T);
+      }
+
+      if (sql.includes('sys.columns') && sql.includes('sys.tables')) {
+        return Promise.resolve({
+          resultSets: [
+            {
+              columns: [
+                { name: 'Schema', dataType: 'nvarchar', nullable: false, ordinal: 0 },
+                { name: 'Table', dataType: 'nvarchar', nullable: false, ordinal: 1 },
+                { name: 'Column', dataType: 'nvarchar', nullable: false, ordinal: 2 },
+                { name: 'ColId', dataType: 'int', nullable: false, ordinal: 3 },
+                { name: 'Type', dataType: 'nvarchar', nullable: false, ordinal: 4 },
+                { name: 'ByteLen', dataType: 'smallint', nullable: false, ordinal: 5 },
+                { name: 'Precision', dataType: 'tinyint', nullable: false, ordinal: 6 },
+                { name: 'Scale', dataType: 'tinyint', nullable: false, ordinal: 7 },
+                { name: 'Nullable', dataType: 'bit', nullable: false, ordinal: 8 },
+                { name: 'Identity', dataType: 'bit', nullable: false, ordinal: 9 },
+                { name: 'DefaultValue', dataType: 'nvarchar', nullable: false, ordinal: 10 },
+                { name: 'Collation', dataType: 'nvarchar', nullable: false, ordinal: 11 },
+              ],
+              rows: [
+                ['dbo', 'Users', 'Id', 1, 'int', 4, 10, 0, false, true, '', ''],
+                ['dbo', 'Users', 'Username', 2, 'nvarchar', 100, 0, 0, false, false, '', 'Chinese_Taiwan_Stroke_CI_AS'],
+                ['dbo', 'Users', 'Email', 3, 'nvarchar', 200, 0, 0, true, false, '', 'Chinese_Taiwan_Stroke_CI_AS'],
+                ['dbo', 'Users', 'CreatedAt', 4, 'datetime2', 8, 27, 7, false, false, '(sysdatetime())', ''],
+                ['dbo', 'Orders', 'OrderId', 1, 'int', 4, 10, 0, false, true, '', ''],
+                ['dbo', 'Orders', 'UserId', 2, 'int', 4, 10, 0, false, false, '', ''],
+                ['dbo', 'Orders', 'TotalAmount', 3, 'decimal', 9, 18, 2, false, false, '((0))', ''],
+                ['dbo', 'Orders', 'Status', 4, 'varchar', 20, 0, 0, false, false, "('PENDING')", 'Chinese_Taiwan_Stroke_CI_AS'],
+              ],
+              rowCount: 8,
+            },
+          ],
+          messages: [],
+          affectedRows: 8,
+          executionTimeMs: 24,
+        } as unknown as T);
+      }
+
+      if (sql.includes('sys.indexes')) {
+        return Promise.resolve({
+          resultSets: [
+            {
+              columns: [
+                { name: 'Schema', dataType: 'nvarchar', nullable: false, ordinal: 0 },
+                { name: 'Table', dataType: 'nvarchar', nullable: false, ordinal: 1 },
+                { name: 'IndexName', dataType: 'nvarchar', nullable: false, ordinal: 2 },
+                { name: 'IndexType', dataType: 'nvarchar', nullable: false, ordinal: 3 },
+                { name: 'IsUnique', dataType: 'bit', nullable: false, ordinal: 4 },
+                { name: 'IsPK', dataType: 'bit', nullable: false, ordinal: 5 },
+                { name: 'KeyColumns', dataType: 'nvarchar', nullable: false, ordinal: 6 },
+                { name: 'IncludedColumns', dataType: 'nvarchar', nullable: false, ordinal: 7 },
+              ],
+              rows: [
+                ['dbo', 'Users', 'PK_Users', 'CLUSTERED', true, true, 'Id ASC', ''],
+                ['dbo', 'Users', 'IX_Users_Email', 'NONCLUSTERED', true, false, 'Email ASC', 'Username'],
+                ['dbo', 'Orders', 'PK_Orders', 'CLUSTERED', true, true, 'OrderId ASC', ''],
+                ['dbo', 'Orders', 'IX_Orders_UserId', 'NONCLUSTERED', false, false, 'UserId ASC', 'Status, TotalAmount'],
+              ],
+              rowCount: 4,
+            },
+          ],
+          messages: [],
+          affectedRows: 4,
+          executionTimeMs: 18,
+        } as unknown as T);
+      }
+
+      if (sql.includes('sys.sql_modules')) {
+        return Promise.resolve({
+          resultSets: [
+            {
+              columns: [
+                { name: 'Schema', dataType: 'nvarchar', nullable: false, ordinal: 0 },
+                { name: 'ObjectName', dataType: 'nvarchar', nullable: false, ordinal: 1 },
+                { name: 'ObjectType', dataType: 'nvarchar', nullable: false, ordinal: 2 },
+                { name: 'CreateDate', dataType: 'datetime', nullable: false, ordinal: 3 },
+                { name: 'ModifyDate', dataType: 'datetime', nullable: false, ordinal: 4 },
+                { name: 'CodeHash', dataType: 'nvarchar', nullable: false, ordinal: 5 },
+              ],
+              rows: [
+                ['dbo', 'vw_ActiveUsers', 'VIEW', '2026-01-01 10:00:00', '2026-02-15 14:20:00', 'E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855'],
+                ['dbo', 'usp_GetUserOrders', 'SQL_STORED_PROCEDURE', '2026-01-10 11:30:00', '2026-03-01 09:12:00', 'CA978112CA1BBDCAFAC231B39A23DC4DA786EFF8147C4E72B9807785AFEE48BB'],
+                ['dbo', 'fn_CalculateTax', 'SQL_SCALAR_FUNCTION', '2026-01-12 16:45:00', '2026-01-12 16:45:00', '4E07408562BEDB8B60CE05C1DECFE3AD16B72230967DE01F640B7E4729B49FCE'],
+              ],
+              rowCount: 3,
+            },
+          ],
+          messages: [],
+          affectedRows: 3,
+          executionTimeMs: 22,
         } as unknown as T);
       }
 

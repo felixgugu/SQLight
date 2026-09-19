@@ -676,6 +676,8 @@ export const useQueryStore = defineStore('query', () => {
         resultTabs.value.splice(firstUnpinnedIdx, 0, tab);
       }
     }
+
+    activeResultTabId.value = id;
   }
 
   function reorderResultTabs(fromIndex: number, toIndex: number) {

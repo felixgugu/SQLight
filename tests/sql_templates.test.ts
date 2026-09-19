@@ -14,7 +14,7 @@ test('BUILTIN_SQL_TEMPLATES integrity: all items have required fields and unique
   assert.ok(BUILTIN_SQL_TEMPLATES.length >= 10, 'Expected at least 10 built-in templates');
 
   const idSet = new Set<string>();
-  const validCategories = new Set(['basic', 'cte', 'advanced', 'maintenance']);
+  const validCategories = new Set(['basic', 'cte', 'advanced', 'maintenance', 'inspection']);
 
   for (const t of BUILTIN_SQL_TEMPLATES) {
     assert.ok(t.id && t.id.trim().length > 0, `Template missing valid id: ${JSON.stringify(t)}`);
@@ -29,12 +29,18 @@ test('BUILTIN_SQL_TEMPLATES integrity: all items have required fields and unique
   }
 });
 
-test('BUILTIN_SQL_TEMPLATES covers required categories: Basic, CTE, Advanced, and Maintenance', () => {
+test('BUILTIN_SQL_TEMPLATES covers required categories: Basic, CTE, Advanced, Maintenance, and Inspection', () => {
   const categories = new Set(BUILTIN_SQL_TEMPLATES.map((t) => t.category));
   assert.ok(categories.has('basic'), 'Must include basic templates');
   assert.ok(categories.has('cte'), 'Must include CTE templates');
   assert.ok(categories.has('advanced'), 'Must include advanced templates');
   assert.ok(categories.has('maintenance'), 'Must include maintenance templates');
+  assert.ok(categories.has('inspection'), 'Must include inspection templates');
+
+  const inspectionTemplates = BUILTIN_SQL_TEMPLATES.filter((t) => t.category === 'inspection');
+  assert.ok(inspectionTemplates.length >= 10, 'Must include table inspection templates');
+  assert.ok(inspectionTemplates.some((t) => t.id === 'inspect-table-all-in-one'));
+  assert.ok(inspectionTemplates.some((t) => t.id === 'inspect-columns-schema'));
 
   const cteTemplates = BUILTIN_SQL_TEMPLATES.filter((t) => t.category === 'cte');
   assert.ok(cteTemplates.some((t) => t.title.includes('遞迴')), 'Must include recursive CTE template');
@@ -59,6 +65,10 @@ test('sqlTemplateStore: category filtering correctly narrows templates', () => {
   store.activeCategory = 'basic';
   assert.ok(store.filteredTemplates.length > 0);
   assert.ok(store.filteredTemplates.every((t) => t.category === 'basic'));
+
+  store.activeCategory = 'inspection';
+  assert.ok(store.filteredTemplates.length > 0);
+  assert.ok(store.filteredTemplates.every((t) => t.category === 'inspection'));
 });
 
 test('sqlTemplateStore: keyword search matches across title, tags, description, and code', () => {

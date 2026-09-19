@@ -1,5 +1,6 @@
 import * as monaco from 'monaco-editor';
 import EditorWorker from './editorWorker?worker';
+import { SURFACE_PALETTES } from '../services/themeManager';
 
 self.MonacoEnvironment = {
   getWorker: function (_moduleId: unknown, _label: string) {
@@ -7,7 +8,9 @@ self.MonacoEnvironment = {
   },
 };
 
-export function ensureSqlightTheme() {
+export function ensureSqlightTheme(surfaceName = 'slate') {
+  const pal = (SURFACE_PALETTES[surfaceName] ?? SURFACE_PALETTES['slate'])!;
+
   monaco.editor.defineTheme('sqlight-dark', {
     base: 'vs-dark',
     inherit: true,
@@ -19,11 +22,11 @@ export function ensureSqlightTheme() {
       { token: 'operator.sql', foreground: 'f472b6' },
     ],
     colors: {
-      'editor.background': '#141418',
-      'editor.foreground': '#f0f0f5',
-      'editorLineNumber.foreground': '#4b5563',
+      'editor.background': pal['900'],
+      'editor.foreground': pal['100'],
+      'editorLineNumber.foreground': pal['500'],
       'editorLineNumber.activeForeground': '#93c5fd',
-      'editor.lineHighlightBackground': '#1e1e26',
+      'editor.lineHighlightBackground': pal['800'],
       'editor.selectionBackground': '#2563eb40',
       'editorCursor.foreground': '#60a5fa',
     },
@@ -41,10 +44,10 @@ export function ensureSqlightTheme() {
     ],
     colors: {
       'editor.background': '#ffffff',
-      'editor.foreground': '#0f172a',
-      'editorLineNumber.foreground': '#94a3b8',
+      'editor.foreground': pal['900'],
+      'editorLineNumber.foreground': pal['400'],
       'editorLineNumber.activeForeground': '#2563eb',
-      'editor.lineHighlightBackground': '#f1f5f9',
+      'editor.lineHighlightBackground': pal['100'],
       'editor.selectionBackground': '#bfdbfe80',
       'editorCursor.foreground': '#2563eb',
     },
@@ -53,6 +56,16 @@ export function ensureSqlightTheme() {
 
 // Automatically register theme on module load
 ensureSqlightTheme();
+
+// Listen for surface changes and update Monaco theme dynamically
+if (typeof window !== 'undefined') {
+  window.addEventListener('sqlight:surface-changed', (e: any) => {
+    const surfaceName = e.detail?.surface || 'slate';
+    ensureSqlightTheme(surfaceName);
+    const isDark = document.documentElement.classList.contains('dark');
+    monaco.editor.setTheme(isDark ? 'sqlight-dark' : 'sqlight-light');
+  });
+}
 
 export { monaco };
 

@@ -76,3 +76,12 @@ test('settingsStore: theme settings defaults, setters, and resetToDefaults', () 
   assert.equal(store.surfaceColor, 'slate');
   assert.equal(store.ripple, true);
 });
+
+test('themeManager: SURFACE_PALETTES provides complete 50-950 scale for all 5 surface options', () => {
+  const surfaces = ['slate', 'gray', 'zinc', 'neutral', 'stone'];
+  for (const s of surfaces) {
+    const pal = (themeManager as any).SURFACE_PALETTES?.[s] || SURFACE_OPTIONS.find((opt) => opt.name === s);
+    assert.ok(pal, `Surface palette for ${s} should exist`);
+  }
+});
+

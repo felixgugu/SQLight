@@ -67,7 +67,7 @@
           v-if="queryStore.resultTabs.length > 0"
           ref="resultsTabsBarRef"
           @wheel="handleResultTabsWheel"
-          class="h-7 bg-dark-850 border-b border-dark-750 flex items-center px-1.5 space-x-1.5 overflow-x-auto select-none flex-shrink-0"
+          class="h-9 bg-dark-850 border-b border-dark-750 flex items-end px-1.5 space-x-1.5 overflow-x-auto overflow-y-hidden select-none flex-shrink-0"
         >
           <div
             v-for="(rtab, idx) in queryStore.resultTabs"
@@ -76,10 +76,10 @@
             @click="handleTabClick(rtab.id)"
             @contextmenu.prevent="openTabContextMenu($event, rtab)"
             :class="[
-              'result-tab-item h-5.5 px-2 flex items-center space-x-1.5 text-xxs rounded cursor-grab active:cursor-grabbing transition-all duration-100 group max-w-[220px] border flex-shrink-0 select-none touch-none',
+              'result-tab-item h-7 px-2 flex items-center space-x-1.5 text-xxs rounded-t cursor-grab active:cursor-grabbing transition-all duration-100 group max-w-[220px] border flex-shrink-0 select-none touch-none',
               queryStore.activeResultTabId === rtab.id
                 ? 'font-medium shadow-xs border-dark-600'
-                : 'bg-dark-800/80 text-dark-400 hover:text-dark-200 border-transparent hover:bg-dark-800',
+                : 'bg-dark-800/80 text-dark-400 hover:text-dark-200 border-dark-700 hover:border-dark-600 hover:bg-dark-800',
               isPointerDragging && dragSourceIndex === idx ? 'opacity-35 border-dashed border-brand-400 scale-95' : '',
               dropHoverIndex === idx && isPointerDragging && dropHoverIndex !== dragSourceIndex ? 'border-brand-400 bg-brand-500/25 ring-1 ring-brand-400 scale-102' : ''
             ]"
@@ -145,7 +145,7 @@
                 'p-0.5 rounded transition-opacity flex-shrink-0',
                 queryStore.resultTabs.length <= 1
                   ? 'opacity-20 cursor-not-allowed text-dark-600'
-                  : (queryStore.activeResultTabId === rtab.id ? 'text-dark-400 hover:text-rose-400 hover:bg-rose-500/15' : 'text-dark-500 hover:text-dark-200 hover:bg-dark-700 opacity-0 group-hover:opacity-100 cursor-pointer')
+                  : (queryStore.activeResultTabId === rtab.id ? 'text-dark-400 hover:text-rose-400 hover:bg-rose-500/15' : 'text-dark-400 hover:text-rose-400 hover:bg-rose-500/15 opacity-0 group-hover:opacity-100 cursor-pointer')
               ]"
               :title="queryStore.resultTabs.length <= 1 ? '最後一個查詢結果不可刪除' : '關閉此結果'"
             >
@@ -465,15 +465,15 @@ function getResultTabStyle(rtab: QueryResultTab) {
   const isActive = queryStore.activeResultTabId === rtab.id;
   if (!isActive) return {};
 
-  const isCustomBg = Boolean(settingsStore.activeResultTabBgColor && settingsStore.activeResultTabBgColor !== '#065f46');
-  const isCustomText = Boolean(settingsStore.activeResultTabTextColor && settingsStore.activeResultTabTextColor !== '#ffffff');
+  const isCustomBg = Boolean(settingsStore.activeSqlTabBgColor && settingsStore.activeSqlTabBgColor !== '#1e40af');
+  const isCustomText = Boolean(settingsStore.activeSqlTabTextColor && settingsStore.activeSqlTabTextColor !== '#ffffff');
 
   if (isCustomBg || isCustomText) {
     return {
-      backgroundColor: settingsStore.activeResultTabBgColor,
-      color: settingsStore.activeResultTabTextColor,
-      borderColor: settingsStore.activeResultTabBgColor,
-      borderTopColor: settingsStore.activeResultTabBgColor,
+      backgroundColor: settingsStore.activeSqlTabBgColor,
+      color: settingsStore.activeSqlTabTextColor,
+      borderColor: settingsStore.activeSqlTabBgColor,
+      borderTopColor: settingsStore.activeSqlTabBgColor,
     };
   }
 
@@ -482,8 +482,8 @@ function getResultTabStyle(rtab: QueryResultTab) {
     backgroundColor: isLight ? '#ffffff' : 'rgb(var(--color-dark-900))',
     color: isLight ? '#0f172a' : 'rgb(var(--color-dark-100))',
     borderColor: 'rgb(var(--color-dark-700))',
-    borderTopColor: 'var(--p-primary-color, #10b981)',
-    borderTopWidth: '2px',
+    borderTopColor: 'var(--p-primary-color, #3b82f6)',
+    borderTopWidth: '1px',
   };
 }
 </script>

@@ -24,7 +24,7 @@
             optionLabel="label"
             optionValue="value"
             size="small"
-            class="w-full text-xs"
+            class="w-full !text-xs !h-7"
           />
         </div>
 
@@ -37,7 +37,7 @@
             size="small"
             @keydown.enter="handleAddRule"
             :invalid="!!patternError"
-            class="w-full font-mono text-xs"
+            class="w-full font-mono !text-xs !h-7 placeholder:!text-[11px] placeholder:!text-dark-500"
           />
         </div>
 
@@ -49,7 +49,7 @@
             placeholder="說明備註 (選填，例: 系統庫)"
             size="small"
             @keydown.enter="handleAddRule"
-            class="w-full text-xs"
+            class="w-full !text-xs !h-7 placeholder:!text-[11px] placeholder:!text-dark-500"
           />
         </div>
 
@@ -62,7 +62,7 @@
             size="small"
             @click="handleAddRule"
             :disabled="!newPattern.trim() || !!patternError"
-            class="w-full"
+            class="w-full !h-7 !text-xs !py-0"
           />
         </div>
       </div>
@@ -105,7 +105,7 @@
                   optionLabel="label"
                   optionValue="value"
                   size="small"
-                  class="w-full text-xs"
+                  class="w-full !text-xs !h-7"
                 />
               </div>
 
@@ -119,7 +119,7 @@
                   @keydown.enter="saveEditing"
                   @keydown.esc="cancelEditing"
                   :invalid="!!editPatternError"
-                  class="w-full font-mono text-xs"
+                  class="w-full font-mono !text-xs !h-7 placeholder:!text-[11px] placeholder:!text-dark-500"
                 />
               </div>
 
@@ -132,7 +132,7 @@
                   size="small"
                   @keydown.enter="saveEditing"
                   @keydown.esc="cancelEditing"
-                  class="w-full text-xs"
+                  class="w-full !text-xs !h-7 placeholder:!text-[11px] placeholder:!text-dark-500"
                 />
               </div>
 
@@ -259,7 +259,7 @@
           type="text"
           :placeholder="testTargetType === 'database' ? '輸入資料庫名稱 (例: tempdb 或 DB_bak)' : '輸入資料表名稱 (例: bak_Orders 或 dbo.tmp_logs)'"
           size="small"
-          class="flex-1 font-mono text-xs"
+          class="flex-1 font-mono !text-xs !h-7 placeholder:!text-[11px] placeholder:!text-dark-500"
         />
         <div v-if="testName.trim()" class="flex-shrink-0">
           <Tag
@@ -377,3 +377,29 @@ function handleAddRule() {
   newDescription.value = '';
 }
 </script>
+
+<style scoped>
+:deep(.p-inputtext) {
+  font-size: 12px !important;
+}
+
+:deep(.p-inputtext::placeholder) {
+  font-size: 11px !important;
+  color: rgb(var(--color-dark-500, 100 116 139)) !important;
+}
+
+:deep(.p-select) {
+  font-size: 12px !important;
+}
+
+:deep(.p-select-label) {
+  font-size: 12px !important;
+  padding-top: 0.25rem !important;
+  padding-bottom: 0.25rem !important;
+}
+
+:deep(.p-select-label.p-placeholder) {
+  font-size: 11px !important;
+}
+</style>
+

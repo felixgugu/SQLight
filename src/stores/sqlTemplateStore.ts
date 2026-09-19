@@ -30,6 +30,7 @@ export const useSqlTemplateStore = defineStore('sqlTemplate', () => {
       cte: 0,
       advanced: 0,
       maintenance: 0,
+      inspection: 0,
       custom: 0,
     };
 

@@ -1,4 +1,4 @@
-export type SqlTemplateCategory = 'all' | 'basic' | 'cte' | 'advanced' | 'maintenance' | 'custom';
+export type SqlTemplateCategory = 'all' | 'basic' | 'cte' | 'advanced' | 'maintenance' | 'inspection' | 'custom';
 
 export interface SqlTemplate {
   id: string;

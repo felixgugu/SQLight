@@ -184,24 +184,18 @@ test('settingsStore includes customizable active tab colors with proper defaults
 
   assert.equal(store.activeSqlTabBgColor, '#1e40af');
   assert.equal(store.activeSqlTabTextColor, '#ffffff');
-  assert.equal(store.activeResultTabBgColor, '#065f46');
-  assert.equal(store.activeResultTabTextColor, '#ffffff');
 
   // Customize values
   store.activeSqlTabBgColor = '#9333ea';
   store.activeSqlTabTextColor = '#fef08a';
-  store.activeResultTabBgColor = '#b91c1c';
-  store.activeResultTabTextColor = '#f3f4f6';
 
   assert.equal(store.activeSqlTabBgColor, '#9333ea');
-  assert.equal(store.activeResultTabBgColor, '#b91c1c');
+  assert.equal(store.activeSqlTabTextColor, '#fef08a');
 
   // Reset to defaults
   store.resetToDefaults();
   assert.equal(store.activeSqlTabBgColor, '#1e40af');
   assert.equal(store.activeSqlTabTextColor, '#ffffff');
-  assert.equal(store.activeResultTabBgColor, '#065f46');
-  assert.equal(store.activeResultTabTextColor, '#ffffff');
 });
 
 test('addErDiagramTab adds an er_diagram tab at index 0 and activates it', () => {

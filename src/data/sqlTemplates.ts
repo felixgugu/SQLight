@@ -1,4 +1,5 @@
 import type { SqlTemplate } from '@/types/sqlTemplate';
+import { TABLE_INSPECTION_TEMPLATES } from './tableInspectionTemplates';
 
 export const BUILTIN_SQL_TEMPLATES: SqlTemplate[] = [
   // ==========================================
@@ -780,4 +781,10 @@ CROSS APPLY sys.dm_exec_sql_text(r.sql_handle) t
 WHERE r.blocking_session_id <> 0;
 `,
   },
+
+  // ==========================================
+  // 5. 表結構探勘 (Table Inspection & Profile)
+  // ==========================================
+  ...TABLE_INSPECTION_TEMPLATES,
 ];
+
