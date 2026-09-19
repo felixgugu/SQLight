@@ -1,0 +1,634 @@
+<template>
+  <Teleport to="body">
+    <!-- AI SQL Assistant Floating Window -->
+    <div
+      v-if="aiChatStore.isChatOpen && !aiChatStore.isMinimized"
+      ref="panelRef"
+      class="fixed z-[9995] flex flex-col font-sans select-none overflow-hidden"
+      :class="[
+        isMaximized
+          ? 'inset-0 w-screen h-screen rounded-none border-0 shadow-none'
+          : 'rounded-xl border border-dark-700 shadow-2xl bg-dark-850 dark:bg-[#18181f]'
+      ]"
+      :style="isMaximized ? { top: 0, left: 0, width: '100vw', height: '100vh' } : {
+        top: `${pos.top}px`,
+        left: `${pos.left}px`,
+        width: `${size.width}px`,
+        height: `${size.height}px`,
+      }"
+    >
+      <!-- Top Header / Drag Titlebar -->
+      <div
+        class="h-10 px-3 bg-dark-850 dark:bg-[#141418] border-b border-dark-750 dark:border-dark-700 flex items-center justify-between flex-shrink-0"
+        :class="isMaximized ? 'cursor-default' : 'cursor-move'"
+        @pointerdown="handleTitlePointerDown"
+        @dblclick="toggleMaximize"
+      >
+        <div class="flex items-center space-x-2">
+          <i
+            class="pi pi-sparkles text-sm"
+            :class="aiChatStore.isGenerating ? 'animate-spin text-purple-400' : 'text-purple-400'"
+          />
+          <span class="text-xs font-semibold text-dark-100">AI SQL 智能助理</span>
+        </div>
+
+        <!-- 視窗控制按鈕組 (點擊不觸發拖曳) -->
+        <div class="flex items-center space-x-1" @pointerdown.stop>
+          <Button
+            icon="pi pi-trash"
+            severity="secondary"
+            text
+            rounded
+            size="small"
+            v-tooltip.top="'清除對話記錄'"
+            class="!w-7 !h-7 !p-0"
+            @click="aiChatStore.clearHistory()"
+          />
+          <Button
+            :icon="isMaximized ? 'pi pi-window-minimize' : 'pi pi-window-maximize'"
+            severity="secondary"
+            text
+            rounded
+            size="small"
+            v-tooltip.top="isMaximized ? '還原大小' : '最大化視窗 (100vw 100vh)'"
+            class="!w-7 !h-7 !p-0"
+            @click="toggleMaximize"
+          />
+          <Button
+            icon="pi pi-minus"
+            severity="secondary"
+            text
+            rounded
+            size="small"
+            v-tooltip.top="'最小化至浮動膠囊 (可繼續背景分析)'"
+            class="!w-7 !h-7 !p-0"
+            @click="aiChatStore.toggleMinimize()"
+          />
+          <Button
+            icon="pi pi-times"
+            severity="secondary"
+            text
+            rounded
+            size="small"
+            v-tooltip.top="'關閉視窗'"
+            class="!w-7 !h-7 !p-0 hover:text-rose-400"
+            @click="aiChatStore.closeChat()"
+          />
+        </div>
+      </div>
+
+      <!-- Main Chat Body -->
+      <div class="flex-1 flex flex-col overflow-hidden bg-dark-900 dark:bg-[#141418]">
+        <!-- 附帶 SQL 標籤欄 -->
+        <div
+          v-if="aiChatStore.currentSql"
+          class="flex items-center justify-between px-3 py-1.5 border-b border-dark-750 dark:border-dark-800 bg-dark-850/60 dark:bg-[#18181f]/80 text-xs flex-shrink-0"
+        >
+          <div class="flex items-center space-x-2 truncate">
+            <Tag
+              :value="aiChatStore.isSelectionOnly ? '選取範圍 SQL' : '整頁 SQL'"
+              severity="info"
+              class="!text-[10px] !py-0.5 !px-1.5"
+            />
+            <span class="text-dark-400 truncate max-w-[360px] font-mono">
+              {{ sqlPreviewText }}
+            </span>
+          </div>
+          <Button
+            icon="pi pi-times"
+            severity="secondary"
+            text
+            rounded
+            size="small"
+            v-tooltip.top="'移除附加 SQL'"
+            class="!w-5 !h-5 !p-0"
+            @click="aiChatStore.clearSqlContext()"
+          />
+        </div>
+
+        <!-- 訊息列表 -->
+        <div ref="messagesContainerRef" class="flex-1 overflow-y-auto p-4 space-y-4 text-xs select-text">
+          <!-- 歡迎提示 -->
+          <div
+            v-if="aiChatStore.messages.length === 0"
+            class="flex flex-col items-center justify-center h-full text-center p-6 space-y-3 opacity-80 select-none"
+          >
+            <div class="w-12 h-12 rounded-full flex items-center justify-center bg-dark-800 text-purple-400">
+              <i class="pi pi-sparkles text-xl" />
+            </div>
+            <div>
+              <h4 class="font-semibold text-sm text-dark-100">歡迎使用 SQLight AI 智能助手</h4>
+              <p class="text-dark-400 mt-1 max-w-sm leading-relaxed text-xs">
+                選取 SQL 語法後點選下方快捷分析，或直接在輸入框提出針對 T-SQL 最佳化、執行計畫或除錯的疑問。
+              </p>
+            </div>
+          </div>
+
+          <!-- 對話項目 -->
+          <template v-for="(msg, idx) in aiChatStore.messages" :key="msg.id || idx">
+            <!-- 使用者訊息 -->
+            <div v-if="msg.role === 'user'" class="flex flex-col items-end space-y-1">
+              <div
+                class="max-w-[85%] rounded-lg px-3.5 py-2.5 shadow-sm text-xs leading-relaxed"
+                :style="{
+                  backgroundColor: 'var(--p-primary-color, #3b82f6)',
+                  color: 'var(--p-primary-contrast-color, #ffffff)',
+                }"
+              >
+                <div v-if="msg.sqlContext" class="mb-2 pb-1.5 border-b border-white/20 opacity-90 font-mono text-[11px] truncate">
+                  <i class="pi pi-code mr-1" />【附帶 SQL】{{ msg.sqlContext.slice(0, 50) }}...
+                </div>
+                <div class="whitespace-pre-wrap select-text font-sans">{{ msg.content }}</div>
+              </div>
+              <span class="text-[10px] text-dark-400 font-mono px-1">
+                {{ formatTime(msg.timestamp) }}
+              </span>
+            </div>
+
+            <!-- AI 助手訊息 -->
+            <div v-else-if="msg.role === 'assistant'" class="flex flex-col items-start space-y-1">
+              <div class="max-w-[95%] rounded-lg px-3.5 py-2.5 shadow-sm text-xs leading-relaxed border border-dark-750 bg-dark-850 dark:bg-[#1e1e26] text-dark-200 select-text">
+                <div class="prose prose-invert max-w-none">
+                  <template v-for="(segment, sIdx) in parseMessageSegments(msg.content)" :key="sIdx">
+                    <div v-if="segment.type === 'text'" class="whitespace-pre-wrap leading-relaxed mb-2 font-sans">
+                      {{ segment.value }}
+                    </div>
+
+                    <!-- SQL Code Block -->
+                    <div v-else-if="segment.type === 'sql'" class="my-2.5 rounded border border-dark-700 bg-dark-900 overflow-hidden select-none">
+                      <div class="flex items-center justify-between px-3 py-1 text-[11px] border-b border-dark-750 bg-dark-800 text-purple-300">
+                        <span class="font-mono font-semibold">T-SQL 語法建議</span>
+                        <div class="flex items-center space-x-1.5">
+                          <Button
+                            label="複製"
+                            icon="pi pi-copy"
+                            severity="secondary"
+                            text
+                            size="small"
+                            class="!text-[10px] !py-0.5 !px-1.5 !h-6"
+                            @click="copySql(segment.value)"
+                          />
+                          <Button
+                            label="開啟至新分頁"
+                            icon="pi pi-external-link"
+                            severity="primary"
+                            size="small"
+                            class="!text-[10px] !py-0.5 !px-2 !h-6"
+                            @click="openInNewTab(segment.value)"
+                          />
+                        </div>
+                      </div>
+                      <pre class="p-3 overflow-x-auto text-[11px] font-mono leading-relaxed bg-black/30 m-0 select-text"><code>{{ segment.value }}</code></pre>
+                    </div>
+                  </template>
+                </div>
+
+                <div v-if="msg.tokensUsed" class="mt-2 pt-1 border-t border-dark-750 flex justify-end">
+                  <span class="text-[10px] text-dark-400 font-mono">
+                    消耗 {{ msg.tokensUsed }} tokens
+                  </span>
+                </div>
+              </div>
+              <span class="text-[10px] text-dark-400 font-mono px-1">
+                {{ formatTime(msg.timestamp) }}
+              </span>
+            </div>
+          </template>
+
+          <!-- 運算中進度列 -->
+          <div v-if="aiChatStore.isGenerating" class="flex items-center space-x-2 py-2 text-dark-400">
+            <ProgressBar mode="indeterminate" class="w-24 !h-1.5" />
+            <span class="text-[11px]">AI 分析中... ({{ aiChatStore.executionElapsedSeconds }}s)</span>
+            <Button
+              label="中斷"
+              icon="pi pi-stop-circle"
+              severity="danger"
+              text
+              size="small"
+              class="!text-[10px] !py-0 !px-1 !h-5 ml-1"
+              @click="aiChatStore.cancelGeneration()"
+            />
+          </div>
+        </div>
+
+        <!-- 快捷提示詞晶片 -->
+        <div class="px-3 py-1.5 border-t border-dark-750 bg-dark-850/80 flex items-center space-x-2 overflow-x-auto flex-shrink-0 select-none scrollbar-none">
+          <span class="text-[11px] text-dark-400 flex-shrink-0 flex items-center">
+            <i class="pi pi-bolt mr-1 text-amber-400" />快捷提問:
+          </span>
+          <Button
+            v-for="chip in quickChips"
+            :key="chip.label"
+            :label="chip.label"
+            size="small"
+            severity="secondary"
+            outlined
+            class="!text-[11px] !py-0.5 !px-2 !rounded-full flex-shrink-0"
+            :disabled="aiChatStore.isGenerating"
+            @click="handleSendPrompt(chip.prompt)"
+          />
+        </div>
+
+        <!-- 輸入文字框區塊 -->
+        <div class="p-3 border-t border-dark-750 bg-dark-850/90 flex-shrink-0 select-none">
+          <div class="relative flex items-end space-x-2">
+            <Textarea
+              v-model="inputQuery"
+              rows="2"
+              auto-resize
+              placeholder="請輸入針對此 SQL 的問題... (Enter 送出, Shift+Enter 換行)"
+              class="w-full !text-xs !p-2.5 font-sans !resize-none !bg-dark-900 !border-dark-700"
+              :disabled="aiChatStore.isGenerating"
+              @keydown.enter.exact.prevent="handleSubmit"
+            />
+            <Button
+              icon="pi pi-send"
+              severity="primary"
+              class="!h-9 !w-9 !p-0 flex-shrink-0"
+              :loading="aiChatStore.isGenerating"
+              :disabled="!inputQuery.trim() || aiChatStore.isGenerating"
+              @click="handleSubmit"
+            />
+          </div>
+        </div>
+      </div>
+
+      <!-- 8-Direction Resizers (僅在非最大化狀態顯示) -->
+      <template v-if="!isMaximized">
+        <!-- Corner resizers -->
+        <div class="resize-handle top-left" @pointerdown.stop="startResize($event, 'tl')" />
+        <div class="resize-handle top-right" @pointerdown.stop="startResize($event, 'tr')" />
+        <div class="resize-handle bottom-left" @pointerdown.stop="startResize($event, 'bl')" />
+        <div class="resize-handle bottom-right" @pointerdown.stop="startResize($event, 'br')" />
+        <!-- Edge resizers -->
+        <div class="resize-handle top" @pointerdown.stop="startResize($event, 't')" />
+        <div class="resize-handle bottom" @pointerdown.stop="startResize($event, 'b')" />
+        <div class="resize-handle left" @pointerdown.stop="startResize($event, 'l')" />
+        <div class="resize-handle right" @pointerdown.stop="startResize($event, 'r')" />
+      </template>
+    </div>
+  </Teleport>
+</template>
+
+<script setup lang="ts">
+import { ref, reactive, computed, watch, nextTick, onMounted, onBeforeUnmount } from 'vue';
+import Button from 'primevue/button';
+import Textarea from 'primevue/textarea';
+import Tag from 'primevue/tag';
+import ProgressBar from 'primevue/progressbar';
+import { useToast } from 'primevue/usetoast';
+import { useAiChatStore } from '@/stores/aiChatStore';
+import { useWorkspaceStore } from '@/stores/workspaceStore';
+
+const aiChatStore = useAiChatStore();
+const workspaceStore = useWorkspaceStore();
+const toast = useToast();
+
+const panelRef = ref<HTMLElement | null>(null);
+const messagesContainerRef = ref<HTMLElement | null>(null);
+const inputQuery = ref('');
+const isMaximized = ref(false);
+
+// 視窗定位與尺寸 (預設高度 80vh，靠右下角排列)
+const size = reactive({
+  width: 720,
+  height: Math.round(window.innerHeight * 0.8),
+});
+
+const pos = reactive({
+  top: Math.max(20, window.innerHeight - Math.round(window.innerHeight * 0.8) - 40),
+  left: Math.max(20, window.innerWidth - 720 - 40),
+});
+
+function initPosition() {
+  const initialH = Math.min(Math.round(window.innerHeight * 0.8), window.innerHeight - 60);
+  const initialW = Math.min(740, window.innerWidth - 60);
+  size.width = initialW;
+  size.height = initialH;
+  pos.top = Math.max(20, window.innerHeight - initialH - 35);
+  pos.left = Math.max(20, window.innerWidth - initialW - 35);
+}
+
+// 監聽視窗開啟時，若位置超出螢幕則自動矯正
+watch(
+  () => aiChatStore.isChatOpen,
+  (open) => {
+    if (open) {
+      if (pos.left + size.width > window.innerWidth || pos.top + size.height > window.innerHeight) {
+        initPosition();
+      }
+    }
+  }
+);
+
+function toggleMaximize() {
+  isMaximized.value = !isMaximized.value;
+}
+
+// ========================
+// 視窗拖曳移動邏輯 (Drag Move)
+// ========================
+let isDraggingMove = false;
+let moveStartX = 0;
+let moveStartY = 0;
+let initialLeft = 0;
+let initialTop = 0;
+
+function handleTitlePointerDown(e: PointerEvent) {
+  if (isMaximized.value || e.button !== 0) return;
+  isDraggingMove = true;
+  moveStartX = e.clientX;
+  moveStartY = e.clientY;
+  initialLeft = pos.left;
+  initialTop = pos.top;
+
+  window.addEventListener('pointermove', onPointerMoveDrag);
+  window.addEventListener('pointerup', onPointerUpDrag);
+  window.addEventListener('pointercancel', onPointerUpDrag);
+}
+
+function onPointerMoveDrag(e: PointerEvent) {
+  if (!isDraggingMove) return;
+  const dx = e.clientX - moveStartX;
+  const dy = e.clientY - moveStartY;
+
+  const maxLeft = window.innerWidth - 100;
+  const maxTop = window.innerHeight - 60;
+  pos.left = Math.min(Math.max(-size.width + 100, initialLeft + dx), maxLeft);
+  pos.top = Math.min(Math.max(0, initialTop + dy), maxTop);
+}
+
+function onPointerUpDrag() {
+  isDraggingMove = false;
+  window.removeEventListener('pointermove', onPointerMoveDrag);
+  window.removeEventListener('pointerup', onPointerUpDrag);
+  window.removeEventListener('pointercancel', onPointerUpDrag);
+}
+
+// ========================
+// 8 向邊緣與角落流暢拉伸 (Resize)
+// ========================
+type ResizeHandle = 'tl' | 'tr' | 'bl' | 'br' | 't' | 'b' | 'l' | 'r';
+let currentHandle: ResizeHandle | null = null;
+let resizeStartX = 0;
+let resizeStartY = 0;
+let resizeStartW = 0;
+let resizeStartH = 0;
+let resizeStartLeft = 0;
+let resizeStartTop = 0;
+
+function startResize(e: PointerEvent, handle: ResizeHandle) {
+  if (isMaximized.value || e.button !== 0) return;
+  currentHandle = handle;
+  resizeStartX = e.clientX;
+  resizeStartY = e.clientY;
+  resizeStartW = size.width;
+  resizeStartH = size.height;
+  resizeStartLeft = pos.left;
+  resizeStartTop = pos.top;
+
+  window.addEventListener('pointermove', onPointerMoveResize);
+  window.addEventListener('pointerup', onPointerUpResize);
+  window.addEventListener('pointercancel', onPointerUpResize);
+}
+
+function onPointerMoveResize(e: PointerEvent) {
+  if (!currentHandle) return;
+  const dx = e.clientX - resizeStartX;
+  const dy = e.clientY - resizeStartY;
+
+  const minW = 420;
+  const minH = 320;
+  const maxW = window.innerWidth;
+  const maxH = window.innerHeight;
+
+  // 右下 (br)
+  if (currentHandle.includes('r')) {
+    size.width = Math.min(maxW, Math.max(minW, resizeStartW + dx));
+  }
+  if (currentHandle.includes('b')) {
+    size.height = Math.min(maxH, Math.max(minH, resizeStartH + dy));
+  }
+  // 左上 (tl)
+  if (currentHandle.includes('l')) {
+    const candidateW = resizeStartW - dx;
+    if (candidateW >= minW && candidateW <= maxW) {
+      size.width = candidateW;
+      pos.left = resizeStartLeft + dx;
+    }
+  }
+  if (currentHandle.includes('t')) {
+    const candidateH = resizeStartH - dy;
+    if (candidateH >= minH && candidateH <= maxH) {
+      size.height = candidateH;
+      pos.top = resizeStartTop + dy;
+    }
+  }
+}
+
+function onPointerUpResize() {
+  currentHandle = null;
+  window.removeEventListener('pointermove', onPointerMoveResize);
+  window.removeEventListener('pointerup', onPointerUpResize);
+  window.removeEventListener('pointercancel', onPointerUpResize);
+}
+
+// 快速提示詞列表
+const quickChips = [
+  { label: '🚀 查詢最佳化', prompt: '請針對附加的 SQL 語法進行效能診斷，指出潛在的效能瓶頸，並提供最佳化後的改寫建議與索引規劃。' },
+  { label: '🔍 語法邏輯解釋', prompt: '請逐步詳細解釋這段 SQL 的執行邏輯、關聯條件 (JOIN) 與各條件的預期結果。' },
+  { label: '⚠️ 效能與死鎖風險', prompt: '這段 SQL 在高併發交易下是否存在鎖定 (Locking)、死鎖 (Deadlock) 或隱式型別轉換 (Implicit Conversion) 的風險？' },
+  { label: '🛠️ 改寫相容語法', prompt: '請將這段語法改寫為標準、嚴謹且效能最佳的 T-SQL 寫法。' },
+];
+
+const sqlPreviewText = computed(() => {
+  if (!aiChatStore.currentSql) return '';
+  const lines = aiChatStore.currentSql.trim().split('\n');
+  const firstLine = lines[0] ?? '';
+  return `(${lines.length} 行) ${firstLine.slice(0, 45)}...`;
+});
+
+function formatTime(ts: number): string {
+  const d = new Date(ts);
+  return `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}:${d.getSeconds().toString().padStart(2, '0')}`;
+}
+
+function parseMessageSegments(content: string): Array<{ type: 'text' | 'sql'; value: string }> {
+  const segments: Array<{ type: 'text' | 'sql'; value: string }> = [];
+  const regex = /```(?:sql)?\s*([\s\S]*?)```/gi;
+  let lastIndex = 0;
+  let match;
+
+  while ((match = regex.exec(content)) !== null) {
+    if (match.index > lastIndex) {
+      segments.push({
+        type: 'text',
+        value: content.substring(lastIndex, match.index),
+      });
+    }
+    const sqlCode = match[1] ?? '';
+    segments.push({
+      type: 'sql',
+      value: sqlCode.trim(),
+    });
+    lastIndex = regex.lastIndex;
+  }
+
+  if (lastIndex < content.length) {
+    segments.push({
+      type: 'text',
+      value: content.substring(lastIndex),
+    });
+  }
+
+  return segments;
+}
+
+function scrollToBottom() {
+  nextTick(() => {
+    if (messagesContainerRef.value) {
+      messagesContainerRef.value.scrollTop = messagesContainerRef.value.scrollHeight;
+    }
+  });
+}
+
+watch(
+  () => aiChatStore.messages.length,
+  () => {
+    scrollToBottom();
+  }
+);
+
+function handleSubmit() {
+  if (!inputQuery.value.trim() || aiChatStore.isGenerating) return;
+  const q = inputQuery.value;
+  inputQuery.value = '';
+  aiChatStore.askQuestion(q);
+  scrollToBottom();
+}
+
+function handleSendPrompt(prompt: string) {
+  aiChatStore.askQuestion(prompt);
+  scrollToBottom();
+}
+
+async function copySql(sqlText: string) {
+  try {
+    await navigator.clipboard.writeText(sqlText);
+    toast.add({
+      severity: 'success',
+      summary: '複製成功',
+      detail: '已將 SQL 語法複製至剪貼簿',
+      life: 2000,
+    });
+  } catch {
+    toast.add({
+      severity: 'error',
+      summary: '複製失敗',
+      detail: '無法寫入系統剪貼簿',
+      life: 2500,
+    });
+  }
+}
+
+function openInNewTab(sqlText: string) {
+  workspaceStore.addSqlTab(sqlText, 'AI Generated');
+  toast.add({
+    severity: 'info',
+    summary: '分頁已開啟',
+    detail: '已將 AI 建議 SQL 載入至新分頁',
+    life: 2000,
+  });
+}
+
+onMounted(() => {
+  initPosition();
+  window.addEventListener('resize', initPosition);
+});
+
+onBeforeUnmount(() => {
+  window.removeEventListener('resize', initPosition);
+  onPointerUpDrag();
+  onPointerUpResize();
+});
+</script>
+
+<style scoped>
+/* 8-Direction Resize Handles */
+.resize-handle {
+  position: absolute;
+  z-index: 50;
+}
+
+/* Corners */
+.resize-handle.top-left {
+  top: 0;
+  left: 0;
+  width: 10px;
+  height: 10px;
+  cursor: nwse-resize;
+}
+.resize-handle.top-right {
+  top: 0;
+  right: 0;
+  width: 10px;
+  height: 10px;
+  cursor: nesw-resize;
+}
+.resize-handle.bottom-left {
+  bottom: 0;
+  left: 0;
+  width: 10px;
+  height: 10px;
+  cursor: nesw-resize;
+}
+.resize-handle.bottom-right {
+  bottom: 0;
+  right: 0;
+  width: 14px;
+  height: 14px;
+  cursor: nwse-resize;
+}
+
+/* Visual grip marks at bottom right corner */
+.resize-handle.bottom-right::after {
+  content: '';
+  position: absolute;
+  right: 3px;
+  bottom: 3px;
+  width: 6px;
+  height: 6px;
+  border-right: 2px solid rgba(255, 255, 255, 0.35);
+  border-bottom: 2px solid rgba(255, 255, 255, 0.35);
+}
+
+/* Edges */
+.resize-handle.top {
+  top: 0;
+  left: 10px;
+  right: 10px;
+  height: 5px;
+  cursor: ns-resize;
+}
+.resize-handle.bottom {
+  bottom: 0;
+  left: 10px;
+  right: 14px;
+  height: 5px;
+  cursor: ns-resize;
+}
+.resize-handle.left {
+  left: 0;
+  top: 10px;
+  bottom: 10px;
+  width: 5px;
+  cursor: ew-resize;
+}
+.resize-handle.right {
+  right: 0;
+  top: 10px;
+  bottom: 14px;
+  width: 5px;
+  cursor: ew-resize;
+}
+</style>

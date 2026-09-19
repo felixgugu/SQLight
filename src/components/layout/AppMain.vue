@@ -694,6 +694,17 @@ function focusEditor(line = 1, col = 1) {
   });
 }
 
+function getSelectedOrFullQuery(): { sql: string; isSelection: boolean } {
+  if (monacoRef.value && workspaceStore.activeTab?.type === 'sql_editor') {
+    return monacoRef.value.getSelectedOrFullQuery();
+  }
+  if (workspaceStore.activeTab?.type === 'sql_editor') {
+    const sql = (workspaceStore.activeTab as SqlEditorTab).query || '';
+    return { sql, isSelection: false };
+  }
+  return { sql: '', isSelection: false };
+}
+
 function handleAddNewTab() {
   workspaceStore.addSqlTab();
   nextTick(() => {
@@ -915,6 +926,7 @@ defineExpose({
   openSqlFile,
   insertTextAtCursor,
   getTableNameAtCursor,
+  getSelectedOrFullQuery,
   scrollToStart,
   focusEditor,
 });

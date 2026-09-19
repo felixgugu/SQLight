@@ -11,6 +11,7 @@
       @open-settings-modal="isSettingsModalOpen = true"
       @open-quick-finder="isQuickFinderOpen = true"
       @open-sql-templates="isSqlTemplatesOpen = true"
+      @open-ai-chat="handleOpenAiChat"
     />
 
 
@@ -97,6 +98,11 @@
       @open-in-new-tab="handleOpenTemplateInNewTab"
     />
 
+    <!-- AI SQL Assistant Chat Modal (PrimeVue Dialog) -->
+    <AiSqlChatModal />
+
+    <!-- AI Floating Progress Pill (縮小化浮動膠囊) -->
+    <AiFloatingPill />
 
     <!-- PrimeVue Global Toast Notification -->
     <Toast position="bottom-right" />
@@ -117,11 +123,14 @@ import ConnectionModal from '@/components/modals/ConnectionModal.vue';
 import SettingsModal from '@/components/modals/SettingsModal.vue';
 import QuickObjectFinderModal from '@/components/modals/QuickObjectFinderModal.vue';
 import SqlTemplateModal from '@/components/modals/SqlTemplateModal.vue';
+import AiSqlChatModal from '@/components/modals/AiSqlChatModal.vue';
+import AiFloatingPill from '@/components/ai/AiFloatingPill.vue';
 import { usePrimeVue } from 'primevue/config';
 import { useSplitter } from '@/composables/useSplitter';
 import { useWorkspaceStore } from '@/stores/workspaceStore';
 import { useQueryStore } from '@/stores/queryStore';
 import { useSettingsStore } from '@/stores/settingsStore';
+import { useAiChatStore } from '@/stores/aiChatStore';
 import { themeManager } from '@/services/themeManager';
 import type { ConnectionProfile } from '@/types/connection';
 import type { SqlTemplate } from '@/types/sqlTemplate';
@@ -129,8 +138,22 @@ import type { SqlTemplate } from '@/types/sqlTemplate';
 const workspaceStore = useWorkspaceStore();
 const queryStore = useQueryStore();
 const settingsStore = useSettingsStore();
+const aiChatStore = useAiChatStore();
 const primevue = usePrimeVue();
 const toast = useToast();
+
+function handleOpenAiChat(sqlOverride?: string, isSelection = false) {
+  let targetSql = sqlOverride || '';
+  let isSel = isSelection;
+
+  if (!targetSql && mainWorkspaceRef.value) {
+    const info = mainWorkspaceRef.value.getSelectedOrFullQuery();
+    targetSql = info.sql;
+    isSel = info.isSelection;
+  }
+
+  aiChatStore.openChat(targetSql, isSel);
+}
 
 watch(
   () => workspaceStore.activeToast,
@@ -336,11 +359,27 @@ function handleGlobalKeydown(e: KeyboardEvent) {
     return;
   }
 
+  // Ctrl/Cmd + I -> Open AI Chat Assistant
+  if ((e.ctrlKey || e.metaKey) && !e.shiftKey && (e.key === 'i' || e.key === 'I')) {
+    e.preventDefault();
+    handleOpenAiChat();
+    return;
+  }
+
   // Ctrl/Cmd + P -> Quick Object Finder (Spotlight)
   if ((e.ctrlKey || e.metaKey) && !e.shiftKey && (e.key === 'p' || e.key === 'P')) {
     e.preventDefault();
     isQuickFinderOpen.value = !isQuickFinderOpen.value;
     return;
+  }
+}
+
+function handleAiChatCustomEvent(e: Event) {
+  const customEvt = e as CustomEvent<{ sql: string; isSelection: boolean }>;
+  if (customEvt.detail) {
+    handleOpenAiChat(customEvt.detail.sql, customEvt.detail.isSelection);
+  } else {
+    handleOpenAiChat();
   }
 }
 
@@ -367,6 +406,7 @@ onMounted(() => {
   window.addEventListener('sqlight:open-quick-finder', handleOpenQuickFinder);
   window.addEventListener('sqlight:open-sql-templates', handleOpenSqlTemplates);
   window.addEventListener('sqlight:locate-table-at-cursor', handleLocateTableRequest);
+  window.addEventListener('sqlight:open-ai-chat', handleAiChatCustomEvent);
 });
 
 onBeforeUnmount(() => {
@@ -375,6 +415,7 @@ onBeforeUnmount(() => {
   window.removeEventListener('sqlight:open-quick-finder', handleOpenQuickFinder);
   window.removeEventListener('sqlight:open-sql-templates', handleOpenSqlTemplates);
   window.removeEventListener('sqlight:locate-table-at-cursor', handleLocateTableRequest);
+  window.removeEventListener('sqlight:open-ai-chat', handleAiChatCustomEvent);
 });
 </script>
 

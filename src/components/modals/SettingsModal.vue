@@ -428,7 +428,10 @@
       <!-- Tab 3: Table Filter -->
       <TableFilterTab v-else-if="activeTab === 'table_filter'" />
 
-      <!-- Tab 4: About & Shortcuts -->
+      <!-- Tab 4: AI Settings -->
+      <AiSettingsTab v-else-if="activeTab === 'ai'" />
+
+      <!-- Tab 5: About & Shortcuts -->
       <div v-else-if="activeTab === 'about'" class="space-y-4">
         <div class="bg-dark-900 border border-dark-750 p-3.5 rounded space-y-2">
           <div class="flex items-center space-x-2">
@@ -505,6 +508,10 @@
               <div class="flex justify-between items-center py-0.5">
                 <span class="text-dark-300">格式化 SQL (選取/當前語句)</span>
                 <kbd class="bg-dark-800 px-1.5 py-0.5 rounded text-amber-300 border border-dark-700">Shift+Alt+F</kbd>
+              </div>
+              <div class="flex justify-between items-center py-0.5">
+                <span class="text-dark-300">AI SQL 助手 (分析/最佳化)</span>
+                <kbd class="bg-dark-800 px-1.5 py-0.5 rounded text-amber-300 border border-dark-700">Ctrl + I</kbd>
               </div>
               <div class="flex justify-between items-center py-0.5">
                 <span class="text-dark-300">向下快速複製 (行/選取塊)</span>
@@ -587,6 +594,7 @@ import {
   type ThemePresetName,
 } from '@/services/themeManager';
 import TableFilterTab from './TableFilterTab.vue';
+import AiSettingsTab from './settings/AiSettingsTab.vue';
 
 defineProps<{
   isOpen: boolean;
@@ -598,13 +606,14 @@ defineEmits<{
 
 const primevue = usePrimeVue();
 const settingsStore = useSettingsStore();
-const activeTab = ref<'theme' | 'editor' | 'results' | 'table_filter' | 'about'>('theme');
+const activeTab = ref<'theme' | 'editor' | 'results' | 'table_filter' | 'ai' | 'about'>('theme');
 
 const tabs = [
   { id: 'theme' as const, label: '外觀與主題 (Appearance & Theme)', icon: 'pi pi-palette' },
   { id: 'editor' as const, label: '編輯器 (Editor)', icon: 'pi pi-code' },
   { id: 'results' as const, label: '查詢與結果 (Results)', icon: 'pi pi-table' },
   { id: 'table_filter' as const, label: '名稱過濾 (Object Filter)', icon: 'pi pi-filter' },
+  { id: 'ai' as const, label: 'AI 設定 (AI Assistant)', icon: 'pi pi-sparkles' },
   { id: 'about' as const, label: '關於 (About)', icon: 'pi pi-info-circle' },
 ];
 

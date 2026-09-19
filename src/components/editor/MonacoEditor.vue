@@ -130,6 +130,27 @@ function getExecutableQuery(mode: 'current' | 'all' = 'current'): string {
 }
 
 /**
+ * 取得選取的 SQL 區塊；若無選取，則預設回傳整頁 SQL (供 AI 助手使用)
+ */
+function getSelectedOrFullQuery(): { sql: string; isSelection: boolean } {
+  if (!editorInstance) {
+    return { sql: props.modelValue, isSelection: false };
+  }
+  const model = editorInstance.getModel();
+  if (!model) {
+    return { sql: props.modelValue, isSelection: false };
+  }
+  const selection = editorInstance.getSelection();
+  if (selection && !selection.isEmpty()) {
+    const selectedText = model.getValueInRange(selection);
+    if (selectedText.trim()) {
+      return { sql: selectedText, isSelection: true };
+    }
+  }
+  return { sql: model.getValue(), isSelection: false };
+}
+
+/**
  * Duplicate line downwards if no selection, or duplicate selected block downwards with blank line separation if selection exists.
  */
 function duplicateLineOrSelection() {
@@ -356,6 +377,16 @@ onMounted(() => {
     window.dispatchEvent(new CustomEvent('sqlight:new-query-tab'));
   });
 
+  // Shortcut: Ctrl/Cmd + I -> Open AI SQL Assistant
+  editorInstance.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyI, () => {
+    const queryInfo = getSelectedOrFullQuery();
+    window.dispatchEvent(
+      new CustomEvent('sqlight:open-ai-chat', {
+        detail: queryInfo,
+      })
+    );
+  });
+
   // Shortcut: Ctrl/Cmd + P -> Quick Object Finder (Spotlight)
   editorInstance.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyP, () => {
     window.dispatchEvent(new CustomEvent('sqlight:open-quick-finder'));
@@ -380,6 +411,22 @@ onMounted(() => {
     contextMenuOrder: 1.6,
     run: () => {
       window.dispatchEvent(new CustomEvent('sqlight:locate-table-at-cursor'));
+    },
+  });
+
+  // Context Menu: AI SQL 助手 (AI Assistant Ctrl+I)
+  editorInstance.addAction({
+    id: 'sqlight.open-ai-chat-menu',
+    label: '✨ AI SQL 助手 (分析 / 最佳化)...',
+    contextMenuGroupId: '1_modification',
+    contextMenuOrder: 1.7,
+    run: () => {
+      const queryInfo = getSelectedOrFullQuery();
+      window.dispatchEvent(
+        new CustomEvent('sqlight:open-ai-chat', {
+          detail: queryInfo,
+        })
+      );
     },
   });
 
@@ -696,6 +743,7 @@ defineExpose({
   getExecutableQuery,
   getStatementAtCursor,
   getFullDocumentQuery,
+  getSelectedOrFullQuery,
   duplicateLineOrSelection,
   formatCode,
   insertTextAtCursor,

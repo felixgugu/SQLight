@@ -217,6 +217,17 @@
           @click="$emit('open-sql-templates')"
         />
 
+        <!-- AI SQL Assistant Button -->
+        <Button
+          icon="pi pi-sparkles"
+          severity="secondary"
+          size="small"
+          text
+          class="!h-7 !w-7 !p-0 !text-purple-400 hover:!text-purple-300"
+          v-tooltip.bottom="'AI SQL 智能助手 (Ctrl + I)'"
+          @click="$emit('open-ai-chat')"
+        />
+
         <!-- DBA Diagnostics Toolbox Button & Popover -->
         <Button
           icon="pi pi-chart-line"
@@ -424,6 +435,7 @@ const emit = defineEmits<{
   (e: 'open-settings-modal'): void;
   (e: 'open-quick-finder'): void;
   (e: 'open-sql-templates'): void;
+  (e: 'open-ai-chat'): void;
 }>();
 
 async function handleSelectConnection(connId: string) {

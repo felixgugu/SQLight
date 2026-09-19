@@ -526,3 +526,27 @@ html:not(.dark) .p-tooltip-bottom .p-tooltip-arrow {
   width: 0.625rem !important;
   height: 0.625rem !important;
 }
+
+/* ==========================================================================
+   AI SQL Chat Non-modal Floating Dialog: Solid Opaque Background & Resizable
+   ========================================================================== */
+.ai-sql-chat-dialog {
+  background-color: rgb(var(--color-dark-850)) !important;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6) !important;
+}
+
+.ai-sql-chat-dialog:not(.p-dialog-maximized) {
+  resize: both;
+  overflow: hidden;
+}
+
+.ai-sql-chat-dialog .p-dialog-header {
+  background-color: rgb(var(--color-dark-850)) !important;
+  border-bottom: 1px solid rgb(var(--color-dark-700)) !important;
+  user-select: none;
+}
+
+.ai-sql-chat-dialog .p-dialog-content {
+  background-color: rgb(var(--color-dark-900)) !important;
+  background-image: none !important;
+}
