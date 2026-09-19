@@ -1,4 +1,4 @@
-# SQLight - 極致輕量、現代高效的 Microsoft SQL Server 桌面客戶端
+# SQLight - 輕量的 Microsoft SQL Server 桌面客戶端
 
 <p align="center">
   <strong>基於 Tauri v2 + Rust + Vue 3 + TypeScript + PrimeVue 4 + Monaco Editor + AG Grid Community 打造</strong>
@@ -14,7 +14,7 @@
    - [連線與資料庫物件瀏覽 (Connection & Schema Explorer)](#1-連線與資料庫物件瀏覽)
    - [快速定位游標處資料表 (Locate Table in Explorer)](#-快速定位游標處資料表-locate-table-in-explorer)
    - [智慧記憶與自動復原 (Auto-Restore Last Session)](#2-智慧記憶與自動復原)
-   - [專業級 Monaco SQL 編輯器 & DBA 工具箱 (Monaco SQL Workspace & DBA Diagnostics)](#3-專業級-monaco-sql-編輯器--dba-診斷工具箱)
+   - [Monaco SQL 編輯器與常用查詢工具 (Monaco SQL Workspace & Utilities)](#3-monaco-sql-編輯器與常用查詢工具)
    - [長時間查詢中斷與取消機制 (Cancel Query / Task Killer & SPID)](#-長時間查詢中斷與取消機制-cancel-query--task-killer)
    - [常用 SQL 範本庫與同層自訂語法文件 (SQL Templates & Co-located Custom File)](#-常用-sql-範本庫與應用程式同層自訂文件-sql_custom_templatesjson)
    - [客戶端 GO 批次分割執行引擎 (Client-Side GO Batch Runner)](#-客戶端-go-批次分割執行引擎-client-side-go-batch-runner)
@@ -32,18 +32,18 @@
 
 ## 🌟 專案簡介與特色 (Overview)
 
-**SQLight** 是一款專為開發者、資料庫管理員 (DBA) 與數據分析師打造的極致輕量化 Microsoft SQL Server (T-SQL) 桌面管理客戶端。
+**SQLight** 是一款 Microsoft SQL Server (T-SQL) 桌面管理客戶端，適合日常開發與簡單的資料庫查詢操作。
 
-傳統的 SQL Server 管理工具（如 SQL Server Management Studio (SSMS)、DataGrip、DBeaver）往往存在啟動載入過慢、記憶體資源佔用過大、介面老舊厚重等痛點。**SQLight** 旨在保留最核心且高頻使用的資料庫操作體驗，同時提供：
-- ⚡ **秒開啟動**：原生 Rust 後端核心，體積輕巧且無肥重執行環境開銷。
-- 🎨 **深色 / 亮色雙模式主題**：整合 PrimeVue 4 設計體系，支援 Aura / Lara / Nora 佈景預設、12 種主色調與 5 種表面色調即時切換，暗黑與明亮模式均渾然一體。
-- 💻 **媲美 VS Code 的編程手感**：深度整合 Monaco Editor，支援智慧補全、單句語法隔離、快速複製與自適應格式化。
-- 🛑 **秒級查詢取消與 Task Killer**：點擊取消或按下快捷鍵即刻中斷本地讀取，後端自動透過獨立連線發送 `KILL <spid>;` 釋放資料庫鎖定與運算資源。
-- 🎯 **快速定位資料表 (Locate in Explorer)**：編輯器游標或反白處物件一鍵在左側 Explorer 自動連鎖展開、載入欄位、光暈高亮並置中捲動。
-- 📚 **常用 SQL 範本庫與同層自訂文件**：內建豐富 T-SQL 與變數宣告範例，同層實體文件 `sql_custom_templates.json` 隨拷隨走、外部編輯熱重載。
-- 🚀 **客戶端 GO 批次引擎**：狀態機智慧隔離註解與字串內的 `GO`，無縫支援多批次 DDL 與大型腳本執行。
-- 📊 **百萬級資料流暢瀏覽**：採用 AG Grid 虛擬化捲動引擎，海量資料渲染依然絲滑不卡頓。
-- 🎯 **人性化的操作細節**：智慧記憶上次連線與資料庫、可自訂執行閃爍高亮、Pointer Events 無縫分頁拖曳、多結果歷史防清除釘選。
+相較於 SSMS、DataGrip、DBeaver 等功能完整的工具，**SQLight** 更著重於輕量與快速啟動，提供日常最常用的功能：
+- ⚡ **快速啟動**：原生 Rust 後端，體積小、啟動快。
+- 🎨 **深色 / 亮色主題**：整合 PrimeVue 4 主題系統，支援深色與亮色模式切換，可自訂主色調與表面色調。
+- 💻 **Monaco 編輯器**：整合 VS Code 核心編輯元件，支援語法高亮、自動補全與代碼格式化。
+- 🛑 **查詢取消**：支援中斷執行中的查詢，後端透過獨立連線發送 `KILL <spid>;` 釋放資料庫資源。
+- 🎯 **物件定位**：編輯器游標處的資料表名稱可快速在左側 Explorer 展開並定位。
+- 📚 **SQL 範本庫**：內建常用 T-SQL 語法範例，支援同層自訂檔案。
+- 🚀 **GO 批次執行**：客戶端自動依 `GO` 拆分批次，解決 TDS 驅動不支援 `GO` 的問題。
+- 📊 **AG Grid 表格**：採用 AG Grid 虛擬捲動，可處理較大量的查詢結果。
+- 🔧 **常用操作**：記憶上次連線、分頁拖曳排序、結果釘選保留等。
 
 ---
 
@@ -153,27 +153,27 @@ SQLight 採用現代跨平台桌面客戶端的雙層解耦架構：
 - **開啟即連線**：
   - 下次啟動 SQLight 時，程式會自動讀取最後紀錄，**直接將左上角的「連線下拉選單」與「資料庫下拉選單」復原至上次狀態**，並在背景自動發起連線與切換，無需每次反覆點選。
 
-### 3. 專業級 Monaco SQL 編輯器 & DBA 診斷工具箱
-- **頂部工具列極簡圖示與浮動提示 (Pure Icon-Only Toolbar with Tooltips)**：
-  - 上方所有操作按鈕與控制項全面採用**純圖示設計**（無外顯文字標籤），所有功能說明、參數與快捷鍵統一收整於浮動提示 (`title`) 中，介面極致精緻乾淨不壅擠。
-  - 整合「**效能分析 (Performance Analysis)**」核取方塊（`Gauge` 圖示，琥珀金色高亮），僅在需要深入排查或調優語句時勾選啟用，測量實際 IO 與 CPU 耗時。
-  - 整合「**預估執行計畫 (Estimated Plan `SET SHOWPLAN_ALL ON;`)**」核取方塊（`Workflow` 圖示，青空藍高亮），勾選後直接以表格型態輸出編譯期最佳化執行計畫至查詢結果分頁，不實際執行語句。
-  - 整合「**實際執行計畫 (Actual Plan `SET STATISTICS XML ON;`)**」核取方塊（`Network` 圖示，霓虹紫高亮），實際執行語句並自動擷取底層 XML Showplan，在新工作區分頁中以專業圖形化計畫呈現。
-  - 三大調優模式（效能分析／預估計畫／實際計畫）內建**三向智慧互斥保護機制**，防止同時勾選造成 T-SQL 衝突或伺服器連線狀態混亂。
-- **常用 DBA 維護與監控快速代碼庫 (Built-in DBA Diagnostics Toolbox)**：
-  - 頂部工具列整合「**DBA 工具箱**」下拉選單，內建最頂級、高頻使用且經過最佳化的 SQL Server 專用排查語法：
-    1. 🔒 **即時鎖定與阻塞鏈 (Locks & Blocking)**：快速抓出誰卡住了誰（Lead Blocker、SPID、等待類型與秒數、阻塞 SQL 語句）。
-    2. ⚡ **Top 20 慢查詢 (Top Slow Queries by CPU)**：透過 DMV 依累計 CPU 與執行時間分析最耗效能的語句。
-    3. 💾 **資料表空間與筆數排行 (Table Sizes & Rows)**：秒級查詢全庫資料表列數與 MB 佔用排行（無需緩慢的 `COUNT(*)`）。
-    4. 🧩 **索引破碎度分析 (Index Fragmentation > 20%)**：精準揪出破碎度過高索引並自動附帶 `REBUILD` / `REORGANIZE` 語法。
-    5. 🗑️ **未使用的冗餘索引 (Unused Indexes)**：找出 0 次搜尋使用卻佔用龐大寫入維護開銷的索引。
-    6. 🌐 **目前活動連線與客戶端統計 (Active Sessions)**：即時掌握連線 SPID、來源主機、程式名稱與 IP。
-  - 點擊任何項目即刻自動開啟新查詢分頁並填入完整代碼，按下 <kbd>Ctrl</kbd> + <kbd>Enter</kbd> 即可秒級執行。
+### 3. Monaco SQL 編輯器與常用查詢工具
+- **頂部工具列 (Toolbar)**：
+  - 操作按鈕以圖示呈現，功能說明與快捷鍵收於浮動提示 (`tooltip`)。
+  - 整合「**效能分析**」核取方塊，勾選後查詢時自動附加 `SET STATISTICS IO, TIME ON` 以測量 IO 與 CPU 耗時。
+  - 整合「**預估執行計畫**」核取方塊（`SET SHOWPLAN_ALL ON;`），以表格形式輸出編譯期執行計畫，不實際執行語句。
+  - 整合「**實際執行計畫**」核取方塊（`SET STATISTICS XML ON;`），執行語句後擷取 XML Showplan 並以圖形化方式呈現。
+  - 三個模式內建互斥保護，避免同時勾選造成衝突。
+- **內建常用查詢語法 (Preset SQL Queries)**：
+  - 頂部工具列提供「常用查詢」下拉選單，內建幾組常用的 SQL Server 排查語法：
+    1. 🔒 **鎖定與阻塞查詢 (Locks & Blocking)**：查看目前的阻塞鏈與等待狀態。
+    2. ⚡ **慢查詢排行 (Top Slow Queries)**：透過 DMV 查看累計 CPU 較高的語句。
+    3. 💾 **資料表空間統計 (Table Sizes)**：查看各資料表的列數與佔用空間。
+    4. 🧩 **索引破碎度 (Index Fragmentation)**：查看破碎度較高的索引。
+    5. 🗑️ **未使用索引 (Unused Indexes)**：查看幾乎沒被使用的索引。
+    6. 🌐 **活動連線 (Active Sessions)**：查看目前的連線 SPID 與來源資訊。
+  - 點擊後自動開啟新分頁並填入語法，按 <kbd>Ctrl</kbd> + <kbd>Enter</kbd> 即可執行。
 - **多分頁標籤管理 (Multi-Tab SQL Editor)**：
   - 支援多開查詢分頁，各分頁擁有獨立的 SQL 內容與游標狀態。
   - 分頁列超出寬度時，支援**滑鼠滾輪直接左右橫向滾動**。
   - **Pointer Events 無縫拖曳換位**：上方查詢分頁支援滑鼠按住拖曳自由調整排列順序，具備目標落點藍色指示條。
-  - **當前所選分頁顯眼色彩與主題對齊 (Active Tab Colors & PrimeVue Token Alignment)**：當前啟用中的分頁以資料夾 (Folder tab) 造型呈現，頂部 2px 強調線動態綁定 PrimeVue Primary Token (`var(--p-primary-color)`)，底色無縫融入編輯器畫布表面，於深色/亮色模式均渾然一體；各分頁類別（SQL、表格資料、結構、執行計畫、ER 圖）各自擁有語意色彩圖示。連線別名自動顯示於分頁右側徽章，連線色彩自動呈現於邊框。可於設定中完全自訂。
+  - **分頁色彩與主題整合**：當前分頁以頂部強調線標示，色彩隨 PrimeVue 主題設定自動變化；各分頁類別（SQL、表格資料、結構、執行計畫、ER 圖）有各自的圖示色彩。連線別名與色彩會顯示在分頁上。可於設定中自訂。
   - **行內重新命名 (Inline Tab Rename)**：滑鼠雙擊分頁名稱即可直接在原地編輯命名，按下 <kbd>Enter</kbd> 保存、<kbd>Esc</kbd> 取消；亦可透過**滑鼠右鍵選單**選擇「重新命名」、「關閉此分頁」或「關閉其他分頁」。
 - **介面佈局靈活掌控 (Layout Controls)**：
   - **側邊欄快速收合/展開**：於右上角版面控制區點擊側邊欄按鈕，即可一鍵收合左方 Explorer 側邊欄，釋放最大代碼編輯空間，並自動記憶收合狀態。
@@ -231,7 +231,7 @@ SQLight 採用現代跨平台桌面客戶端的雙層解耦架構：
   - **點擊列號 `#` 整列選取與拖曳**：點擊左側行號選取整列，按住拖曳或配合 <kbd>Shift</kbd> 快速連續選取多列。
   - **視覺順序同步匯出**：當欄位經過拖曳調整前後順序後，選取複製、TSV、CSV、JSON 與 Markdown 匯出自動忠實依據使用者所排定之**畫面視覺順序**輸出。
   - **直觀視覺高亮與清除**：被選取的欄位標題以專屬淡藍色高亮標示（`.sqlight-header-selected`），儲存格呈現清晰反白效果；按 <kbd>Esc</kbd> 鍵隨時清除所有選取。
-- **Excel 級即時統計列 (Excel-Grade Live Aggregate Bar)**：
+- **即時統計列 (Live Aggregate Bar)**：
   - 於查詢結果表格（`ResultGrid`）與資料表瀏覽器（`TableDataViewer`）底部配備即時統計狀態列。
   - **任意區域拖曳框選**：按住滑鼠左鍵自由拖曳框選一格或多格儲存格（或多欄選取、多列選取），立即呈現：
     - `選取: N 格 (M 個數值)`（多欄選取時顯示 `選取: X 欄 / Y 列`）
@@ -250,9 +250,9 @@ SQLight 採用現代跨平台桌面客戶端的雙層解耦架構：
   - 記憶體維護單調遞增計數器（由 0 起算持續累計），每次執行查詢自動依序編號，分頁名稱自動格式化為 `$SEQ.$Tabname $rowNumber'r'`（例如 `1.Customers 50r`、`2.Orders 12r`、出錯時為 `3.Query 0r`）。
   - 分頁列排版乾淨俐落，若標題已內含筆數資訊則不重複顯示額外徽章，發生錯誤時自動以高警示紅色 `Err` 徽章標示。
   - **支援重新命名**：滑鼠雙擊結果分頁名稱或點擊右鍵「重新命名」，即可自由更改為易識別的自訂名稱。
-- **當前所選結果分頁顯眼色彩 (Active Result Tab Colors)**：
-  - 當前啟用中的結果分頁套用顯眼高對比色彩（預設深森林綠 `#065f46` 配純白字 `#ffffff`），與上方藍色 SQL 分頁產生清晰視覺層次，即使多個查詢結果切換也能迅速定位。
-  - 顏色可於「設定」中自由自訂，並提供 7 種設計師精選調色盤預設與即時預覽。
+- **結果分頁色彩 (Active Result Tab Colors)**：
+  - 當前結果分頁以顯眼色彩標示，與上方 SQL 分頁區分。
+  - 顏色可於設定中自訂。
 - **釘選保護機制 (Pin / Unpin)**：
   - 點擊分頁左側圖釘或右鍵選單即可釘選；**被釘選的分頁會自動移動至最左側**，受特殊保護，即使超過歷史保留上限也不會被自動清理。
 - **嚴謹的分頁排列順序**：
@@ -273,7 +273,7 @@ SQLight 採用現代跨平台桌面客戶端的雙層解耦架構：
     - **若無 PK、未取得 PK 定義或僅投影部分主鍵**：自動安全退回（fallback）改以**當前查詢結果的全部欄位**作為 `WHERE` 條件（並將 NULL 轉為 `IS NULL`），徹底防範因部分複合主鍵匹配多筆資料而造成誤更新或誤刪！
   - **自動交易保護機制 (Transaction Guards)**：
     - 產生的 `UPDATE` 與 `DELETE` 自動包覆於 `BEGIN TRANSACTION`、`BEGIN TRY ... COMMIT`、`BEGIN CATCH ... ROLLBACK` 結構中。
-    - 前置防護檢查 `IF @@TRANCOUNT <> 0 THROW`，執行後嚴格檢查 `IF @@ROWCOUNT <> 1 THROW`，確保影響筆數恰為 1 筆，否則自動觸發 `ROLLBACK`，保障生產資料絕對安全。
+    - 前置防護檢查 `IF @@TRANCOUNT <> 0 THROW`，執行後檢查 `IF @@ROWCOUNT <> 1 THROW`，確保影響筆數恰為 1 筆，否則自動 `ROLLBACK`。
   - **欄位安全過濾與逸出**：
     - `INSERT` 與 `UPDATE SET` 自動排除 `Identity` 自動識別欄位。
     - 二進位佔位符與超出 JS 安全範圍的超大整數主動防呆攔截，防止資料截斷與失真。
@@ -294,16 +294,16 @@ SQLight 採用現代跨平台桌面客戶端的雙層解耦架構：
   - 預設保持關閉 (`false`)，避免日常查詢產生非必要的伺服器追蹤與網路開銷。
   - 勾選頂部功能列的「**效能分析**」核取方塊後執行查詢，系統自動注入 `SET STATISTICS IO, TIME ON` 與階段性 DMV 遙測腳本。
   - 執行完成後自動切換至底部「**Stats (效能)**」儀表板分頁，並主動將底層遙測資料集隔離剔除，使用者查詢結果集 100% 保持乾淨。
-- **5 大核心效能 KPI 摘要卡片**：
-  1. ⏱️ **總執行時間 (Elapsed Time)**：整體查詢端到端歷時。
-  2. ⚡ **CPU 時間 (CPU Time)**：資料庫引擎實際消耗之 CPU 計算毫秒數。
-  3. 🛠️ **編譯與解析時間 (Compile Time)**：SQL Server 生成查詢計畫與編譯所耗費的時間。
-  4. 📖 **邏輯讀取量 (Logical Reads)**：從記憶體緩衝區 (Buffer Cache) 讀取的 8KB 資料頁數與換算容量（如 `1,250 頁 (9.8 MB)`）。
-  5. 🎯 **緩衝快取命中率 (Buffer Cache Hit Ratio)**：精準換算 `(Logical Reads - Physical Reads) / Logical Reads` 百分比，快速評估是否發生硬碟實體 I/O 瓶頸。
+- **效能摘要 (Performance Summary)**：
+  1. ⏱️ **總執行時間 (Elapsed Time)**
+  2. ⚡ **CPU 時間 (CPU Time)**
+  3. 🛠️ **編譯時間 (Compile Time)**
+  4. 📖 **邏輯讀取量 (Logical Reads)**：頁數與換算容量（如 `1,250 頁 (9.8 MB)`）
+  5. 🎯 **緩衝快取命中率 (Buffer Cache Hit Ratio)**
 - **各資料表實體/邏輯 IO 細部展開 (Per-Table Breakdown)**：
   - 清晰列出查詢所涉及的每一張資料表：掃描次數 (`Scan Count`)、邏輯讀取 (`Logical Reads`)、實體讀取 (`Physical Reads`)、預讀次數 (`Read-Ahead`)、LOB 大型物件讀取。
   - **自動容量換算**：根據 SQL Server 內部 8KB 資料頁規格，自動換算為人類友善的資料量單位（`B` / `KB` / `MB` / `GB`）。
-  - **高 IO 警示 (High IO Alert)**：當單表邏輯讀取 > 1,000 頁或發生全表掃描且讀取 > 200 頁時，自動標記琥珀金警示與進度條，協助工程師一眼揪出效能殺手（Table Scan / Index Scan / 遺漏索引）。
+  - **高 IO 提示 (High IO Alert)**：當單表邏輯讀取較高或發生全表掃描時，以警示標記提醒注意。
 - **工作階段等待事件統計 (Session Wait Stats)**：
   - 自動抓取當次查詢在 `sys.dm_exec_session_wait_stats` 中所累積的等待事件（如 `PAGEIOLATCH_SH`、`ASYNC_NETWORK_IO`、`CXPACKET` 等）。
   - 清楚展示等待任務數 (`Waiting Tasks`)、累計等待毫秒數 (`Wait Time`) 與最大單次等待時間。
@@ -313,7 +313,7 @@ SQLight 採用現代跨平台桌面客戶端的雙層解耦架構：
 ### 7. 資料表資料與結構瀏覽器 (Table Data & Structure Viewer)
 - **資料表資料瀏覽器 (Table Data Viewer)**：
   - 於側邊欄任何資料表右鍵點選「**開啟資料表 (Open Data)**」，立即以獨立分頁開啟該資料表資料。
-  - 採用 AG Grid 虛擬滾動流暢瀏覽，支援快速文字篩選、儲存格矩形框選、多欄多列拖曳選取、Excel 級即時統計列（Sum/Avg/Min/Max/Distinct）、以及複製為 TSV/JSON/Markdown 與 DML 產生。
+  - 採用 AG Grid 虛擬滾動瀏覽，支援文字篩選、儲存格框選、多欄多列選取、即時統計列（Sum/Avg/Min/Max/Distinct）、複製為 TSV/JSON/Markdown 與 DML 產生。
 - **資料表結構檢視器 (Table Structure Viewer)**：
   - 於側邊欄任何資料表或檢視表右鍵點選「**資料表結構 (Table Structure)**」，即刻開啟專屬結構分頁。
   - 完整展示 12 大欄位中繼資料屬性：
