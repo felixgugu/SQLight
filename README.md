@@ -24,7 +24,9 @@
    - [資料表資料與結構瀏覽器 (Table Data & Structure Viewer)](#7-資料表資料與結構瀏覽器-table-data--structure-viewer)
    - [實際執行計畫與 XML 視覺化檢視器 (Actual Execution Plan & XML Viewer)](#8-實際執行計畫與-xml-視覺化檢視器)
    - [ER 關聯圖視覺化檢視器 (ER Diagram Viewer)](#9-er-關聯圖視覺化檢視器-er-diagram-viewer)
-   - [個人化設定與安全防護 (Settings & Preferences)](#10-個人化設定與安全防護-settings--preferences)
+   - [AI SQL 智能助理 (AI SQL Assistant)](#10-ai-sql-智能助理-ai-sql-assistant)
+   - [本機 SQL 檔案監控與瀏覽區 (SQL Files Folder Explorer)](#11-本機-sql-檔案監控與瀏覽區-sql-files-folder-explorer)
+   - [個人化設定與安全防護 (Settings & Preferences)](#12-個人化設定與安全防護-settings--preferences)
 4. [鍵盤快捷鍵與快速代碼範本 (Shortcuts & Snippets)](#-鍵盤快捷鍵與快速代碼範本-shortcuts--snippets)
 5. [安裝、開發與建置指南 (Installation & Development)](#-安裝開發與建置指南-installation--development)
 
@@ -37,9 +39,11 @@
 相較於 SSMS、DataGrip、DBeaver 等功能完整的工具，**SQLight** 更著重於輕量與快速啟動，提供日常最常用的功能：
 - ⚡ **快速啟動**：原生 Rust 後端，體積小、啟動快。
 - 🎨 **深色 / 亮色主題**：整合 PrimeVue 4 主題系統，支援深色與亮色模式切換，可自訂主色調與表面色調。
+- 🤖 **AI SQL 助理**：自訂通用 cURL 範本引擎，去識別化適配任何 AI 供應商，支援上下文 SQL 帶入與多輪智慧對話。
 - 💻 **Monaco 編輯器**：整合 VS Code 核心編輯元件，支援語法高亮、自動補全與代碼格式化。
 - 🛑 **查詢取消**：支援中斷執行中的查詢，後端透過獨立連線發送 `KILL <spid>;` 釋放資料庫資源。
 - 🎯 **物件定位**：編輯器游標處的資料表名稱可快速在左側 Explorer 展開並定位。
+- 📁 **本機檔案監控**：側邊欄整合本機 SQL 資料夾監控區，支援檔案樹瀏覽與原地即時儲存。
 - 📚 **SQL 範本庫**：內建常用 T-SQL 語法範例，支援同層自訂檔案。
 - 🚀 **GO 批次執行**：客戶端自動依 `GO` 拆分批次，解決 TDS 驅動不支援 `GO` 的問題。
 - 📊 **AG Grid 表格**：採用 AG Grid 虛擬捲動，可處理較大量的查詢結果。
@@ -370,8 +374,39 @@ SQLight 採用現代跨平台桌面客戶端的雙層解耦架構：
   - 支援一鍵匯出為 PNG 圖片或 JSON 結構資料。
   - 支援從已儲存的 JSON 檔案還原 ER 圖工作區。
 
-### 10. 個人化設定與安全防護 (Settings & Preferences)
+### 10. AI SQL 智能助理 (AI SQL Assistant)
+- **通用自訂 cURL 請求範本引擎**：
+  - **去識別化與跨廠商相容**：不強制綁定特定廠商 SDK，全面適配任何支援 HTTP POST 的主流 LLM 服務商（如 MiniMax、OpenAI、Anthropic Claude、DeepSeek、Google Gemini、Groq、Ollama、vLLM 本地模型等）。
+  - **智慧替換變數**：
+    - `<token>`：系統自動置換為設定頁所保存之 API Key。
+    - `<content>`：自動封裝提問內容與上下文，並多輪追加至請求的 `messages` 陣列中。
+  - **結構化 JSON 容錯解析**：內建括號深度感知解析引擎，即使使用者貼上的 cURL 指令末尾缺失引號或含有換行反斜線，亦能精確提取正確的 JSON Payload。
+- **上下文感知與快捷喚起**：
+  - **快速喚起**：按 <kbd>Ctrl</kbd> + <kbd>Alt</kbd> + <kbd>A</kbd> 或點選頂部工具列「AI 助理 (<kbd>Sparkles</kbd>)」按鈕隨時開啟。
+  - **SQL 上下文自動注入**：在 Monaco 編輯器中反白語法或游標停留於語句時呼出，系統自動將該 SQL 作為參考脈絡帶入，輔助 AI 進行錯誤修正、效能優化或代碼重構。
+  - **代碼一鍵操作**：AI 回傳之 SQL 程式碼區塊提供「**複製代碼**」、「**填入當前編輯器**」與「**新開查詢分頁**」快捷按鈕。
+- **原生懸浮對話視窗 (Native Floating Window)**：
+  - **自由拖曳移動**：採用高靈敏 Pointer Events，按住標題列即可平滑拖曳至桌面任意位置。
+  - **8 方向邊緣/角落自由縮放**：四個邊框與四個角落皆具備縮放控柄，支援按住拉伸調整視窗尺寸。
+  - **全螢幕最大化與還原**：支援雙擊標題列或點擊右上角最大化按鈕，秒級切換為 `100vw × 100vh` 全螢幕工作區。
+  - **最小化為懸浮膠囊列**：點擊最小化可收合至右下角小巧的膠囊列（AiFloatingPill），即時顯示思考/旋轉動態與未讀訊息徽章，點擊即刻還原視窗。
+
+### 11. 本機 SQL 檔案監控與瀏覽區 (SQL Files Folder Explorer)
+- **專屬本機目錄監控**：
+  - 於左側 Explorer 下方整合「**SQL 檔案**」專屬監控區塊，可自由選擇或切換本機工作資料夾。
+  - 記憶最後開啟之路徑，啟動時自動掃描並載入所有 `.sql` 腳本檔案。
+- **雙向高度拖曳分割條 (Draggable Splitter)**：
+  - 兩區塊之間配置原生拖曳把手，可依當前工作重心自由拖動調整資料庫物件樹與本機檔案樹的高度佔比。
+- **無縫開啟與原地儲存**：
+  - 點擊本機檔案清單中的 `.sql` 檔案，直接於 Monaco 編輯器開啟專屬標籤分頁。
+  - 編輯後按下 <kbd>Ctrl</kbd> + <kbd>S</kbd>，直接將變更寫回本機實體檔案，無需透過另存新檔對話框。
+
+### 12. 個人化設定與安全防護 (Settings & Preferences)
 透過右上角齒輪開啟設定對話框（固定尺寸設計，切換分頁不晃動）：
+- **AI 助手設定 (AI Settings)**：
+  - **API Key**：輸入個人金鑰（支援遮蔽與顯示切換）。
+  - **cURL 請求範本**：提供標準多行文字編輯區，可自由自訂任何廠商的 curl 指令、模型名稱、思考設定（`thinking`）或參數，並具備「**還原預設範本**」按鈕。
+  - **測試連線 (Test Connection)**：一鍵發送真實 Ping 請求測試端點連線與金鑰有效性，即時反饋回傳訊息與延遲毫秒數 (Latency)。
 - **佈景主題設定 (Theme)**：
   - **色彩模式 (Color Mode)**：深色 (Dark) / 亮色 (Light) 一鍵切換，Monaco Editor、AG Grid、執行計畫檢視器、ER 圖與全域 CSS 同步自適應。
   - **佈景預設 (Theme Preset)**：Aura（現代立體圓潤）/ Lara（均衡專業）/ Nora（平坦極簡），即時套用全部 PrimeVue 元件。
@@ -408,6 +443,9 @@ SQLight 採用現代跨平台桌面客戶端的雙層解耦架構：
 | 快捷鍵 | 作用範圍 | 功能說明 |
 | :--- | :--- | :--- |
 | <kbd>Ctrl</kbd> + <kbd>P</kbd> | 全域 / 編輯器 | **快速物件檢索 (Spotlight)**：呼出浮動搜尋面板，模糊檢索資料表、檢視表、預存程序、函數 |
+| <kbd>Ctrl</kbd> + <kbd>Alt</kbd> + <kbd>A</kbd> | SQL 編輯器 | **詢問 AI SQL 助理**：呼出對話視窗，自動將反白或游標處 SQL 作為上下文脈絡帶入 |
+| 工具列按鈕 (<kbd>Sparkles</kbd>) | 頂部工具列 | **AI SQL 助理**：開啟或還原 AI 對話浮動視窗 |
+| 膠囊懸浮列 | 右下角視窗 | **還原 AI 對話視窗**：點擊右下角膠囊懸浮列即刻還原視窗，顯示未讀計數與動態 |
 | <kbd>Ctrl</kbd> + <kbd>Enter</kbd> | SQL 編輯器 | **執行當前語句**：若有選取文字則執行選取範圍；無選取時自動執行游標所在獨立 SQL |
 | <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>Enter</kbd> | SQL 編輯器 | **執行全部語句**：無條件執行整個編輯器內的所有 SQL 代碼 |
 | <kbd>Alt</kbd> + <kbd>Break</kbd> / <kbd>Pause</kbd> | 全域 / 編輯器 | **中斷並取消查詢 (Cancel Query)**：微軟 SSMS 標準中斷快捷鍵，中止本地讀取並發送 `KILL <spid>` 終止伺服器運算 |
@@ -485,7 +523,7 @@ npm run dev:tauri
 # 執行 TypeScript 靜態型別檢查
 npm run typecheck
 
-# 執行自動化單元測試套件 (203 項涵蓋連線、安全 DML、語句切分、Spotlight 模糊檢索、預估執行計畫 SHOWPLAN_ALL、資料表結構、分頁顏色與主題系統、執行統計分析、長時間查詢中斷取消與 Task Killer、常用 SQL 範本庫、快速定位抽取器、資料庫/資料表正則過濾與 PrimeVue 佈景主題切換)
+# 執行自動化單元測試套件 (226 項涵蓋連線、安全 DML、語句切分、Spotlight 模糊檢索、預估執行計畫 SHOWPLAN_ALL、資料表結構、分頁顏色與主題系統、執行統計分析、長時間查詢中斷取消與 Task Killer、常用 SQL 範本庫、快速定位抽取器、資料庫/資料表正則過濾、PrimeVue 佈景主題切換與 AI 自訂 cURL 請求範本引擎)
 npm test
 
 # 執行前端生產環境打包
