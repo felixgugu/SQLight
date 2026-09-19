@@ -7,42 +7,54 @@
         <span>Explorer</span>
       </div>
       <div class="flex items-center space-x-1">
-        <button
+        <Button
+          icon="pi pi-compass"
+          severity="secondary"
+          size="small"
+          text
+          rounded
+          class="!h-6 !w-6 !p-0"
+          v-tooltip.bottom="'快速定位游標處資料表 (Locate Table)'"
           @click="handleLocateCurrentTable"
-          class="p-1 hover:bg-dark-750 text-dark-400 hover:text-brand-400 rounded transition-colors"
-          title="快速定位游標處資料表 (Locate Table at Cursor)"
-        >
-          <LocateFixed class="w-3.5 h-3.5" />
-        </button>
-        <button
+        />
+        <Button
+          icon="pi pi-plus"
+          severity="secondary"
+          size="small"
+          text
+          rounded
+          class="!h-6 !w-6 !p-0"
+          v-tooltip.bottom="'新增連線 (New Connection)'"
           @click="$emit('open-connection-modal')"
-          class="p-1 hover:bg-dark-750 text-dark-400 hover:text-dark-200 rounded transition-colors"
-          title="New Connection"
-        >
-          <Plus class="w-3.5 h-3.5" />
-        </button>
-        <button
+        />
+        <Button
+          :icon="isRefreshing ? 'pi pi-spin pi-spinner' : 'pi pi-refresh'"
+          severity="secondary"
+          size="small"
+          text
+          rounded
+          class="!h-6 !w-6 !p-0"
+          v-tooltip.bottom="'重新整理 (Refresh Explorer)'"
           @click="refreshCurrent"
-          class="p-1 hover:bg-dark-750 text-dark-400 hover:text-dark-200 rounded transition-colors"
-          title="Refresh Explorer"
-        >
-          <RotateCw :class="['w-3.5 h-3.5', isRefreshing ? 'animate-spin text-brand-400' : '']" />
-        </button>
-        <button
+        />
+        <Button
+          icon="pi pi-angle-double-up"
+          severity="secondary"
+          size="small"
+          text
+          rounded
+          class="!h-6 !w-6 !p-0"
+          v-tooltip.bottom="'全部收合 (Collapse All)'"
           @click="handleCollapseAll"
-          class="p-1 hover:bg-dark-750 text-dark-400 hover:text-dark-200 rounded transition-colors"
-          title="全部收合 (Collapse All)"
-        >
-          <ChevronsDownUp class="w-3.5 h-3.5" />
-        </button>
+        />
       </div>
     </div>
 
     <!-- Filter Search Box with ComboBox & Clear Button -->
     <div ref="filterContainerRef" class="p-2 border-b border-dark-700 flex-shrink-0 relative">
       <div class="relative flex items-center">
-        <Search class="w-3 h-3 text-dark-500 absolute left-2 pointer-events-none" />
-        <input
+        <i class="pi pi-search text-dark-500 absolute left-2 pointer-events-none text-xs" />
+        <InputText
           ref="filterInputRef"
           v-model="filterQuery"
           @keydown.enter.stop="handleKeyEnter"
@@ -50,9 +62,8 @@
           @keydown.up.prevent="handleKeyUp"
           @keydown.esc.stop="handleKeyEsc"
           @blur="handleInputBlur"
-          type="text"
           placeholder="Filter tables, views & procs..."
-          class="w-full bg-dark-900 border border-dark-700 rounded px-2 py-1 pl-7 pr-12 text-xs text-dark-100 placeholder-dark-500 focus:outline-none focus:border-brand-500 font-mono transition-colors"
+          class="w-full !bg-dark-900 !border-dark-700 !rounded !px-2 !py-1 !pl-7 !pr-12 !text-xs !text-dark-100 !font-mono"
         />
 
         <!-- Right Buttons inside Input -->
@@ -198,13 +209,13 @@
           <span class="font-sans font-medium truncate flex-1">{{ conn.name }}</span>
 
           <!-- Status indicator (when active in workspace) -->
-          <span
+          <Tag
             v-if="connectionStore.activeConnectionId === conn.id && connectionStore.status === 'connected'"
-            class="text-[9px] px-1 py-0.2 rounded bg-emerald-500/20 text-emerald-300 font-sans border border-emerald-500/30 flex-shrink-0 mr-1"
+            severity="success"
+            value="使用中"
+            class="!text-[9px] !px-1 !py-0 flex-shrink-0 mr-1"
             title="目前工作區使用中連線"
-          >
-            使用中
-          </span>
+          />
 
           <!-- Action Buttons on Hover -->
           <div
@@ -640,163 +651,9 @@
       </div>
     </div>
 
-    <!-- Object Context Menu Popover (Tables, Views, Procedures, Functions) -->
-    <div
-      v-if="contextMenu.visible"
-      :style="{ top: `${contextMenu.y}px`, left: `${contextMenu.x}px` }"
-      class="fixed z-50 bg-dark-800 border border-dark-700 rounded shadow-xl py-1 w-52 text-xs font-sans text-dark-200 select-none"
-      @click="contextMenu.visible = false"
-    >
-      <div class="px-2.5 py-1 text-xxs text-dark-400 border-b border-dark-750 font-mono truncate">
-        {{ contextMenu.schema }}.{{ contextMenu.tableName }} ({{ contextMenu.objectType }})
-      </div>
-
-      <!-- Tables & Views: Open Data -->
-      <button
-        v-if="contextMenu.objectType === 'TABLE' || contextMenu.objectType === 'VIEW'"
-        @click="handleOpenData"
-        class="w-full text-left px-2.5 py-1.5 hover:bg-dark-750 hover:text-dark-100 flex items-center space-x-2 transition-colors"
-      >
-        <Table2 class="w-3.5 h-3.5 text-emerald-400" />
-        <span>{{ contextMenu.objectType === 'TABLE' ? '開啟資料表 (Open Data)' : '開啟檢視表資料' }}</span>
-      </button>
-
-      <!-- Tables & Views: Table Structure -->
-      <button
-        v-if="contextMenu.objectType === 'TABLE' || contextMenu.objectType === 'VIEW'"
-        @click="handleOpenStructure"
-        class="w-full text-left px-2.5 py-1.5 hover:bg-dark-750 hover:text-dark-100 flex items-center space-x-2 transition-colors text-indigo-300"
-      >
-        <TableProperties class="w-3.5 h-3.5 text-indigo-400" />
-        <span>資料表結構 (Table Structure)</span>
-      </button>
-
-      <!-- Table Only: Open ER Model (只支援單一資料表右鍵選單「建立關聯實體圖」) -->
-      <button
-        v-if="contextMenu.objectType === 'TABLE'"
-        @click="handleOpenErDiagram(2)"
-        class="w-full text-left px-2.5 py-1.5 hover:bg-dark-750 hover:text-dark-100 flex items-center space-x-2 transition-colors text-cyan-300"
-      >
-        <Workflow class="w-3.5 h-3.5 text-cyan-400" />
-        <span>建立關聯實體圖 (ER Model)</span>
-      </button>
-
-      <!-- Table Only: Add to Current Active ER Diagram if activeTab is er_diagram -->
-      <button
-        v-if="contextMenu.objectType === 'TABLE' && workspaceStore.activeTab?.type === 'er_diagram'"
-        @click="handleAddToCurrentErDiagram"
-        class="w-full text-left px-2.5 py-1.5 hover:bg-dark-750 hover:text-dark-100 flex items-center space-x-2 transition-colors text-brand-300"
-      >
-        <PlusCircle class="w-3.5 h-3.5 text-brand-400" />
-        <span>加入至當前 ER 圖</span>
-      </button>
-
-      <!-- Tables & Views: Generate SELECT -->
-      <button
-        v-if="contextMenu.objectType === 'TABLE' || contextMenu.objectType === 'VIEW'"
-        @click="handleGenerateSelect"
-        class="w-full text-left px-2.5 py-1.5 hover:bg-dark-750 hover:text-dark-100 flex items-center space-x-2 transition-colors"
-      >
-        <FileCode class="w-3.5 h-3.5 text-brand-400" />
-        <span>產生 SELECT 語法</span>
-      </button>
-
-      <!-- Table Only: Generate CREATE TABLE DDL -->
-      <button
-        v-if="contextMenu.objectType === 'TABLE'"
-        @click="handleGenerateCreateTableDdl"
-        class="w-full text-left px-2.5 py-1.5 hover:bg-dark-750 hover:text-dark-100 flex items-center space-x-2 transition-colors text-amber-300"
-      >
-        <FileText class="w-3.5 h-3.5 text-amber-400" />
-        <span>產生 CREATE TABLE 腳本</span>
-      </button>
-
-      <!-- Views, Procedures, Functions: View Definition -->
-      <button
-        v-if="contextMenu.objectType === 'VIEW' || contextMenu.objectType === 'PROCEDURE' || contextMenu.objectType === 'FUNCTION'"
-        @click="handleViewDefinition(contextMenu.connId, contextMenu.database, contextMenu.schema, contextMenu.tableName)"
-        class="w-full text-left px-2.5 py-1.5 hover:bg-dark-750 hover:text-dark-100 flex items-center space-x-2 transition-colors text-cyan-300"
-      >
-        <Code2 class="w-3.5 h-3.5 text-cyan-400" />
-        <span>檢視定義 (View Definition)</span>
-      </button>
-
-      <!-- Procedures: Generate EXEC Template -->
-      <button
-        v-if="contextMenu.objectType === 'PROCEDURE'"
-        @click="handleGenerateExec"
-        class="w-full text-left px-2.5 py-1.5 hover:bg-dark-750 hover:text-dark-100 flex items-center space-x-2 transition-colors"
-      >
-        <Play class="w-3.5 h-3.5 text-emerald-400" />
-        <span>產生 EXEC 呼叫樣板</span>
-      </button>
-
-      <!-- Functions: Generate SELECT Template -->
-      <button
-        v-if="contextMenu.objectType === 'FUNCTION'"
-        @click="handleGenerateFuncSelect"
-        class="w-full text-left px-2.5 py-1.5 hover:bg-dark-750 hover:text-dark-100 flex items-center space-x-2 transition-colors"
-      >
-        <FileCode class="w-3.5 h-3.5 text-sky-400" />
-        <span>產生 SELECT 呼叫樣板</span>
-      </button>
-    </div>
-
-    <!-- Connection Context Menu Popover -->
-    <div
-      v-if="connContextMenu.visible"
-      :style="{ top: `${connContextMenu.y}px`, left: `${connContextMenu.x}px` }"
-      class="fixed z-50 bg-dark-800 border border-dark-700 rounded shadow-xl py-1 w-44 text-xs font-sans text-dark-200 select-none"
-      @click="connContextMenu.visible = false"
-    >
-      <div class="px-2.5 py-1 text-xxs text-dark-400 border-b border-dark-750 font-sans truncate font-medium">
-        {{ connContextMenu.conn?.name }}
-      </div>
-
-      <button
-        @click="handleRefreshConn(connContextMenu.conn!)"
-        class="w-full text-left px-2.5 py-1.5 hover:bg-dark-750 hover:text-dark-100 flex items-center space-x-2 transition-colors"
-      >
-        <RotateCw class="w-3.5 h-3.5 text-brand-400" />
-        <span>重新整理 (Refresh)</span>
-      </button>
-
-
-      <button
-        @click="handleEditConn(connContextMenu.conn!)"
-        class="w-full text-left px-2.5 py-1.5 hover:bg-dark-750 hover:text-dark-100 flex items-center space-x-2 transition-colors"
-      >
-        <Database class="w-3.5 h-3.5 text-amber-400" />
-        <span>編輯設定 (Edit)</span>
-      </button>
-
-      <button
-        @click="handleDuplicateConn(connContextMenu.conn!)"
-        class="w-full text-left px-2.5 py-1.5 hover:bg-dark-750 hover:text-dark-100 flex items-center space-x-2 transition-colors"
-      >
-        <Copy class="w-3.5 h-3.5 text-emerald-400" />
-        <span>複製連線 (Duplicate)</span>
-      </button>
-
-      <button
-        v-if="connectionStore.activeConnectionId === connContextMenu.conn?.id && connectionStore.status === 'connected'"
-        @click="handleDisconnect"
-        class="w-full text-left px-2.5 py-1.5 hover:bg-dark-750 hover:text-dark-100 flex items-center space-x-2 transition-colors border-t border-dark-750"
-      >
-        <Unplug class="w-3.5 h-3.5 text-dark-400" />
-        <span>中斷連線 (Disconnect)</span>
-      </button>
-
-      <div class="my-1 border-t border-dark-750"></div>
-
-      <button
-        @click="handlePromptDelete(connContextMenu.conn!)"
-        class="w-full text-left px-2.5 py-1.5 hover:bg-rose-950/60 text-rose-400 hover:text-rose-300 flex items-center space-x-2 transition-colors"
-      >
-        <Trash2 class="w-3.5 h-3.5" />
-        <span>刪除連線 (Delete)</span>
-      </button>
-    </div>
+    <!-- PrimeVue Context Menus -->
+    <ContextMenu ref="objectMenuRef" :model="objectMenuItems" />
+    <ContextMenu ref="connMenuRef" :model="connMenuItems" />
 
     <!-- Delete Connection Confirm Modal -->
     <ConfirmModal
@@ -813,37 +670,29 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, reactive, nextTick, watch } from 'vue';
+import { ref, onMounted, onUnmounted, reactive, nextTick, watch, computed } from 'vue';
+import Button from 'primevue/button';
+import InputText from 'primevue/inputtext';
+import ContextMenu from 'primevue/contextmenu';
+import Tag from 'primevue/tag';
 import {
   Server,
-  Plus,
   RotateCw,
-  Search,
   ChevronDown,
   ChevronRight,
   Database,
   Table2,
-  TableProperties,
   FileText,
   Key,
   Columns,
-  FileCode,
   Settings,
-  Trash2,
   X,
-  Unplug,
   Folder,
   FolderOpen,
   Cog,
   Code2,
-  Play,
-  LocateFixed,
   History,
   Clock,
-  ChevronsDownUp,
-  Copy,
-  Workflow,
-  PlusCircle,
 } from 'lucide-vue-next';
 import ConfirmModal from '@/components/common/ConfirmModal.vue';
 import { useConnectionStore } from '@/stores/connectionStore';
@@ -1379,6 +1228,125 @@ function getTableColumns(connId: string, db: string, schema: string, tableName: 
   return loadedColumns[tableKey(connId, db, schema, tableName)] ?? [];
 }
 
+const objectMenuRef = ref();
+const connMenuRef = ref();
+
+const objectMenuItems = computed(() => {
+  const isTable = contextMenu.objectType === 'TABLE';
+  const isView = contextMenu.objectType === 'VIEW';
+  const isProc = contextMenu.objectType === 'PROCEDURE';
+  const isFunc = contextMenu.objectType === 'FUNCTION';
+
+  const items: any[] = [];
+  if (isTable || isView) {
+    items.push({
+      label: isTable ? '開啟資料表 (Open Data)' : '開啟檢視表資料',
+      icon: 'pi pi-table',
+      command: handleOpenData,
+    });
+    items.push({
+      label: '資料表結構 (Table Structure)',
+      icon: 'pi pi-list',
+      command: handleOpenStructure,
+    });
+  }
+  if (isTable) {
+    items.push({
+      label: '建立關聯實體圖 (ER Model)',
+      icon: 'pi pi-sitemap',
+      command: () => handleOpenErDiagram(2),
+    });
+    if (workspaceStore.activeTab?.type === 'er_diagram') {
+      items.push({
+        label: '加入至當前 ER 圖',
+        icon: 'pi pi-plus-circle',
+        command: handleAddToCurrentErDiagram,
+      });
+    }
+  }
+  if (isTable || isView) {
+    items.push({
+      label: '產生 SELECT 語法',
+      icon: 'pi pi-file-edit',
+      command: handleGenerateSelect,
+    });
+  }
+  if (isTable) {
+    items.push({
+      label: '產生 CREATE TABLE 腳本',
+      icon: 'pi pi-file',
+      command: handleGenerateCreateTableDdl,
+    });
+  }
+  if (isView || isProc || isFunc) {
+    items.push({
+      label: '檢視定義 (View Definition)',
+      icon: 'pi pi-code',
+      command: () => handleViewDefinition(contextMenu.connId, contextMenu.database, contextMenu.schema, contextMenu.tableName),
+    });
+  }
+  if (isProc) {
+    items.push({
+      label: '產生 EXEC 呼叫樣板',
+      icon: 'pi pi-play',
+      command: handleGenerateExec,
+    });
+  }
+  if (isFunc) {
+    items.push({
+      label: '產生 SELECT 呼叫樣板',
+      icon: 'pi pi-file-edit',
+      command: handleGenerateFuncSelect,
+    });
+  }
+  return items;
+});
+
+const connMenuItems = computed(() => {
+  const conn = connContextMenu.conn;
+  if (!conn) return [];
+  const items: any[] = [
+    {
+      label: conn.name,
+      disabled: true,
+    },
+    { separator: true },
+    {
+      label: '重新整理 (Refresh)',
+      icon: 'pi pi-refresh',
+      command: () => handleRefreshConn(conn),
+    },
+    {
+      label: '編輯設定 (Edit)',
+      icon: 'pi pi-pencil',
+      command: () => handleEditConn(conn),
+    },
+    {
+      label: '複製連線 (Duplicate)',
+      icon: 'pi pi-copy',
+      command: () => handleDuplicateConn(conn),
+    },
+  ];
+
+  if (connectionStore.activeConnectionId === conn.id && connectionStore.status === 'connected') {
+    items.push({
+      label: '中斷連線 (Disconnect)',
+      icon: 'pi pi-power-off',
+      command: handleDisconnect,
+    });
+  }
+
+  items.push({ separator: true });
+  items.push({
+    label: '刪除連線 (Delete)',
+    icon: 'pi pi-trash',
+    class: '!text-rose-400',
+    command: () => handlePromptDelete(conn),
+  });
+
+  return items;
+});
+
 function openContextMenu(
   event: MouseEvent,
   connId: string,
@@ -1387,39 +1355,17 @@ function openContextMenu(
   tableName: string,
   objectType: 'TABLE' | 'VIEW' | 'PROCEDURE' | 'FUNCTION' = 'TABLE'
 ) {
-  connContextMenu.visible = false;
-  contextMenu.visible = true;
-  contextMenu.x = event.clientX;
-  contextMenu.y = event.clientY;
   contextMenu.connId = connId;
   contextMenu.database = db;
   contextMenu.schema = schema;
   contextMenu.tableName = tableName;
   contextMenu.objectType = objectType;
-
-  function closeMenu() {
-    contextMenu.visible = false;
-    document.removeEventListener('click', closeMenu);
-  }
-  setTimeout(() => {
-    document.addEventListener('click', closeMenu);
-  }, 0);
+  objectMenuRef.value?.show(event);
 }
 
 function openConnContextMenu(event: MouseEvent, conn: ConnectionProfile) {
-  contextMenu.visible = false;
-  connContextMenu.visible = true;
-  connContextMenu.x = event.clientX;
-  connContextMenu.y = event.clientY;
   connContextMenu.conn = conn;
-
-  function closeMenu() {
-    connContextMenu.visible = false;
-    document.removeEventListener('click', closeMenu);
-  }
-  setTimeout(() => {
-    document.addEventListener('click', closeMenu);
-  }, 0);
+  connMenuRef.value?.show(event);
 }
 
 async function handleOpenData() {

@@ -3,34 +3,40 @@
     <!-- Subheader with Clear Action and Expand/Collapse All -->
     <div class="h-6 bg-dark-850 border-b border-dark-750 flex items-center justify-between px-3 text-xxs text-dark-400 select-none flex-shrink-0">
       <span>{{ messages.length }} messages in this session</span>
-      <div class="flex items-center space-x-3">
-        <button
+      <div class="flex items-center space-x-2">
+        <Button
           type="button"
+          icon="pi pi-file"
+          label="實體日誌 (Log)"
+          size="small"
+          text
+          severity="secondary"
           @click="handleOpenLog"
-          class="hover:text-brand-300 transition-colors cursor-pointer flex items-center space-x-1"
-          title="開啟與應用程式同目錄的實體日誌檔 (sqlight.log)"
-        >
-          <FileText class="w-3 h-3" />
-          <span>實體日誌 (Log)</span>
-        </button>
+          v-tooltip.top="'開啟與應用程式同目錄的實體日誌檔 (sqlight.log)'"
+          class="!text-xxs !p-0"
+        />
         <span v-if="messages.length > 0" class="text-dark-600">|</span>
-        <button
+        <Button
           v-if="messages.length > 0"
           type="button"
+          :label="isAllExpanded ? '全部收合' : '全部展開'"
+          size="small"
+          text
+          severity="secondary"
           @click="toggleExpandAll"
-          class="hover:text-brand-300 transition-colors cursor-pointer"
-        >
-          {{ isAllExpanded ? '全部收合' : '全部展開' }}
-        </button>
+          class="!text-xxs !p-0"
+        />
         <span v-if="messages.length > 0" class="text-dark-600">|</span>
-        <button
+        <Button
           v-if="messages.length > 0"
           type="button"
+          label="Clear Messages"
+          size="small"
+          text
+          severity="danger"
           @click="$emit('clear')"
-          class="hover:text-rose-400 transition-colors cursor-pointer"
-        >
-          Clear Messages
-        </button>
+          class="!text-xxs !p-0"
+        />
       </div>
     </div>
 
@@ -58,18 +64,11 @@
           <div class="flex items-center space-x-2 flex-wrap min-w-0">
             <span class="text-brand-400 font-bold font-mono">[{{ '#' + (msg.seq ?? (messages.length - idx)) }}]</span>
             <span class="text-dark-400 font-mono">[{{ formatTime(msg.timestamp) }}]</span>
-            <span
-              :class="[
-                'uppercase tracking-wide px-1.5 py-0.2 rounded font-semibold text-xxs',
-                msg.level === 'error'
-                  ? 'bg-rose-900/80 text-rose-200'
-                  : msg.level === 'warning'
-                  ? 'bg-amber-900/80 text-amber-200'
-                  : 'bg-dark-700 text-dark-300'
-              ]"
-            >
-              {{ msg.level }}
-            </span>
+            <Tag
+              :severity="msg.level === 'error' ? 'danger' : msg.level === 'warning' ? 'warn' : 'secondary'"
+              :value="msg.level"
+              class="!text-xxs !px-1.5 !py-0.2 uppercase tracking-wide font-semibold"
+            />
             <span v-if="msg.code !== undefined && msg.code !== null" class="text-dark-400">
               Msg {{ msg.code }}
             </span>
@@ -80,25 +79,29 @@
 
           <!-- 右上角按鈕：展開|收合 與 複製 -->
           <div class="flex items-center space-x-1 flex-shrink-0 select-none">
-            <button
+            <Button
               type="button"
+              :icon="isExpanded(getMsgKey(msg, idx)) ? 'pi pi-chevron-up' : 'pi pi-chevron-down'"
+              text
+              rounded
+              size="small"
+              severity="secondary"
               @click.stop="toggleExpand(getMsgKey(msg, idx))"
-              class="opacity-0 group-hover:opacity-100 hover:text-dark-100 text-dark-400 transition-opacity p-0.5 rounded cursor-pointer"
-              :title="isExpanded(getMsgKey(msg, idx)) ? '收合 (Collapse)' : '展開 (Expand)'"
-            >
-              <ChevronUp v-if="isExpanded(getMsgKey(msg, idx))" class="w-3.5 h-3.5" />
-              <ChevronDown v-else class="w-3.5 h-3.5" />
-            </button>
+              v-tooltip.top="isExpanded(getMsgKey(msg, idx)) ? '收合 (Collapse)' : '展開 (Expand)'"
+              class="opacity-0 group-hover:opacity-100 !w-6 !h-6 !p-0"
+            />
 
-            <button
+            <Button
               type="button"
+              :icon="copiedKey === (msg.seq ?? idx) ? 'pi pi-check text-emerald-400' : 'pi pi-copy'"
+              text
+              rounded
+              size="small"
+              severity="secondary"
               @click.stop="copyMessage(msg.message, msg.seq ?? idx)"
-              class="opacity-0 group-hover:opacity-100 hover:text-dark-100 text-dark-400 transition-opacity p-0.5 rounded cursor-pointer"
-              :title="copiedKey === (msg.seq ?? idx) ? '已複製 (Copied)' : '複製訊息 (Copy message)'"
-            >
-              <Check v-if="copiedKey === (msg.seq ?? idx)" class="w-3.5 h-3.5 text-emerald-400" />
-              <Copy v-else class="w-3.5 h-3.5" />
-            </button>
+              v-tooltip.top="copiedKey === (msg.seq ?? idx) ? '已複製 (Copied)' : '複製訊息 (Copy message)'"
+              class="opacity-0 group-hover:opacity-100 !w-6 !h-6 !p-0"
+            />
           </div>
         </div>
 
@@ -121,7 +124,8 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue';
-import { Copy, Check, ChevronDown, ChevronUp, FileText } from 'lucide-vue-next';
+import Button from 'primevue/button';
+import Tag from 'primevue/tag';
 import type { SessionMessageItem, QueryMessage } from '@/types/query';
 import { queryService } from '@/services/queryService';
 import { useWorkspaceStore } from '@/stores/workspaceStore';

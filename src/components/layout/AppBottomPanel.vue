@@ -4,31 +4,24 @@
     <div class="h-8 bg-dark-850 border-b border-dark-700 flex items-center justify-between px-2 text-xs flex-shrink-0">
       <!-- Tabs Switcher -->
       <div class="flex items-center space-x-1">
-        <button
+        <Button
           v-for="tab in panelTabs"
           :key="tab.id"
+          :severity="workspaceStore.bottomPanelTab === tab.id ? 'primary' : 'secondary'"
+          :text="workspaceStore.bottomPanelTab !== tab.id"
+          size="small"
+          class="!h-6 !px-2 !py-0 !text-xs !font-medium"
           @click="workspaceStore.setBottomPanelTab(tab.id)"
-          :class="[
-            'h-6 px-2.5 flex items-center space-x-1.5 rounded text-xs font-medium transition-colors',
-            workspaceStore.bottomPanelTab === tab.id
-              ? 'bg-dark-750 text-dark-100 shadow-sm'
-              : 'text-dark-400 hover:text-dark-200 hover:bg-dark-800'
-          ]"
         >
           <component :is="tab.icon" class="w-3.5 h-3.5" />
           <span>{{ tab.label }}</span>
-          <span
+          <Badge
             v-if="tab.badge !== undefined && tab.badge > 0"
-            :class="[
-              'text-xxs px-1 rounded-full font-mono',
-              tab.id === 'messages' && hasErrorMessages
-                ? 'bg-rose-900/80 text-rose-200'
-                : 'bg-dark-700 text-dark-300'
-            ]"
-          >
-            {{ tab.badge }}
-          </span>
-        </button>
+            :value="String(tab.badge)"
+            :severity="tab.id === 'messages' && hasErrorMessages ? 'danger' : 'secondary'"
+            class="!text-[10px] !px-1 !py-0 !min-w-4 !h-4"
+          />
+        </Button>
       </div>
 
       <!-- Right Summary & Panel Controls -->
@@ -52,13 +45,16 @@
           Affected: <strong class="text-emerald-400">{{ queryStore.activeResult.affectedRows }}</strong>
         </span>
 
-        <button
+        <Button
+          icon="pi pi-minus"
+          severity="secondary"
+          size="small"
+          text
+          rounded
+          class="!h-6 !w-6 !p-0"
+          v-tooltip.bottom="'縮小面板 (Minimize)'"
           @click="workspaceStore.toggleBottomPanel()"
-          class="p-1 text-dark-400 hover:text-dark-200 hover:bg-dark-750 rounded transition-colors"
-          title="Minimize Panel"
-        >
-          <Minimize2 class="w-3.5 h-3.5" />
-        </button>
+        />
       </div>
     </div>
 
@@ -162,54 +158,8 @@
           </div>
         </div>
 
-        <!-- Result Tab Context Menu Backdrop -->
-        <div
-          v-if="tabContextMenu.visible"
-          class="fixed inset-0 z-50"
-          @click="closeTabContextMenu"
-          @contextmenu.prevent="closeTabContextMenu"
-        />
-
-        <!-- Result Tab Context Menu Popup -->
-        <div
-          v-if="tabContextMenu.visible && tabContextMenu.tab"
-          :style="{ left: `${tabContextMenu.x}px`, top: `${tabContextMenu.y}px` }"
-          class="fixed z-50 bg-dark-850 border border-dark-700 rounded-md shadow-2xl py-1 text-xs text-dark-200 select-none min-w-[160px] animate-in fade-in zoom-in-95 duration-100 font-sans"
-        >
-          <div class="px-3 py-1 text-xxs font-mono text-dark-400 border-b border-dark-750 truncate max-w-[180px]">
-            {{ tabContextMenu.tab.title }}
-          </div>
-          <button
-            type="button"
-            @click="handleContextMenuRename"
-            class="w-full text-left px-3 py-1.5 hover:bg-dark-750 hover:text-dark-100 flex items-center space-x-2 cursor-pointer transition-colors"
-          >
-            <Edit2 class="w-3.5 h-3.5 text-dark-400" />
-            <span>重新命名 (Rename)</span>
-          </button>
-          <button
-            type="button"
-            @click="handleContextMenuPin"
-            class="w-full text-left px-3 py-1.5 hover:bg-dark-750 hover:text-dark-100 flex items-center space-x-2 cursor-pointer transition-colors"
-          >
-            <Pin class="w-3.5 h-3.5" :class="tabContextMenu.tab.isPinned ? 'fill-current text-amber-400' : 'text-dark-400'" />
-            <span>{{ tabContextMenu.tab.isPinned ? '解除釘選 (Unpin)' : '釘選此結果 (Pin)' }}</span>
-          </button>
-          <button
-            type="button"
-            @click="handleContextMenuClose"
-            :disabled="queryStore.resultTabs.length <= 1"
-            :class="[
-              'w-full text-left px-3 py-1.5 flex items-center space-x-2 transition-colors',
-              queryStore.resultTabs.length <= 1
-                ? 'opacity-40 cursor-not-allowed text-dark-500'
-                : 'hover:bg-dark-750 hover:text-dark-100 text-dark-300 cursor-pointer'
-            ]"
-          >
-            <X class="w-3.5 h-3.5 text-dark-400" />
-            <span>關閉此結果 (Close)</span>
-          </button>
-        </div>
+        <!-- PrimeVue Result Tab Context Menu -->
+        <ContextMenu ref="tabContextMenuRef" :model="tabContextMenuItems" />
 
         <!-- Result Grid Viewer Area -->
         <div class="flex-1 min-h-0 overflow-hidden">
@@ -244,7 +194,10 @@
 
 <script setup lang="ts">
 import { ref, computed, reactive, nextTick, onBeforeUnmount } from 'vue';
-import { TableProperties, MessageSquare, History, Minimize2, Pin, X, Edit2, Gauge } from 'lucide-vue-next';
+import Button from 'primevue/button';
+import Badge from 'primevue/badge';
+import ContextMenu from 'primevue/contextmenu';
+import { TableProperties, MessageSquare, History, Pin, X, Gauge } from 'lucide-vue-next';
 import { useWorkspaceStore } from '@/stores/workspaceStore';
 import { useQueryStore } from '@/stores/queryStore';
 import { useSettingsStore } from '@/stores/settingsStore';
@@ -398,33 +351,49 @@ function cancelRenameTab() {
 // ========================
 // Tab Context Menu
 // ========================
+const tabContextMenuRef = ref();
 const tabContextMenu = reactive<{
-  visible: boolean;
-  x: number;
-  y: number;
   tab: QueryResultTab | null;
 }>({
-  visible: false,
-  x: 0,
-  y: 0,
   tab: null,
 });
 
-function openTabContextMenu(e: MouseEvent, tab: QueryResultTab) {
-  tabContextMenu.visible = true;
-  tabContextMenu.x = Math.min(e.clientX, window.innerWidth - 180);
-  tabContextMenu.y = e.clientY;
-  tabContextMenu.tab = tab;
-}
+const tabContextMenuItems = computed(() => {
+  const tab = tabContextMenu.tab;
+  if (!tab) return [];
+  return [
+    {
+      label: tab.title,
+      disabled: true,
+      class: 'font-mono !text-xs !text-dark-300',
+    },
+    { separator: true },
+    {
+      label: '重新命名 (Rename)',
+      icon: 'pi pi-pencil',
+      command: handleContextMenuRename,
+    },
+    {
+      label: tab.isPinned ? '解除釘選 (Unpin)' : '釘選此結果 (Pin)',
+      icon: tab.isPinned ? 'pi pi-bookmark-fill' : 'pi pi-bookmark',
+      command: handleContextMenuPin,
+    },
+    {
+      label: '關閉此結果 (Close)',
+      icon: 'pi pi-times',
+      disabled: queryStore.resultTabs.length <= 1,
+      command: handleContextMenuClose,
+    },
+  ];
+});
 
-function closeTabContextMenu() {
-  tabContextMenu.visible = false;
-  tabContextMenu.tab = null;
+function openTabContextMenu(e: MouseEvent, tab: QueryResultTab) {
+  tabContextMenu.tab = tab;
+  tabContextMenuRef.value?.show(e);
 }
 
 function handleContextMenuRename() {
   const tab = tabContextMenu.tab;
-  closeTabContextMenu();
   if (tab) {
     startRenameTab(tab);
   }
@@ -432,7 +401,6 @@ function handleContextMenuRename() {
 
 function handleContextMenuPin() {
   const tab = tabContextMenu.tab;
-  closeTabContextMenu();
   if (tab) {
     queryStore.togglePinTab(tab.id);
   }
@@ -440,7 +408,6 @@ function handleContextMenuPin() {
 
 function handleContextMenuClose() {
   const tab = tabContextMenu.tab;
-  closeTabContextMenu();
   if (tab) {
     queryStore.deleteResultTab(tab.id);
   }

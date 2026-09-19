@@ -12,88 +12,70 @@
       <!-- Left Controls: Info & Relation Depth & Layout -->
       <div class="flex items-center space-x-2">
         <!-- Root Table Badge -->
-        <div
+        <Tag
           v-if="tab.rootTable"
-          class="flex items-center space-x-1.5 px-2 py-1 rounded text-xs border"
-          :class="isLightTheme ? 'bg-slate-100 border-slate-200' : 'bg-dark-800 border-dark-700'"
+          severity="info"
+          class="!font-mono !text-xs !px-2 !py-1"
         >
-          <Database class="w-3.5 h-3.5 text-brand-500" />
-          <span class="text-xxs font-mono" :class="isLightTheme ? 'text-slate-400' : 'text-dark-400'">{{ tab.rootSchema }}.</span>
-          <span class="font-semibold font-mono" :class="isLightTheme ? 'text-slate-800' : 'text-dark-100'">{{ tab.rootTable }}</span>
-        </div>
+          <template #icon>
+            <i class="pi pi-database text-brand-500 mr-1 text-xs"></i>
+          </template>
+          <span>{{ tab.rootSchema }}.{{ tab.rootTable }}</span>
+        </Tag>
 
         <div class="h-4 w-px mx-1" :class="isLightTheme ? 'bg-slate-200' : 'bg-dark-750'"></div>
 
-
         <!-- Edit Mode Toggle Button -->
-        <button
+        <Button
           type="button"
+          :icon="isEditMode ? 'pi pi-pencil' : 'pi pi-eye'"
+          :label="isEditMode ? '編輯模式 (ON)' : '檢視模式 (OFF)'"
+          size="small"
+          :severity="isEditMode ? 'warn' : 'secondary'"
+          :outlined="!isEditMode"
           @click="toggleEditMode"
-          :class="[
-            'h-7 px-2.5 rounded text-xs flex items-center space-x-1.5 transition-all cursor-pointer font-medium border shadow-xs',
-            isEditMode
-              ? 'bg-amber-500 hover:bg-amber-600 text-white border-amber-600 shadow-amber-500/20 ring-1 ring-amber-400/50'
-              : (isLightTheme
-                  ? 'bg-white hover:bg-slate-50 text-slate-600 hover:text-slate-900 border-slate-200'
-                  : 'bg-dark-800 hover:bg-dark-750 text-dark-300 hover:text-dark-100 border-dark-700')
-          ]"
-          :title="isEditMode ? '目前為編輯模式：可自由拖曳連線與勾選隱藏欄位 (點擊切換為檢視模式)' : '目前為檢視模式：僅可移動卡片 (點擊開啟編輯模式)'"
-        >
-          <component :is="isEditMode ? Edit3 : Eye" class="w-3.5 h-3.5" :class="isEditMode ? 'text-white animate-pulse' : (isLightTheme ? 'text-slate-400' : 'text-dark-400')" />
-          <span>{{ isEditMode ? '編輯模式' : '檢視模式' }}</span>
-          <span
-            :class="[
-              'text-[9px] px-1 py-0.2 rounded font-mono font-bold leading-none',
-              isEditMode
-                ? 'bg-amber-700 text-amber-100'
-                : (isLightTheme ? 'bg-slate-100 text-slate-500' : 'bg-dark-750 text-dark-400')
-            ]"
-          >
-            {{ isEditMode ? 'ON' : 'OFF' }}
-          </span>
-        </button>
+          v-tooltip.top="isEditMode ? '目前為編輯模式：可自由拖曳連線與勾選隱藏欄位 (點擊切換為檢視模式)' : '目前為檢視模式：僅可移動卡片 (點擊開啟編輯模式)'"
+          class="!text-xs !py-1 !px-2.5 font-medium shadow-xs"
+        />
 
         <!-- Auto Layout (Dagre) Button -->
-        <button
+        <Button
           type="button"
+          icon="pi pi-th-large text-brand-500"
+          label="自動排版"
+          size="small"
+          severity="secondary"
+          outlined
           @click="applyAutoLayout(layoutDirection)"
-          class="h-7 px-2.5 rounded text-xs flex items-center space-x-1.5 transition-colors cursor-pointer shadow-xs border"
-          :class="isLightTheme
-            ? 'bg-white hover:bg-slate-50 text-slate-700 hover:text-slate-900 border-slate-200'
-            : 'bg-dark-800 hover:bg-dark-750 text-dark-200 hover:text-white border-dark-700'"
-          title="以階層拓撲演算法自動重新排列所有資料表"
-        >
-          <LayoutGrid class="w-3.5 h-3.5 text-brand-500" />
-          <span>自動排版</span>
-        </button>
+          v-tooltip.top="'以階層拓撲演算法自動重新排列所有資料表'"
+          class="!text-xs !py-1 !px-2.5 shadow-xs"
+        />
 
         <!-- Direction Toggle (LR / TB) -->
-        <button
+        <Button
           type="button"
+          :icon="layoutDirection === 'LR' ? 'pi pi-arrows-h' : 'pi pi-arrows-v'"
+          :label="layoutDirection"
+          size="small"
+          severity="secondary"
+          outlined
           @click="toggleLayoutDirection"
-          class="h-7 px-2 rounded text-xs flex items-center space-x-1 transition-colors cursor-pointer border"
-          :class="isLightTheme
-            ? 'bg-white hover:bg-slate-50 text-slate-600 hover:text-slate-900 border-slate-200'
-            : 'bg-dark-800 hover:bg-dark-750 text-dark-300 hover:text-dark-100 border-dark-700'"
-          :title="`目前方向：${layoutDirection === 'LR' ? '水平左右 (LR)' : '垂直上下 (TB)'}，點擊切換`"
-        >
-          <component :is="layoutDirection === 'LR' ? ArrowRightLeft : ArrowUpDown" class="w-3.5 h-3.5" :class="isLightTheme ? 'text-slate-400' : 'text-dark-400'" />
-          <span class="text-xxs font-mono">{{ layoutDirection }}</span>
-        </button>
+          v-tooltip.top="`目前方向：${layoutDirection === 'LR' ? '水平左右 (LR)' : '垂直上下 (TB)'}，點擊切換`"
+          class="!text-xs !py-1 !px-2 font-mono"
+        />
 
         <!-- Add Text Note Button -->
-        <button
+        <Button
           type="button"
+          icon="pi pi-align-left"
+          label="文字"
+          size="small"
+          severity="secondary"
+          outlined
           @click="handleAddTextNode"
-          class="h-7 px-2.5 rounded text-xs flex items-center space-x-1.5 transition-colors cursor-pointer shadow-xs border"
-          :class="isLightTheme
-            ? 'bg-white hover:bg-slate-50 text-slate-700 hover:text-slate-900 border-slate-200'
-            : 'bg-dark-800 hover:bg-dark-750 text-dark-200 hover:text-white border-dark-700'"
-          title="在畫布上新增文字說明 / 備註便箋"
-        >
-          <Type class="w-3.5 h-3.5" :class="isLightTheme ? 'text-slate-600' : 'text-zinc-400'" />
-          <span>文字</span>
-        </button>
+          v-tooltip.top="'在畫布上新增文字說明 / 備註便箋'"
+          class="!text-xs !py-1 !px-2.5 shadow-xs"
+        />
       </div>
 
       <!-- Right Controls: Zoom, Theme, Export -->
@@ -103,125 +85,77 @@
           class="flex items-center rounded overflow-hidden border"
           :class="isLightTheme ? 'bg-white border-slate-200' : 'bg-dark-800 border-dark-700'"
         >
-          <button
+          <Button
             type="button"
+            icon="pi pi-search-minus"
+            text
+            size="small"
+            severity="secondary"
             @click="handleZoomOut"
-            class="p-1.5 transition-colors cursor-pointer"
-            :class="isLightTheme ? 'hover:bg-slate-100 text-slate-600 hover:text-slate-900' : 'hover:bg-dark-750 text-dark-300 hover:text-white'"
-            title="縮小 (Ctrl + 滾輪下滾)"
-          >
-            <ZoomOut class="w-3.5 h-3.5" />
-          </button>
-          <button
+            v-tooltip.top="'縮小 (Ctrl + 滾輪下滾)'"
+            class="!p-1.5 !w-7 !h-7"
+          />
+          <Button
             type="button"
+            :label="`${Math.round(zoomLevel * 100)}%`"
+            text
+            size="small"
+            severity="secondary"
             @click="handleZoomReset"
-            class="px-1.5 py-1 text-xxs font-mono transition-colors min-w-[42px] text-center cursor-pointer"
-            :class="isLightTheme ? 'hover:bg-slate-100 text-slate-700 hover:text-slate-900' : 'hover:bg-dark-750 text-dark-300 hover:text-white'"
-            title="重設縮放 100%"
-          >
-            {{ Math.round(zoomLevel * 100) }}%
-          </button>
-          <button
+            v-tooltip.top="'重設縮放 100%'"
+            class="!px-1.5 !py-1 !text-xxs font-mono min-w-[42px]"
+          />
+          <Button
             type="button"
+            icon="pi pi-search-plus"
+            text
+            size="small"
+            severity="secondary"
             @click="handleZoomIn"
-            class="p-1.5 transition-colors cursor-pointer"
-            :class="isLightTheme ? 'hover:bg-slate-100 text-slate-600 hover:text-slate-900' : 'hover:bg-dark-750 text-dark-300 hover:text-white'"
-            title="放大 (Ctrl + 滾輪上滾)"
-          >
-            <ZoomIn class="w-3.5 h-3.5" />
-          </button>
-          <button
+            v-tooltip.top="'放大 (Ctrl + 滾輪上滾)'"
+            class="!p-1.5 !w-7 !h-7"
+          />
+          <Button
             type="button"
+            icon="pi pi-window-maximize"
+            text
+            size="small"
+            severity="secondary"
             @click="handleZoomFit"
-            class="p-1.5 transition-colors border-l cursor-pointer"
-            :class="isLightTheme ? 'hover:bg-slate-100 text-slate-600 hover:text-slate-900 border-slate-200' : 'hover:bg-dark-750 text-dark-300 hover:text-white border-dark-750'"
-            title="最適大小 (Fit)"
-          >
-            <Maximize2 class="w-3.5 h-3.5" />
-          </button>
+            v-tooltip.top="'最適大小 (Fit)'"
+            class="!p-1.5 !w-7 !h-7 border-l"
+          />
         </div>
 
         <div class="h-4 w-px mx-1" :class="isLightTheme ? 'bg-slate-200' : 'bg-dark-750'"></div>
 
         <!-- Theme Toggle Button (Dark / Light) -->
-        <button
+        <Button
           type="button"
+          :icon="isLightTheme ? 'pi pi-sun text-amber-500' : 'pi pi-moon text-indigo-400'"
+          :label="isLightTheme ? '淺色' : '深色'"
+          size="small"
+          severity="secondary"
+          outlined
           @click="toggleTheme"
-          class="h-7 px-2.5 rounded text-xs flex items-center space-x-1.5 transition-colors cursor-pointer border shadow-xs"
-          :class="isLightTheme
-            ? 'bg-white hover:bg-slate-50 text-slate-700 hover:text-slate-900 border-slate-200'
-            : 'bg-dark-800 hover:bg-dark-750 text-dark-200 hover:text-white border-dark-700'"
-          :title="`佈景切換：目前為${isLightTheme ? '淺色系' : '深色系'} (點擊切換為${isLightTheme ? '深色系' : '淺色系'})`"
-        >
-          <component
-            :is="isLightTheme ? Sun : Moon"
-            class="w-3.5 h-3.5"
-            :class="isLightTheme ? 'text-amber-500' : 'text-indigo-400'"
-          />
-          <span>佈景切換</span>
-          <span
-            class="text-[9px] px-1 py-0.2 rounded font-mono font-bold leading-none"
-            :class="isLightTheme ? 'bg-amber-100 text-amber-800' : 'bg-dark-750 text-indigo-300'"
-          >
-            {{ isLightTheme ? '淺色' : '深色' }}
-          </span>
-        </button>
+          v-tooltip.top="`佈景切換：目前為${isLightTheme ? '淺色系' : '深色系'} (點擊切換)`"
+          class="!text-xs !py-1 !px-2.5 shadow-xs"
+        />
 
         <div class="h-4 w-px mx-1" :class="isLightTheme ? 'bg-slate-200' : 'bg-dark-750'"></div>
 
         <!-- Export Dropdown -->
-        <div class="relative">
-          <button
-            type="button"
-            @click.stop="isExportMenuOpen = !isExportMenuOpen"
-            class="h-7 px-2.5 bg-brand-600 hover:bg-brand-500 text-white rounded text-xs flex items-center space-x-1.5 transition-colors font-medium shadow-sm cursor-pointer"
-          >
-            <Download class="w-3.5 h-3.5" />
-            <span>匯出</span>
-            <ChevronDown class="w-3 h-3 ml-0.5" />
-          </button>
-
-          <!-- Export Menu Popover -->
-          <div
-            v-if="isExportMenuOpen"
-            class="absolute right-0 top-full mt-1.5 w-48 rounded-md shadow-2xl py-1 text-xs z-50 animate-in fade-in zoom-in-95 duration-100 border"
-            :class="isLightTheme ? 'bg-white border-slate-200 text-slate-700' : 'bg-dark-850 border-dark-700 text-dark-200'"
-          >
-            <div
-              class="px-2.5 py-1 text-xxs border-b font-medium"
-              :class="isLightTheme ? 'text-slate-400 border-slate-100' : 'text-dark-400 border-dark-750'"
-            >
-              匯出 ER 圖形與定義
-            </div>
-            <button
-              type="button"
-              @click="exportAsPng"
-              class="w-full text-left px-2.5 py-1.5 flex items-center space-x-2 transition-colors cursor-pointer"
-              :class="isLightTheme ? 'hover:bg-slate-100 hover:text-slate-900' : 'hover:bg-dark-750 hover:text-white'"
-            >
-              <Image class="w-3.5 h-3.5 text-emerald-500" />
-              <span>匯出 PNG 圖檔 (高解析)</span>
-            </button>
-            <button
-              type="button"
-              @click="exportAsSvg"
-              class="w-full text-left px-2.5 py-1.5 flex items-center space-x-2 transition-colors cursor-pointer"
-              :class="isLightTheme ? 'hover:bg-slate-100 hover:text-slate-900' : 'hover:bg-dark-750 hover:text-white'"
-            >
-              <FileCode class="w-3.5 h-3.5 text-sky-500" />
-              <span>匯出 SVG 向量圖</span>
-            </button>
-            <button
-              type="button"
-              @click="exportAsJson"
-              class="w-full text-left px-2.5 py-1.5 flex items-center space-x-2 transition-colors cursor-pointer"
-              :class="isLightTheme ? 'hover:bg-slate-100 text-amber-600' : 'hover:bg-dark-750 text-amber-300 hover:text-white'"
-            >
-              <FileJson class="w-3.5 h-3.5 text-amber-500" />
-              <span>匯出原始碼 (.sqlight-er.json)</span>
-            </button>
-          </div>
-        </div>
+        <Button
+          type="button"
+          icon="pi pi-download"
+          label="匯出"
+          iconPos="left"
+          size="small"
+          severity="primary"
+          @click="(e) => exportMenuRef?.toggle(e)"
+          class="!text-xs !py-1 !px-2.5 font-medium shadow-sm"
+        />
+        <Menu ref="exportMenuRef" :model="exportMenuItems" :popup="true" />
       </div>
     </div>
 
@@ -420,29 +354,19 @@
 
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted, onBeforeUnmount, shallowRef, nextTick } from 'vue';
+import Button from 'primevue/button';
+import Tag from 'primevue/tag';
+import Menu from 'primevue/menu';
 import {
-  Database,
-  LayoutGrid,
-  ZoomIn,
-  ZoomOut,
-  Maximize2,
-  Download,
-  Image,
   FileCode,
-  FileJson,
-  ChevronDown,
   Loader2,
   PlusCircle,
   Layers,
   ArrowRightLeft,
-  ArrowUpDown,
   Link2,
   Trash2,
   Eye,
   Edit3,
-  Type,
-  Sun,
-  Moon,
 } from 'lucide-vue-next';
 import { Graph, Export } from '@antv/x6';
 import { register } from '@antv/x6-vue-shape';
@@ -558,6 +482,27 @@ const isLoading = ref(false);
 const loadingMessage = ref('正在載入 ER 圖表...');
 const isDragOver = ref(false);
 const isExportMenuOpen = ref(false);
+const exportMenuRef = ref<any>(null);
+const exportMenuItems = computed(() => [
+  {
+    label: 'PNG 點陣圖 (.png)',
+    icon: 'pi pi-image',
+    command: () => exportAsPng(),
+  },
+  {
+    label: 'SVG 向量圖 (.svg)',
+    icon: 'pi pi-code',
+    command: () => exportAsSvg(),
+  },
+  {
+    separator: true,
+  },
+  {
+    label: 'ER 圖表架構檔 (.json)',
+    icon: 'pi pi-file',
+    command: () => exportAsJson(),
+  },
+]);
 const zoomLevel = ref(1);
 const isGraphReady = ref(false);
 const nodeCount = ref(0);

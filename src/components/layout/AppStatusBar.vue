@@ -1,7 +1,7 @@
 <template>
-  <footer class="h-6 bg-dark-900 border-t border-dark-700 flex items-center justify-between px-3 text-xxs text-dark-400 select-none flex-shrink-0">
+  <footer class="h-6 bg-dark-900 border-t border-dark-700 flex items-center justify-between px-3 text-xxs text-dark-400 select-none flex-shrink-0 font-sans">
     <!-- Left: Connection & Server Info -->
-    <div class="flex items-center space-x-3">
+    <div class="flex items-center space-x-2.5">
       <div class="flex items-center space-x-1.5">
         <span
           :class="[
@@ -18,7 +18,7 @@
       <div class="h-3 w-px bg-dark-750" />
 
       <div class="flex items-center space-x-1">
-        <span class="text-dark-500">Database:</span>
+        <i class="pi pi-database text-amber-400 text-xxs" />
         <span class="text-dark-300 font-mono">{{ connectionStore.activeDatabase }}</span>
       </div>
 
@@ -26,25 +26,23 @@
         <div class="h-3 w-px bg-dark-750" />
         <div class="flex items-center space-x-1" title="SQL Server 伺服器工作階段識別碼 (Server Process ID)">
           <span class="text-dark-500">SPID:</span>
-          <span class="text-sky-400 font-mono font-medium">{{ connectionStore.activeSpid }}</span>
+          <Tag severity="info" :value="String(connectionStore.activeSpid)" class="!text-[9px] !px-1 !py-0 font-mono" />
         </div>
       </template>
     </div>
 
     <!-- Right: Metrics & Environment -->
-    <div class="flex items-center space-x-4 font-mono">
+    <div class="flex items-center space-x-3 font-mono">
       <div class="flex items-center space-x-1.5">
         <span class="text-dark-500">Status:</span>
         <template v-if="queryStore.isCancelling">
-          <span class="w-1.5 h-1.5 rounded-full bg-rose-500 animate-ping" />
-          <span class="text-rose-400 font-medium">中斷中 (Cancelling)...</span>
+          <Tag severity="danger" value="Cancelling..." class="!text-[9px] !px-1.5 !py-0 animate-pulse" />
         </template>
         <template v-else-if="queryStore.isExecuting">
-          <span class="w-1.5 h-1.5 rounded-full bg-amber-400 animate-ping" />
-          <span class="text-amber-300 font-medium">執行中 ({{ formattedElapsedTime }})...</span>
+          <Tag severity="warn" :value="`Running (${formattedElapsedTime})`" class="!text-[9px] !px-1.5 !py-0 animate-pulse" />
         </template>
         <template v-else>
-          <span class="text-emerald-400">Ready</span>
+          <Tag severity="success" value="Ready" class="!text-[9px] !px-1.5 !py-0" />
         </template>
       </div>
 
@@ -66,6 +64,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue';
+import Tag from 'primevue/tag';
 import { useConnectionStore } from '@/stores/connectionStore';
 import { useQueryStore } from '@/stores/queryStore';
 

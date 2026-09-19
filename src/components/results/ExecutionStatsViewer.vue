@@ -6,7 +6,7 @@
       class="flex-1 flex flex-col items-center justify-center p-6 text-center text-dark-400 space-y-3"
     >
       <div class="w-12 h-12 rounded-full bg-dark-800 border border-dark-700 flex items-center justify-center text-amber-400/80">
-        <Gauge class="w-6 h-6" />
+        <i class="pi pi-chart-bar text-xl"></i>
       </div>
       <div class="space-y-1 max-w-md">
         <div class="text-sm font-medium text-dark-200">尚無執行統計與 IO 分析資料</div>
@@ -21,8 +21,8 @@
       <!-- Top Bar: Timestamp, SQL info, Actions -->
       <div class="flex items-center justify-between border-b border-dark-750 pb-2 flex-shrink-0 text-xs">
         <div class="flex items-center space-x-2 truncate">
-          <span class="flex items-center space-x-1 text-amber-400 font-medium">
-            <Gauge class="w-3.5 h-3.5 flex-shrink-0" />
+          <span class="flex items-center space-x-1.5 text-amber-400 font-medium">
+            <i class="pi pi-chart-bar text-xs"></i>
             <span>執行效能分析報告</span>
           </span>
           <span class="text-dark-600">|</span>
@@ -34,315 +34,252 @@
         </div>
 
         <div class="flex items-center space-x-1.5 flex-shrink-0">
-          <button
+          <Button
             type="button"
+            icon="pi pi-copy"
+            label="複製報告"
+            size="small"
+            severity="secondary"
+            outlined
             @click="copyStatsMarkdown"
-            class="px-2 py-1 rounded bg-dark-800 hover:bg-dark-750 text-dark-300 hover:text-dark-100 border border-dark-700 text-xxs transition-colors flex items-center space-x-1"
-            title="複製 Markdown 格式統計報表至剪貼簿"
-          >
-            <Copy class="w-3 h-3 text-brand-400" />
-            <span>複製報告</span>
-          </button>
+            v-tooltip.top="'複製 Markdown 格式統計報表至剪貼簿'"
+            class="!text-xxs !py-1 !px-2"
+          />
 
-          <button
+          <Button
             type="button"
+            icon="pi pi-trash"
+            text
+            rounded
+            size="small"
+            severity="danger"
             @click="queryStore.clearExecutionStats()"
-            class="p-1 rounded bg-dark-800 hover:bg-dark-750 text-dark-400 hover:text-dark-200 border border-dark-700 text-xxs transition-colors"
-            title="清除分析報告"
-          >
-            <Trash2 class="w-3 h-3" />
-          </button>
+            v-tooltip.top="'清除分析報告'"
+            class="!w-7 !h-7 !p-0"
+          />
         </div>
       </div>
 
       <!-- 1. KPI Metric Cards -->
       <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5 flex-shrink-0">
         <!-- CPU Time -->
-        <div class="bg-dark-850 border border-dark-750 rounded-lg p-2.5 flex flex-col justify-between">
-          <div class="flex items-center justify-between text-dark-400 text-xxs">
-            <span>CPU 耗時</span>
-            <Cpu class="w-3.5 h-3.5 text-amber-400" />
-          </div>
-          <div class="mt-1 flex items-baseline space-x-1 font-mono">
-            <span class="text-lg font-bold text-dark-100">{{ stats.cpuTimeMs }}</span>
-            <span class="text-dark-400 text-xxs">ms</span>
-          </div>
-          <div class="text-[10px] text-dark-500 font-mono mt-0.5 truncate">
-            編譯: {{ stats.compileCpuTimeMs ?? 0 }} ms
-          </div>
-        </div>
+        <Card class="!bg-dark-850 !border !border-dark-750 !rounded-lg" :pt="{ body: { class: '!p-2.5 flex flex-col justify-between h-full' } }">
+          <template #content>
+            <div class="flex items-center justify-between text-dark-400 text-xxs">
+              <span>CPU 耗時</span>
+              <i class="pi pi-microchip text-amber-400 text-xs"></i>
+            </div>
+            <div class="mt-1 flex items-baseline space-x-1 font-mono">
+              <span class="text-lg font-bold text-dark-100">{{ stats.cpuTimeMs }}</span>
+              <span class="text-dark-400 text-xxs">ms</span>
+            </div>
+            <div class="text-[10px] text-dark-500 font-mono mt-0.5 truncate">
+              編譯: {{ stats.compileCpuTimeMs ?? 0 }} ms
+            </div>
+          </template>
+        </Card>
 
         <!-- Elapsed Time -->
-        <div class="bg-dark-850 border border-dark-750 rounded-lg p-2.5 flex flex-col justify-between">
-          <div class="flex items-center justify-between text-dark-400 text-xxs">
-            <span>總執行耗時</span>
-            <Clock class="w-3.5 h-3.5 text-sky-400" />
-          </div>
-          <div class="mt-1 flex items-baseline space-x-1 font-mono">
-            <span class="text-lg font-bold text-dark-100">{{ stats.elapsedTimeMs }}</span>
-            <span class="text-dark-400 text-xxs">ms</span>
-          </div>
-          <div class="text-[10px] text-dark-500 font-mono mt-0.5 truncate">
-            編譯: {{ stats.compileElapsedTimeMs ?? 0 }} ms
-          </div>
-        </div>
+        <Card class="!bg-dark-850 !border !border-dark-750 !rounded-lg" :pt="{ body: { class: '!p-2.5 flex flex-col justify-between h-full' } }">
+          <template #content>
+            <div class="flex items-center justify-between text-dark-400 text-xxs">
+              <span>總執行耗時</span>
+              <i class="pi pi-clock text-sky-400 text-xs"></i>
+            </div>
+            <div class="mt-1 flex items-baseline space-x-1 font-mono">
+              <span class="text-lg font-bold text-dark-100">{{ stats.elapsedTimeMs }}</span>
+              <span class="text-dark-400 text-xxs">ms</span>
+            </div>
+            <div class="text-[10px] text-dark-500 font-mono mt-0.5 truncate">
+              編譯: {{ stats.compileElapsedTimeMs ?? 0 }} ms
+            </div>
+          </template>
+        </Card>
 
         <!-- Logical Reads -->
-        <div class="bg-dark-850 border border-dark-750 rounded-lg p-2.5 flex flex-col justify-between">
-          <div class="flex items-center justify-between text-dark-400 text-xxs">
-            <span>邏輯讀取 (Logical)</span>
-            <BookOpen class="w-3.5 h-3.5 text-emerald-400" />
-          </div>
-          <div class="mt-1 flex items-baseline space-x-1 font-mono">
-            <span class="text-lg font-bold text-emerald-300">{{ stats.totalLogicalReads.toLocaleString() }}</span>
-            <span class="text-dark-400 text-xxs">頁</span>
-          </div>
-          <div class="text-[10px] text-emerald-400/80 font-mono mt-0.5 truncate">
-            容量: {{ extractByteSize(stats.logicalReadsFormatted) }}
-          </div>
-        </div>
+        <Card class="!bg-dark-850 !border !border-dark-750 !rounded-lg" :pt="{ body: { class: '!p-2.5 flex flex-col justify-between h-full' } }">
+          <template #content>
+            <div class="flex items-center justify-between text-dark-400 text-xxs">
+              <span>邏輯讀取 (Logical)</span>
+              <i class="pi pi-book text-emerald-400 text-xs"></i>
+            </div>
+            <div class="mt-1 flex items-baseline space-x-1 font-mono">
+              <span class="text-lg font-bold text-emerald-300">{{ stats.totalLogicalReads.toLocaleString() }}</span>
+              <span class="text-dark-400 text-xxs">頁</span>
+            </div>
+            <div class="text-[10px] text-emerald-400/80 font-mono mt-0.5 truncate">
+              容量: {{ extractByteSize(stats.logicalReadsFormatted) }}
+            </div>
+          </template>
+        </Card>
 
         <!-- Physical Reads -->
-        <div class="bg-dark-850 border border-dark-750 rounded-lg p-2.5 flex flex-col justify-between">
-          <div class="flex items-center justify-between text-dark-400 text-xxs">
-            <span>實體讀取 (Physical)</span>
-            <HardDrive class="w-3.5 h-3.5 text-purple-400" />
-          </div>
-          <div class="mt-1 flex items-baseline space-x-1 font-mono">
-            <span class="text-lg font-bold text-dark-100">{{ stats.totalPhysicalReads.toLocaleString() }}</span>
-            <span class="text-dark-400 text-xxs">頁</span>
-          </div>
-          <div class="text-[10px] text-dark-500 font-mono mt-0.5 truncate">
-            預讀: {{ stats.totalReadAheadReads }} 頁
-          </div>
-        </div>
+        <Card class="!bg-dark-850 !border !border-dark-750 !rounded-lg" :pt="{ body: { class: '!p-2.5 flex flex-col justify-between h-full' } }">
+          <template #content>
+            <div class="flex items-center justify-between text-dark-400 text-xxs">
+              <span>實體讀取 (Physical)</span>
+              <i class="pi pi-server text-purple-400 text-xs"></i>
+            </div>
+            <div class="mt-1 flex items-baseline space-x-1 font-mono">
+              <span class="text-lg font-bold text-dark-100">{{ stats.totalPhysicalReads.toLocaleString() }}</span>
+              <span class="text-dark-400 text-xxs">頁</span>
+            </div>
+            <div class="text-[10px] text-dark-500 font-mono mt-0.5 truncate">
+              預讀: {{ stats.totalReadAheadReads }} 頁
+            </div>
+          </template>
+        </Card>
 
         <!-- Physical Writes & LOB -->
-        <div class="bg-dark-850 border border-dark-750 rounded-lg p-2.5 flex flex-col justify-between">
-          <div class="flex items-center justify-between text-dark-400 text-xxs">
-            <span>寫入與 LOB 讀取</span>
-            <Database class="w-3.5 h-3.5 text-indigo-400" />
-          </div>
-          <div class="mt-1 flex items-baseline space-x-1 font-mono">
-            <span class="text-lg font-bold text-dark-100">{{ stats.totalPhysicalWrites.toLocaleString() }}</span>
-            <span class="text-dark-400 text-xxs">頁寫入</span>
-          </div>
-          <div class="text-[10px] text-dark-500 font-mono mt-0.5 truncate">
-            LOB 讀取: {{ stats.totalLobReads }} 頁
-          </div>
-        </div>
+        <Card class="!bg-dark-850 !border !border-dark-750 !rounded-lg" :pt="{ body: { class: '!p-2.5 flex flex-col justify-between h-full' } }">
+          <template #content>
+            <div class="flex items-center justify-between text-dark-400 text-xxs">
+              <span>寫入與 LOB 讀取</span>
+              <i class="pi pi-database text-indigo-400 text-xs"></i>
+            </div>
+            <div class="mt-1 flex items-baseline space-x-1 font-mono">
+              <span class="text-lg font-bold text-dark-100">{{ stats.totalPhysicalWrites.toLocaleString() }}</span>
+              <span class="text-dark-400 text-xxs">頁寫入</span>
+            </div>
+            <div class="text-[10px] text-dark-500 font-mono mt-0.5 truncate">
+              LOB 讀取: {{ stats.totalLobReads }} 頁
+            </div>
+          </template>
+        </Card>
       </div>
 
       <!-- 2. Health Insight Banner -->
-      <div
+      <Message
         v-if="hasHighIoAlert"
-        class="px-3 py-2 rounded-lg bg-rose-950/40 border border-rose-600/40 text-rose-200 text-xs flex items-center space-x-2 flex-shrink-0"
+        severity="error"
+        :closable="false"
+        class="!text-xs"
       >
-        <AlertTriangle class="w-4 h-4 text-rose-400 flex-shrink-0" />
-        <span class="leading-relaxed">
-          <strong>效能警示：</strong>部分資料表邏輯讀取量超過 1,000 頁或存在全表掃描 (Scan count > 0)。建議排查是否有缺失索引或未加入有效過濾條件。
-        </span>
-      </div>
-      <div
+        <strong>效能警示：</strong>部分資料表邏輯讀取量超過 1,000 頁或存在全表掃描 (Scan count > 0)。建議排查是否有缺失索引或未加入有效過濾條件。
+      </Message>
+      <Message
         v-else-if="stats.totalLogicalReads > 0"
-        class="px-3 py-1.5 rounded-lg bg-emerald-950/30 border border-emerald-600/30 text-emerald-200 text-xs flex items-center space-x-2 flex-shrink-0"
+        severity="success"
+        :closable="false"
+        class="!text-xs"
       >
-        <CheckCircle2 class="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" />
-        <span class="leading-relaxed">
-          查詢資源消耗處於健康水位，快取命中率約 <strong>{{ stats.cacheHitRatio }}%</strong>。
-        </span>
-      </div>
+        查詢資源消耗處於健康水位，快取命中率約 <strong>{{ stats.cacheHitRatio }}%</strong>。
+      </Message>
 
       <!-- 3. Per-Table IO Breakdown Table -->
       <div class="bg-dark-850 border border-dark-750 rounded-lg flex flex-col overflow-hidden flex-1 min-h-[160px]">
         <!-- Table Header -->
         <div class="h-8 px-3 bg-dark-800/80 border-b border-dark-750 flex items-center justify-between text-xs flex-shrink-0">
           <div class="flex items-center space-x-1.5 font-medium text-dark-200">
-            <Layers class="w-3.5 h-3.5 text-brand-400" />
+            <i class="pi pi-table text-brand-400 text-xs"></i>
             <span>各資料表 IO 讀取明細 (Per-Table IO Breakdown)</span>
-            <span class="text-xxs text-dark-500 font-mono">({{ stats.tableStats.length }})</span>
+            <Tag :value="stats.tableStats.length" severity="secondary" class="!font-mono !text-xxs !px-1.5 !py-0" />
           </div>
 
           <!-- Quick Filter Input -->
-          <div class="relative flex items-center">
-            <Search class="w-3 h-3 text-dark-500 absolute left-2" />
-            <input
+          <IconField>
+            <InputIcon class="pi pi-search text-dark-500" />
+            <InputText
               v-model="tableFilterQuery"
-              type="text"
               placeholder="過濾資料表..."
-              class="w-40 bg-dark-900 border border-dark-700 rounded px-2 py-0.5 pl-6 text-xxs text-dark-100 placeholder-dark-500 focus:outline-none focus:border-brand-500 font-mono"
+              size="small"
+              class="w-40 font-mono !text-xxs !py-0.5 !pl-6"
             />
-          </div>
+          </IconField>
         </div>
 
-        <!-- Table Body -->
+        <!-- DataTable -->
         <div class="flex-1 overflow-auto font-mono text-xs">
-          <div v-if="sortedTableStats.length === 0" class="p-6 text-center text-dark-500 italic text-xs">
-            無符合條件之資料表 IO 紀錄
-          </div>
-
-          <table v-else class="w-full text-left border-collapse">
-            <thead>
-              <tr class="bg-dark-800/60 text-dark-400 text-xxs uppercase tracking-wider border-b border-dark-750 select-none">
-                <th
-                  class="py-1.5 px-3 cursor-pointer hover:text-dark-200 font-medium"
-                  @click="toggleSort('tableName')"
-                >
-                  資料表名稱
-                  <span v-if="sortField === 'tableName'">{{ sortAsc ? '▲' : '▼' }}</span>
-                </th>
-                <th
-                  class="py-1.5 px-2 cursor-pointer hover:text-dark-200 font-medium text-right"
-                  @click="toggleSort('scanCount')"
-                >
-                  掃描次數
-                  <span v-if="sortField === 'scanCount'">{{ sortAsc ? '▲' : '▼' }}</span>
-                </th>
-                <th
-                  class="py-1.5 px-3 cursor-pointer hover:text-dark-200 font-medium text-right w-44"
-                  @click="toggleSort('logicalReads')"
-                >
-                  邏輯讀取 (佔比)
-                  <span v-if="sortField === 'logicalReads'">{{ sortAsc ? '▲' : '▼' }}</span>
-                </th>
-                <th
-                  class="py-1.5 px-2 cursor-pointer hover:text-dark-200 font-medium text-right"
-                  @click="toggleSort('physicalReads')"
-                >
-                  實體讀取
-                  <span v-if="sortField === 'physicalReads'">{{ sortAsc ? '▲' : '▼' }}</span>
-                </th>
-                <th
-                  class="py-1.5 px-2 cursor-pointer hover:text-dark-200 font-medium text-right"
-                  @click="toggleSort('readAheadReads')"
-                >
-                  預讀
-                  <span v-if="sortField === 'readAheadReads'">{{ sortAsc ? '▲' : '▼' }}</span>
-                </th>
-                <th
-                  class="py-1.5 px-2 cursor-pointer hover:text-dark-200 font-medium text-right"
-                  @click="toggleSort('lobLogicalReads')"
-                >
-                  LOB 讀取
-                  <span v-if="sortField === 'lobLogicalReads'">{{ sortAsc ? '▲' : '▼' }}</span>
-                </th>
-                <th
-                  class="py-1.5 px-2 cursor-pointer hover:text-dark-200 font-medium text-right"
-                  @click="toggleSort('totalReads')"
-                >
-                  總計容量
-                  <span v-if="sortField === 'totalReads'">{{ sortAsc ? '▲' : '▼' }}</span>
-                </th>
-                <th class="py-1.5 px-3 text-center font-medium">狀態</th>
-              </tr>
-            </thead>
-            <tbody class="divide-y divide-dark-800/70">
-              <tr
-                v-for="row in sortedTableStats"
-                :key="row.tableName"
-                :class="[
-                  'transition-colors hover:bg-dark-800/80',
-                  row.isHighIo ? 'bg-rose-950/15' : ''
-                ]"
-              >
-                <!-- Table Name -->
-                <td class="py-1.5 px-3 font-sans font-medium text-dark-200 truncate max-w-xs" :title="row.tableName">
-                  {{ row.tableName }}
-                </td>
-
-                <!-- Scan Count -->
-                <td class="py-1.5 px-2 text-right">
-                  <span :class="row.scanCount > 1 ? 'text-amber-400 font-bold' : 'text-dark-300'">
-                    {{ row.scanCount }}
-                  </span>
-                </td>
-
-                <!-- Logical Reads with Progress Bar -->
-                <td class="py-1.5 px-3 text-right">
-                  <div class="flex items-center justify-end space-x-2">
-                    <!-- Mini visual bar -->
-                    <div class="w-16 bg-dark-750 rounded-full h-1.5 overflow-hidden flex-shrink-0">
-                      <div
-                        class="h-full rounded-full transition-all"
-                        :class="row.isHighIo ? 'bg-rose-500' : 'bg-brand-400'"
-                        :style="{ width: `${getLogicalPercent(row.logicalReads)}%` }"
-                      />
-                    </div>
-                    <span :class="row.isHighIo ? 'text-rose-300 font-bold' : 'text-dark-200'">
-                      {{ row.logicalReads.toLocaleString() }}
-                    </span>
+          <DataTable
+            :value="sortedTableStats"
+            size="small"
+            class="p-datatable-sm w-full"
+            :rowClass="() => '!bg-dark-900 hover:!bg-dark-800/80 transition-colors'"
+          >
+            <template #empty>
+              <div class="p-6 text-center text-dark-500 italic text-xs">
+                無符合條件之資料表 IO 紀錄
+              </div>
+            </template>
+            <Column field="tableName" header="資料表名稱" sortable class="!py-1.5 !px-3 font-sans font-medium text-dark-200" />
+            <Column field="scanCount" header="掃描次數" sortable class="!py-1.5 !px-2 text-right">
+              <template #body="{ data }">
+                <span :class="data.scanCount > 1 ? 'text-amber-400 font-bold' : 'text-dark-300'">
+                  {{ data.scanCount }}
+                </span>
+              </template>
+            </Column>
+            <Column field="logicalReads" header="邏輯讀取 (佔比)" sortable class="!py-1.5 !px-3 text-right w-44">
+              <template #body="{ data }">
+                <div class="flex items-center justify-end space-x-2">
+                  <div class="w-16 bg-dark-750 rounded-full h-1.5 overflow-hidden flex-shrink-0">
+                    <div
+                      class="h-full rounded-full transition-all"
+                      :class="data.isHighIo ? 'bg-rose-500' : 'bg-brand-400'"
+                      :style="{ width: `${getLogicalPercent(data.logicalReads)}%` }"
+                    />
                   </div>
-                </td>
-
-                <!-- Physical Reads -->
-                <td class="py-1.5 px-2 text-right text-dark-300">
-                  {{ row.physicalReads.toLocaleString() }}
-                </td>
-
-                <!-- Read-Ahead -->
-                <td class="py-1.5 px-2 text-right text-dark-400">
-                  {{ row.readAheadReads.toLocaleString() }}
-                </td>
-
-                <!-- LOB Reads -->
-                <td class="py-1.5 px-2 text-right text-dark-400">
-                  {{ row.lobLogicalReads.toLocaleString() }}
-                </td>
-
-                <!-- Total formatted -->
-                <td class="py-1.5 px-2 text-right font-medium text-dark-300">
-                  {{ row.bytesFormatted }}
-                </td>
-
-                <!-- Severity Badge -->
-                <td class="py-1.5 px-3 text-center">
-                  <span
-                    v-if="row.isHighIo"
-                    class="inline-block px-1.5 py-0.2 rounded text-[10px] font-sans font-semibold bg-rose-950/80 text-rose-300 border border-rose-500/40"
-                    title="邏輯讀取量偏高或有大量掃描"
-                  >
-                    High IO
+                  <span :class="data.isHighIo ? 'text-rose-300 font-bold' : 'text-dark-200'">
+                    {{ data.logicalReads.toLocaleString() }}
                   </span>
-                  <span
-                    v-else
-                    class="inline-block px-1.5 py-0.2 rounded text-[10px] font-sans font-medium bg-emerald-950/60 text-emerald-300 border border-emerald-500/30"
-                  >
-                    OK
-                  </span>
-                </td>
-              </tr>
-            </tbody>
-          </table>
+                </div>
+              </template>
+            </Column>
+            <Column field="physicalReads" header="實體讀取" sortable class="!py-1.5 !px-2 text-right text-dark-300">
+              <template #body="{ data }">
+                {{ data.physicalReads.toLocaleString() }}
+              </template>
+            </Column>
+            <Column field="readAheadReads" header="預讀" sortable class="!py-1.5 !px-2 text-right text-dark-400">
+              <template #body="{ data }">
+                {{ data.readAheadReads.toLocaleString() }}
+              </template>
+            </Column>
+            <Column field="lobLogicalReads" header="LOB 讀取" sortable class="!py-1.5 !px-2 text-right text-dark-400">
+              <template #body="{ data }">
+                {{ data.lobLogicalReads.toLocaleString() }}
+              </template>
+            </Column>
+            <Column field="bytesFormatted" header="總計容量" sortable class="!py-1.5 !px-2 text-right font-medium text-dark-300" />
+            <Column header="狀態" class="!py-1.5 !px-3 text-center">
+              <template #body="{ data }">
+                <Tag
+                  :severity="data.isHighIo ? 'danger' : 'success'"
+                  :value="data.isHighIo ? 'High IO' : 'OK'"
+                  class="!text-[10px] !px-1.5 !py-0.2"
+                />
+              </template>
+            </Column>
+          </DataTable>
         </div>
       </div>
 
       <!-- 4. Session Wait Stats (If any wait events captured) -->
       <div v-if="stats.waitStats.length > 0" class="bg-dark-850 border border-dark-750 rounded-lg p-2.5 flex flex-col space-y-2 flex-shrink-0">
         <div class="flex items-center space-x-1.5 text-xs font-medium text-dark-200">
-          <Activity class="w-3.5 h-3.5 text-amber-400" />
+          <i class="pi pi-bolt text-amber-400 text-xs"></i>
           <span>工作階段等候事件分析 (Session Wait Statistics)</span>
         </div>
 
-        <div class="overflow-x-auto font-mono text-xxs">
-          <table class="w-full text-left">
-            <thead>
-              <tr class="text-dark-500 border-b border-dark-750">
-                <th class="py-1 px-2">等候類型 (Wait Type)</th>
-                <th class="py-1 px-2 text-right">等候次數</th>
-                <th class="py-1 px-2 text-right">總等候時間 (ms)</th>
-                <th class="py-1 px-2 text-right">最大單次等候 (ms)</th>
-              </tr>
-            </thead>
-            <tbody class="divide-y divide-dark-800">
-              <tr v-for="w in stats.waitStats" :key="w.waitType">
-                <td class="py-1 px-2 text-dark-300 font-semibold">{{ w.waitType }}</td>
-                <td class="py-1 px-2 text-right text-dark-400">{{ w.waitingTasksCount }}</td>
-                <td class="py-1 px-2 text-right text-amber-400 font-bold">{{ w.waitTimeMs }} ms</td>
-                <td class="py-1 px-2 text-right text-dark-400">{{ w.maxWaitTimeMs }} ms</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
+        <DataTable
+          :value="stats.waitStats"
+          size="small"
+          class="p-datatable-sm w-full font-mono text-xxs"
+          :rowClass="() => '!bg-dark-900'"
+        >
+          <Column field="waitType" header="等候類型 (Wait Type)" class="!py-1 !px-2 text-dark-300 font-semibold" />
+          <Column field="waitingTasksCount" header="等候次數" class="!py-1 !px-2 text-right text-dark-400" />
+          <Column field="waitTimeMs" header="總等候時間 (ms)" class="!py-1 !px-2 text-right text-amber-400 font-bold">
+            <template #body="{ data }">
+              {{ data.waitTimeMs }} ms
+            </template>
+          </Column>
+          <Column field="maxWaitTimeMs" header="最大單次等候 (ms)" class="!py-1 !px-2 text-right text-dark-400">
+            <template #body="{ data }">
+              {{ data.maxWaitTimeMs }} ms
+            </template>
+          </Column>
+        </DataTable>
       </div>
     </div>
   </div>
@@ -350,32 +287,23 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue';
-import {
-  Gauge,
-  Cpu,
-  Clock,
-  BookOpen,
-  HardDrive,
-  Database,
-  AlertTriangle,
-  CheckCircle2,
-  Layers,
-  Search,
-  Copy,
-  Trash2,
-  Activity,
-} from 'lucide-vue-next';
+import Button from 'primevue/button';
+import Card from 'primevue/card';
+import Tag from 'primevue/tag';
+import Message from 'primevue/message';
+import IconField from 'primevue/iconfield';
+import InputIcon from 'primevue/inputicon';
+import InputText from 'primevue/inputtext';
+import DataTable from 'primevue/datatable';
+import Column from 'primevue/column';
 import { useQueryStore } from '@/stores/queryStore';
 import { useWorkspaceStore } from '@/stores/workspaceStore';
-import type { TableIoStats } from '@/utils/statsParser';
 
 const queryStore = useQueryStore();
 const workspaceStore = useWorkspaceStore();
 
 const stats = computed(() => queryStore.activeExecutionStats);
 const tableFilterQuery = ref('');
-const sortField = ref<keyof TableIoStats>('logicalReads');
-const sortAsc = ref(false);
 
 const hasHighIoAlert = computed(() => {
   return stats.value?.tableStats.some((t) => t.isHighIo) ?? false;
@@ -389,27 +317,8 @@ const sortedTableStats = computed(() => {
   if (q) {
     list = list.filter((t) => t.tableName.toLowerCase().includes(q));
   }
-
-  return [...list].sort((a, b) => {
-    const valA = a[sortField.value];
-    const valB = b[sortField.value];
-    if (typeof valA === 'number' && typeof valB === 'number') {
-      return sortAsc.value ? valA - valB : valB - valA;
-    }
-    return sortAsc.value
-      ? String(valA).localeCompare(String(valB))
-      : String(valB).localeCompare(String(valA));
-  });
+  return list;
 });
-
-function toggleSort(field: keyof TableIoStats) {
-  if (sortField.value === field) {
-    sortAsc.value = !sortAsc.value;
-  } else {
-    sortField.value = field;
-    sortAsc.value = false;
-  }
-}
 
 function getLogicalPercent(reads: number): number {
   if (!stats.value?.totalLogicalReads || stats.value.totalLogicalReads === 0) return 0;

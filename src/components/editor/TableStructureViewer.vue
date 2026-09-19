@@ -3,80 +3,78 @@
     <!-- Subheader toolbar for Table Structure -->
     <div class="h-8 bg-dark-850 border-b border-dark-700 flex items-center justify-between px-2 text-xs flex-shrink-0 space-x-2">
       <div class="flex items-center space-x-2 min-w-0">
-        <TableProperties class="w-3.5 h-3.5 text-indigo-400 flex-shrink-0" />
+        <i class="pi pi-list text-indigo-400 text-xs flex-shrink-0"></i>
         <span class="font-semibold text-dark-100 truncate">{{ schema }}.{{ tableName }}</span>
         <span class="text-dark-600">|</span>
-        <span class="text-dark-400 text-xxs flex-shrink-0">
-          <strong class="text-indigo-400">{{ columns.length }}</strong> 欄位
-        </span>
-        <span v-if="pkCount > 0" class="text-amber-400/90 text-xxs flex-shrink-0 font-medium">
-          ({{ pkCount }} 主鍵)
-        </span>
-        <span v-if="identityCount > 0" class="text-sky-400/90 text-xxs flex-shrink-0 font-medium">
-          ({{ identityCount }} Identity)
-        </span>
+        <Tag :value="`${columns.length} 欄位`" severity="info" class="!font-mono !text-xxs !px-1.5 !py-0.2" />
+        <Tag v-if="pkCount > 0" :value="`${pkCount} 主鍵`" severity="warn" class="!font-mono !text-xxs !px-1.5 !py-0.2" />
+        <Tag v-if="identityCount > 0" :value="`${identityCount} Identity`" severity="secondary" class="!font-mono !text-xxs !px-1.5 !py-0.2" />
 
         <!-- Quick Filter Input -->
-        <div class="relative flex items-center w-40 sm:w-56 ml-2">
-          <Search class="w-3 h-3 text-dark-500 absolute left-2 pointer-events-none" />
-          <input
+        <IconField class="w-40 sm:w-56 ml-2">
+          <InputIcon class="pi pi-search text-dark-500 text-xs" />
+          <InputText
             v-model="quickFilter"
             type="text"
             placeholder="搜尋欄位名稱、型別..."
-            class="w-full bg-dark-900 border border-dark-700 rounded px-2 py-0.5 pl-7 pr-5 text-xs text-dark-100 placeholder-dark-500 focus:outline-none focus:border-brand-500 font-mono transition-colors"
+            size="small"
+            class="w-full !bg-dark-900 !border-dark-700 !py-0.5 !pl-7 !pr-6 !text-xs font-mono"
           />
-          <button
-            v-if="quickFilter"
-            @click="quickFilter = ''"
-            class="absolute right-1 text-dark-400 hover:text-dark-200 p-0.5"
-            title="清除搜尋"
-          >
-            <X class="w-2.5 h-2.5" />
-          </button>
-        </div>
+        </IconField>
       </div>
 
       <div class="flex items-center space-x-1.5 flex-shrink-0">
         <!-- Copy TSV -->
-        <button
+        <Button
+          type="button"
+          :icon="copiedTsv ? 'pi pi-check text-emerald-400' : 'pi pi-file-excel text-emerald-400'"
+          :label="copiedTsv ? '已複製' : 'Copy TSV'"
+          size="small"
+          severity="secondary"
+          outlined
           @click="copyAsTsv"
-          class="flex items-center space-x-1 px-2 py-0.5 bg-dark-800 hover:bg-dark-750 text-dark-300 hover:text-dark-100 rounded border border-dark-700 text-xxs transition-colors cursor-pointer"
-          title="複製全表結構為 TSV (相容 Excel)"
-        >
-          <Check v-if="copiedTsv" class="w-2.5 h-2.5 text-emerald-400" />
-          <FileSpreadsheet v-else class="w-2.5 h-2.5 text-emerald-400" />
-          <span>{{ copiedTsv ? '已複製' : 'Copy TSV' }}</span>
-        </button>
+          v-tooltip.top="'複製全表結構為 TSV (相容 Excel)'"
+          class="!text-xxs !py-0.5 !px-2"
+        />
 
         <!-- Copy JSON -->
-        <button
+        <Button
+          type="button"
+          icon="pi pi-code text-cyan-400"
+          label="JSON"
+          size="small"
+          severity="secondary"
+          outlined
           @click="copyAsJson"
-          class="flex items-center space-x-1 px-2 py-0.5 bg-dark-800 hover:bg-dark-750 text-dark-300 hover:text-dark-100 rounded border border-dark-700 text-xxs transition-colors cursor-pointer"
-          title="複製全表結構為 JSON 物件陣列"
-        >
-          <Braces class="w-2.5 h-2.5 text-cyan-400" />
-          <span>JSON</span>
-        </button>
+          v-tooltip.top="'複製全表結構為 JSON 物件陣列'"
+          class="!text-xxs !py-0.5 !px-2"
+        />
 
         <!-- Copy Markdown -->
-        <button
+        <Button
+          type="button"
+          icon="pi pi-table text-pink-400"
+          label="MD"
+          size="small"
+          severity="secondary"
+          outlined
           @click="copyAsMarkdown"
-          class="flex items-center space-x-1 px-2 py-0.5 bg-dark-800 hover:bg-dark-750 text-dark-300 hover:text-dark-100 rounded border border-dark-700 text-xxs transition-colors cursor-pointer"
-          title="複製全表結構為 Markdown 表格"
-        >
-          <Table class="w-2.5 h-2.5 text-pink-400" />
-          <span>MD</span>
-        </button>
+          v-tooltip.top="'複製全表結構為 Markdown 表格'"
+          class="!text-xxs !py-0.5 !px-2"
+        />
 
         <!-- Reload Data -->
-        <button
+        <Button
+          type="button"
+          :icon="isLoading ? 'pi pi-spin pi-spinner' : 'pi pi-refresh'"
+          label="重新整理"
+          size="small"
+          severity="secondary"
+          outlined
           @click="loadStructure"
-          class="flex items-center space-x-1 px-2 py-0.5 bg-dark-800 hover:bg-dark-750 text-dark-200 rounded border border-dark-700 text-xxs transition-colors cursor-pointer ml-1"
-          title="重新載入資料表結構"
-        >
-          <RotateCw :class="['w-2.5 h-2.5', isLoading ? 'animate-spin text-brand-400' : '']" />
-          <span>重新整理</span>
-        </button>
+          v-tooltip.top="'重新載入資料表結構'"
+          class="!text-xxs !py-0.5 !px-2 ml-1"
+        />
       </div>
     </div>
 
@@ -155,14 +153,16 @@
             非重複計數: <strong class="font-mono text-dark-100">{{ selectionStats.distinctCount.toLocaleString() }}</strong>
           </div>
 
-          <button
+          <Button
             type="button"
+            label="清除"
+            text
+            size="small"
+            severity="secondary"
             @click="clearCellSelection"
-            class="ml-1 text-dark-400 hover:text-dark-200 underline text-[10px] cursor-pointer flex-shrink-0"
-            title="清除選取 (Esc)"
-          >
-            清除
-          </button>
+            v-tooltip.top="'清除選取 (Esc)'"
+            class="!ml-1 !p-0 !text-[10px] !underline"
+          />
         </template>
 
         <template v-else>
@@ -180,15 +180,17 @@
 
       <!-- Right: Copy Selection Button -->
       <div v-if="selectionStats" class="flex items-center space-x-1 flex-shrink-0 ml-2">
-        <button
+        <Button
           type="button"
+          icon="pi pi-copy"
+          label="複製選取"
+          size="small"
+          severity="primary"
+          outlined
           @click="copySelectedCells"
-          class="flex items-center space-x-1 px-1.5 py-0.5 bg-brand-500/20 hover:bg-brand-500/30 text-brand-300 rounded border border-brand-500/40 text-[10px] transition-colors cursor-pointer"
-          title="複製選取內容 (Ctrl+C)"
-        >
-          <Copy class="w-2.5 h-2.5" />
-          <span>複製選取</span>
-        </button>
+          v-tooltip.top="'複製選取內容 (Ctrl+C)'"
+          class="!py-0.5 !px-1.5 !text-[10px]"
+        />
       </div>
     </div>
 
@@ -373,12 +375,12 @@
 
 <script setup lang="ts">
 import { ref, computed, reactive, onMounted, watch } from 'vue';
+import Button from 'primevue/button';
+import InputText from 'primevue/inputtext';
+import IconField from 'primevue/iconfield';
+import InputIcon from 'primevue/inputicon';
+import Tag from 'primevue/tag';
 import {
-  TableProperties,
-  RotateCw,
-  Search,
-  X,
-  Check,
   FileSpreadsheet,
   FileText,
   Copy,

@@ -98,38 +98,15 @@
     />
 
 
-    <!-- Global Floating Toast Notification -->
-    <Transition
-      enter-active-class="transition duration-200 ease-out"
-      enter-from-class="opacity-0 translate-y-2 scale-95"
-      enter-to-class="opacity-100 translate-y-0 scale-100"
-      leave-active-class="transition duration-150 ease-in"
-      leave-from-class="opacity-100 translate-y-0 scale-100"
-      leave-to-class="opacity-0 translate-y-2 scale-95"
-    >
-      <div
-        v-if="workspaceStore.activeToast"
-        class="fixed bottom-8 right-6 z-50 flex items-center space-x-2.5 px-3.5 py-2 rounded-lg shadow-2xl border text-xs font-sans backdrop-blur-md pointer-events-none select-none max-w-md"
-        :class="[
-          workspaceStore.activeToast.type === 'success' ? 'bg-emerald-950/90 border-emerald-600/70 text-emerald-200' :
-          workspaceStore.activeToast.type === 'warning' ? 'bg-amber-950/90 border-amber-600/70 text-amber-200' :
-          workspaceStore.activeToast.type === 'error' ? 'bg-rose-950/90 border-rose-600/70 text-rose-200' :
-          'bg-dark-800/95 border-dark-650 text-dark-100 shadow-black/60'
-        ]"
-      >
-        <CheckCircle2 v-if="workspaceStore.activeToast.type === 'success'" class="w-4 h-4 text-emerald-400 flex-shrink-0" />
-        <AlertTriangle v-else-if="workspaceStore.activeToast.type === 'warning'" class="w-4 h-4 text-amber-400 flex-shrink-0" />
-        <XCircle v-else-if="workspaceStore.activeToast.type === 'error'" class="w-4 h-4 text-rose-400 flex-shrink-0" />
-        <Info v-else class="w-4 h-4 text-brand-400 flex-shrink-0" />
-        <span class="font-medium leading-relaxed">{{ workspaceStore.activeToast.message }}</span>
-      </div>
-    </Transition>
+    <!-- PrimeVue Global Toast Notification -->
+    <Toast position="bottom-right" />
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, nextTick, onMounted, onBeforeUnmount } from 'vue';
-import { CheckCircle2, AlertTriangle, XCircle, Info } from 'lucide-vue-next';
+import { ref, watch, nextTick, onMounted, onBeforeUnmount } from 'vue';
+import Toast from 'primevue/toast';
+import { useToast } from 'primevue/usetoast';
 import AppHeader from '@/components/layout/AppHeader.vue';
 import AppSidebar from '@/components/layout/AppSidebar.vue';
 import AppMain from '@/components/layout/AppMain.vue';
@@ -148,6 +125,34 @@ import type { SqlTemplate } from '@/types/sqlTemplate';
 
 const workspaceStore = useWorkspaceStore();
 const queryStore = useQueryStore();
+const toast = useToast();
+
+watch(
+  () => workspaceStore.activeToast,
+  (t) => {
+    if (t) {
+      const severityMap: Record<string, 'info' | 'success' | 'warn' | 'error'> = {
+        info: 'info',
+        success: 'success',
+        warning: 'warn',
+        error: 'error',
+      };
+      toast.add({
+        severity: severityMap[t.type] || 'info',
+        summary:
+          t.type === 'error'
+            ? '錯誤'
+            : t.type === 'warning'
+            ? '警告'
+            : t.type === 'success'
+            ? '成功'
+            : '提示',
+        detail: t.message,
+        life: 3000,
+      });
+    }
+  }
+);
 const isConnectionModalOpen = ref(false);
 const isSettingsModalOpen = ref(false);
 const isQuickFinderOpen = ref(false);

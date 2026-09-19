@@ -1,519 +1,496 @@
 <template>
-  <Teleport to="body">
-    <Transition
-      enter-active-class="transition duration-150 ease-out"
-      enter-from-class="opacity-0 scale-95"
-      enter-to-class="opacity-100 scale-100"
-      leave-active-class="transition duration-100 ease-in"
-      leave-from-class="opacity-100 scale-100"
-      leave-to-class="opacity-0 scale-95"
-    >
-      <div
-        v-if="isOpen"
-        class="fixed inset-0 z-50 flex items-start justify-center pt-[5vh] px-4 bg-black/65 backdrop-blur-xs select-none"
-        @click.self="closeModal"
-        @keydown.esc="closeModal"
-      >
-        <div
-          class="w-full max-w-5xl h-[84vh] bg-dark-850 border border-dark-650 rounded-xl shadow-2xl flex flex-col overflow-hidden text-xs font-sans ring-1 ring-white/10"
-          @click.stop
-        >
-          <!-- Top Header & Search Area -->
-          <div class="p-3.5 border-b border-dark-700 bg-dark-900/80 flex flex-col space-y-2.5 flex-shrink-0">
-            <div class="flex items-center space-x-2.5">
-              <BookOpen class="w-4 h-4 text-amber-400 flex-shrink-0" />
-              <span class="text-sm font-semibold text-dark-100 flex items-center space-x-2">
-                <span>常用 SQL 範本庫</span>
-                <span class="text-xxs px-1.5 py-0.2 bg-dark-750 text-dark-300 rounded-full font-mono border border-dark-700">
-                  {{ templateStore.allTemplates.length }}
-                </span>
-              </span>
+  <!-- Main Template Explorer Dialog -->
+  <Dialog
+    :visible="isOpen"
+    @update:visible="(val) => !val && closeModal()"
+    modal
+    :closable="false"
+    :dismissableMask="true"
+    :showHeader="false"
+    class="w-full max-w-5xl h-[84vh] !bg-dark-850 !border !border-dark-650 !rounded-xl shadow-2xl overflow-hidden ring-1 ring-white/10"
+    contentClass="!p-0 !bg-dark-850 h-full flex flex-col"
+  >
+    <!-- Top Header & Search Area -->
+    <div class="p-3.5 border-b border-dark-700 bg-dark-900/80 flex flex-col space-y-2.5 flex-shrink-0">
+      <div class="flex items-center space-x-2.5">
+        <i class="pi pi-book text-amber-400 text-base flex-shrink-0"></i>
+        <span class="text-sm font-semibold text-dark-100 flex items-center space-x-2">
+          <span>常用 SQL 範本庫</span>
+          <Tag :value="templateStore.allTemplates.length" severity="secondary" class="!font-mono !text-xxs !px-1.5 !py-0.2" />
+        </span>
 
-              <div class="h-4 w-px bg-dark-700 mx-1"></div>
+        <div class="h-4 w-px bg-dark-700 mx-1"></div>
 
-              <!-- Search Input -->
-              <div class="flex-1 relative flex items-center">
-                <Search class="w-3.5 h-3.5 text-brand-400 absolute left-2.5 pointer-events-none" />
-                <input
-                  ref="searchInputRef"
-                  v-model="templateStore.searchQuery"
-                  type="text"
-                  placeholder="搜尋常用語法、CTE、遞迴、分頁、PIVOT、說明關鍵字... (如 cte, merge, json)"
-                  class="w-full bg-dark-800 border border-dark-700 focus:border-brand-500 rounded-lg pl-8 pr-7 py-1.5 text-xs text-dark-100 placeholder-dark-500 focus:outline-none font-mono"
-                  @keydown.down.prevent="navigateDown"
-                  @keydown.up.prevent="navigateUp"
-                  @keydown.enter="handleEnterKey"
-                  @keydown.esc.prevent="closeModal"
-                />
-                <button
-                  v-if="templateStore.searchQuery"
-                  type="button"
-                  @click="templateStore.searchQuery = ''; searchInputRef?.focus()"
-                  class="absolute right-2 p-0.5 text-dark-400 hover:text-dark-200 rounded transition-colors"
-                  title="清除搜尋"
-                >
-                  <X class="w-3 h-3" />
-                </button>
-              </div>
+        <!-- Search Input with IconField -->
+        <IconField class="flex-1">
+          <InputIcon class="pi pi-search text-brand-400" />
+          <InputText
+            ref="searchInputRef"
+            v-model="templateStore.searchQuery"
+            type="text"
+            placeholder="搜尋常用語法、CTE、遞迴、分頁、PIVOT、說明關鍵字... (如 cte, merge, json)"
+            class="w-full !bg-dark-800 !border-dark-700 font-mono !text-xs text-dark-100 placeholder-dark-500"
+            @keydown.down.prevent="navigateDown"
+            @keydown.up.prevent="navigateUp"
+            @keydown.enter="handleEnterKey"
+            @keydown.esc.prevent="closeModal"
+          />
+        </IconField>
 
-              <!-- Close Button -->
-              <button
-                type="button"
-                @click="closeModal"
-                class="p-1.5 text-dark-400 hover:text-dark-200 rounded hover:bg-dark-750 transition-colors"
-                title="關閉 (Esc)"
-              >
-                <X class="w-4 h-4" />
-              </button>
-            </div>
+        <Button
+          v-if="templateStore.searchQuery"
+          type="button"
+          icon="pi pi-times"
+          text
+          size="small"
+          severity="secondary"
+          @click="clearSearch"
+          v-tooltip.top="'清除搜尋'"
+          class="!w-7 !h-7 !p-0 !rounded-md !border-0 hover:!bg-dark-750"
+        />
 
-            <!-- Category Filter Chips -->
-            <div class="flex items-center justify-between text-xxs text-dark-400 pt-0.5">
-              <div class="flex items-center space-x-1.5 overflow-x-auto">
-                <button
-                  v-for="chip in categoryChips"
-                  :key="chip.category"
-                  type="button"
-                  @click="templateStore.activeCategory = chip.category"
-                  :class="[
-                    'px-2.5 py-1 rounded-md font-medium transition-colors cursor-pointer flex items-center space-x-1.5',
-                    templateStore.activeCategory === chip.category
-                      ? 'bg-brand-500/25 text-brand-300 border border-brand-500/50 shadow-xs'
-                      : 'bg-dark-800 hover:bg-dark-750 text-dark-400 hover:text-dark-200 border border-dark-750'
-                  ]"
-                >
-                  <span>{{ chip.label }}</span>
-                  <span class="text-xxs opacity-70 font-mono">({{ chip.count }})</span>
-                </button>
-              </div>
+        <!-- Close Button -->
+        <Button
+          type="button"
+          icon="pi pi-times"
+          text
+          size="small"
+          severity="secondary"
+          @click="closeModal"
+          v-tooltip.top="'關閉 (Esc)'"
+          class="!w-7 !h-7 !p-0 !rounded-md !border-0 !shadow-none hover:!bg-rose-500/20 hover:!text-rose-400"
+        />
+      </div>
 
-              <!-- Reload & Add New Buttons -->
-              <div class="flex items-center space-x-1.5 flex-shrink-0">
-                <button
-                  type="button"
-                  @click="handleReloadFromDisk"
-                  :disabled="templateStore.isLoading"
-                  class="px-2 py-1 bg-dark-800 hover:bg-dark-750 text-dark-300 hover:text-dark-100 rounded border border-dark-700 transition-colors cursor-pointer flex items-center space-x-1"
-                  title="從應用程式同層檔案 (sql_custom_templates.json) 重新載入自訂語法"
-                >
-                  <RotateCw :class="['w-3 h-3 text-brand-400', templateStore.isLoading ? 'animate-spin' : '']" />
-                  <span>重新載入</span>
-                </button>
-
-                <button
-                  type="button"
-                  @click="openAddTemplateModal"
-                  class="px-2 py-1 bg-brand-600 hover:bg-brand-500 text-white rounded font-medium transition-colors cursor-pointer flex items-center space-x-1 shadow-xs"
-                  title="新增自訂 SQL 範本並儲存至應用程式同層檔案"
-                >
-                  <Plus class="w-3 h-3" />
-                  <span>＋ 新增自訂範本</span>
-                </button>
-              </div>
-            </div>
-          </div>
-
-          <!-- Main Content Area: Split View (Left: List, Right: Preview) -->
-          <div class="flex-1 flex overflow-hidden min-h-0 divide-x divide-dark-750">
-            <!-- Left Pane: Templates List (40%) -->
-            <div class="w-[40%] flex flex-col overflow-hidden bg-dark-900/40">
-              <div class="px-3 py-1.5 border-b border-dark-750/70 text-xxs text-dark-400 flex items-center justify-between">
-                <span>搜尋結果 ({{ templateStore.filteredTemplates.length }})</span>
-                <span class="text-dark-500">按 ↑↓ 選擇 · Enter 插入</span>
-              </div>
-
-              <!-- Scrollable List -->
-              <div
-                v-if="templateStore.filteredTemplates.length > 0"
-                ref="listContainerRef"
-                class="flex-1 overflow-y-auto p-1.5 space-y-1"
-              >
-                <div
-                  v-for="(tpl, idx) in templateStore.filteredTemplates"
-                  :key="tpl.id"
-                  :ref="(el) => setItemRef(el, idx)"
-                  @click="selectTemplate(tpl)"
-                  @mouseenter="hoverIndex = idx"
-                  :class="[
-                    'p-2.5 rounded-lg cursor-pointer transition-all border text-left group relative',
-                    templateStore.selectedTemplate?.id === tpl.id
-                      ? 'bg-brand-500/15 border-brand-500/40 text-dark-100 ring-1 ring-brand-500/30 shadow-xs'
-                      : 'bg-dark-800/60 hover:bg-dark-800 border-dark-750/60 hover:border-dark-700 text-dark-300 hover:text-dark-200'
-                  ]"
-                >
-                  <div class="flex items-center justify-between space-x-1 mb-1">
-                    <!-- Category Badge -->
-                    <div class="flex items-center space-x-1.5 min-w-0">
-                      <span
-                        :class="[
-                          'px-1.5 py-0.2 rounded text-[10px] font-sans font-semibold uppercase tracking-wider flex-shrink-0 border',
-                          getCategoryBadgeClass(tpl.category, tpl.isCustom)
-                        ]"
-                      >
-                        {{ tpl.categoryLabel || tpl.category }}
-                      </span>
-
-                      <span
-                        v-if="tpl.isCustom"
-                        class="px-1.5 py-0.2 rounded text-[10px] font-sans bg-rose-500/15 text-rose-300 border border-rose-500/30 font-semibold"
-                      >
-                        自訂文件
-                      </span>
-                    </div>
-
-                    <span class="text-dark-500 text-xxs font-mono flex-shrink-0">
-                      #{{ idx + 1 }}
-                    </span>
-                  </div>
-
-                  <!-- Template Title -->
-                  <div class="font-medium text-xs text-dark-100 group-hover:text-brand-300 transition-colors line-clamp-1 mb-1">
-                    {{ tpl.title }}
-                  </div>
-
-                  <!-- Short Description -->
-                  <div class="text-xxs text-dark-400 line-clamp-2 leading-relaxed">
-                    {{ tpl.description }}
-                  </div>
-
-                  <!-- Tags -->
-                  <div v-if="tpl.tags && tpl.tags.length > 0" class="flex flex-wrap gap-1 mt-1.5">
-                    <span
-                      v-for="tag in tpl.tags.slice(0, 3)"
-                      :key="tag"
-                      class="text-[10px] px-1 py-0.2 bg-dark-750/80 text-dark-400 rounded"
-                    >
-                      #{{ tag }}
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Empty State -->
-              <div
-                v-else
-                class="flex-1 flex flex-col items-center justify-center p-6 text-center space-y-2 text-dark-400"
-              >
-                <Search class="w-8 h-8 text-dark-600 mb-1" />
-                <span class="text-xs text-dark-300 font-medium">找不到符合的範本</span>
-                <span class="text-xxs text-dark-500 max-w-xs">
-                  嘗試輸入其他關鍵字，或切換至「全部」分類檢視完整語法清單
-                </span>
-                <button
-                  type="button"
-                  @click="templateStore.searchQuery = ''; templateStore.activeCategory = 'all'"
-                  class="mt-2 px-2.5 py-1 text-xxs bg-dark-800 hover:bg-dark-750 text-dark-300 rounded border border-dark-700 transition-colors"
-                >
-                  重設搜尋條件
-                </button>
-              </div>
-            </div>
-
-            <!-- Right Pane: Preview & Actions (60%) -->
-            <div class="w-[60%] flex flex-col overflow-hidden bg-dark-900/70">
-              <template v-if="templateStore.selectedTemplate">
-                <!-- Header / Action Bar -->
-                <div class="p-3.5 border-b border-dark-750 bg-dark-850/60 flex items-center justify-between flex-shrink-0">
-                  <div class="min-w-0 flex-1 pr-3">
-                    <div class="flex items-center space-x-2 mb-1">
-                      <span
-                        :class="[
-                          'px-1.5 py-0.2 rounded text-xxs font-semibold uppercase tracking-wider border',
-                          getCategoryBadgeClass(templateStore.selectedTemplate.category, templateStore.selectedTemplate.isCustom)
-                        ]"
-                      >
-                        {{ templateStore.selectedTemplate.categoryLabel || templateStore.selectedTemplate.category }}
-                      </span>
-                      <span
-                        v-if="templateStore.selectedTemplate.isCustom"
-                        class="px-1.5 py-0.2 rounded text-xxs bg-rose-500/15 text-rose-300 border border-rose-500/30 font-semibold"
-                      >
-                        外部自訂檔案
-                      </span>
-                    </div>
-                    <h3 class="text-sm font-semibold text-dark-100 truncate">
-                      {{ templateStore.selectedTemplate.title }}
-                    </h3>
-                  </div>
-
-                  <!-- Action Buttons -->
-                  <div class="flex items-center space-x-1.5 flex-shrink-0">
-                    <!-- Copy Button -->
-                    <button
-                      type="button"
-                      @click="copyCode(templateStore.selectedTemplate.code)"
-                      class="px-2.5 py-1.5 bg-dark-800 hover:bg-dark-750 text-dark-200 rounded border border-dark-700 transition-colors flex items-center space-x-1 cursor-pointer"
-                      title="複製語法至剪貼簿"
-                    >
-                      <Check v-if="hasCopied" class="w-3.5 h-3.5 text-emerald-400" />
-                      <Copy v-else class="w-3.5 h-3.5 text-dark-400" />
-                      <span>{{ hasCopied ? '已複製' : '複製' }}</span>
-                    </button>
-
-                    <!-- Open in New Tab Button -->
-                    <button
-                      type="button"
-                      @click="openInNewTab(templateStore.selectedTemplate)"
-                      class="px-2.5 py-1.5 bg-dark-800 hover:bg-dark-750 text-dark-200 rounded border border-dark-700 transition-colors flex items-center space-x-1 cursor-pointer"
-                      title="在新查詢分頁載入此範本"
-                    >
-                      <FilePlus class="w-3.5 h-3.5 text-brand-400" />
-                      <span>新分頁開啟</span>
-                    </button>
-
-                    <!-- Insert at Cursor (Primary) -->
-                    <button
-                      type="button"
-                      @click="insertIntoEditor(templateStore.selectedTemplate)"
-                      class="px-3 py-1.5 bg-brand-600 hover:bg-brand-500 text-white rounded font-medium transition-colors flex items-center space-x-1.5 cursor-pointer shadow-xs"
-                      title="將範本直接插入目前查詢編輯器的游標位置 (Enter)"
-                    >
-                      <CornerDownLeft class="w-3.5 h-3.5" />
-                      <span>插入到目前編輯點</span>
-                    </button>
-
-                    <!-- If Custom: Edit / Delete -->
-                    <template v-if="templateStore.selectedTemplate.isCustom">
-                      <button
-                        type="button"
-                        @click="openEditTemplateModal(templateStore.selectedTemplate)"
-                        class="p-1.5 text-dark-400 hover:text-amber-300 hover:bg-dark-800 rounded border border-dark-750 transition-colors"
-                        title="編輯此自訂範本"
-                      >
-                        <Edit3 class="w-3.5 h-3.5" />
-                      </button>
-
-                      <button
-                        type="button"
-                        @click="handleDeleteTemplate(templateStore.selectedTemplate.id)"
-                        class="p-1.5 text-dark-400 hover:text-rose-400 hover:bg-dark-800 rounded border border-dark-750 transition-colors"
-                        title="刪除此自訂範本"
-                      >
-                        <Trash2 class="w-3.5 h-3.5" />
-                      </button>
-                    </template>
-                  </div>
-                </div>
-
-                <!-- Preview Content Area -->
-                <div class="flex-1 overflow-y-auto p-4 space-y-3.5">
-                  <!-- Usage Notes / Description Card -->
-                  <div class="p-3 bg-dark-800/80 border border-dark-700/80 rounded-lg text-dark-300 text-xs leading-relaxed space-y-1.5">
-                    <div class="flex items-center space-x-1.5 font-semibold text-amber-300 text-xxs uppercase tracking-wider">
-                      <Info class="w-3.5 h-3.5" />
-                      <span>說明與最佳實踐 (Usage Notes & Guidelines)</span>
-                    </div>
-                    <div class="text-dark-200">
-                      {{ templateStore.selectedTemplate.description }}
-                    </div>
-                    <!-- Tags -->
-                    <div v-if="templateStore.selectedTemplate.tags.length > 0" class="flex flex-wrap gap-1 pt-1">
-                      <span
-                        v-for="t in templateStore.selectedTemplate.tags"
-                        :key="t"
-                        class="text-xxs px-1.5 py-0.5 bg-dark-750 text-dark-400 rounded border border-dark-700/60 font-mono"
-                      >
-                        #{{ t }}
-                      </span>
-                    </div>
-                  </div>
-
-                  <!-- SQL Code View Box -->
-                  <div class="space-y-1.5">
-                    <div class="flex items-center justify-between text-xxs text-dark-400 font-mono">
-                      <span>SQL 程式碼預覽 (T-SQL Syntax):</span>
-                      <span>按 Enter 立即插入至編輯器游標處</span>
-                    </div>
-
-                    <div class="relative bg-dark-950 border border-dark-700 rounded-lg overflow-hidden group">
-                      <pre
-                        class="p-3.5 text-xs font-mono text-dark-100 overflow-x-auto select-text leading-relaxed whitespace-pre font-light"
-                      ><code>{{ templateStore.selectedTemplate.code }}</code></pre>
-                    </div>
-                  </div>
-                </div>
-              </template>
-
-              <!-- No Selection Placeholder -->
-              <div
-                v-else
-                class="flex-1 flex flex-col items-center justify-center p-8 text-center text-dark-500 space-y-2"
-              >
-                <BookOpen class="w-10 h-10 text-dark-700" />
-                <span class="text-xs text-dark-400">請從左側選擇要預覽或插入的範本</span>
-              </div>
-            </div>
-          </div>
-
-          <!-- Bottom Footer: File Info & Keyboard Shortcuts Bar -->
-          <div class="px-3.5 py-2 border-t border-dark-700 bg-dark-900/90 flex items-center justify-between text-xxs text-dark-400 flex-shrink-0">
-            <!-- Left: Co-located File Information -->
-            <div class="flex items-center space-x-2 min-w-0 flex-1 mr-4">
-              <span class="flex items-center space-x-1 text-dark-400 flex-shrink-0">
-                <FileCode class="w-3 h-3 text-brand-400" />
-                <span>自訂範本文件:</span>
-              </span>
-              <span
-                class="text-dark-300 font-mono truncate max-w-md bg-dark-800 px-1.5 py-0.5 rounded border border-dark-750 select-text"
-                :title="templateStore.customFilePath || 'sql_custom_templates.json'"
-              >
-                {{ templateStore.customFilePath || 'sql_custom_templates.json (同層目錄)' }}
-              </span>
-
-              <button
-                type="button"
-                @click="handleRevealInExplorer"
-                class="px-2 py-0.5 bg-dark-800 hover:bg-dark-750 text-dark-300 hover:text-dark-100 rounded border border-dark-700 transition-colors flex items-center space-x-1 flex-shrink-0 cursor-pointer"
-                title="在 Windows 檔案總管中開啟並反白此自訂語法檔案"
-              >
-                <Folder class="w-3 h-3 text-amber-400" />
-                <span>在檔案總管顯示</span>
-              </button>
-            </div>
-
-            <!-- Right: Keyboard Hints -->
-            <div class="flex items-center space-x-2.5 flex-shrink-0 text-dark-400">
-              <span><kbd class="px-1 py-0.5 bg-dark-800 border border-dark-700 rounded text-dark-300 font-mono">↑</kbd> <kbd class="px-1 py-0.5 bg-dark-800 border border-dark-700 rounded text-dark-300 font-mono">↓</kbd> 選擇</span>
-              <span><kbd class="px-1 py-0.5 bg-dark-800 border border-dark-700 rounded text-dark-300 font-mono">Enter</kbd> 插入游標處</span>
-              <span><kbd class="px-1 py-0.5 bg-dark-800 border border-dark-700 rounded text-dark-300 font-mono">Esc</kbd> 關閉</span>
-            </div>
-          </div>
+      <!-- Category Filter Chips -->
+      <div class="flex items-center justify-between text-xxs text-dark-400 pt-0.5">
+        <div class="flex items-center space-x-1.5 overflow-x-auto">
+          <Button
+            v-for="chip in categoryChips"
+            :key="chip.category"
+            type="button"
+            size="small"
+            :severity="templateStore.activeCategory === chip.category ? 'primary' : 'secondary'"
+            :variant="templateStore.activeCategory === chip.category ? undefined : 'outlined'"
+            @click="templateStore.activeCategory = chip.category"
+            class="!text-xxs !py-1 !px-2.5"
+          >
+            <span>{{ chip.label }}</span>
+            <span class="ml-1 opacity-70 font-mono">({{ chip.count }})</span>
+          </Button>
         </div>
 
-        <!-- Inline Sub-Modal: Add / Edit Custom Template -->
-        <div
-          v-if="isCustomFormOpen"
-          class="fixed inset-0 z-60 flex items-center justify-center p-4 bg-black/70 backdrop-blur-xs select-none"
-          @click.self="isCustomFormOpen = false"
-        >
-          <div
-            class="w-full max-w-xl bg-dark-850 border border-dark-650 rounded-xl shadow-2xl flex flex-col overflow-hidden text-xs font-sans ring-1 ring-white/10"
-            @click.stop
-          >
-            <div class="px-4 py-3 border-b border-dark-700 bg-dark-900 flex items-center justify-between">
-              <span class="font-semibold text-dark-100 flex items-center space-x-2">
-                <Plus class="w-4 h-4 text-brand-400" />
-                <span>{{ editingTemplateId ? '編輯自訂 SQL 範本' : '新增自訂 SQL 範本' }}</span>
-              </span>
-              <button
-                type="button"
-                @click="isCustomFormOpen = false"
-                class="p-1 text-dark-400 hover:text-dark-200 rounded"
-              >
-                <X class="w-4 h-4" />
-              </button>
-            </div>
+        <!-- Reload & Add New Buttons -->
+        <div class="flex items-center space-x-1.5 flex-shrink-0">
+          <Button
+            type="button"
+            :icon="templateStore.isLoading ? 'pi pi-spin pi-spinner' : 'pi pi-refresh'"
+            label="重新載入"
+            size="small"
+            severity="secondary"
+            outlined
+            @click="handleReloadFromDisk"
+            :disabled="templateStore.isLoading"
+            v-tooltip.top="'從應用程式同層檔案 (sql_custom_templates.json) 重新載入自訂語法'"
+            class="!text-xxs !py-1 !px-2"
+          />
 
-            <form @submit.prevent="saveCustomTemplateForm" class="p-4 space-y-3">
-              <!-- Title Field -->
-              <div class="space-y-1">
-                <label class="block text-dark-300 font-medium">範本標題 <span class="text-rose-400">*</span></label>
-                <input
-                  v-model="formState.title"
-                  required
-                  type="text"
-                  placeholder="例如: ERP 訂單每日彙總批次查詢"
-                  class="w-full bg-dark-800 border border-dark-700 focus:border-brand-500 rounded px-2.5 py-1.5 text-xs text-dark-100 focus:outline-none"
-                />
-              </div>
-
-              <!-- Category & Tags Row -->
-              <div class="grid grid-cols-2 gap-3">
-                <div class="space-y-1">
-                  <label class="block text-dark-300 font-medium">範本分類</label>
-                  <select
-                    v-model="formState.category"
-                    class="w-full bg-dark-800 border border-dark-700 focus:border-brand-500 rounded px-2.5 py-1.5 text-xs text-dark-100 focus:outline-none cursor-pointer"
-                  >
-                    <option value="custom">自訂範本</option>
-                    <option value="basic">常用語法</option>
-                    <option value="cte">CTE 語法</option>
-                    <option value="advanced">進階用法</option>
-                    <option value="maintenance">診斷維護</option>
-                  </select>
-                </div>
-
-                <div class="space-y-1">
-                  <label class="block text-dark-300 font-medium">標籤 (逗號分隔)</label>
-                  <input
-                    v-model="formState.tagsInput"
-                    type="text"
-                    placeholder="如: erp, 報表, sync"
-                    class="w-full bg-dark-800 border border-dark-700 focus:border-brand-500 rounded px-2.5 py-1.5 text-xs text-dark-100 focus:outline-none font-mono"
-                  />
-                </div>
-              </div>
-
-              <!-- Description Field -->
-              <div class="space-y-1">
-                <label class="block text-dark-300 font-medium">使用情境與說明</label>
-                <textarea
-                  v-model="formState.description"
-                  rows="2"
-                  placeholder="描述此範本的適用情境、注意事項或需替換的欄位與參數"
-                  class="w-full bg-dark-800 border border-dark-700 focus:border-brand-500 rounded px-2.5 py-1.5 text-xs text-dark-100 focus:outline-none resize-none leading-relaxed"
-                />
-              </div>
-
-              <!-- SQL Code Field -->
-              <div class="space-y-1">
-                <label class="block text-dark-300 font-medium">SQL 語法內容 <span class="text-rose-400">*</span></label>
-                <textarea
-                  v-model="formState.code"
-                  required
-                  rows="7"
-                  placeholder="SELECT * FROM dbo.YourTable..."
-                  class="w-full bg-dark-950 border border-dark-700 focus:border-brand-500 rounded p-2.5 text-xs text-dark-100 font-mono focus:outline-none resize-y leading-relaxed"
-                />
-              </div>
-
-              <!-- Modal Footer -->
-              <div class="pt-2 flex items-center justify-between border-t border-dark-750">
-                <span class="text-xxs text-dark-500">
-                  將儲存至應用程式同層檔案 (sql_custom_templates.json)
-                </span>
-                <div class="flex items-center space-x-2">
-                  <button
-                    type="button"
-                    @click="isCustomFormOpen = false"
-                    class="px-3 py-1.5 bg-dark-800 hover:bg-dark-750 text-dark-300 rounded border border-dark-700 transition-colors"
-                  >
-                    取消
-                  </button>
-                  <button
-                    type="submit"
-                    class="px-3.5 py-1.5 bg-brand-600 hover:bg-brand-500 text-white rounded font-medium transition-colors shadow-xs"
-                  >
-                    儲存範本
-                  </button>
-                </div>
-              </div>
-            </form>
-          </div>
+          <Button
+            type="button"
+            icon="pi pi-plus"
+            label="新增自訂範本"
+            size="small"
+            severity="primary"
+            @click="openAddTemplateModal"
+            v-tooltip.top="'新增自訂 SQL 範本並儲存至應用程式同層檔案'"
+            class="!text-xxs !py-1 !px-2.5"
+          />
         </div>
       </div>
-    </Transition>
-  </Teleport>
+    </div>
+
+    <!-- Main Content Area: Split View (Left: List, Right: Preview) -->
+    <div class="flex-1 flex overflow-hidden min-h-0 divide-x divide-dark-750">
+      <!-- Left Pane: Templates List (40%) -->
+      <div class="w-[40%] flex flex-col overflow-hidden bg-dark-900/40">
+        <div class="px-3 py-1.5 border-b border-dark-750/70 text-xxs text-dark-400 flex items-center justify-between">
+          <span>搜尋結果 ({{ templateStore.filteredTemplates.length }})</span>
+          <span class="text-dark-500">按 ↑↓ 選擇 · Enter 插入</span>
+        </div>
+
+        <!-- Scrollable List -->
+        <div
+          v-if="templateStore.filteredTemplates.length > 0"
+          ref="listContainerRef"
+          class="flex-1 overflow-y-auto p-1.5 space-y-1"
+        >
+          <div
+            v-for="(tpl, idx) in templateStore.filteredTemplates"
+            :key="tpl.id"
+            :ref="(el) => setItemRef(el, idx)"
+            @click="selectTemplate(tpl)"
+            @mouseenter="hoverIndex = idx"
+            :class="[
+              'p-2.5 rounded-lg cursor-pointer transition-all border text-left group relative',
+              templateStore.selectedTemplate?.id === tpl.id
+                ? 'bg-brand-500/15 border-brand-500/40 text-dark-100 ring-1 ring-brand-500/30 shadow-xs'
+                : 'bg-dark-800/60 hover:bg-dark-800 border-dark-750/60 hover:border-dark-700 text-dark-300 hover:text-dark-200'
+            ]"
+          >
+            <div class="flex items-center justify-between space-x-1 mb-1">
+              <!-- Category Badge -->
+              <div class="flex items-center space-x-1.5 min-w-0">
+                <Tag
+                  :severity="getCategorySeverity(tpl.category, tpl.isCustom)"
+                  :value="tpl.categoryLabel || tpl.category"
+                  class="!text-[10px] !px-1.5 !py-0.2 uppercase tracking-wider"
+                />
+
+                <Tag
+                  v-if="tpl.isCustom"
+                  severity="danger"
+                  value="自訂文件"
+                  class="!text-[10px] !px-1.5 !py-0.2"
+                />
+              </div>
+
+              <span class="text-dark-500 text-xxs font-mono flex-shrink-0">
+                #{{ idx + 1 }}
+              </span>
+            </div>
+
+            <!-- Template Title -->
+            <div class="font-medium text-xs text-dark-100 group-hover:text-brand-300 transition-colors line-clamp-1 mb-1">
+              {{ tpl.title }}
+            </div>
+
+            <!-- Short Description -->
+            <div class="text-xxs text-dark-400 line-clamp-2 leading-relaxed">
+              {{ tpl.description }}
+            </div>
+
+            <!-- Tags -->
+            <div v-if="tpl.tags && tpl.tags.length > 0" class="flex flex-wrap gap-1 mt-1.5">
+              <span
+                v-for="tag in tpl.tags.slice(0, 3)"
+                :key="tag"
+                class="text-[10px] px-1 py-0.2 bg-dark-750/80 text-dark-400 rounded"
+              >
+                #{{ tag }}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Empty State -->
+        <div
+          v-else
+          class="flex-1 flex flex-col items-center justify-center p-6 text-center space-y-2 text-dark-400"
+        >
+          <i class="pi pi-search text-3xl text-dark-600 mb-1"></i>
+          <span class="text-xs text-dark-300 font-medium">找不到符合的範本</span>
+          <span class="text-xxs text-dark-500 max-w-xs">
+            嘗試輸入其他關鍵字，或切換至「全部」分類檢視完整語法清單
+          </span>
+          <Button
+            type="button"
+            label="重設搜尋條件"
+            size="small"
+            severity="secondary"
+            outlined
+            @click="templateStore.searchQuery = ''; templateStore.activeCategory = 'all'"
+            class="mt-2 !text-xxs !py-1 !px-2.5"
+          />
+        </div>
+      </div>
+
+      <!-- Right Pane: Preview & Actions (60%) -->
+      <div class="w-[60%] flex flex-col overflow-hidden bg-dark-900/70">
+        <template v-if="templateStore.selectedTemplate">
+          <!-- Header / Action Bar -->
+          <div class="p-3.5 border-b border-dark-750 bg-dark-850/60 flex items-center justify-between flex-shrink-0">
+            <div class="min-w-0 flex-1 pr-3">
+              <div class="flex items-center space-x-2 mb-1">
+                <Tag
+                  :severity="getCategorySeverity(templateStore.selectedTemplate.category, templateStore.selectedTemplate.isCustom)"
+                  :value="templateStore.selectedTemplate.categoryLabel || templateStore.selectedTemplate.category"
+                  class="!text-xxs uppercase tracking-wider"
+                />
+                <Tag
+                  v-if="templateStore.selectedTemplate.isCustom"
+                  severity="danger"
+                  value="外部自訂檔案"
+                  class="!text-xxs"
+                />
+              </div>
+              <h3 class="text-sm font-semibold text-dark-100 truncate">
+                {{ templateStore.selectedTemplate.title }}
+              </h3>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="flex items-center space-x-1.5 flex-shrink-0">
+              <!-- Copy Button -->
+              <Button
+                type="button"
+                :icon="hasCopied ? 'pi pi-check' : 'pi pi-copy'"
+                :label="hasCopied ? '已複製' : '複製'"
+                size="small"
+                severity="secondary"
+                outlined
+                @click="copyCode(templateStore.selectedTemplate.code)"
+                v-tooltip.top="'複製語法至剪貼簿'"
+                class="!text-xs !py-1.5 !px-2.5"
+              />
+
+              <!-- Open in New Tab Button -->
+              <Button
+                type="button"
+                icon="pi pi-external-link"
+                label="新分頁開啟"
+                size="small"
+                severity="secondary"
+                outlined
+                @click="openInNewTab(templateStore.selectedTemplate)"
+                v-tooltip.top="'在新查詢分頁載入此範本'"
+                class="!text-xs !py-1.5 !px-2.5"
+              />
+
+              <!-- Insert at Cursor (Primary) -->
+              <Button
+                type="button"
+                icon="pi pi-arrow-down-left"
+                label="插入到目前編輯點"
+                size="small"
+                severity="primary"
+                @click="insertIntoEditor(templateStore.selectedTemplate)"
+                v-tooltip.top="'將範本直接插入目前查詢編輯器的游標位置 (Enter)'"
+                class="!text-xs !py-1.5 !px-3 shadow-xs"
+              />
+
+              <!-- If Custom: Edit / Delete -->
+              <template v-if="templateStore.selectedTemplate.isCustom">
+                <Button
+                  type="button"
+                  icon="pi pi-pencil"
+                  text
+                  rounded
+                  size="small"
+                  severity="secondary"
+                  @click="openEditTemplateModal(templateStore.selectedTemplate)"
+                  v-tooltip.top="'編輯此自訂範本'"
+                  class="!p-1 !w-7 !h-7"
+                />
+
+                <Button
+                  type="button"
+                  icon="pi pi-trash"
+                  text
+                  rounded
+                  size="small"
+                  severity="danger"
+                  @click="handleDeleteTemplate(templateStore.selectedTemplate.id)"
+                  v-tooltip.top="'刪除此自訂範本'"
+                  class="!p-1 !w-7 !h-7"
+                />
+              </template>
+            </div>
+          </div>
+
+          <!-- Preview Content Area -->
+          <div class="flex-1 overflow-y-auto p-4 space-y-3.5">
+            <!-- Usage Notes / Description Card -->
+            <div class="p-3 bg-dark-800/80 border border-dark-700/80 rounded-lg text-dark-300 text-xs leading-relaxed space-y-1.5">
+              <div class="flex items-center space-x-1.5 font-semibold text-amber-300 text-xxs uppercase tracking-wider">
+                <i class="pi pi-info-circle text-xs"></i>
+                <span>說明與最佳實踐 (Usage Notes & Guidelines)</span>
+              </div>
+              <div class="text-dark-200">
+                {{ templateStore.selectedTemplate.description }}
+              </div>
+              <!-- Tags -->
+              <div v-if="templateStore.selectedTemplate.tags.length > 0" class="flex flex-wrap gap-1 pt-1">
+                <span
+                  v-for="t in templateStore.selectedTemplate.tags"
+                  :key="t"
+                  class="text-xxs px-1.5 py-0.5 bg-dark-750 text-dark-400 rounded border border-dark-700/60 font-mono"
+                >
+                  #{{ t }}
+                </span>
+              </div>
+            </div>
+
+            <!-- SQL Code View Box -->
+            <div class="space-y-1.5">
+              <div class="flex items-center justify-between text-xxs text-dark-400 font-mono">
+                <span>SQL 程式碼預覽 (T-SQL Syntax):</span>
+                <span>按 Enter 立即插入至編輯器游標處</span>
+              </div>
+
+              <div class="relative bg-dark-950 border border-dark-700 rounded-lg overflow-hidden group">
+                <pre
+                  class="p-3.5 text-xs font-mono text-dark-100 overflow-x-auto select-text leading-relaxed whitespace-pre font-light"
+                ><code>{{ templateStore.selectedTemplate.code }}</code></pre>
+              </div>
+            </div>
+          </div>
+        </template>
+
+        <!-- No Selection Placeholder -->
+        <div
+          v-else
+          class="flex-1 flex flex-col items-center justify-center p-8 text-center text-dark-500 space-y-2"
+        >
+          <i class="pi pi-book text-4xl text-dark-700"></i>
+          <span class="text-xs text-dark-400">請從左側選擇要預覽或插入的範本</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bottom Footer: File Info & Keyboard Shortcuts Bar -->
+    <div class="px-3.5 py-2 border-t border-dark-700 bg-dark-900/90 flex items-center justify-between text-xxs text-dark-400 flex-shrink-0">
+      <!-- Left: Co-located File Information -->
+      <div class="flex items-center space-x-2 min-w-0 flex-1 mr-4">
+        <span class="flex items-center space-x-1 text-dark-400 flex-shrink-0">
+          <i class="pi pi-file text-brand-400 text-xs"></i>
+          <span>自訂範本文件:</span>
+        </span>
+        <span
+          class="text-dark-300 font-mono truncate max-w-md bg-dark-800 px-1.5 py-0.5 rounded border border-dark-750 select-text"
+          :title="templateStore.customFilePath || 'sql_custom_templates.json'"
+        >
+          {{ templateStore.customFilePath || 'sql_custom_templates.json (同層目錄)' }}
+        </span>
+
+        <Button
+          type="button"
+          icon="pi pi-folder-open"
+          label="在檔案總管顯示"
+          size="small"
+          severity="secondary"
+          outlined
+          @click="handleRevealInExplorer"
+          v-tooltip.top="'在 Windows 檔案總管中開啟並反白此自訂語法檔案'"
+          class="!text-xxs !py-0.5 !px-2"
+        />
+      </div>
+
+      <!-- Right: Keyboard Hints -->
+      <div class="flex items-center space-x-2.5 flex-shrink-0 text-dark-400">
+        <span><kbd class="px-1 py-0.5 bg-dark-800 border border-dark-700 rounded text-dark-300 font-mono">↑</kbd> <kbd class="px-1 py-0.5 bg-dark-800 border border-dark-700 rounded text-dark-300 font-mono">↓</kbd> 選擇</span>
+        <span><kbd class="px-1 py-0.5 bg-dark-800 border border-dark-700 rounded text-dark-300 font-mono">Enter</kbd> 插入游標處</span>
+        <span><kbd class="px-1 py-0.5 bg-dark-800 border border-dark-700 rounded text-dark-300 font-mono">Esc</kbd> 關閉</span>
+      </div>
+    </div>
+  </Dialog>
+
+  <!-- Add / Edit Custom Template Dialog -->
+  <Dialog
+    v-model:visible="isCustomFormOpen"
+    modal
+    :header="editingTemplateId ? '編輯自訂 SQL 範本' : '新增自訂 SQL 範本'"
+    class="w-full max-w-xl !bg-dark-850 !border-dark-650"
+  >
+    <form @submit.prevent="saveCustomTemplateForm" class="p-2 space-y-3 text-xs font-sans">
+      <!-- Title Field -->
+      <div class="space-y-1">
+        <label class="block text-dark-300 font-medium">範本標題 <span class="text-rose-400">*</span></label>
+        <InputText
+          v-model="formState.title"
+          required
+          type="text"
+          placeholder="例如: ERP 訂單每日彙總批次查詢"
+          size="small"
+          class="w-full"
+        />
+      </div>
+
+      <!-- Category & Tags Row -->
+      <div class="grid grid-cols-2 gap-3">
+        <div class="space-y-1">
+          <label class="block text-dark-300 font-medium">範本分類</label>
+          <Select
+            v-model="formState.category"
+            :options="customCategoryOptions"
+            optionLabel="label"
+            optionValue="value"
+            size="small"
+            class="w-full"
+          />
+        </div>
+
+        <div class="space-y-1">
+          <label class="block text-dark-300 font-medium">標籤 (逗號分隔)</label>
+          <InputText
+            v-model="formState.tagsInput"
+            type="text"
+            placeholder="如: erp, 報表, sync"
+            size="small"
+            class="w-full font-mono"
+          />
+        </div>
+      </div>
+
+      <!-- Description Field -->
+      <div class="space-y-1">
+        <label class="block text-dark-300 font-medium">使用情境與說明</label>
+        <Textarea
+          v-model="formState.description"
+          rows="2"
+          placeholder="描述此範本的適用情境、注意事項或需替換的欄位與參數"
+          size="small"
+          class="w-full resize-none leading-relaxed"
+        />
+      </div>
+
+      <!-- SQL Code Field -->
+      <div class="space-y-1">
+        <label class="block text-dark-300 font-medium">SQL 語法內容 <span class="text-rose-400">*</span></label>
+        <Textarea
+          v-model="formState.code"
+          required
+          rows="7"
+          placeholder="SELECT * FROM dbo.YourTable..."
+          size="small"
+          class="w-full font-mono resize-y leading-relaxed !bg-dark-950"
+        />
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="pt-3 flex items-center justify-between border-t border-dark-750">
+        <span class="text-xxs text-dark-500">
+          將儲存至應用程式同層檔案 (sql_custom_templates.json)
+        </span>
+        <div class="flex items-center space-x-2">
+          <Button
+            type="button"
+            label="取消"
+            severity="secondary"
+            size="small"
+            @click="isCustomFormOpen = false"
+          />
+          <Button
+            type="submit"
+            label="儲存範本"
+            severity="primary"
+            size="small"
+          />
+        </div>
+      </div>
+    </form>
+  </Dialog>
 </template>
 
 <script setup lang="ts">
 import { ref, reactive, computed, watch, nextTick } from 'vue';
-import {
-  BookOpen,
-  Search,
-  X,
-  Plus,
-  RotateCw,
-  Copy,
-  Check,
-  FilePlus,
-  CornerDownLeft,
-  Info,
-  FileCode,
-  Folder,
-  Edit3,
-  Trash2,
-} from 'lucide-vue-next';
+import Dialog from 'primevue/dialog';
+import IconField from 'primevue/iconfield';
+import InputIcon from 'primevue/inputicon';
+import InputText from 'primevue/inputtext';
+import Textarea from 'primevue/textarea';
+import Button from 'primevue/button';
+import Select from 'primevue/select';
+import Tag from 'primevue/tag';
 import { useSqlTemplateStore } from '@/stores/sqlTemplateStore';
 import { useWorkspaceStore } from '@/stores/workspaceStore';
 import type { SqlTemplate, SqlTemplateCategory } from '@/types/sqlTemplate';
@@ -531,7 +508,7 @@ const emit = defineEmits<{
 const templateStore = useSqlTemplateStore();
 const workspaceStore = useWorkspaceStore();
 
-const searchInputRef = ref<HTMLInputElement | null>(null);
+const searchInputRef = ref<any>(null);
 const listContainerRef = ref<HTMLDivElement | null>(null);
 const itemRefs = ref<HTMLElement[]>([]);
 
@@ -549,6 +526,14 @@ const formState = reactive({
   description: '',
   code: '',
 });
+
+const customCategoryOptions = [
+  { label: '自訂範本', value: 'custom' },
+  { label: '常用語法', value: 'basic' },
+  { label: 'CTE 語法', value: 'cte' },
+  { label: '進階用法', value: 'advanced' },
+  { label: '診斷維護', value: 'maintenance' },
+];
 
 function setItemRef(el: unknown, idx: number) {
   if (el) {
@@ -568,21 +553,36 @@ const categoryChips = computed<{ category: SqlTemplateCategory; label: string; c
   ];
 });
 
-function getCategoryBadgeClass(category: SqlTemplateCategory, isCustom?: boolean): string {
+function getCategorySeverity(category: SqlTemplateCategory, isCustom?: boolean): string {
   if (isCustom || category === 'custom') {
-    return 'bg-rose-500/15 text-rose-300 border-rose-500/30';
+    return 'danger';
   }
   switch (category) {
     case 'basic':
-      return 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30';
+      return 'success';
     case 'cte':
-      return 'bg-purple-500/15 text-purple-300 border-purple-500/30';
+      return 'info';
     case 'advanced':
-      return 'bg-amber-500/15 text-amber-300 border-amber-500/30';
+      return 'warn';
     case 'maintenance':
-      return 'bg-sky-500/15 text-sky-300 border-sky-500/30';
+      return 'secondary';
     default:
-      return 'bg-dark-750 text-dark-300 border-dark-700';
+      return 'secondary';
+  }
+}
+
+function clearSearch() {
+  templateStore.searchQuery = '';
+  focusSearchInput();
+}
+
+function focusSearchInput() {
+  const el = searchInputRef.value;
+  if (!el) return;
+  if (typeof el.focus === 'function') {
+    el.focus();
+  } else if (el.$el && typeof el.$el.focus === 'function') {
+    el.$el.focus();
   }
 }
 
@@ -617,7 +617,6 @@ function navigateUp() {
     scrollToItem(prevIdx);
   }
 }
-
 
 function scrollToItem(idx: number) {
   nextTick(() => {
@@ -740,7 +739,7 @@ watch(
     if (open) {
       templateStore.loadTemplates();
       nextTick(() => {
-        searchInputRef.value?.focus();
+        focusSearchInput();
       });
     }
   }

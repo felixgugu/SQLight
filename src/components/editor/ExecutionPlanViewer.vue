@@ -10,141 +10,137 @@
         <span class="font-medium text-xs text-dark-100 truncate">
           {{ tab.title }}
         </span>
-        <span
+        <Tag
           v-if="tab.database"
-          class="text-[10px] font-mono px-1.5 py-0.5 rounded border border-dark-700 bg-dark-800 text-dark-400 flex-shrink-0"
+          severity="secondary"
+          class="!font-mono !text-xs !py-0.5 !px-1.5 flex-shrink-0"
         >
           {{ tab.database }}
-        </span>
+        </Tag>
         <span class="text-xxs text-dark-500 font-mono flex-shrink-0">
           {{ tab.executedAt }}
         </span>
 
         <!-- Toggle SQL Query Preview -->
-        <button
+        <Button
           type="button"
+          size="small"
+          :severity="showSql ? 'primary' : 'secondary'"
+          :outlined="!showSql"
+          icon="pi pi-code"
+          label="SQL"
           @click="showSql = !showSql"
-          :class="[
-            'px-1.5 py-0.5 rounded text-xxs font-mono border transition-colors cursor-pointer flex items-center space-x-1 flex-shrink-0',
-            showSql
-              ? 'bg-brand-500/20 text-brand-300 border-brand-500/40'
-              : 'bg-dark-800 text-dark-400 hover:text-dark-200 border-dark-700 hover:bg-dark-750'
-          ]"
-          title="查看執行的 SQL 語句"
-        >
-          <Code2 class="w-3 h-3" />
-          <span>SQL</span>
-        </button>
+          v-tooltip.top="'查看執行的 SQL 語句'"
+          class="!text-xs !py-0.5 !px-2 flex-shrink-0"
+        />
       </div>
 
       <!-- Right: View Mode, Zoom Controls, Copy & Download Actions -->
       <div class="flex items-center space-x-1.5 flex-shrink-0">
         <!-- View Mode Segmented Buttons -->
-        <div class="flex items-center bg-dark-800 p-0.5 rounded border border-dark-700 text-xxs">
-          <button
-            type="button"
-            @click="viewMode = 'diagram'"
-            :class="[
-              'px-2 py-1 rounded transition-colors flex items-center space-x-1 cursor-pointer font-medium',
-              viewMode === 'diagram'
-                ? 'bg-purple-600 text-white shadow-xs'
-                : 'text-dark-400 hover:text-dark-200'
-            ]"
-            title="圖形化執行計畫 (Graphical Plan)"
-          >
-            <GitFork class="w-3 h-3" />
-            <span>圖形計畫</span>
-          </button>
-          <button
-            type="button"
-            @click="viewMode = 'xml'"
-            :class="[
-              'px-2 py-1 rounded transition-colors flex items-center space-x-1 cursor-pointer font-medium',
-              viewMode === 'xml'
-                ? 'bg-purple-600 text-white shadow-xs'
-                : 'text-dark-400 hover:text-dark-200'
-            ]"
-            title="原始 XML 內容 (Raw XML)"
-          >
-            <FileCode class="w-3 h-3" />
-            <span>原始 XML</span>
-          </button>
-        </div>
+        <SelectButton
+          v-model="viewMode"
+          :options="viewModeOptions"
+          optionLabel="label"
+          optionValue="value"
+          size="small"
+          :allowEmpty="false"
+          class="!text-xs"
+        >
+          <template #option="{ option }">
+            <div class="flex items-center space-x-1.5">
+              <i :class="option.icon" class="text-xs"></i>
+              <span>{{ option.label }}</span>
+            </div>
+          </template>
+        </SelectButton>
 
         <!-- Zoom Controls (Only in Diagram mode) -->
-        <div v-if="viewMode === 'diagram'" class="flex items-center space-x-0.5 bg-dark-800 px-1 py-0.5 rounded border border-dark-700">
-          <button
+        <div v-if="viewMode === 'diagram'" class="flex items-center rounded overflow-hidden border border-dark-700 bg-dark-800">
+          <Button
             type="button"
-            @click="zoomOut"
+            icon="pi pi-search-minus"
+            text
+            size="small"
+            severity="secondary"
             :disabled="zoom <= 30"
-            class="p-1 rounded text-dark-400 hover:text-dark-200 hover:bg-dark-750 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-colors"
-            title="縮小 (Zoom Out)"
-          >
-            <ZoomOut class="w-3 h-3" />
-          </button>
-          <button
+            @click="zoomOut"
+            v-tooltip.top="'縮小 (Zoom Out)'"
+            class="!p-1.5 !w-7 !h-7"
+          />
+          <Button
             type="button"
+            :label="`${zoom}%`"
+            text
+            size="small"
+            severity="secondary"
             @click="resetZoom"
-            class="px-1.5 py-0.5 text-xxs font-mono text-dark-300 hover:text-white rounded hover:bg-dark-750 cursor-pointer transition-colors"
-            title="點擊重設為 100% (Reset Zoom)"
-          >
-            {{ zoom }}%
-          </button>
-          <button
+            v-tooltip.top="'重設為 100%'"
+            class="!px-1.5 !py-1 !text-xxs font-mono min-w-[42px]"
+          />
+          <Button
             type="button"
-            @click="zoomIn"
+            icon="pi pi-search-plus"
+            text
+            size="small"
+            severity="secondary"
             :disabled="zoom >= 250"
-            class="p-1 rounded text-dark-400 hover:text-dark-200 hover:bg-dark-750 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-colors"
-            title="放大 (Zoom In)"
-          >
-            <ZoomIn class="w-3 h-3" />
-          </button>
-          <button
+            @click="zoomIn"
+            v-tooltip.top="'放大 (Zoom In)'"
+            class="!p-1.5 !w-7 !h-7"
+          />
+          <Button
             type="button"
+            icon="pi pi-refresh"
+            text
+            size="small"
+            severity="secondary"
             @click="resetZoom"
-            class="p-1 rounded text-dark-400 hover:text-dark-200 hover:bg-dark-750 cursor-pointer transition-colors"
-            title="重設大小 (Reset Zoom)"
-          >
-            <RotateCcw class="w-3 h-3" />
-          </button>
+            v-tooltip.top="'重設大小'"
+            class="!p-1.5 !w-7 !h-7 border-l border-dark-700"
+          />
         </div>
 
         <!-- Theme Switcher (Dark / Classic Light) -->
-        <button
+        <Button
           v-if="viewMode === 'diagram'"
           type="button"
+          :icon="planTheme === 'dark' ? 'pi pi-moon text-purple-400' : 'pi pi-sun text-amber-400'"
+          :label="planTheme === 'dark' ? '深色' : '淺色'"
+          size="small"
+          severity="secondary"
+          outlined
           @click="togglePlanTheme"
-          class="px-2 py-1 rounded bg-dark-800 hover:bg-dark-750 text-dark-300 hover:text-white border border-dark-700 transition-colors flex items-center space-x-1 cursor-pointer text-xxs font-medium"
-          :title="planTheme === 'dark' ? '切換為 SSMS 經典淺色風格' : '切換為深色主題風格'"
-        >
-          <Moon v-if="planTheme === 'dark'" class="w-3 h-3 text-purple-400" />
-          <Sun v-else class="w-3 h-3 text-amber-400" />
-          <span>{{ planTheme === 'dark' ? '深色' : '淺色' }}</span>
-        </button>
+          v-tooltip.top="planTheme === 'dark' ? '切換為 SSMS 經典淺色風格' : '切換為深色主題風格'"
+          class="!text-xs !py-1 !px-2"
+        />
 
         <div class="h-4 w-px bg-dark-700 mx-0.5"></div>
 
         <!-- Copy Raw XML Button -->
-        <button
+        <Button
           type="button"
+          :icon="copied ? 'pi pi-check text-emerald-400' : 'pi pi-copy'"
+          :label="copied ? '已複製！' : '複製原始 XML'"
+          size="small"
+          severity="secondary"
+          outlined
           @click="copyXml"
-          class="px-2 py-1 rounded bg-dark-800 hover:bg-dark-750 text-dark-200 hover:text-white border border-dark-700 transition-colors flex items-center space-x-1.5 cursor-pointer text-xs font-medium"
-          title="一鍵複製原始 XML 執行計畫至剪貼簿"
-        >
-          <Check v-if="copied" class="w-3.5 h-3.5 text-emerald-400 animate-in fade-in" />
-          <Copy v-else class="w-3.5 h-3.5 text-dark-400 group-hover:text-dark-200" />
-          <span>{{ copied ? '已複製！' : '複製原始 XML' }}</span>
-        </button>
+          v-tooltip.top="'一鍵複製原始 XML 執行計畫至剪貼簿'"
+          class="!text-xs !py-1 !px-2.5"
+        />
 
         <!-- Save as .sqlplan File Button -->
-        <button
+        <Button
           type="button"
+          icon="pi pi-download"
+          size="small"
+          severity="secondary"
+          outlined
           @click="exportSqlPlanFile"
-          class="p-1.5 rounded bg-dark-800 hover:bg-dark-750 text-dark-300 hover:text-amber-300 border border-dark-700 transition-colors flex items-center cursor-pointer"
-          title="另存為 .sqlplan 檔案 (可直接用 SSMS / Azure Data Studio 開啟)"
-        >
-          <Download class="w-3.5 h-3.5" />
-        </button>
+          v-tooltip.top="'另存為 .sqlplan 檔案 (可直接用 SSMS / Azure Data Studio 開啟)'"
+          class="!text-xs !py-1 !px-2"
+        />
       </div>
     </div>
 
@@ -156,15 +152,17 @@
       <div class="overflow-x-auto max-h-24 flex-1 text-dark-300 whitespace-pre-wrap leading-relaxed">
         {{ tab.querySql }}
       </div>
-      <button
+      <Button
         type="button"
+        icon="pi pi-copy"
+        label="複製 SQL"
+        size="small"
+        severity="secondary"
+        outlined
         @click="copySql"
-        class="px-2 py-1 rounded bg-dark-800 hover:bg-dark-750 border border-dark-700 text-dark-400 hover:text-dark-200 text-xxs flex items-center space-x-1 cursor-pointer flex-shrink-0"
-        title="複製 SQL 語句"
-      >
-        <Copy class="w-3 h-3" />
-        <span>複製 SQL</span>
-      </button>
+        v-tooltip.top="'複製 SQL 語句'"
+        class="!text-xxs !py-0.5 !px-1.5 flex-shrink-0"
+      />
     </div>
 
     <!-- Main Content Area -->
@@ -194,13 +192,13 @@
           <div class="max-w-md">
             <h4 class="font-semibold text-dark-100 text-sm mb-1">圖形渲染失敗</h4>
             <p class="text-dark-400 text-xxs font-mono break-all mb-3">{{ renderError }}</p>
-            <button
+            <Button
               type="button"
+              label="切換至原始 XML 模式檢視"
+              severity="primary"
+              size="small"
               @click="viewMode = 'xml'"
-              class="px-3 py-1.5 rounded bg-purple-600 hover:bg-purple-500 text-white font-medium cursor-pointer transition-colors"
-            >
-              切換至原始 XML 模式檢視
-            </button>
+            />
           </div>
         </div>
 
@@ -244,14 +242,8 @@
             <span>總行數: {{ xmlLines.length }} 行</span>
           </div>
           <div class="flex items-center space-x-2">
-            <label class="flex items-center space-x-1 cursor-pointer select-none text-dark-400 hover:text-dark-200">
-              <input
-                type="checkbox"
-                v-model="wordWrap"
-                class="w-3 h-3 rounded border-dark-600 bg-dark-900 text-purple-500 accent-purple-500"
-              />
-              <span>自動折行</span>
-            </label>
+            <Checkbox v-model="wordWrap" :binary="true" inputId="xmlWordWrap" />
+            <label for="xmlWordWrap" class="cursor-pointer select-none text-dark-400 hover:text-dark-200">自動折行</label>
           </div>
         </div>
 
@@ -270,26 +262,24 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onBeforeUnmount, watch, nextTick } from 'vue';
+import Button from 'primevue/button';
+import Tag from 'primevue/tag';
+import SelectButton from 'primevue/selectbutton';
+import Checkbox from 'primevue/checkbox';
 import {
   Network,
-  GitFork,
-  FileCode,
-  Copy,
-  Check,
-  Download,
-  ZoomIn,
-  ZoomOut,
-  RotateCcw,
   RotateCw,
-  Code2,
   AlertTriangle,
-  Moon,
-  Sun,
 } from 'lucide-vue-next';
 import type { ExecutionPlanTab } from '@/types/workspace';
 import { useWorkspaceStore } from '@/stores/workspaceStore';
 import { formatXml } from '@/utils/planXmlParser';
 import { savePlanToFile } from '@/utils/fileStorage';
+
+const viewModeOptions = [
+  { label: '圖形計畫', value: 'diagram', icon: 'pi pi-sitemap' },
+  { label: '原始 XML', value: 'xml', icon: 'pi pi-code' },
+];
 
 const props = defineProps<{
   tab: ExecutionPlanTab;

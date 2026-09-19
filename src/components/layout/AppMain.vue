@@ -9,14 +9,16 @@
       :class="[isBarDragOver ? 'bg-dark-800 ring-1 ring-inset ring-brand-500/40' : '']"
     >
       <!-- Fixed Left: Add New Query Tab Button -->
-      <button
-        type="button"
+      <Button
+        icon="pi pi-plus"
+        severity="secondary"
+        size="small"
+        text
+        rounded
+        class="!h-7 !w-7 !p-0 !text-brand-400"
+        v-tooltip.bottom="'新增查詢分頁 (Ctrl+N)'"
         @click="handleAddNewTab"
-        class="h-7 px-2 text-dark-400 hover:text-dark-100 hover:bg-dark-750 active:bg-dark-700 rounded transition-colors flex items-center space-x-1 cursor-pointer flex-shrink-0 border border-dark-750/70 shadow-xs"
-        title="新增查詢分頁 (Ctrl+N)"
-      >
-        <Plus class="w-3.5 h-3.5 text-brand-400" />
-      </button>
+      />
 
       <!-- Vertical Divider -->
       <div class="h-4 w-px bg-dark-750 mx-0.5 flex-shrink-0"></div>
@@ -85,19 +87,13 @@
               {{ tab.title }}
             </span>
             <!-- Alias badge (right-aligned via ml-auto) -->
-            <span
+            <Tag
               v-if="getTabConnectionAlias(tab)"
-              class="text-[10px] font-mono px-1.5 py-0.2 rounded border flex-shrink-0 ml-auto transition-colors max-w-[80px] truncate"
-              :class="workspaceStore.activeTabId === tab.id
-                ? 'text-white/95 border-white/20'
-                : 'text-slate-300 border-white/10 group-hover:text-white group-hover:border-white/20'"
-              :style="{
-                backgroundColor: 'var(--tab-badge-bg)',
-              }"
+              severity="secondary"
+              :value="getTabConnectionAlias(tab)"
+              class="!text-[10px] !font-mono !px-1.5 !py-0 flex-shrink-0 ml-auto max-w-[85px] truncate"
               :title="`連線別名: ${getTabConnectionAlias(tab)}`"
-            >
-              {{ getTabConnectionAlias(tab) }}
-            </span>
+            />
           </div>
 
           <!-- Dirty Indicator -->
@@ -108,79 +104,23 @@
           />
 
           <!-- Close Tab Button -->
-          <button
+          <Button
             v-if="editingTabId !== tab.id"
-            type="button"
+            icon="pi pi-times"
+            severity="secondary"
+            size="small"
+            text
+            rounded
+            class="!h-4 !w-4 !p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+            v-tooltip.bottom="'關閉分頁 (Close tab)'"
             @click.stop="workspaceStore.closeTab(tab.id)"
-            class="p-0.5 rounded-full opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 cursor-pointer"
-            :class="workspaceStore.activeTabId === tab.id
-              ? 'text-white/80 hover:text-white hover:bg-black/30'
-              : 'text-slate-300 hover:text-white hover:bg-white/15'"
-            title="關閉分頁 (Close tab)"
-          >
-            <X class="w-3 h-3" />
-          </button>
+          />
         </div>
       </div>
     </div>
 
-    <!-- Query Tab Context Menu Backdrop -->
-    <div
-      v-if="tabContextMenu.visible"
-      class="fixed inset-0 z-50"
-      @click="closeTabContextMenu"
-      @contextmenu.prevent="closeTabContextMenu"
-    />
-
-    <!-- Query Tab Context Menu Popup -->
-    <div
-      v-if="tabContextMenu.visible && tabContextMenu.tab"
-      :style="{ left: `${tabContextMenu.x}px`, top: `${tabContextMenu.y}px` }"
-      class="fixed z-50 bg-dark-850 border border-dark-700 rounded-md shadow-2xl py-1 text-xs text-dark-200 select-none min-w-[170px] animate-in fade-in zoom-in-95 duration-100 font-sans"
-    >
-      <div class="px-3 py-1 text-xxs font-mono text-dark-400 border-b border-dark-750 truncate max-w-[190px]">
-        {{ tabContextMenu.tab.title }}
-      </div>
-      <button
-        type="button"
-        @click="handleContextMenuRename"
-        class="w-full text-left px-3 py-1.5 hover:bg-dark-750 hover:text-dark-100 flex items-center space-x-2 cursor-pointer transition-colors"
-      >
-        <Edit2 class="w-3.5 h-3.5 text-dark-400" />
-        <span>重新命名 (Rename)</span>
-      </button>
-      <button
-        v-if="tabContextMenu.tab.type === 'sql_editor'"
-        type="button"
-        @click="handleContextMenuSaveAs"
-        class="w-full text-left px-3 py-1.5 hover:bg-dark-750 hover:text-dark-100 flex items-center space-x-2 cursor-pointer transition-colors text-amber-300"
-      >
-        <Save class="w-3.5 h-3.5 text-amber-400" />
-        <span>另存為 .sql 檔案...</span>
-      </button>
-      <button
-        type="button"
-        @click="handleContextMenuClose"
-        class="w-full text-left px-3 py-1.5 hover:bg-dark-750 hover:text-dark-100 flex items-center space-x-2 cursor-pointer transition-colors"
-      >
-        <X class="w-3.5 h-3.5 text-dark-400" />
-        <span>關閉此分頁 (Close)</span>
-      </button>
-      <button
-        type="button"
-        @click="handleContextMenuCloseOthers"
-        :disabled="workspaceStore.tabs.length <= 1"
-        :class="[
-          'w-full text-left px-3 py-1.5 flex items-center space-x-2 transition-colors',
-          workspaceStore.tabs.length <= 1
-            ? 'opacity-40 cursor-not-allowed text-dark-500'
-            : 'hover:bg-dark-750 hover:text-dark-100 text-dark-300 cursor-pointer'
-        ]"
-      >
-        <Layers class="w-3.5 h-3.5 text-dark-400" />
-        <span>關閉其他分頁 (Close Others)</span>
-      </button>
-    </div>
+    <!-- PrimeVue Tab Context Menu -->
+    <ContextMenu ref="tabContextMenuRef" :model="tabContextMenuItems" />
 
     <!-- Active Tab Workspace Area (Monaco Editor / Table Data) -->
     <div class="flex-1 relative overflow-hidden bg-dark-900 flex flex-col">
@@ -248,8 +188,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, watch, nextTick, onBeforeUnmount } from 'vue';
-import { FileCode, Table2, TableProperties, Plus, X, Edit2, Layers, Save, Network, Workflow } from 'lucide-vue-next';
+import { ref, reactive, watch, nextTick, onBeforeUnmount, computed } from 'vue';
+import Button from 'primevue/button';
+import Tag from 'primevue/tag';
+import ContextMenu from 'primevue/contextmenu';
+import { FileCode, Table2, TableProperties, Network, Workflow } from 'lucide-vue-next';
 import { useWorkspaceStore } from '@/stores/workspaceStore';
 import { useConnectionStore } from '@/stores/connectionStore';
 import { useQueryStore } from '@/stores/queryStore';
@@ -463,33 +406,61 @@ function cancelRenameTab() {
 // ========================
 // Context Menu
 // ========================
+const tabContextMenuRef = ref();
 const tabContextMenu = reactive<{
-  visible: boolean;
-  x: number;
-  y: number;
   tab: WorkspaceTab | null;
 }>({
-  visible: false,
-  x: 0,
-  y: 0,
   tab: null,
 });
 
-function openTabContextMenu(e: MouseEvent, tab: WorkspaceTab) {
-  tabContextMenu.visible = true;
-  tabContextMenu.x = Math.min(e.clientX, window.innerWidth - 190);
-  tabContextMenu.y = e.clientY;
-  tabContextMenu.tab = tab;
-}
+const tabContextMenuItems = computed(() => {
+  const tab = tabContextMenu.tab;
+  if (!tab) return [];
+  const items: any[] = [
+    {
+      label: tab.title,
+      disabled: true,
+      class: 'font-mono !text-xs !text-dark-300',
+    },
+    { separator: true },
+    {
+      label: '重新命名 (Rename)',
+      icon: 'pi pi-pencil',
+      command: handleContextMenuRename,
+    },
+  ];
 
-function closeTabContextMenu() {
-  tabContextMenu.visible = false;
-  tabContextMenu.tab = null;
+  if (tab.type === 'sql_editor') {
+    items.push({
+      label: '另存為 .sql 檔案...',
+      icon: 'pi pi-save',
+      command: handleContextMenuSaveAs,
+    });
+  }
+
+  items.push({
+    label: '關閉此分頁 (Close)',
+    icon: 'pi pi-times',
+    command: handleContextMenuClose,
+  });
+
+  items.push({
+    label: '關閉其他分頁 (Close Others)',
+    icon: 'pi pi-clone',
+    disabled: workspaceStore.tabs.length <= 1,
+    command: handleContextMenuCloseOthers,
+  });
+
+  return items;
+});
+
+function openTabContextMenu(e: MouseEvent, tab: WorkspaceTab) {
+  tabContextMenu.tab = tab;
+  tabContextMenuRef.value?.show(e);
 }
 
 function handleContextMenuRename() {
   const tab = tabContextMenu.tab;
-  closeTabContextMenu();
   if (tab) {
     startRenameTab(tab);
   }
@@ -497,7 +468,6 @@ function handleContextMenuRename() {
 
 function handleContextMenuSaveAs() {
   const tab = tabContextMenu.tab;
-  closeTabContextMenu();
   if (tab) {
     saveActiveTab(tab);
   }
@@ -505,7 +475,6 @@ function handleContextMenuSaveAs() {
 
 function handleContextMenuClose() {
   const tab = tabContextMenu.tab;
-  closeTabContextMenu();
   if (tab) {
     workspaceStore.closeTab(tab.id);
   }
@@ -513,7 +482,6 @@ function handleContextMenuClose() {
 
 function handleContextMenuCloseOthers() {
   const tab = tabContextMenu.tab;
-  closeTabContextMenu();
   if (tab) {
     workspaceStore.closeOtherTabs(tab.id);
   }

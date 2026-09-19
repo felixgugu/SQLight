@@ -1,72 +1,148 @@
 <template>
-  <div
-    v-if="isOpen"
-    class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 select-none"
+  <Dialog
+    :visible="isOpen"
+    modal
+    :dismissable-mask="true"
+    :closable="true"
+    class="w-full max-w-xl font-sans"
+    @update:visible="val => !val && close()"
   >
-    <div
-      class="bg-dark-850 border border-dark-700 rounded-lg shadow-2xl w-full max-w-lg overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-150"
-    >
-      <!-- Modal Header -->
-      <div class="px-5 py-3 border-b border-dark-700 flex items-center justify-between bg-dark-800">
-        <div class="flex items-center space-x-2">
-          <Database class="w-4 h-4 text-brand-400" />
-          <h3 class="font-semibold text-sm text-dark-100">
-            {{ editProfile ? 'Edit SQL Server Connection' : (initialProfile ? 'Duplicate SQL Server Connection' : 'New SQL Server Connection') }}
-          </h3>
-        </div>
-        <button
-          @click="close"
-          class="text-dark-400 hover:text-dark-200 p-1 rounded hover:bg-dark-700 transition-colors"
-        >
-          <X class="w-4 h-4" />
-        </button>
+    <template #header>
+      <div class="flex items-center space-x-2">
+        <i class="pi pi-database text-brand-400 text-base" />
+        <span class="font-semibold text-sm text-dark-100">
+          {{ editProfile ? 'Edit SQL Server Connection' : (initialProfile ? 'Duplicate SQL Server Connection' : 'New SQL Server Connection') }}
+        </span>
       </div>
+    </template>
 
-      <!-- Modal Body -->
-      <form @submit.prevent="handleSave" class="p-5 space-y-4 text-xs">
-        <!-- Connection Name & Alias Row -->
-        <div class="grid grid-cols-3 gap-3">
-          <div class="col-span-2">
-            <div class="flex items-center justify-between mb-1">
-              <label class="block text-dark-300 font-medium">連線名稱 (Connection Name)</label>
-              <span v-if="isDuplicateName" class="text-rose-400 text-xxs font-medium">
-                * 此名稱已被使用，請更換名稱
-              </span>
+    <form @submit.prevent="handleSave" class="space-y-3.5 text-xs py-1">
+      <!-- Fieldset 1: Server & Database -->
+      <Fieldset legend="連線主機與資料庫 (Server & Database)" class="!text-xs">
+        <div class="space-y-3 pt-1">
+          <!-- Connection Name & Alias Row -->
+          <div class="grid grid-cols-3 gap-3">
+            <div class="col-span-2">
+              <div class="flex items-center justify-between mb-1">
+                <label class="block text-dark-300 font-medium">連線名稱 (Name) *</label>
+                <span v-if="isDuplicateName" class="text-rose-400 text-xxs font-medium">
+                  * 名稱已存在
+                </span>
+              </div>
+              <InputText
+                v-model="form.name"
+                required
+                placeholder="e.g. Local Development MSSQL"
+                :invalid="isDuplicateName"
+                class="w-full !text-xs !bg-dark-900 !border-dark-700 font-sans"
+              />
             </div>
-            <input
-              v-model="form.name"
-              type="text"
+            <div>
+              <div class="flex items-center justify-between mb-1">
+                <label class="block text-dark-300 font-medium">別名 (Alias)</label>
+              </div>
+              <InputText
+                v-model="form.alias"
+                placeholder="PROD, DEV"
+                class="w-full !text-xs !bg-dark-900 !border-dark-700 font-mono uppercase"
+              />
+            </div>
+          </div>
+
+          <!-- Host, Port, Database Row -->
+          <div class="grid grid-cols-5 gap-3">
+            <div class="col-span-3">
+              <label class="block text-dark-300 font-medium mb-1">主機位置 (Host) *</label>
+              <InputText
+                v-model="form.host"
+                required
+                placeholder="localhost or 127.0.0.1"
+                class="w-full !text-xs !bg-dark-900 !border-dark-700 font-mono"
+              />
+            </div>
+            <div class="col-span-2">
+              <label class="block text-dark-300 font-medium mb-1">連接埠 (Port) *</label>
+              <InputNumber
+                v-model="form.port"
+                :use-grouping="false"
+                required
+                class="w-full !text-xs font-mono"
+                input-class="!text-xs !bg-dark-900 !border-dark-700 font-mono w-full"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-dark-300 font-medium mb-1">預設資料庫 (Default Database) *</label>
+            <InputText
+              v-model="form.database"
               required
-              placeholder="e.g. Local Development MSSQL"
-              :class="[
-                'w-full bg-dark-900 border rounded px-3 py-1.5 text-dark-100 focus:outline-none transition-colors',
-                isDuplicateName
-                  ? 'border-rose-500 focus:border-rose-400'
-                  : 'border-dark-700 focus:border-brand-500'
-              ]"
+              placeholder="master"
+              class="w-full !text-xs !bg-dark-900 !border-dark-700 font-mono"
+            />
+          </div>
+        </div>
+      </Fieldset>
+
+      <!-- Fieldset 2: Authentication -->
+      <Fieldset legend="身分驗證 (Authentication)" class="!text-xs">
+        <div class="grid grid-cols-2 gap-3 pt-1">
+          <div>
+            <label class="block text-dark-300 font-medium mb-1">使用者帳號 (Username) *</label>
+            <InputText
+              v-model="form.username"
+              required
+              placeholder="sa"
+              class="w-full !text-xs !bg-dark-900 !border-dark-700 font-mono"
             />
           </div>
           <div>
-            <div class="flex items-center justify-between mb-1">
-              <label class="block text-dark-300 font-medium">別名 (Alias)</label>
-            </div>
-            <input
-              v-model="form.alias"
-              type="text"
-              placeholder="e.g. PROD, DEV"
-              class="w-full bg-dark-900 border border-dark-700 rounded px-3 py-1.5 text-dark-100 focus:outline-none focus:border-brand-500 font-mono transition-colors"
+            <label class="block text-dark-300 font-medium mb-1">密碼 (Password)</label>
+            <Password
+              v-model="form.password"
+              :toggle-mask="true"
+              :feedback="false"
+              fluid
+              class="w-full !text-xs"
+              input-class="!text-xs !bg-dark-900 !border-dark-700 font-mono w-full"
+              :placeholder="editProfile ? '•••••••• (保留原密碼)' : (initialProfile ? '•••••••• (沿用複製密碼)' : '輸入密碼')"
             />
           </div>
         </div>
+      </Fieldset>
 
-        <!-- Tab Color Picker -->
-        <div>
-          <div class="flex items-center justify-between mb-1.5">
-            <label class="block text-dark-300 font-medium">分頁標籤自訂顏色 (Tab Color)</label>
-            <span v-if="form.color" class="text-xxs text-dark-400 font-mono">{{ form.color }}</span>
+      <!-- Fieldset 3: Security & Safe Guard -->
+      <Fieldset legend="安全性與標籤色彩 (Security & Appearance)" class="!text-xs">
+        <div class="space-y-3 pt-1">
+          <!-- Modification Prompt Safe Guard -->
+          <div class="flex items-start space-x-2.5 p-2 rounded bg-amber-950/20 border border-amber-900/40">
+            <ToggleSwitch v-model="form.modificationPrompt" class="mt-0.5 flex-shrink-0" />
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center space-x-1.5">
+                <span class="font-semibold text-amber-300 text-xs">修改提示 (危險指令二次確認保護)</span>
+                <Tag severity="warn" value="SAFE GUARD" class="!text-[9px] !px-1 !py-0 font-mono" />
+              </div>
+              <p class="text-xxs text-dark-400 mt-0.5 leading-relaxed">
+                勾選後，在此連線執行 <code class="text-amber-300 font-mono">UPDATE</code>、<code class="text-amber-300 font-mono">DELETE</code>、<code class="text-amber-300 font-mono">DROP</code> 等修改指令時，強制要求連續確認 2 次，防範意外誤更動。
+              </p>
+            </div>
           </div>
-          <div class="flex items-center space-x-2 bg-dark-900/60 p-2 rounded border border-dark-750">
-            <!-- Preset Color Palette -->
+
+          <!-- TLS & Cert -->
+          <div class="flex items-center space-x-4 text-dark-300">
+            <div class="flex items-center space-x-2">
+              <Checkbox v-model="form.encrypt" :binary="true" input-id="encrypt-cb" />
+              <label for="encrypt-cb" class="cursor-pointer">強制 TLS 加密</label>
+            </div>
+            <div class="flex items-center space-x-2">
+              <Checkbox v-model="form.trustServerCertificate" :binary="true" input-id="trust-cert-cb" />
+              <label for="trust-cert-cb" class="cursor-pointer">信任自我簽署憑證 (Trust Cert)</label>
+            </div>
+          </div>
+
+          <!-- Color Picker Row -->
+          <div class="flex items-center space-x-2 pt-1">
+            <label class="text-dark-300 font-medium">標籤色彩:</label>
             <div class="flex items-center space-x-1.5">
               <button
                 v-for="preset in PRESET_COLORS"
@@ -75,206 +151,118 @@
                 @click="form.color = preset"
                 :style="{ backgroundColor: preset }"
                 :class="[
-                  'w-5 h-5 rounded-full border transition-all cursor-pointer',
+                  'w-4 h-4 rounded-full border transition-all cursor-pointer',
                   form.color.toLowerCase() === preset.toLowerCase()
-                    ? 'border-white scale-125 ring-2 ring-white/30 shadow-xs'
+                    ? 'border-white scale-125 ring-2 ring-white/30'
                     : 'border-dark-600 hover:scale-115 opacity-80 hover:opacity-100'
                 ]"
                 :title="preset"
               />
             </div>
-
-            <!-- Custom Color Picker -->
-            <label class="relative cursor-pointer flex items-center justify-center w-6 h-6 rounded border border-dark-600 bg-dark-900 hover:border-dark-400 transition-colors" title="自訂顏色 (Custom Color)">
+            <label class="relative cursor-pointer flex items-center justify-center w-5 h-5 rounded border border-dark-600 bg-dark-900 hover:border-dark-400 ml-1" title="自訂色彩">
               <input
                 type="color"
                 v-model="form.color"
                 class="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
               />
               <span
-                class="w-3.5 h-3.5 rounded-sm border border-white/20"
+                class="w-3 h-3 rounded-sm border border-white/20"
                 :style="{ backgroundColor: form.color || '#64748b' }"
               />
             </label>
-
-            <!-- Clear button -->
-            <button
+            <Button
               v-if="form.color"
-              type="button"
+              label="清除"
+              size="small"
+              text
+              severity="secondary"
+              class="!text-xxs !py-0 !px-1"
               @click="form.color = ''"
-              class="text-xxs text-dark-400 hover:text-dark-200 px-1.5 py-0.5 rounded border border-dark-700 hover:bg-dark-750 transition-colors cursor-pointer"
-            >
-              清除
-            </button>
+            />
 
-            <!-- Tab Preview Badge -->
-            <div class="ml-auto flex items-center space-x-1.5 px-2.5 py-1 rounded bg-dark-850 border border-dark-700 text-xxs select-none">
-              <span class="text-dark-500">頁籤預覽:</span>
+            <!-- Preview -->
+            <div class="ml-auto flex items-center space-x-1.5 px-2 py-0.5 rounded bg-dark-900 border border-dark-750 text-xxs">
+              <span class="text-dark-500">預覽:</span>
               <span
                 class="w-2 h-2 rounded-full shrink-0"
                 :style="{ backgroundColor: form.color || '#64748b' }"
               />
-              <span
-                class="font-medium truncate max-w-[110px]"
-                :style="{ color: form.color || undefined }"
-                :class="!form.color ? 'text-dark-200' : ''"
-              >
-                {{ form.name.trim() || 'Query 1' }}
+              <span class="font-medium truncate max-w-[90px]" :style="{ color: form.color || undefined }">
+                {{ form.name.trim() || 'Query' }}
               </span>
-              <span
+              <Tag
                 v-if="form.alias.trim()"
-                class="text-[10px] font-mono px-1 py-0.2 rounded border flex-shrink-0 text-slate-300 border-white/10"
-                :style="{ backgroundColor: 'rgba(255,255,255,0.08)' }"
-              >
-                {{ form.alias.trim() }}
-              </span>
+                severity="secondary"
+                :value="form.alias.trim()"
+                class="!text-[9px] !px-1 !py-0 font-mono"
+              />
             </div>
           </div>
         </div>
+      </Fieldset>
 
-        <!-- Host & Port Row -->
-        <div class="grid grid-cols-3 gap-3">
-          <div class="col-span-2">
-            <label class="block text-dark-300 font-medium mb-1">Host / Server</label>
-            <input
-              v-model="form.host"
-              type="text"
-              required
-              placeholder="localhost or 127.0.0.1"
-              class="w-full bg-dark-900 border border-dark-700 rounded px-3 py-1.5 text-dark-100 focus:outline-none focus:border-brand-500 font-mono transition-colors"
-            />
-          </div>
-          <div>
-            <label class="block text-dark-300 font-medium mb-1">Port</label>
-            <input
-              v-model.number="form.port"
-              type="number"
-              required
-              class="w-full bg-dark-900 border border-dark-700 rounded px-3 py-1.5 text-dark-100 focus:outline-none focus:border-brand-500 font-mono transition-colors"
-            />
-          </div>
-        </div>
+      <!-- Feedback Messages -->
+      <Message
+        v-if="testResult"
+        :severity="testResult.success ? 'success' : 'error'"
+        :closable="false"
+        class="!text-xs"
+      >
+        <span class="font-medium">{{ testResult.success ? '連線測試成功！' : '連線測試失敗' }}</span>
+        <span v-if="testResult.message" class="block text-xxs mt-0.5 font-mono">{{ testResult.message }}</span>
+      </Message>
+    </form>
 
-        <!-- Database Name -->
-        <div>
-          <label class="block text-dark-300 font-medium mb-1">Default Database</label>
-          <input
-            v-model="form.database"
-            type="text"
-            required
-            placeholder="master"
-            class="w-full bg-dark-900 border border-dark-700 rounded px-3 py-1.5 text-dark-100 focus:outline-none focus:border-brand-500 font-mono transition-colors"
+    <!-- Modal Footer Actions -->
+    <template #footer>
+      <div class="flex items-center justify-between w-full pt-2">
+        <Button
+          type="button"
+          label="測試連線 (Test)"
+          icon="pi pi-bolt"
+          severity="secondary"
+          size="small"
+          :loading="isTesting"
+          @click="handleTest"
+        />
+
+        <div class="flex items-center space-x-2">
+          <Button
+            type="button"
+            label="取消 (Cancel)"
+            severity="secondary"
+            size="small"
+            text
+            @click="close"
+          />
+          <Button
+            type="button"
+            label="儲存並連線 (Save & Connect)"
+            icon="pi pi-check"
+            severity="primary"
+            size="small"
+            :loading="isSaving"
+            :disabled="isDuplicateName || !form.name.trim()"
+            @click="handleSave"
           />
         </div>
-
-        <!-- Username & Password Row -->
-        <div class="grid grid-cols-2 gap-3">
-          <div>
-            <label class="block text-dark-300 font-medium mb-1">Username (SQL Auth)</label>
-            <input
-              v-model="form.username"
-              type="text"
-              required
-              placeholder="sa"
-              class="w-full bg-dark-900 border border-dark-700 rounded px-3 py-1.5 text-dark-100 focus:outline-none focus:border-brand-500 font-mono transition-colors"
-            />
-          </div>
-          <div>
-            <label class="block text-dark-300 font-medium mb-1">Password</label>
-            <input
-              v-model="form.password"
-              type="password"
-              :placeholder="editProfile ? '•••••••• (Leave blank to keep existing)' : (initialProfile ? '•••••••• (Leave blank to reuse copied password)' : 'Enter password')"
-              class="w-full bg-dark-900 border border-dark-700 rounded px-3 py-1.5 text-dark-100 focus:outline-none focus:border-brand-500 font-mono transition-colors"
-            />
-          </div>
-        </div>
-
-        <!-- Security & Protection Flags -->
-        <div class="pt-2 border-t border-dark-750 space-y-2.5">
-          <!-- Modification Prompt Safe Guard -->
-          <label class="flex items-start space-x-2.5 p-2 rounded bg-amber-950/20 border border-amber-900/40 cursor-pointer hover:bg-amber-950/30 transition-colors">
-            <input
-              v-model="form.modificationPrompt"
-              type="checkbox"
-              class="mt-0.5 rounded bg-dark-900 border-dark-700 text-amber-500 focus:ring-0 focus:outline-none"
-            />
-            <div class="flex-1 min-w-0">
-              <div class="flex items-center space-x-1.5">
-                <span class="font-semibold text-amber-300">修改提示 (危險指令二次確認保護)</span>
-                <span class="px-1.5 py-0.2 bg-amber-500/20 text-amber-300 border border-amber-500/40 rounded text-xxs font-mono">SAFE GUARD</span>
-              </div>
-              <p class="text-xxs text-dark-400 mt-0.5 leading-relaxed">
-                勾選後，在此連線執行 <code class="text-amber-300 font-mono">UPDATE</code>、<code class="text-amber-300 font-mono">INSERT</code>、<code class="text-amber-300 font-mono">DELETE</code>、<code class="text-amber-300 font-mono">ALTER</code>、<code class="text-amber-300 font-mono">CREATE</code>、<code class="text-amber-300 font-mono">DROP</code>、<code class="text-amber-300 font-mono">TRUNCATE</code> 等危險指令時，必須連續確認 2 次才可執行，避免改錯資料。
-              </p>
-            </div>
-          </label>
-
-          <label class="flex items-center space-x-2 cursor-pointer text-dark-300 hover:text-dark-100">
-            <input
-              v-model="form.encrypt"
-              type="checkbox"
-              class="rounded bg-dark-900 border-dark-700 text-brand-500 focus:ring-0 focus:outline-none"
-            />
-            <span>Encrypt connection (TLS)</span>
-          </label>
-          <label class="flex items-center space-x-2 cursor-pointer text-dark-300 hover:text-dark-100">
-            <input
-              v-model="form.trustServerCertificate"
-              type="checkbox"
-              class="rounded bg-dark-900 border-dark-700 text-brand-500 focus:ring-0 focus:outline-none"
-            />
-            <span>Trust Server Certificate (Allow self-signed certificates)</span>
-          </label>
-        </div>
-
-        <!-- Feedback Messages (Test status / errors) -->
-        <div v-if="testResult" :class="['p-2.5 rounded text-xs border font-mono', testResult.success ? 'bg-emerald-950/40 text-emerald-300 border-emerald-800/60' : 'bg-rose-950/40 text-rose-300 border-rose-800/60']">
-          <div class="flex items-center space-x-1.5 font-semibold">
-            <CheckCircle2 v-if="testResult.success" class="w-4 h-4 text-emerald-400" />
-            <AlertCircle v-else class="w-4 h-4 text-rose-400" />
-            <span>{{ testResult.success ? 'Connection Successful' : 'Connection Failed' }}</span>
-          </div>
-          <div v-if="testResult.message" class="mt-1 text-xxs leading-relaxed">{{ testResult.message }}</div>
-        </div>
-
-        <!-- Modal Footer Actions -->
-        <div class="pt-3 border-t border-dark-700 flex items-center justify-between">
-          <button
-            type="button"
-            @click="handleTest"
-            :disabled="isTesting"
-            class="flex items-center space-x-1.5 px-3 py-1.5 bg-dark-800 hover:bg-dark-750 text-dark-200 rounded border border-dark-700 transition-colors disabled:opacity-50"
-          >
-            <RotateCw :class="['w-3.5 h-3.5', isTesting ? 'animate-spin text-brand-400' : '']" />
-            <span>{{ isTesting ? 'Testing...' : 'Test Connection' }}</span>
-          </button>
-
-          <div class="flex items-center space-x-2">
-            <button
-              type="button"
-              @click="close"
-              class="px-3 py-1.5 bg-dark-800 hover:bg-dark-750 text-dark-400 hover:text-dark-200 rounded border border-dark-700 transition-colors"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              :disabled="isSaving || isDuplicateName || !form.name.trim()"
-              class="flex items-center space-x-1 px-4 py-1.5 bg-brand-600 hover:bg-brand-500 text-white font-medium rounded shadow-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <span>{{ isSaving ? 'Saving...' : 'Save & Connect' }}</span>
-            </button>
-          </div>
-        </div>
-      </form>
-    </div>
-  </div>
+      </div>
+    </template>
+  </Dialog>
 </template>
 
 <script setup lang="ts">
 import { reactive, ref, watch, computed } from 'vue';
-import { Database, X, RotateCw, CheckCircle2, AlertCircle } from 'lucide-vue-next';
+import Dialog from 'primevue/dialog';
+import Fieldset from 'primevue/fieldset';
+import InputText from 'primevue/inputtext';
+import InputNumber from 'primevue/inputnumber';
+import Password from 'primevue/password';
+import ToggleSwitch from 'primevue/toggleswitch';
+import Checkbox from 'primevue/checkbox';
+import Button from 'primevue/button';
+import Tag from 'primevue/tag';
+import Message from 'primevue/message';
 import type { ConnectionProfile } from '@/types/connection';
 import { useConnectionStore } from '@/stores/connectionStore';
 import { generateDuplicateConnectionName } from '@/utils/connectionNameHelper';
@@ -401,7 +389,7 @@ async function handleTest() {
       modificationPrompt: form.modificationPrompt,
       copyPasswordFrom: copyFrom,
     });
-    testResult.value = { success: true, message: 'Connected to Microsoft SQL Server successfully.' };
+    testResult.value = { success: true, message: '已成功連線至 Microsoft SQL Server。' };
   } catch (err: unknown) {
     testResult.value = {
       success: false,

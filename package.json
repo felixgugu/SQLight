@@ -20,6 +20,7 @@
     "@antv/layout": "^2.0.0",
     "@antv/x6": "^3.1.8",
     "@antv/x6-vue-shape": "^3.0.2",
+    "@primevue/themes": "^4.5.4",
     "@tauri-apps/api": "^2.2.0",
     "@tauri-apps/plugin-shell": "^2.2.0",
     "ag-grid-community": "^36.1.0",
@@ -28,6 +29,8 @@
     "lucide-vue-next": "^0.475.0",
     "monaco-editor": "^0.56.0",
     "pinia": "^3.0.1",
+    "primeicons": "^7.0.0",
+    "primevue": "^4.5.5",
     "sql-formatter": "^15.8.2",
     "vue": "^3.5.13"
   },

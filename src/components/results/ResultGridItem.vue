@@ -5,53 +5,52 @@
       <!-- Left: Result Set Label & Quick Filter -->
       <div class="flex items-center space-x-2 min-w-0">
         <!-- Multiple Result Set Index Badge -->
-        <div
+        <Tag
           v-if="totalSets > 1"
-          class="flex items-center space-x-1 px-2 py-0.5 rounded bg-dark-800 border border-dark-700 text-xxs font-medium text-brand-300 flex-shrink-0 shadow-xs"
+          severity="info"
+          :value="`Result #${setIndex + 1} (${resultSet.rowCount ?? resultSet.rows.length})`"
+          class="!font-mono !text-xxs !px-2 !py-0.5 flex-shrink-0"
         >
-          <Table class="w-3 h-3 text-brand-400" />
-          <span class="font-semibold">Result #{{ setIndex + 1 }}</span>
-          <span class="text-dark-400">({{ resultSet.rowCount ?? resultSet.rows.length }})</span>
-        </div>
+          <template #icon>
+            <i class="pi pi-table mr-1 text-xs"></i>
+          </template>
+        </Tag>
 
         <!-- Quick Filter Input -->
-        <div class="relative flex items-center w-44 sm:w-56">
-          <Search class="w-3 h-3 text-dark-500 absolute left-2 pointer-events-none" />
-          <input
+        <IconField class="w-44 sm:w-56">
+          <InputIcon class="pi pi-search text-dark-500 text-xs" />
+          <InputText
             v-model="quickFilter"
             type="text"
             placeholder="Search grid..."
-            class="w-full bg-dark-900 border border-dark-700 rounded px-2 py-0.5 pl-7 pr-6 text-xs text-dark-100 placeholder-dark-500 focus:outline-none focus:border-brand-500 font-mono transition-colors"
+            size="small"
+            class="w-full !bg-dark-900 !border-dark-700 !py-0.5 !pl-7 !pr-6 !text-xs font-mono"
           />
-          <button
-            v-if="quickFilter"
-            @click="quickFilter = ''"
-            class="absolute right-1.5 text-dark-400 hover:text-dark-200 p-0.5"
-            title="Clear filter"
-          >
-            <X class="w-2.5 h-2.5" />
-          </button>
-        </div>
+        </IconField>
 
         <!-- Truncation Warning Badge (when max rows limit reached) -->
-        <div
+        <Tag
           v-if="resultSet.isTruncated"
-          class="hidden md:flex items-center space-x-1 bg-amber-950/60 text-amber-300 border border-amber-800/60 px-2 py-0.5 rounded text-xxs font-sans truncate"
-          :title="`查詢結果筆數超過上限，已自動截斷至 ${resultSet.rowCount.toLocaleString()} 筆以保護記憶體效能`"
+          severity="warn"
+          :value="`已達上限 ${resultSet.rowCount.toLocaleString()} 筆（共 ${(resultSet.totalCount ?? resultSet.rowCount).toLocaleString()} 筆，其餘已截斷）`"
+          class="hidden md:flex !text-xxs font-sans truncate"
         >
-          <AlertTriangle class="w-3 h-3 text-amber-400 flex-shrink-0" />
-          <span>已達上限 {{ resultSet.rowCount.toLocaleString() }} 筆（共 {{ (resultSet.totalCount ?? resultSet.rowCount).toLocaleString() }} 筆，其餘已截斷）</span>
-        </div>
+          <template #icon>
+            <i class="pi pi-exclamation-triangle mr-1 text-xs"></i>
+          </template>
+        </Tag>
 
         <!-- Estimated Plan Badge -->
-        <div
+        <Tag
           v-if="queryStore.activeResultTab?.isShowplan"
-          class="hidden md:flex items-center space-x-1 bg-cyan-950/60 text-cyan-300 border border-cyan-800/60 px-2 py-0.5 rounded text-xxs font-sans truncate shadow-xs"
-          title="此結果分頁為 SET SHOWPLAN_ALL ON 預估執行計畫，未實際執行語句"
+          severity="info"
+          value="預估執行計畫 (Estimated Plan)"
+          class="hidden md:flex !text-xxs font-sans truncate"
         >
-          <Workflow class="w-3 h-3 text-cyan-400 flex-shrink-0" />
-          <span>預估執行計畫 (Estimated Plan)</span>
-        </div>
+          <template #icon>
+            <i class="pi pi-sitemap mr-1 text-xs"></i>
+          </template>
+        </Tag>
 
         <div class="h-3.5 w-px bg-dark-750 mx-1 flex-shrink-0"></div>
 
@@ -59,49 +58,45 @@
         <div class="flex items-center space-x-1 flex-shrink-0">
           <template v-if="editability.canEdit">
             <!-- Revert Button -->
-            <button
-              @click="handleRevertChanges"
+            <Button
+              type="button"
+              icon="pi pi-undo"
+              label="退回"
+              size="small"
+              :severity="modifiedCount > 0 ? 'warn' : 'secondary'"
+              outlined
               :disabled="modifiedCount === 0"
-              class="flex items-center space-x-1 px-2 py-0.5 rounded border text-xxs transition-colors select-none"
-              :class="modifiedCount > 0
-                ? 'bg-dark-800 hover:bg-dark-750 text-amber-300 border-amber-600/50 hover:border-amber-500 cursor-pointer shadow-xs'
-                : 'bg-dark-850 text-dark-500 border-dark-750 cursor-not-allowed opacity-50'"
-              title="退回所有未提交的修改 (Revert All)"
-            >
-              <RotateCcw class="w-2.5 h-2.5" />
-              <span>退回</span>
-            </button>
+              @click="handleRevertChanges"
+              v-tooltip.top="'退回所有未提交的修改 (Revert All)'"
+              class="!text-xxs !py-0.5 !px-2 select-none"
+            />
 
             <!-- Commit Button -->
-            <button
-              @click="openCommitModal"
+            <Button
+              type="button"
+              icon="pi pi-check"
+              :label="`提交 ${modifiedCount > 0 ? '(' + modifiedCount + ')' : ''}`"
+              size="small"
+              :severity="modifiedCount > 0 ? 'success' : 'secondary'"
               :disabled="modifiedCount === 0"
-              class="flex items-center space-x-1 px-2.5 py-0.5 rounded border text-xxs transition-colors select-none"
-              :class="modifiedCount > 0
-                ? 'bg-emerald-950/80 hover:bg-emerald-900 text-emerald-300 border-emerald-600/70 hover:border-emerald-500 font-semibold cursor-pointer shadow-xs'
-                : 'bg-dark-850 text-dark-500 border-dark-750 cursor-not-allowed opacity-50'"
-              title="提交所有修改至資料庫 (Commit Changes)"
-            >
-              <Check class="w-2.5 h-2.5" />
-              <span>提交</span>
-              <span
-                v-if="modifiedCount > 0"
-                class="ml-1 px-1 py-0 bg-emerald-500/30 text-emerald-200 rounded text-[10px] font-mono"
-              >
-                {{ modifiedCount }}
-              </span>
-            </button>
+              @click="openCommitModal"
+              v-tooltip.top="'提交所有修改至資料庫 (Commit Changes)'"
+              class="!text-xxs !py-0.5 !px-2.5 font-semibold select-none shadow-xs"
+            />
           </template>
 
           <!-- Read-only Indicator when editing is not supported -->
           <template v-else>
-            <div
-              class="flex items-center space-x-1 px-2 py-0.5 bg-dark-850 text-dark-400 border border-dark-750 rounded text-xxs select-none"
-              :title="editability.reason"
+            <Tag
+              severity="secondary"
+              :value="editability.shortReason || '唯讀'"
+              v-tooltip.top="editability.reason"
+              class="!text-xxs select-none"
             >
-              <Lock class="w-2.5 h-2.5 text-dark-500 flex-shrink-0" />
-              <span>{{ editability.shortReason || '唯讀' }}</span>
-            </div>
+              <template #icon>
+                <i class="pi pi-lock mr-1 text-xs text-dark-500"></i>
+              </template>
+            </Tag>
           </template>
         </div>
       </div>
@@ -109,57 +104,70 @@
       <!-- Right: Copy Tools, Row Stats & Maximize Toggle -->
       <div class="flex items-center space-x-1.5 flex-shrink-0">
         <!-- Refresh Button -->
-        <button
-          @click="handleRefresh"
+        <Button
+          type="button"
+          :icon="isRefreshing ? 'pi pi-spin pi-spinner' : 'pi pi-refresh'"
+          :label="isRefreshing ? 'Refreshing...' : '重新整理'"
+          size="small"
+          severity="secondary"
+          outlined
           :disabled="isRefreshing"
-          class="flex items-center space-x-1 px-2 py-0.5 bg-dark-800 hover:bg-dark-750 text-dark-300 hover:text-dark-100 rounded border border-dark-700 text-xxs transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-          :title="isRefreshing ? '正在重新整理中...' : '重新整理此查詢結果 (Re-run SQL)'"
-        >
-          <RotateCw class="w-2.5 h-2.5 text-brand-400" :class="isRefreshing ? 'animate-spin' : ''" />
-          <span>{{ isRefreshing ? 'Refreshing...' : '重新整理' }}</span>
-        </button>
+          @click="handleRefresh"
+          v-tooltip.top="isRefreshing ? '正在重新整理中...' : '重新整理此查詢結果 (Re-run SQL)'"
+          class="!text-xxs !py-0.5 !px-2"
+        />
 
         <!-- Copy to TSV (Excel friendly) -->
-        <button
+        <Button
+          type="button"
+          :icon="copiedTsv ? 'pi pi-check text-emerald-400' : 'pi pi-file-excel text-emerald-400'"
+          :label="copiedTsv ? 'Copied!' : 'Copy TSV'"
+          size="small"
+          severity="secondary"
+          outlined
           @click="copyAsTsv"
-          class="flex items-center space-x-1 px-2 py-0.5 bg-dark-800 hover:bg-dark-750 text-dark-300 hover:text-dark-100 rounded border border-dark-700 text-xxs transition-colors cursor-pointer"
-          title="複製全部為 TSV (相容 Excel 貼上)"
-        >
-          <Check v-if="copiedTsv" class="w-2.5 h-2.5 text-emerald-400" />
-          <FileSpreadsheet v-else class="w-2.5 h-2.5 text-emerald-400" />
-          <span>{{ copiedTsv ? 'Copied!' : 'Copy TSV' }}</span>
-        </button>
+          v-tooltip.top="'複製全部為 TSV (相容 Excel 貼上)'"
+          class="!text-xxs !py-0.5 !px-2"
+        />
 
         <!-- Copy to CSV -->
-        <button
+        <Button
+          type="button"
+          :icon="copiedCsv ? 'pi pi-check text-brand-400' : 'pi pi-file text-brand-400'"
+          :label="copiedCsv ? 'Copied!' : 'CSV'"
+          size="small"
+          severity="secondary"
+          outlined
           @click="copyAsCsv"
-          class="flex items-center space-x-1 px-2 py-0.5 bg-dark-800 hover:bg-dark-750 text-dark-300 hover:text-dark-100 rounded border border-dark-700 text-xxs transition-colors cursor-pointer"
-          title="複製為 CSV 格式"
-        >
-          <Check v-if="copiedCsv" class="w-2.5 h-2.5 text-brand-400" />
-          <FileText v-else class="w-2.5 h-2.5 text-brand-400" />
-          <span>{{ copiedCsv ? 'Copied!' : 'CSV' }}</span>
-        </button>
+          v-tooltip.top="'複製為 CSV 格式'"
+          class="!text-xxs !py-0.5 !px-2"
+        />
 
         <!-- Copy as JSON -->
-        <button
+        <Button
+          type="button"
+          icon="pi pi-code text-cyan-400"
+          label="JSON"
+          size="small"
+          severity="secondary"
+          outlined
           @click="copyAsJson"
-          class="flex items-center space-x-1 px-2 py-0.5 bg-dark-800 hover:bg-dark-750 text-dark-300 hover:text-dark-100 rounded border border-dark-700 text-xxs transition-colors cursor-pointer"
-          title="複製全表為 JSON 物件陣列"
-        >
-          <Braces class="w-2.5 h-2.5 text-cyan-400" />
-          <span>JSON</span>
-        </button>
+          v-tooltip.top="'複製全表為 JSON 物件陣列'"
+          class="!text-xxs !py-0.5 !px-2"
+        />
 
         <!-- Copy as Markdown -->
-        <button
+        <Button
+          type="button"
+          icon="pi pi-table text-pink-400"
+          label="MD"
+          size="small"
+          severity="secondary"
+          outlined
           @click="copyAsMarkdown"
-          class="flex items-center space-x-1 px-2 py-0.5 bg-dark-800 hover:bg-dark-750 text-dark-300 hover:text-dark-100 rounded border border-dark-700 text-xxs transition-colors cursor-pointer"
-          title="複製全表為 Markdown 表格 (貼入 GitHub / Notion)"
-        >
-          <TableIcon class="w-2.5 h-2.5 text-pink-400" />
-          <span>MD</span>
-        </button>
+          v-tooltip.top="'複製全表為 Markdown 表格 (貼入 GitHub / Notion)'"
+          class="!text-xxs !py-0.5 !px-2"
+        />
 
         <div class="h-3.5 w-px bg-dark-750 mx-0.5"></div>
 
@@ -169,16 +177,18 @@
         </span>
 
         <!-- Maximize / Restore Toggle (when multiple result sets) -->
-        <button
+        <Button
           v-if="totalSets > 1"
           type="button"
+          :icon="isMaximized ? 'pi pi-window-minimize' : 'pi pi-window-maximize'"
+          text
+          rounded
+          size="small"
+          severity="secondary"
           @click="$emit('toggle-maximize')"
-          class="p-1 text-dark-400 hover:text-dark-200 hover:bg-dark-750 rounded transition-colors ml-1 cursor-pointer"
-          :title="isMaximized ? '恢復預設多網格檢視' : '最大化檢視此結果集'"
-        >
-          <Minimize2 v-if="isMaximized" class="w-3 h-3 text-brand-400" />
-          <Maximize2 v-else class="w-3 h-3" />
-        </button>
+          v-tooltip.top="isMaximized ? '恢復預設多網格檢視' : '最大化檢視此結果集'"
+          class="!w-6 !h-6 !p-0 ml-1"
+        />
       </div>
     </div>
 
@@ -263,14 +273,16 @@
             非重複計數: <strong class="font-mono text-dark-100">{{ selectionStats.distinctCount.toLocaleString() }}</strong>
           </div>
 
-          <button
+          <Button
             type="button"
+            label="清除"
+            text
+            size="small"
+            severity="secondary"
             @click="clearCellSelection"
-            class="ml-1 text-dark-400 hover:text-dark-200 underline text-[10px] cursor-pointer flex-shrink-0"
-            title="清除選取 (Esc)"
-          >
-            清除
-          </button>
+            v-tooltip.top="'清除選取 (Esc)'"
+            class="!ml-1 !p-0 !text-[10px] !underline"
+          />
         </template>
 
         <template v-else>
@@ -286,15 +298,17 @@
 
       <!-- Right: Copy Selection Button -->
       <div v-if="selectionStats" class="flex items-center space-x-1 flex-shrink-0 ml-2">
-        <button
+        <Button
           type="button"
+          icon="pi pi-copy"
+          label="複製選取"
+          size="small"
+          severity="primary"
+          outlined
           @click="copySelectedCells"
-          class="flex items-center space-x-1 px-1.5 py-0.5 bg-brand-500/20 hover:bg-brand-500/30 text-brand-300 rounded border border-brand-500/40 text-[10px] transition-colors cursor-pointer"
-          title="複製選取內容 (Ctrl+C)"
-        >
-          <Copy class="w-2.5 h-2.5" />
-          <span>複製選取</span>
-        </button>
+          v-tooltip.top="'複製選取內容 (Ctrl+C)'"
+          class="!py-0.5 !px-1.5 !text-[10px]"
+        />
       </div>
     </div>
 
@@ -439,182 +453,194 @@
     </div>
 
     <!-- Commit Confirmation Modal -->
-    <div
-      v-if="commitModal.visible"
-      class="fixed inset-0 z-50 bg-black/65 flex items-center justify-center p-4 sm:p-6 backdrop-blur-xs select-none"
-      @click.self="closeCommitModal"
+    <Dialog
+      :visible="commitModal.visible"
+      @update:visible="(val) => !val && closeCommitModal()"
+      modal
+      :closable="false"
+      :dismissableMask="true"
+      :showHeader="false"
+      class="w-[92vw] max-w-5xl h-[88vh] max-h-[850px] !bg-dark-850 !border !rounded-lg overflow-hidden flex flex-col shadow-2xl"
+      :class="requiresModificationPrompt ? (commitModal.confirmStep === 2 ? '!border-rose-600/80 shadow-rose-950/40' : '!border-amber-600/80 shadow-amber-950/30') : '!border-dark-700'"
+      contentClass="!p-0 !bg-dark-850 h-full flex flex-col"
     >
+      <!-- Modal Header -->
       <div
-        class="bg-dark-850 border rounded-lg shadow-2xl w-[92vw] max-w-5xl h-[88vh] max-h-[850px] flex flex-col overflow-hidden text-sans transition-colors"
-        :class="requiresModificationPrompt ? (commitModal.confirmStep === 2 ? 'border-rose-600/80 shadow-rose-950/40' : 'border-amber-600/80 shadow-amber-950/30') : 'border-dark-700'"
+        class="px-5 py-3.5 border-b flex items-center justify-between flex-shrink-0"
+        :class="requiresModificationPrompt && commitModal.confirmStep === 2 ? 'bg-rose-950/30 border-rose-900/50' : 'bg-dark-800 border-dark-750'"
       >
-        <!-- Modal Header -->
-        <div
-          class="px-5 py-3.5 border-b border-dark-750 flex items-center justify-between flex-shrink-0"
-          :class="requiresModificationPrompt && commitModal.confirmStep === 2 ? 'bg-rose-950/30 border-rose-900/50' : 'bg-dark-800'"
-        >
-          <div class="flex items-center space-x-2.5">
-            <div
-              class="w-7 h-7 rounded-md flex items-center justify-center"
-              :class="requiresModificationPrompt ? (commitModal.confirmStep === 2 ? 'bg-rose-950/80 border border-rose-700/60' : 'bg-amber-950/80 border border-amber-700/60') : 'bg-emerald-950/80 border border-emerald-700/60'"
-            >
-              <ShieldAlert v-if="requiresModificationPrompt && commitModal.confirmStep === 2" class="w-4 h-4 text-rose-400 animate-pulse" />
-              <AlertTriangle v-else-if="requiresModificationPrompt" class="w-4 h-4 text-amber-400" />
-              <CheckCircle2 v-else class="w-4 h-4 text-emerald-400" />
-            </div>
-            <div>
-              <h3 class="font-semibold text-sm text-dark-100 leading-tight">
-                {{ requiresModificationPrompt ? (commitModal.confirmStep === 2 ? '確認提交資料變更 (高危最終確認 2/2)' : '確認提交資料變更 (修改提示 1/2)') : '確認提交資料變更 (Commit Changes)' }}
-              </h3>
-              <p class="text-xxs text-dark-400 mt-0.5">
-                {{ requiresModificationPrompt ? (commitModal.confirmStep === 2 ? '注意：此操作將直接更動目標資料庫！資料修改後可能無法復原' : '連線已啟用修改提示保護，請核實即將寫入資料庫的交易語法與異動範圍') : '請確認以下即將寫入資料庫的交易 T-SQL 語法與異動範圍' }}
-              </p>
-            </div>
-          </div>
-          <button
-            @click="closeCommitModal"
-            class="text-dark-400 hover:text-dark-200 p-1.5 rounded hover:bg-dark-700 transition-colors cursor-pointer"
-            title="關閉 (Esc)"
+        <div class="flex items-center space-x-2.5">
+          <div
+            class="w-7 h-7 rounded-md flex items-center justify-center"
+            :class="requiresModificationPrompt ? (commitModal.confirmStep === 2 ? 'bg-rose-950/80 border border-rose-700/60' : 'bg-amber-950/80 border border-amber-700/60') : 'bg-emerald-950/80 border border-emerald-700/60'"
           >
-            <X class="w-4 h-4" />
-          </button>
+            <i v-if="requiresModificationPrompt && commitModal.confirmStep === 2" class="pi pi-exclamation-triangle text-rose-400 animate-pulse text-sm"></i>
+            <i v-else-if="requiresModificationPrompt" class="pi pi-exclamation-triangle text-amber-400 text-sm"></i>
+            <i v-else class="pi pi-check text-emerald-400 text-sm"></i>
+          </div>
+          <div>
+            <h3 class="font-semibold text-sm text-dark-100 leading-tight">
+              {{ requiresModificationPrompt ? (commitModal.confirmStep === 2 ? '確認提交資料變更 (高危最終確認 2/2)' : '確認提交資料變更 (修改提示 1/2)') : '確認提交資料變更 (Commit Changes)' }}
+            </h3>
+            <p class="text-xxs text-dark-400 mt-0.5">
+              {{ requiresModificationPrompt ? (commitModal.confirmStep === 2 ? '注意：此操作將直接更動目標資料庫！資料修改後可能無法復原' : '連線已啟用修改提示保護，請核實即將寫入資料庫的交易語法與異動範圍') : '請確認以下即將寫入資料庫的交易 T-SQL 語法與異動範圍' }}
+            </p>
+          </div>
         </div>
+        <Button
+          type="button"
+          icon="pi pi-times"
+          text
+          size="small"
+          severity="secondary"
+          @click="closeCommitModal"
+          v-tooltip.top="'關閉 (Esc)'"
+          class="!w-7 !h-7 !p-0 !rounded-md !border-0 !shadow-none hover:!bg-rose-500/20 hover:!text-rose-400"
+        />
+      </div>
 
-        <!-- Modal Body -->
-        <div class="p-5 flex-1 flex flex-col min-h-0 space-y-3.5 text-xs bg-dark-900">
-          <!-- Summary Info Strip -->
-          <div class="bg-dark-850 border border-dark-750 rounded-md px-4 py-2.5 flex items-center justify-between font-mono flex-shrink-0">
-            <div class="flex items-center space-x-2">
-              <span class="text-dark-400 text-xxs">目標資料表: </span>
-              <strong class="text-brand-300 font-semibold text-xs">[{{ editability.targetTable?.schema }}].[{{ editability.targetTable?.tableName }}]</strong>
-            </div>
-            <div class="flex items-center space-x-3 text-dark-300 text-xxs">
-              <span>異動列數: <strong class="text-emerald-400 font-semibold text-xs">{{ commitModal.rowCount }}</strong> 列</span>
-              <span class="text-dark-600">|</span>
-              <span>異動格數: <strong class="text-amber-400 font-semibold text-xs">{{ commitModal.cellCount }}</strong> 格</span>
-            </div>
+      <!-- Modal Body -->
+      <div class="p-5 flex-1 flex flex-col min-h-0 space-y-3.5 text-xs bg-dark-900">
+        <!-- Summary Info Strip -->
+        <div class="bg-dark-850 border border-dark-750 rounded-md px-4 py-2.5 flex items-center justify-between font-mono flex-shrink-0">
+          <div class="flex items-center space-x-2">
+            <span class="text-dark-400 text-xxs">目標資料表: </span>
+            <strong class="text-brand-300 font-semibold text-xs">[{{ editability.targetTable?.schema }}].[{{ editability.targetTable?.tableName }}]</strong>
           </div>
-
-          <!-- Error Alert if any -->
-          <div v-if="commitModal.error" class="bg-rose-950/50 border border-rose-800 text-rose-300 p-3 rounded-md text-xs flex items-start space-x-2 flex-shrink-0">
-            <AlertTriangle class="w-4 h-4 text-rose-400 flex-shrink-0 mt-0.5" />
-            <div class="flex-1 font-mono break-all whitespace-pre-wrap">{{ commitModal.error }}</div>
-          </div>
-
-          <!-- SQL Preview with Monaco Syntax Highlighting -->
-          <div class="flex-1 flex flex-col min-h-0">
-            <div class="text-xxs text-dark-400 mb-1.5 flex items-center justify-between flex-shrink-0">
-              <span class="flex items-center space-x-1.5">
-                <span class="font-medium text-dark-200">即將執行的安全交易 T-SQL 語法</span>
-                <span class="text-dark-500">(含 @@ROWCOUNT 防護，任一列失敗自動完整 ROLLBACK)</span>
-              </span>
-              <button
-                type="button"
-                @click="copyCommitSql"
-                class="px-2 py-0.5 rounded border border-dark-700 bg-dark-800 hover:bg-dark-750 text-dark-300 hover:text-dark-100 flex items-center space-x-1 text-xxs transition-colors cursor-pointer"
-                title="複製語法至剪貼簿"
-              >
-                <Copy class="w-2.5 h-2.5 text-brand-400" />
-                <span>複製語法</span>
-              </button>
-            </div>
-
-            <!-- Monaco SQL Code Viewer Container -->
-            <div class="flex-1 min-h-[350px] border border-dark-750 rounded-md overflow-hidden relative shadow-inner">
-              <SqlCodeViewer :code="commitModal.sql" language="sql" class="w-full h-full" />
-            </div>
+          <div class="flex items-center space-x-3 text-dark-300 text-xxs">
+            <span>異動列數: <strong class="text-emerald-400 font-semibold text-xs">{{ commitModal.rowCount }}</strong> 列</span>
+            <span class="text-dark-600">|</span>
+            <span>異動格數: <strong class="text-amber-400 font-semibold text-xs">{{ commitModal.cellCount }}</strong> 格</span>
           </div>
         </div>
 
-        <!-- Modal Footer -->
-        <div class="px-5 py-3 border-t border-dark-750 flex items-center justify-between bg-dark-800 flex-shrink-0">
-          <!-- Left: High Risk Warning / Standard Note -->
-          <div v-if="requiresModificationPrompt" class="flex-1 min-w-0 mr-4">
-            <div
-              v-if="commitModal.confirmStep === 1"
-              class="flex items-center space-x-2 px-3 py-1.5 rounded bg-amber-950/40 border border-amber-800/60 text-amber-300 text-xxs leading-normal"
-            >
-              <AlertTriangle class="w-4 h-4 text-amber-400 shrink-0" />
-              <span>
-                <strong>高危提醒 (1/2)：</strong>連線「{{ currentConnection?.name }}」已啟用修改提示防護。此操作將直接更動資料庫，需進行 <strong>2 次重複確認</strong> 才可提交！
-              </span>
-            </div>
-            <div
-              v-else
-              class="flex items-center space-x-2 px-3 py-1.5 rounded bg-rose-950/60 border border-rose-700/80 text-rose-200 text-xxs leading-normal animate-pulse"
-            >
-              <AlertOctagon class="w-4 h-4 text-rose-400 shrink-0" />
-              <span>
-                <strong class="text-white">高危提醒 (2/2 最終確認)：</strong>即將對目標資料表實施實體資料更動！資料修改後可能無法復原，請再次核實無誤後點擊執行。
-              </span>
-            </div>
+        <!-- Error Alert if any -->
+        <div v-if="commitModal.error" class="bg-rose-950/50 border border-rose-800 text-rose-300 p-3 rounded-md text-xs flex items-start space-x-2 flex-shrink-0">
+          <i class="pi pi-exclamation-triangle text-rose-400 flex-shrink-0 mt-0.5 text-sm"></i>
+          <div class="flex-1 font-mono break-all whitespace-pre-wrap">{{ commitModal.error }}</div>
+        </div>
+
+        <!-- SQL Preview with Monaco Syntax Highlighting -->
+        <div class="flex-1 flex flex-col min-h-0">
+          <div class="text-xxs text-dark-400 mb-1.5 flex items-center justify-between flex-shrink-0">
+            <span class="flex items-center space-x-1.5">
+              <span class="font-medium text-dark-200">即將執行的安全交易 T-SQL 語法</span>
+              <span class="text-dark-500">(含 @@ROWCOUNT 防護，任一列失敗自動完整 ROLLBACK)</span>
+            </span>
+            <Button
+              type="button"
+              icon="pi pi-copy"
+              label="複製語法"
+              size="small"
+              severity="secondary"
+              outlined
+              @click="copyCommitSql"
+              v-tooltip.top="'複製語法至剪貼簿'"
+              class="!text-xxs !py-0.5 !px-2"
+            />
           </div>
-          <div v-else class="text-xxs text-dark-400">
-            提示：所有異動包含在同一交易 (BEGIN TRAN) 中，任何錯誤均完整復原
-          </div>
 
-          <!-- Right: Buttons -->
-          <div class="flex items-center space-x-2 shrink-0">
-            <button
-              type="button"
-              @click="closeCommitModal"
-              class="px-3 py-1.5 rounded border border-dark-700 hover:bg-dark-750 text-dark-300 hover:text-dark-100 text-xs transition-colors cursor-pointer"
-            >
-              {{ requiresModificationPrompt && commitModal.confirmStep === 2 ? '放棄提交 (Esc)' : '取消' }}
-            </button>
-
-            <!-- Guarded Step 1 Button -->
-            <button
-              v-if="requiresModificationPrompt && commitModal.confirmStep === 1"
-              type="button"
-              @click="commitModal.confirmStep = 2"
-              class="px-4 py-1.5 rounded bg-amber-600 hover:bg-amber-500 text-white font-semibold text-xs flex items-center space-x-1.5 transition-colors cursor-pointer shadow-sm"
-            >
-              <span>初次確認提交 (1/2)</span>
-              <ArrowRight class="w-3.5 h-3.5" />
-            </button>
-
-            <!-- Guarded Step 2 Button -->
-            <button
-              v-else-if="requiresModificationPrompt && commitModal.confirmStep === 2"
-              type="button"
-              @click="executeCommit"
-              :disabled="commitModal.isExecuting"
-              class="px-4 py-1.5 rounded bg-rose-600 hover:bg-rose-500 active:bg-rose-700 disabled:opacity-50 text-white font-bold text-xs flex items-center space-x-1.5 transition-colors cursor-pointer shadow-md shadow-rose-950/50"
-            >
-              <Loader2 v-if="commitModal.isExecuting" class="w-3.5 h-3.5 animate-spin" />
-              <AlertTriangle v-else class="w-3.5 h-3.5" />
-              <span>{{ commitModal.isExecuting ? '提交執行中...' : '確定立即提交 (最終確認 2/2)' }}</span>
-            </button>
-
-            <!-- Standard Commit Button -->
-            <button
-              v-else
-              type="button"
-              @click="executeCommit"
-              :disabled="commitModal.isExecuting"
-              class="px-4 py-1.5 rounded bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-medium text-xs flex items-center space-x-1.5 transition-colors cursor-pointer shadow-sm"
-            >
-              <Loader2 v-if="commitModal.isExecuting" class="w-3.5 h-3.5 animate-spin" />
-              <Check v-else class="w-3.5 h-3.5" />
-              <span>{{ commitModal.isExecuting ? '提交執行中...' : `確認提交 (${commitModal.rowCount} 列 / ${commitModal.cellCount} 格)` }}</span>
-            </button>
+          <!-- Monaco SQL Code Viewer Container -->
+          <div class="flex-1 min-h-[350px] border border-dark-750 rounded-md overflow-hidden relative shadow-inner">
+            <SqlCodeViewer :code="commitModal.sql" language="sql" class="w-full h-full" />
           </div>
         </div>
       </div>
-    </div>
+
+      <!-- Modal Footer -->
+      <div class="px-5 py-3 border-t border-dark-750 flex items-center justify-between bg-dark-800 flex-shrink-0">
+        <!-- Left: High Risk Warning / Standard Note -->
+        <div v-if="requiresModificationPrompt" class="flex-1 min-w-0 mr-4">
+          <div
+            v-if="commitModal.confirmStep === 1"
+            class="flex items-center space-x-2 px-3 py-1.5 rounded bg-amber-950/40 border border-amber-800/60 text-amber-300 text-xxs leading-normal"
+          >
+            <i class="pi pi-exclamation-triangle text-amber-400 shrink-0 text-sm"></i>
+            <span>
+              <strong>高危提醒 (1/2)：</strong>連線「{{ currentConnection?.name }}」已啟用修改提示防護。此操作將直接更動資料庫，需進行 <strong>2 次重複確認</strong> 才可提交！
+            </span>
+          </div>
+          <div
+            v-else
+            class="flex items-center space-x-2 px-3 py-1.5 rounded bg-rose-950/60 border border-rose-700/80 text-rose-200 text-xxs leading-normal animate-pulse"
+          >
+            <i class="pi pi-exclamation-circle text-rose-400 shrink-0 text-sm"></i>
+            <span>
+              <strong class="text-white">高危提醒 (2/2 最終確認)：</strong>即將對目標資料表實施實體資料更動！資料修改後可能無法復原，請再次核實無誤後點擊執行。
+            </span>
+          </div>
+        </div>
+        <div v-else class="text-xxs text-dark-400">
+          提示：所有異動包含在同一交易 (BEGIN TRAN) 中，任何錯誤均完整復原
+        </div>
+
+        <!-- Right: Buttons -->
+        <div class="flex items-center space-x-2 shrink-0">
+          <Button
+            type="button"
+            :label="requiresModificationPrompt && commitModal.confirmStep === 2 ? '放棄提交 (Esc)' : '取消'"
+            size="small"
+            severity="secondary"
+            outlined
+            @click="closeCommitModal"
+            class="!text-xs !py-1.5 !px-3"
+          />
+
+          <!-- Guarded Step 1 Button -->
+          <Button
+            v-if="requiresModificationPrompt && commitModal.confirmStep === 1"
+            type="button"
+            icon="pi pi-arrow-right"
+            iconPos="right"
+            label="初次確認提交 (1/2)"
+            size="small"
+            severity="warn"
+            @click="commitModal.confirmStep = 2"
+            class="!text-xs !py-1.5 !px-4 font-semibold shadow-sm"
+          />
+
+          <!-- Guarded Step 2 Button -->
+          <Button
+            v-else-if="requiresModificationPrompt && commitModal.confirmStep === 2"
+            type="button"
+            :icon="commitModal.isExecuting ? 'pi pi-spin pi-spinner' : 'pi pi-exclamation-triangle'"
+            :label="commitModal.isExecuting ? '提交執行中...' : '確定立即提交 (最終確認 2/2)'"
+            size="small"
+            severity="danger"
+            :disabled="commitModal.isExecuting"
+            @click="executeCommit"
+            class="!text-xs !py-1.5 !px-4 font-bold shadow-md shadow-rose-950/50"
+          />
+
+          <!-- Standard Commit Button -->
+          <Button
+            v-else
+            type="button"
+            :icon="commitModal.isExecuting ? 'pi pi-spin pi-spinner' : 'pi pi-check'"
+            :label="commitModal.isExecuting ? '提交執行中...' : `確認提交 (${commitModal.rowCount} 列 / ${commitModal.cellCount} 格)`"
+            size="small"
+            severity="success"
+            :disabled="commitModal.isExecuting"
+            @click="executeCommit"
+            class="!text-xs !py-1.5 !px-4 font-medium shadow-sm"
+          />
+        </div>
+      </div>
+    </Dialog>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, reactive, watch } from 'vue';
+import Button from 'primevue/button';
+import InputText from 'primevue/inputtext';
+import IconField from 'primevue/iconfield';
+import InputIcon from 'primevue/inputicon';
+import Tag from 'primevue/tag';
+import Dialog from 'primevue/dialog';
 import {
   Inbox,
-  Search,
-  X,
   Copy,
-  Check,
-  AlertTriangle,
   Pin,
   PinOff,
   FileSpreadsheet,
@@ -624,20 +650,8 @@ import {
   Trash2,
   Braces,
   Table as TableIcon,
-  Workflow,
-  RotateCcw,
-  RotateCw,
-  Lock,
   Slash,
   Undo2,
-  CheckCircle2,
-  Loader2,
-  Maximize2,
-  Minimize2,
-  Table,
-  AlertOctagon,
-  ShieldAlert,
-  ArrowRight,
 } from 'lucide-vue-next';
 import { AgGridVue } from 'ag-grid-vue3';
 import {

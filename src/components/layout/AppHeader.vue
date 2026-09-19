@@ -1,476 +1,373 @@
 <template>
-  <header class="h-10 bg-dark-850 border-b border-dark-700 flex items-center justify-between px-3 text-xs select-none flex-shrink-0 relative z-30">
-    <!-- Click Outside Backdrop for Connection & DBA Dropdown -->
-    <div
-      v-if="isConnDropdownOpen || isDbaDropdownOpen"
-      class="fixed inset-0 z-40"
-      @click="isConnDropdownOpen = false; isDbaDropdownOpen = false"
-    />
-
-    <!-- Left: App Branding & Connection / DB Pickers -->
-    <div :class="['flex items-center space-x-2.5', isConnDropdownOpen ? 'relative z-50' : '']">
-      <!-- App Brand -->
-      <div class="flex items-center space-x-2 font-bold text-dark-100 tracking-wide pr-2 border-r border-dark-700">
-        <div class="w-5 h-5 rounded bg-brand-500/20 text-brand-500 flex items-center justify-center font-mono text-xs font-black">
-          SQL
+  <Toolbar class="!h-10 !bg-dark-850 !border-b !border-dark-700 !rounded-none !px-2.5 !py-0 select-none flex-shrink-0 relative z-30 font-sans text-xs">
+    <!-- Start: Branding & Connection / Database Pickers -->
+    <template #start>
+      <div class="flex items-center space-x-2">
+        <!-- App Brand -->
+        <div class="flex items-center space-x-1.5 font-bold text-dark-100 tracking-wide pr-2 border-r border-dark-700">
+          <div class="w-5 h-5 rounded bg-brand-500/20 text-brand-400 flex items-center justify-center font-mono text-xs font-black">
+            SQL
+          </div>
+          <span class="text-xs font-bold text-dark-100">SQLight</span>
         </div>
-        <span class="text-sm font-semibold">SQLight</span>
-      </div>
 
-      <!-- Active Connection Selector Dropdown -->
-      <div class="relative">
-        <!-- Trigger Button -->
-        <button
-          type="button"
-          @click="isConnDropdownOpen = !isConnDropdownOpen"
-          :class="[
-            'flex items-center space-x-2 px-2.5 py-1 rounded-md border transition-all cursor-pointer text-xs font-sans shadow-xs',
-            connectionStore.status === 'connected' && connectionStore.activeConnection
-              ? 'bg-brand-950/70 border-brand-500/50 hover:border-brand-400 text-brand-100 hover:bg-brand-900/60 ring-1 ring-brand-500/30'
-              : 'bg-dark-800 border-dark-600 hover:border-dark-500 text-dark-200 hover:bg-dark-750'
-          ]"
+        <!-- Connection Select -->
+        <Select
+          :model-value="connectionStore.activeConnectionId"
+          :options="connectionStore.connections"
+          option-value="id"
+          option-label="name"
+          placeholder="選擇連線..."
+          size="small"
+          class="!h-7 !text-xs !bg-dark-800 !border-dark-600 hover:!border-dark-500 min-w-[160px] max-w-[220px]"
           :style="activeConnStyle"
-          title="切換連線 (Switch Connection)"
+          @update:model-value="val => handleSelectConnection(val as string)"
         >
-          <!-- Connection indicator / server icon -->
-          <span
-            v-if="connectionStore.status === 'connected' && connectionStore.activeConnection"
-            class="w-2 h-2 rounded-full bg-emerald-400 flex-shrink-0 shadow-sm shadow-emerald-400/80 animate-pulse"
-          />
-          <Server v-else class="w-3.5 h-3.5 text-dark-400 flex-shrink-0" />
-
-          <span class="font-semibold max-w-[150px] truncate text-white">
-            {{ connectionStore.activeConnection?.name ?? 'Select Connection' }}
-          </span>
-
-          <!-- Active Connection Alias Badge -->
-          <span
-            v-if="connectionStore.activeConnection?.alias"
-            class="text-[10px] font-mono px-1.5 py-0.2 rounded bg-brand-500/25 border border-brand-400/30 text-brand-200 flex-shrink-0 truncate max-w-[70px]"
-            :title="`連線別名: ${connectionStore.activeConnection.alias}`"
-          >
-            {{ connectionStore.activeConnection.alias }}
-          </span>
-
-          <ChevronDown :class="['w-3 h-3 transition-transform duration-150', isConnDropdownOpen ? 'rotate-180 text-brand-300' : 'text-brand-400/80']" />
-        </button>
-
-        <!-- Dropdown Menu -->
-        <div
-          v-if="isConnDropdownOpen"
-          @click.stop
-          class="absolute top-full left-0 mt-1.5 w-72 bg-dark-850 border border-dark-700 rounded-md shadow-2xl z-50 py-1 font-sans text-xs select-none"
-        >
-          <!-- Dropdown Header -->
-          <div class="px-2.5 py-1 text-xxs font-semibold uppercase tracking-wider text-dark-400 flex items-center justify-between border-b border-dark-750/70 mb-1">
-            <span>連線清單 (Connections)</span>
-            <span class="font-mono text-dark-500">{{ connectionStore.connections.length }}</span>
-          </div>
-
-          <!-- Empty State -->
-          <div
-            v-if="connectionStore.connections.length === 0"
-            class="px-3 py-3 text-center text-dark-500 text-xs italic"
-          >
-            尚無已儲存的連線
-          </div>
-
-          <!-- Connections List -->
-          <div v-else class="max-h-64 overflow-y-auto space-y-0.5 px-1">
-            <button
-              v-for="conn in connectionStore.connections"
-              :key="conn.id"
-              type="button"
-              @click="handleSelectConnection(conn.id)"
-              :class="[
-                'w-full text-left px-2 py-1.5 rounded flex items-center space-x-2 transition-colors group cursor-pointer',
-                connectionStore.activeConnectionId === conn.id
-                  ? 'bg-brand-500/15 text-brand-300'
-                  : 'hover:bg-dark-750 text-dark-200'
-              ]"
-            >
-              <!-- Icon / Status dot -->
+          <template #value="slotProps">
+            <div v-if="slotProps.value && connectionStore.activeConnection" class="flex items-center space-x-1.5 min-w-0">
               <span
-                v-if="connectionStore.activeConnectionId === conn.id && connectionStore.status === 'connected'"
-                class="w-2 h-2 rounded-full bg-emerald-500 flex-shrink-0"
+                v-if="connectionStore.status === 'connected'"
+                class="w-2 h-2 rounded-full bg-emerald-400 flex-shrink-0 animate-pulse shadow-xs shadow-emerald-400/80"
               />
-              <Server v-else class="w-3.5 h-3.5 text-dark-400 group-hover:text-dark-200 flex-shrink-0" />
+              <i v-else class="pi pi-server text-dark-400 text-xs flex-shrink-0" />
+              <span class="font-semibold text-xs truncate text-dark-100">
+                {{ connectionStore.activeConnection.name }}
+              </span>
+              <Tag
+                v-if="connectionStore.activeConnection.alias"
+                severity="info"
+                :value="connectionStore.activeConnection.alias"
+                class="!text-[10px] !px-1 !py-0 flex-shrink-0"
+              />
+            </div>
+            <span v-else class="text-dark-400 text-xs">選擇連線...</span>
+          </template>
 
-              <!-- Connection Name & Info -->
+          <template #option="slotProps">
+            <div class="flex items-center space-x-2 w-full py-0.5">
+              <span
+                v-if="connectionStore.activeConnectionId === slotProps.option.id && connectionStore.status === 'connected'"
+                class="w-2 h-2 rounded-full bg-emerald-400 flex-shrink-0"
+              />
+              <i v-else class="pi pi-server text-dark-400 text-xs flex-shrink-0" />
               <div class="flex-1 min-w-0 flex flex-col">
                 <div class="flex items-center space-x-1.5">
-                  <span class="font-medium truncate leading-tight">{{ conn.name }}</span>
-                  <span
-                    v-if="conn.alias"
-                    class="text-[9px] font-mono px-1 py-0.2 rounded bg-brand-500/20 text-brand-300 border border-brand-500/30"
-                  >
-                    {{ conn.alias }}
-                  </span>
+                  <span class="font-medium text-xs truncate">{{ slotProps.option.name }}</span>
+                  <Tag
+                    v-if="slotProps.option.alias"
+                    severity="info"
+                    :value="slotProps.option.alias"
+                    class="!text-[9px] !px-1 !py-0"
+                  />
                 </div>
-                <span class="text-xxs text-dark-400 font-mono truncate leading-tight mt-0.5">
-                  {{ conn.username ? `${conn.username}@` : '' }}{{ conn.host }}:{{ conn.port }}
+                <span class="text-[10px] text-dark-400 font-mono truncate">
+                  {{ slotProps.option.username ? `${slotProps.option.username}@` : '' }}{{ slotProps.option.host }}:{{ slotProps.option.port }}
                 </span>
               </div>
-
-              <!-- Selected Checkmark -->
-              <Check
-                v-if="connectionStore.activeConnectionId === conn.id"
-                class="w-3.5 h-3.5 text-brand-400 flex-shrink-0 ml-1"
+              <i
+                v-if="connectionStore.activeConnectionId === slotProps.option.id"
+                class="pi pi-check text-brand-400 text-xs ml-auto flex-shrink-0"
               />
-            </button>
-          </div>
+            </div>
+          </template>
 
-          <!-- Bottom Action: New Connection -->
-          <div class="border-t border-dark-750 mt-1 pt-1 px-1">
-            <button
-              type="button"
-              @click="handleOpenNewConnection"
-              class="w-full text-left px-2 py-1.5 rounded flex items-center space-x-2 text-brand-400 hover:text-brand-300 hover:bg-dark-750 transition-colors cursor-pointer font-medium"
-            >
-              <Plus class="w-3.5 h-3.5" />
-              <span>建立新連線 (New Connection...)</span>
-            </button>
-          </div>
-        </div>
-      </div>
+          <template #footer>
+            <div class="p-1 border-t border-dark-700">
+              <Button
+                label="建立新連線..."
+                icon="pi pi-plus"
+                size="small"
+                text
+                class="w-full !justify-start !text-xs !py-1"
+                @click="handleOpenNewConnection"
+              />
+            </div>
+          </template>
+        </Select>
 
-      <!-- Active Database Selector Dropdown (Prominent Amber Pill) -->
-      <div class="relative flex items-center">
-        <div
-          class="flex items-center bg-amber-950/50 hover:bg-amber-950/70 border border-amber-500/50 hover:border-amber-400/80 rounded-md px-2 py-1 text-xs transition-all shadow-xs ring-1 ring-amber-500/20 group"
-          title="切換目前工作區使用的資料庫 (Switch Active Database)"
+        <!-- Database Select -->
+        <Select
+          :model-value="connectionStore.activeDatabase"
+          :options="filteredAvailableDatabases"
+          placeholder="選擇資料庫..."
+          size="small"
+          class="!h-7 !text-xs !bg-dark-800 !border-dark-600 hover:!border-dark-500 min-w-[130px] max-w-[180px]"
+          @update:model-value="val => onDatabaseChange(val as string)"
         >
-          <Database class="w-3.5 h-3.5 text-amber-400 flex-shrink-0 mr-1.5 group-hover:scale-105 transition-transform" />
-          <select
-            :value="connectionStore.activeDatabase"
-            @change="onDatabaseChange"
-            class="bg-transparent text-amber-200 hover:text-amber-100 font-mono font-medium text-xs focus:outline-none cursor-pointer appearance-none pr-5 transition-colors"
-          >
-            <option
-              v-for="db in filteredAvailableDatabases"
-              :key="db"
-              :value="db"
-              class="bg-dark-850 text-dark-100 font-mono"
-            >
-              {{ db }}
-            </option>
-          </select>
-          <ChevronDown class="w-3 h-3 text-amber-400/80 absolute right-2 pointer-events-none group-hover:text-amber-300 transition-colors" />
-        </div>
+          <template #value="slotProps">
+            <div class="flex items-center space-x-1.5 min-w-0">
+              <i class="pi pi-database text-amber-400 text-xs flex-shrink-0" />
+              <span class="font-mono text-xs truncate text-amber-200">
+                {{ slotProps.value || '選擇資料庫...' }}
+              </span>
+            </div>
+          </template>
+
+          <template #option="slotProps">
+            <div class="flex items-center space-x-1.5 font-mono text-xs py-0.5">
+              <i class="pi pi-database text-amber-400 text-xs flex-shrink-0" />
+              <span class="truncate">{{ slotProps.option }}</span>
+            </div>
+          </template>
+        </Select>
       </div>
-    </div>
+    </template>
 
-    <!-- Middle Spacer to push action controls to the right -->
-    <div class="flex-1 min-w-4" />
-
-    <!-- Right: Actions Toolbar & Settings -->
-    <div :class="['flex items-center space-x-2', isDbaDropdownOpen ? 'relative z-50' : '']">
-      <!-- Main Action Toolbar (Run, Run All, Stop, Format, New Tab, Limit) -->
+    <!-- End: Actions Toolbar & Settings -->
+    <template #end>
       <div class="flex items-center space-x-1">
-        <!-- Run Current Statement / Selected Button (Dynamic Cancel when running) -->
-        <button
+        <!-- Run / Stop Query Button -->
+        <Button
           v-if="!queryStore.isExecuting"
+          icon="pi pi-play"
+          severity="success"
+          size="small"
+          class="!h-7 !w-7 !p-0"
+          v-tooltip.bottom="'執行當前語句或選取內容 (Ctrl + Enter)'"
           @click="$emit('run-query', 'current')"
-          class="p-1.5 bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white rounded font-medium shadow-xs transition-colors group cursor-pointer flex items-center justify-center"
-          title="執行當前語句或選取內容 (Ctrl + Enter)"
-        >
-          <Play class="w-3.5 h-3.5 fill-current" />
-        </button>
-        <button
+        />
+        <Button
           v-else
-          @click="$emit('cancel-query')"
+          :icon="queryStore.isCancelling ? 'pi pi-spin pi-spinner' : 'pi pi-stop'"
+          severity="danger"
+          size="small"
+          class="!h-7 !w-7 !p-0 animate-pulse"
           :disabled="queryStore.isCancelling"
-          class="p-1.5 bg-rose-600 hover:bg-rose-500 active:bg-rose-700 text-white rounded font-medium shadow-xs transition-colors group cursor-pointer flex items-center justify-center animate-pulse disabled:opacity-50"
-          :title="queryStore.isCancelling ? '正在中斷查詢中...' : '點擊中斷並取消查詢 (Click to Cancel / Esc)'"
-        >
-          <RotateCw v-if="queryStore.isCancelling" class="w-3.5 h-3.5 animate-spin" />
-          <Square v-else class="w-3.5 h-3.5 fill-current" />
-        </button>
+          v-tooltip.bottom="queryStore.isCancelling ? '正在中斷查詢中...' : '中斷並取消查詢 (Esc)'"
+          @click="$emit('cancel-query')"
+        />
 
         <!-- Run All Statements Button -->
-        <button
-          @click="$emit('run-query', 'all')"
+        <Button
+          icon="pi pi-forward"
+          severity="success"
+          size="small"
+          outlined
+          class="!h-7 !w-7 !p-0"
           :disabled="queryStore.isExecuting"
-          class="p-1.5 bg-emerald-700/80 hover:bg-emerald-600 active:bg-emerald-800 text-emerald-100 hover:text-white rounded font-medium shadow-xs transition-colors group disabled:opacity-40 cursor-pointer flex items-center justify-center"
-          title="無條件執行整頁全部內容 (Ctrl + Shift + Enter)"
-        >
-          <PlaySquare class="w-3.5 h-3.5" />
-        </button>
+          v-tooltip.bottom="'無條件執行整頁全部內容 (Ctrl + Shift + Enter)'"
+          @click="$emit('run-query', 'all')"
+        />
 
-        <!-- Stop Button -->
-        <button
-          @click="$emit('cancel-query')"
-          :disabled="!queryStore.isExecuting || queryStore.isCancelling"
-          :class="[
-            'p-1.5 rounded border transition-colors flex items-center justify-center',
-            queryStore.isExecuting
-              ? 'bg-rose-600 hover:bg-rose-500 active:bg-rose-700 text-white border-rose-500 cursor-pointer animate-pulse shadow-xs'
-              : 'bg-dark-800 text-dark-400 border-dark-700 opacity-40 cursor-not-allowed'
-          ]"
-          :title="queryStore.isExecuting ? (queryStore.isCancelling ? '正在中斷查詢...' : '取消查詢執行 (Alt + Break / Esc)') : '目前無執行中的查詢'"
-        >
-          <RotateCw v-if="queryStore.isCancelling" class="w-3.5 h-3.5 animate-spin" />
-          <Square v-else class="w-3.5 h-3.5" />
-        </button>
-
-        <div class="h-4 w-px bg-dark-700 mx-1"></div>
+        <Divider layout="vertical" class="!my-0 !h-4 !mx-0.5" />
 
         <!-- Format SQL Button -->
-        <button
+        <Button
+          icon="pi pi-align-left"
+          severity="secondary"
+          size="small"
+          text
+          class="!h-7 !w-7 !p-0"
+          v-tooltip.bottom="'格式化 SQL (Shift + Alt + F)'"
           @click="$emit('format-sql')"
-          class="p-1.5 bg-dark-800 hover:bg-dark-750 text-dark-300 hover:text-dark-100 rounded border border-dark-700 transition-colors cursor-pointer flex items-center justify-center"
-          title="格式化 SQL (Shift + Alt + F)"
-        >
-          <AlignLeft class="w-3.5 h-3.5 text-dark-400" />
-        </button>
+        />
 
         <!-- Open SQL File Button -->
-        <button
+        <Button
+          icon="pi pi-folder-open"
+          severity="secondary"
+          size="small"
+          text
+          class="!h-7 !w-7 !p-0 !text-sky-400"
+          v-tooltip.bottom="'開啟本機 SQL 檔案 (Ctrl + O)'"
           @click="$emit('open-sql-file')"
-          class="p-1.5 bg-dark-800 hover:bg-dark-750 text-dark-300 hover:text-dark-100 rounded border border-dark-700 transition-colors cursor-pointer flex items-center justify-center"
-          title="開啟本機 SQL 檔案 (Ctrl + O)"
-        >
-          <FolderOpen class="w-3.5 h-3.5 text-sky-400" />
-        </button>
+        />
 
         <!-- Save SQL File Button -->
-        <button
+        <Button
+          icon="pi pi-save"
+          severity="secondary"
+          size="small"
+          text
+          class="!h-7 !w-7 !p-0 !text-amber-400"
+          v-tooltip.bottom="'另存當前 SQL 至檔案 (Ctrl + S)'"
           @click="$emit('save-sql-file')"
-          class="p-1.5 bg-dark-800 hover:bg-dark-750 text-dark-300 hover:text-dark-100 rounded border border-dark-700 transition-colors cursor-pointer flex items-center justify-center"
-          title="另存當前 SQL 至檔案 (Ctrl + S)"
-        >
-          <Save class="w-3.5 h-3.5 text-amber-400" />
-        </button>
+        />
 
         <!-- New Query Tab Button -->
-        <button
+        <Button
+          icon="pi pi-plus"
+          severity="secondary"
+          size="small"
+          text
+          class="!h-7 !w-7 !p-0 !text-brand-400"
+          v-tooltip.bottom="'開啟新查詢分頁 (Ctrl + N)'"
           @click="workspaceStore.addSqlTab()"
-          class="p-1.5 bg-dark-800 hover:bg-dark-750 text-dark-300 hover:text-dark-100 rounded border border-dark-700 transition-colors cursor-pointer flex items-center justify-center"
-          title="開啟新查詢分頁 (Ctrl + N)"
-        >
-          <Plus class="w-3.5 h-3.5 text-brand-500" />
-        </button>
+        />
 
         <!-- Quick Object Finder Button (Ctrl + P) -->
-        <button
+        <Button
+          icon="pi pi-search"
+          severity="secondary"
+          size="small"
+          text
+          class="!h-7 !w-7 !p-0 !text-cyan-400"
+          v-tooltip.bottom="'快速物件檢索器 (Ctrl + P)'"
           @click="$emit('open-quick-finder')"
-          class="p-1.5 bg-dark-800 hover:bg-dark-750 text-dark-300 hover:text-dark-100 rounded border border-dark-700 transition-colors cursor-pointer flex items-center justify-center"
-          title="快速物件檢索器 (Ctrl + P)"
-        >
-          <Search class="w-3.5 h-3.5 text-brand-400" />
-        </button>
+        />
 
-        <!-- SQL Templates Library Button (非快速鍵，自訂語法與範本庫) -->
-        <button
+        <!-- SQL Templates Library Button -->
+        <Button
+          icon="pi pi-book"
+          severity="secondary"
+          size="small"
+          text
+          class="!h-7 !w-7 !p-0 !text-amber-300"
+          v-tooltip.bottom="'常用 SQL 範本庫 (語法、CTE、維護樣板)'"
           @click="$emit('open-sql-templates')"
-          class="p-1.5 bg-dark-800 hover:bg-dark-750 text-dark-300 hover:text-dark-100 rounded border border-dark-700 transition-colors cursor-pointer flex items-center justify-center"
-          title="常用 SQL 範本庫 (常用語法、CTE、進階用法、說明與同層自訂文件)"
-        >
-          <BookOpen class="w-3.5 h-3.5 text-amber-400" />
-        </button>
+        />
 
+        <!-- DBA Diagnostics Toolbox Button & Popover -->
+        <Button
+          icon="pi pi-chart-line"
+          severity="secondary"
+          size="small"
+          text
+          class="!h-7 !w-7 !p-0 !text-rose-400"
+          v-tooltip.bottom="'DBA 常用診斷維護工具箱'"
+          @click="toggleDbaPopover"
+        />
 
-        <!-- DBA Diagnostics Toolbox Button & Dropdown -->
-        <div class="relative">
-          <button
-            type="button"
-            @click="isDbaDropdownOpen = !isDbaDropdownOpen"
-            :class="[
-              'p-1.5 rounded border transition-colors cursor-pointer flex items-center space-x-1',
-              isDbaDropdownOpen
-                ? 'bg-rose-500/20 text-rose-300 border-rose-500/50'
-                : 'bg-dark-800 hover:bg-dark-750 text-dark-300 hover:text-dark-100 border-dark-700'
-            ]"
-            title="DBA 常用診斷維護工具箱 (SQL Server 排查與監控指令庫)"
-          >
-            <Activity class="w-3.5 h-3.5 text-rose-400" />
-            <ChevronDown :class="['w-2.5 h-2.5 text-dark-400 transition-transform duration-150', isDbaDropdownOpen ? 'rotate-180 text-rose-400' : '']" />
-          </button>
-
-          <!-- Dropdown Menu -->
-          <div
-            v-if="isDbaDropdownOpen"
-            @click.stop
-            class="absolute top-full right-0 mt-1.5 w-80 bg-dark-850 border border-dark-700 rounded-md shadow-2xl z-50 py-1 font-sans text-xs select-none"
-          >
-            <div class="px-3 py-1.5 text-xxs font-semibold uppercase tracking-wider text-dark-400 flex items-center justify-between border-b border-dark-750 mb-1">
+        <Popover ref="dbaPopoverRef">
+          <div class="w-72 font-sans text-xs select-none">
+            <div class="px-2 py-1.5 text-xxs font-semibold uppercase tracking-wider text-dark-400 flex items-center justify-between border-b border-dark-750 mb-1">
               <div class="flex items-center space-x-1.5">
-                <Activity class="w-3 h-3 text-rose-400" />
-                <span>DBA 常用診斷與維護指令庫</span>
+                <i class="pi pi-chart-line text-rose-400 text-xs" />
+                <span>DBA 診斷與維護指令庫</span>
               </div>
               <span class="text-dark-500 font-mono">{{ DBA_QUERIES.length }} 項</span>
             </div>
-
-            <div class="max-h-96 overflow-y-auto space-y-0.5 px-1">
-              <button
+            <div class="max-h-72 overflow-y-auto space-y-0.5">
+              <div
                 v-for="query in DBA_QUERIES"
                 :key="query.id"
-                type="button"
-                @click.stop="openDbaQuery(query)"
-                class="w-full text-left px-2.5 py-2 rounded hover:bg-dark-750 text-dark-200 transition-colors flex flex-col space-y-0.5 cursor-pointer group"
+                class="px-2.5 py-1.5 rounded hover:bg-dark-750 text-dark-200 transition-colors flex flex-col space-y-0.5 cursor-pointer group"
+                @click="openDbaQuery(query)"
               >
                 <div class="flex items-center justify-between w-full">
                   <span class="font-medium text-dark-100 group-hover:text-rose-300 transition-colors">
                     {{ query.title }}
                   </span>
-                  <span :class="['text-[9px] px-1.5 py-0.2 rounded border font-mono', query.badgeColor]">
+                  <span :class="['text-[9px] px-1 py-0.2 rounded border font-mono', query.badgeColor]">
                     {{ query.badge }}
                   </span>
                 </div>
-                <span class="text-xxs text-dark-400 leading-tight">
+                <span class="text-[10px] text-dark-400 leading-tight">
                   {{ query.description }}
                 </span>
-              </button>
+              </div>
             </div>
           </div>
-        </div>
+        </Popover>
 
-        <!-- Performance Analysis Checkbox (Icon-only with title) -->
-        <label
-          class="flex items-center space-x-1 px-1.5 py-1 rounded border cursor-pointer select-none transition-colors"
-          :class="[
-            queryStore.isStatsEnabled
-              ? 'bg-amber-500/20 border-amber-500/50 text-amber-300 shadow-xs'
-              : 'bg-dark-800 hover:bg-dark-750 border-dark-700 text-dark-400 hover:text-dark-200'
-          ]"
-          title="效能分析 (SET STATISTICS IO, TIME ON) — 執行時記錄 IO 與耗時，產生效能儀表板"
-        >
-          <input
-            type="checkbox"
-            :checked="queryStore.isStatsEnabled"
-            @change="queryStore.toggleStatsEnabled()"
-            class="w-3.5 h-3.5 rounded border-dark-600 bg-dark-900 text-amber-500 focus:ring-0 focus:ring-offset-0 cursor-pointer accent-amber-500"
-          />
-          <Gauge class="w-3.5 h-3.5 flex-shrink-0" :class="queryStore.isStatsEnabled ? 'text-amber-400' : 'text-dark-400'" />
-        </label>
+        <Divider layout="vertical" class="!my-0 !h-4 !mx-0.5" />
 
-        <!-- Estimated Execution Plan Checkbox (SET SHOWPLAN_ALL ON) (Icon-only with title) -->
-        <label
-          class="flex items-center space-x-1 px-1.5 py-1 rounded border cursor-pointer select-none transition-colors"
-          :class="[
-            queryStore.isShowplanEnabled
-              ? 'bg-cyan-500/20 border-cyan-500/50 text-cyan-300 shadow-xs'
-              : 'bg-dark-800 hover:bg-dark-750 border-dark-700 text-dark-400 hover:text-dark-200'
-          ]"
-          title="預估執行計畫 (SET SHOWPLAN_ALL ON) — 以表格型態輸出估計計畫，不實際執行語句"
-        >
-          <input
-            type="checkbox"
-            :checked="queryStore.isShowplanEnabled"
-            @change="queryStore.toggleShowplanEnabled()"
-            class="w-3.5 h-3.5 rounded border-dark-600 bg-dark-900 text-cyan-500 focus:ring-0 focus:ring-offset-0 cursor-pointer accent-cyan-500"
-          />
-          <Workflow class="w-3.5 h-3.5 flex-shrink-0" :class="queryStore.isShowplanEnabled ? 'text-cyan-400' : 'text-dark-400'" />
-        </label>
+        <!-- Performance Analysis Toggle (SET STATISTICS IO, TIME ON) -->
+        <Button
+          icon="pi pi-gauge"
+          size="small"
+          :severity="queryStore.isStatsEnabled ? 'warn' : 'secondary'"
+          :text="!queryStore.isStatsEnabled"
+          class="!h-7 !w-7 !p-0"
+          v-tooltip.bottom="'效能分析 (SET STATISTICS IO, TIME ON)'"
+          @click="queryStore.toggleStatsEnabled()"
+        />
 
-        <!-- Actual Execution Plan Checkbox (SET STATISTICS XML ON) (Icon-only with title) -->
-        <label
-          class="flex items-center space-x-1 px-1.5 py-1 rounded border cursor-pointer select-none transition-colors"
-          :class="[
-            queryStore.isActualPlanEnabled
-              ? 'bg-purple-500/20 border-purple-500/50 text-purple-300 shadow-xs'
-              : 'bg-dark-800 hover:bg-dark-750 border-dark-700 text-dark-400 hover:text-dark-200'
-          ]"
-          title="實際執行計畫 (SET STATISTICS XML ON) — 實際執行語句並於新分頁開啟圖形化執行計畫 (支援複製原始 XML)"
-        >
-          <input
-            type="checkbox"
-            :checked="queryStore.isActualPlanEnabled"
-            @change="queryStore.toggleActualPlanEnabled()"
-            class="w-3.5 h-3.5 rounded border-dark-600 bg-dark-900 text-purple-500 focus:ring-0 focus:ring-offset-0 cursor-pointer accent-purple-500"
-          />
-          <Network class="w-3.5 h-3.5 flex-shrink-0" :class="queryStore.isActualPlanEnabled ? 'text-purple-400' : 'text-dark-400'" />
-        </label>
+        <!-- Estimated Execution Plan Toggle (SET SHOWPLAN_ALL ON) -->
+        <Button
+          icon="pi pi-sitemap"
+          size="small"
+          :severity="queryStore.isShowplanEnabled ? 'info' : 'secondary'"
+          :text="!queryStore.isShowplanEnabled"
+          class="!h-7 !w-7 !p-0"
+          v-tooltip.bottom="'預估執行計畫 (SET SHOWPLAN_ALL ON)'"
+          @click="queryStore.toggleShowplanEnabled()"
+        />
+
+        <!-- Actual Execution Plan Toggle (SET STATISTICS XML ON) -->
+        <Button
+          icon="pi pi-share-alt"
+          size="small"
+          :severity="queryStore.isActualPlanEnabled ? 'help' : 'secondary'"
+          :text="!queryStore.isActualPlanEnabled"
+          class="!h-7 !w-7 !p-0"
+          v-tooltip.bottom="'實際執行計畫 (SET STATISTICS XML ON)'"
+          @click="queryStore.toggleActualPlanEnabled()"
+        />
 
         <!-- Max Rows Limit Selector -->
-        <div class="flex items-center space-x-1 pl-1.5 border-l border-dark-750 text-dark-400 text-xxs font-mono">
-          <span title="查詢回傳最大筆數限制 (超過時自動截斷以保護效能)">Limit:</span>
-          <select
-            :value="queryStore.maxRows ?? 'none'"
-            @change="onMaxRowsChange"
-            class="bg-dark-800 hover:bg-dark-750 text-dark-200 font-mono px-1.5 py-0.5 rounded border border-dark-700 text-xxs focus:outline-none focus:border-brand-500 cursor-pointer"
-            title="Max Rows Limit (預設 10,000 筆，防止大量資料使介面崩潰)"
+        <div class="flex items-center space-x-1 pl-1 text-dark-400 text-xxs font-mono">
+          <span>Limit:</span>
+          <Select
+            :model-value="queryStore.maxRows ?? 'none'"
+            :options="limitOptions"
+            option-value="value"
+            option-label="label"
+            size="small"
+            class="!h-6 !text-[11px] !bg-dark-800 !border-dark-700 min-w-[75px] font-mono"
+            @update:model-value="onMaxRowsChange"
           >
-            <option value="1000">1,000</option>
-            <option value="5000">5,000</option>
-            <option value="10000">10,000</option>
-            <option value="50000">50,000</option>
-            <option value="none">No Limit</option>
-          </select>
+            <template #value="slotProps">
+              <span class="text-[11px] font-mono leading-none">
+                {{ limitOptions.find(o => o.value === slotProps.value)?.label ?? (slotProps.value === 'none' ? 'No Limit' : slotProps.value) }}
+              </span>
+            </template>
+            <template #option="slotProps">
+              <span class="text-[11px] font-mono py-0.5">
+                {{ slotProps.option.label }}
+              </span>
+            </template>
+          </Select>
         </div>
-      </div>
 
-      <div class="h-4 w-px bg-dark-700 mx-0.5"></div>
+        <Divider layout="vertical" class="!my-0 !h-4 !mx-0.5" />
 
-      <!-- Right Controls: Toggle Sidebar, Results Dock & Settings Center -->
-      <div class="flex items-center space-x-1.5">
-        <button
+        <!-- Toggle Sidebar -->
+        <Button
+          icon="pi pi-bars"
+          size="small"
+          :severity="workspaceStore.isSidebarOpen ? 'primary' : 'secondary'"
+          :text="!workspaceStore.isSidebarOpen"
+          class="!h-7 !w-7 !p-0"
+          v-tooltip.bottom="'切換左側邊欄'"
           @click="workspaceStore.toggleSidebar()"
-          :class="[
-            'p-1.5 rounded transition-colors border cursor-pointer',
-            workspaceStore.isSidebarOpen
-              ? 'bg-brand-500/20 text-brand-400 border-brand-500/40'
-              : 'bg-dark-800 text-dark-400 hover:text-dark-200 border-dark-700'
-          ]"
-          title="切換左側邊欄 (Toggle Sidebar)"
-        >
-          <PanelLeft class="w-3.5 h-3.5" />
-        </button>
+        />
 
-        <button
-          @click="workspaceStore.toggleBottomPanel()"
+        <!-- Toggle Bottom Results Panel -->
+        <Button
+          icon="pi pi-window-maximize"
+          size="small"
+          :severity="workspaceStore.isBottomPanelOpen ? 'primary' : 'secondary'"
+          :text="!workspaceStore.isBottomPanelOpen"
           :disabled="workspaceStore.activeTab?.type === 'er_diagram'"
-          :class="[
-            'p-1.5 rounded transition-colors border',
-            workspaceStore.activeTab?.type === 'er_diagram'
-              ? 'opacity-40 cursor-not-allowed bg-dark-800 text-dark-500 border-dark-750'
-              : workspaceStore.isBottomPanelOpen
-                ? 'bg-brand-500/20 text-brand-400 border-brand-500/40 cursor-pointer'
-                : 'bg-dark-800 text-dark-400 hover:text-dark-200 border-dark-700 cursor-pointer'
-          ]"
-          :title="workspaceStore.activeTab?.type === 'er_diagram' ? 'ER 圖模式下自動隱藏下方面板' : '切換下方結果面板 (Toggle Results Dock)'"
-        >
-          <PanelBottom class="w-3.5 h-3.5" />
-        </button>
+          class="!h-7 !w-7 !p-0"
+          v-tooltip.bottom="workspaceStore.activeTab?.type === 'er_diagram' ? 'ER 圖模式下隱藏下方面板' : '切換下方結果面板'"
+          @click="workspaceStore.toggleBottomPanel()"
+        />
 
-        <!-- Real Settings Modal Trigger -->
-        <button
+        <!-- Settings Modal Trigger -->
+        <Button
+          icon="pi pi-cog"
+          size="small"
+          severity="secondary"
+          text
+          class="!h-7 !w-7 !p-0"
+          v-tooltip.bottom="'系統設定'"
           @click="$emit('open-settings-modal')"
-          class="p-1.5 rounded bg-dark-800 hover:bg-dark-750 text-dark-400 hover:text-dark-200 border border-dark-700 transition-colors cursor-pointer"
-          title="偏好與系統設定 (Settings)"
-        >
-          <Settings class="w-3.5 h-3.5" />
-        </button>
+        />
       </div>
-    </div>
-  </header>
+    </template>
+  </Toolbar>
 </template>
 
 <script setup lang="ts">
 import { ref, computed } from 'vue';
-import {
-  Server,
-  Database,
-  ChevronDown,
-  Play,
-  PlaySquare,
-  Square,
-  AlignLeft,
-  FolderOpen,
-  Save,
-  Plus,
-  PanelLeft,
-  PanelBottom,
-  Settings,
-  RotateCw,
-  Check,
-  Activity,
-  Search,
-  BookOpen,
-  Gauge,
-  Workflow,
-  Network,
-} from 'lucide-vue-next';
+import Toolbar from 'primevue/toolbar';
+import Button from 'primevue/button';
+import Select from 'primevue/select';
+import Tag from 'primevue/tag';
+import Divider from 'primevue/divider';
+import Popover from 'primevue/popover';
 import { useWorkspaceStore } from '@/stores/workspaceStore';
 import { useConnectionStore } from '@/stores/connectionStore';
 import { useQueryStore } from '@/stores/queryStore';
@@ -481,13 +378,22 @@ const workspaceStore = useWorkspaceStore();
 const connectionStore = useConnectionStore();
 const queryStore = useQueryStore();
 const settingsStore = useSettingsStore();
+const dbaPopoverRef = ref();
+
+const limitOptions = [
+  { label: '1,000', value: 1000 },
+  { label: '5,000', value: 5000 },
+  { label: '10,000', value: 10000 },
+  { label: '50,000', value: 50000 },
+  { label: 'No Limit', value: 'none' },
+];
 
 const activeConnStyle = computed(() => {
   const conn = connectionStore.activeConnection;
   if (!conn?.color) return {};
   return {
     borderColor: `${conn.color}aa`,
-    boxShadow: `0 0 0 1px ${conn.color}44, 0 1px 3px 0 rgba(0, 0, 0, 0.3)`,
+    boxShadow: `0 0 0 1px ${conn.color}44`,
   };
 });
 
@@ -498,11 +404,12 @@ const filteredAvailableDatabases = computed(() => {
   );
 });
 
-const isConnDropdownOpen = ref(false);
-const isDbaDropdownOpen = ref(false);
+function toggleDbaPopover(event: Event) {
+  dbaPopoverRef.value?.toggle(event);
+}
 
 function openDbaQuery(query: DbaQueryItem) {
-  isDbaDropdownOpen.value = false;
+  dbaPopoverRef.value?.hide();
   workspaceStore.addSqlTab(query.sql, `${query.title}.sql`);
   workspaceStore.showToast(`已載入「${query.title}」診斷指令，按下 Run 即可執行`, 'info', 2500);
 }
@@ -519,10 +426,8 @@ const emit = defineEmits<{
   (e: 'open-sql-templates'): void;
 }>();
 
-
 async function handleSelectConnection(connId: string) {
-  isConnDropdownOpen.value = false;
-  if (connectionStore.activeConnectionId === connId && connectionStore.status === 'connected') {
+  if (!connId || (connectionStore.activeConnectionId === connId && connectionStore.status === 'connected')) {
     return;
   }
   try {
@@ -535,19 +440,16 @@ async function handleSelectConnection(connId: string) {
 }
 
 function handleOpenNewConnection() {
-  isConnDropdownOpen.value = false;
   emit('open-connection-modal');
 }
 
-async function onDatabaseChange(e: Event) {
-  const target = e.target as HTMLSelectElement;
-  const newDb = target.value;
+async function onDatabaseChange(newDb: string) {
+  if (!newDb) return;
   await connectionStore.switchDatabase(newDb);
   workspaceStore.updateActiveTabDatabase(newDb);
 }
 
-function onMaxRowsChange(e: Event) {
-  const target = e.target as HTMLSelectElement;
-  queryStore.maxRows = target.value === 'none' ? null : parseInt(target.value, 10);
+function onMaxRowsChange(val: string | number) {
+  queryStore.maxRows = val === 'none' ? null : Number(val);
 }
 </script>
