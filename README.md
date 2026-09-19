@@ -1,7 +1,7 @@
 # SQLight - 極致輕量、現代高效的 Microsoft SQL Server 桌面客戶端
 
 <p align="center">
-  <strong>基於 Tauri v2 + Rust + Vue 3 + TypeScript + Monaco Editor + AG Grid Community 打造</strong>
+  <strong>基於 Tauri v2 + Rust + Vue 3 + TypeScript + PrimeVue 4 + Monaco Editor + AG Grid Community 打造</strong>
 </p>
 
 ---
@@ -23,7 +23,8 @@
    - [執行統計與 IO 分析器 (Execution Stats & IO Analyzer)](#6-執行統計與-io-分析器-execution-stats--io-analyzer)
    - [資料表資料與結構瀏覽器 (Table Data & Structure Viewer)](#7-資料表資料與結構瀏覽器-table-data--structure-viewer)
    - [實際執行計畫與 XML 視覺化檢視器 (Actual Execution Plan & XML Viewer)](#8-實際執行計畫與-xml-視覺化檢視器)
-   - [個人化設定與安全防護 (Settings & Preferences)](#9-個人化設定與安全防護-settings--preferences)
+   - [ER 關聯圖視覺化檢視器 (ER Diagram Viewer)](#9-er-關聯圖視覺化檢視器-er-diagram-viewer)
+   - [個人化設定與安全防護 (Settings & Preferences)](#10-個人化設定與安全防護-settings--preferences)
 4. [鍵盤快捷鍵與快速代碼範本 (Shortcuts & Snippets)](#-鍵盤快捷鍵與快速代碼範本-shortcuts--snippets)
 5. [安裝、開發與建置指南 (Installation & Development)](#-安裝開發與建置指南-installation--development)
 
@@ -35,7 +36,7 @@
 
 傳統的 SQL Server 管理工具（如 SQL Server Management Studio (SSMS)、DataGrip、DBeaver）往往存在啟動載入過慢、記憶體資源佔用過大、介面老舊厚重等痛點。**SQLight** 旨在保留最核心且高頻使用的資料庫操作體驗，同時提供：
 - ⚡ **秒開啟動**：原生 Rust 後端核心，體積輕巧且無肥重執行環境開銷。
-- 🎨 **現代暗色美學**：精雕細琢的 Dark Theme，搭配流暢的微互動動畫與清晰的層次感。
+- 🎨 **深色 / 亮色雙模式主題**：整合 PrimeVue 4 設計體系，支援 Aura / Lara / Nora 佈景預設、12 種主色調與 5 種表面色調即時切換，暗黑與明亮模式均渾然一體。
 - 💻 **媲美 VS Code 的編程手感**：深度整合 Monaco Editor，支援智慧補全、單句語法隔離、快速複製與自適應格式化。
 - 🛑 **秒級查詢取消與 Task Killer**：點擊取消或按下快捷鍵即刻中斷本地讀取，後端自動透過獨立連線發送 `KILL <spid>;` 釋放資料庫鎖定與運算資源。
 - 🎯 **快速定位資料表 (Locate in Explorer)**：編輯器游標或反白處物件一鍵在左側 Explorer 自動連鎖展開、載入欄位、光暈高亮並置中捲動。
@@ -54,10 +55,10 @@ SQLight 採用現代跨平台桌面客戶端的雙層解耦架構：
 +-------------------------------------------------------------------------+
 |                              SQLight UI                                 |
 |          (Vue 3 Composition API + TypeScript + Tailwind CSS)           |
-+------------------------------------+------------------------------------+
-|            Monaco Editor           |              AG Grid               |
-|   (T-SQL Monarch / IntelliSense)   |  (Virtual Scroll / Multi-ResultSet)|
-+------------------------------------+------------------------------------+
++-----------+--------------+--------------+-------------+----------------+
+|  PrimeVue | Monaco Editor|   AG Grid    |  AntV X6    |html-query-plan |
+|  (Theme)  | (T-SQL Edit) | (Data Grid)  | (ER Diagram)|(Execution Plan)|
++-----------+--------------+--------------+-------------+----------------+
 |                         Pinia State Stores                              |
 |   (connectionStore / workspaceStore / queryStore / settingsStore)       |
 +------------------------------------+------------------------------------+
@@ -76,10 +77,12 @@ SQLight 採用現代跨平台桌面客戶端的雙層解耦架構：
 - **桌面宿主 (Desktop Host)**：[Tauri v2](https://v2.tauri.app/) — 使用作業系統原生 WebView2 (Windows)，大幅降低安裝檔大小與記憶體佔用。
 - **後端非同步連線 (Rust Core)**：[Tiberius](https://github.com/steffengy/tiberius) — 純 Rust 實作的 TDS (Tabular Data Stream) 協定驅動，搭配 `tokio` 與連線池管理，提供高併發、極致效能的查詢傳輸。
 - **前端核心框架 (Frontend UI)**：Vue 3 (Composition API / `<script setup>`) + Vite 6 + TypeScript 5。
+- **UI 元件庫與主題系統 (Component Library & Theming)**：[PrimeVue 4](https://primevue.org/) — 提供 Button、Dialog、Select、Toast、ContextMenu、Tooltip 等豐富元件，搭配 `@primevue/themes` Aura / Lara / Nora 佈景預設與 12 色主色調 × 5 色表面色調即時切換。
 - **狀態集中管理 (State Management)**：Pinia 3。
 - **代碼編輯核心 (Code Editor)**：Monaco Editor (VS Code 核心編輯器)。
 - **高效表格引擎 (Data Grid Engine)**：AG Grid Community (支援百萬列虛擬滾動、儲存格複製、自適應寬度)。
-- **樣式與主題 (Styling)**：Tailwind CSS (自訂 900/850/800 階層深色系暗黑主題) + Lucide Vue Next 圖標庫。
+- **ER 關聯圖引擎 (ER Diagram Engine)**：AntV X6 (圖視覺化與互動引擎)。
+- **樣式與主題 (Styling)**：Tailwind CSS (動態綁定 PrimeVue CSS 設計 Token 以支援深色/亮色雙模式) + Lucide Vue Next 圖標庫 + PrimeIcons。
 - **SQL 格式化**：`sql-formatter` (T-SQL Dialect)。
 
 ---
@@ -90,6 +93,8 @@ SQLight 採用現代跨平台桌面客戶端的雙層解耦架構：
 - **彈性連線設定**：
   - 支援設定伺服器位址 (Host)、連接埠 (Port，預設 1433)、資料庫名稱 (Database)、帳號 (Username) 與密碼 (Password)。
   - 支援 SSL/TLS 加密連線開關 (`encrypt`) 與信任伺服器憑證 (`trustServerCertificate`)，可順暢連線內部自簽憑證或雲端 Azure SQL。
+  - **連線別名 (Alias)**：為每條連線自訂簡短易識別的別名（如 `生產DB`、`測試機`），自動顯示於編輯器分頁右側徽章。
+  - **環境色彩標識 (Connection Color)**：為每條連線指定代表色（如正式環境紅色 🔴、測試環境黃色 🟡、開發環境綠色 🟢），分頁標籤自動呈現對應色彩邊框，防止跨環境誤操作。
   - 內建**測試連線 (Test Connection)** 功能，連線前先行驗證網路與帳密正確性。
 - **樹狀結構分類瀏覽 (Database Objects Tree)**：
   - 清晰展開 `連線` &rarr; `資料庫 (Databases)`，底下分類歸檔為四大資料夾：
@@ -168,7 +173,7 @@ SQLight 採用現代跨平台桌面客戶端的雙層解耦架構：
   - 支援多開查詢分頁，各分頁擁有獨立的 SQL 內容與游標狀態。
   - 分頁列超出寬度時，支援**滑鼠滾輪直接左右橫向滾動**。
   - **Pointer Events 無縫拖曳換位**：上方查詢分頁支援滑鼠按住拖曳自由調整排列順序，具備目標落點藍色指示條。
-  - **當前所選分頁顯眼色彩 (Active Tab Colors)**：當前啟用中的 SQL 編輯分頁採用高對比度醒目色彩（預設皇家藍 `#1e40af` 配純白字 `#ffffff`），分頁圖示、資料庫標籤與關閉按鈕同步高對比適配，於多工作分頁中一目了然；可於設定中完全自訂。
+  - **當前所選分頁顯眼色彩與主題對齊 (Active Tab Colors & PrimeVue Token Alignment)**：當前啟用中的分頁以資料夾 (Folder tab) 造型呈現，頂部 2px 強調線動態綁定 PrimeVue Primary Token (`var(--p-primary-color)`)，底色無縫融入編輯器畫布表面，於深色/亮色模式均渾然一體；各分頁類別（SQL、表格資料、結構、執行計畫、ER 圖）各自擁有語意色彩圖示。連線別名自動顯示於分頁右側徽章，連線色彩自動呈現於邊框。可於設定中完全自訂。
   - **行內重新命名 (Inline Tab Rename)**：滑鼠雙擊分頁名稱即可直接在原地編輯命名，按下 <kbd>Enter</kbd> 保存、<kbd>Esc</kbd> 取消；亦可透過**滑鼠右鍵選單**選擇「重新命名」、「關閉此分頁」或「關閉其他分頁」。
 - **介面佈局靈活掌控 (Layout Controls)**：
   - **側邊欄快速收合/展開**：於右上角版面控制區點擊側邊欄按鈕，即可一鍵收合左方 Explorer 側邊欄，釋放最大代碼編輯空間，並自動記憶收合狀態。
@@ -353,8 +358,26 @@ SQLight 採用現代跨平台桌面客戶端的雙層解耦架構：
   - 點擊「**另存為 .sqlplan**」按鈕，直接將完整的 ShowPlanXML 匯出為微軟標準的 `.sqlplan` 副檔名檔案。
   - 下載之檔案可直接使用官方 **SQL Server Management Studio (SSMS)**、**Azure Data Studio** 或 **SentryOne Plan Explorer** 開啟、分析與分享。
 
-### 9. 個人化設定與安全防護 (Settings & Preferences)
+### 9. ER 關聯圖視覺化檢視器 (ER Diagram Viewer)
+- **一鍵生成 ER 圖**：
+  - 於側邊欄任何資料表右鍵點選「**ER 關聯圖 (ER Diagram)**」，自動以該資料表為中心，遞迴查詢外鍵 (Foreign Key) 關聯並生成完整的實體關聯圖。
+  - 支援自訂遞迴深度（預設 2 層，可於開啟時調整），控制圖的展開範圍。
+- **AntV X6 互動式畫布**：
+  - 採用 AntV X6 圖視覺化引擎，提供流暢的節點拖曳、縮放 (Zoom)、平移 (Pan) 與自動佈局 (Auto Layout)。
+  - 每張資料表以卡片節點呈現，清楚列出欄位名稱、型別、主鍵 (PK 🔑) 與外鍵 (FK 🔗) 標記。
+  - 關聯線條以箭頭與標籤標示外鍵欄位與參考目標。
+- **雙模式匯出**：
+  - 支援一鍵匯出為 PNG 圖片或 JSON 結構資料。
+  - 支援從已儲存的 JSON 檔案還原 ER 圖工作區。
+
+### 10. 個人化設定與安全防護 (Settings & Preferences)
 透過右上角齒輪開啟設定對話框（固定尺寸設計，切換分頁不晃動）：
+- **佈景主題設定 (Theme)**：
+  - **色彩模式 (Color Mode)**：深色 (Dark) / 亮色 (Light) 一鍵切換，Monaco Editor、AG Grid、執行計畫檢視器、ER 圖與全域 CSS 同步自適應。
+  - **佈景預設 (Theme Preset)**：Aura（現代立體圓潤）/ Lara（均衡專業）/ Nora（平坦極簡），即時套用全部 PrimeVue 元件。
+  - **主色調 (Primary Color)**：12 種設計師精選主色（Emerald、Green、Lime、Orange、Amber、Yellow、Teal、Cyan、Sky、Blue、Indigo、Violet），所有 PrimeVue 元件、分頁強調線與操作按鈕同步連動。
+  - **表面色調 (Surface Color)**：5 種表面灰階（Slate、Gray、Zinc、Neutral、Stone），控制面板、卡片與背景明暗層次。
+  - **漣漪效果 (Ripple)**：開啟/關閉 PrimeVue Material Design 觸擊漣漪動畫。
 - **編輯器設定 (Editor)**：
   - 字型大小 (12px ~ 20px)。
   - 字型家族 (Font Family，支援 Fira Code, JetBrains Mono, Cascadia Code, Consolas, Monaco 等寬字型)。
@@ -366,6 +389,12 @@ SQLight 採用現代跨平台桌面客戶端的雙層解耦架構：
   - Results 歷史分頁保留上限（5 ~ 50 組，預設 10 組，超額自動清理最舊未釘選分頁）。
   - 預設最大查詢筆數截斷防護（1,000 ~ 50,000 筆或無限制，防止意外撈取海量資料打爆記憶體）。
   - **查詢結果分頁啟用色彩 (Active Result Tab Colors)**：自訂下方結果分頁在選取時的背景色與前景色（預設深森林綠 `#065f46` 配純白字 `#ffffff`），提供 7 種設計師快速預設與即時分頁預覽。
+- **過濾規則 (Filter Rules)**：
+  - **資料庫/資料表正則過濾**：以正則表達式 (Regex) 自訂隱藏規則，可按前綴、後綴或自訂正則模式批次過濾系統資料庫或不常用的資料表（如 `^sys`、`_backup$`、`__EFMigrations`），減少 Explorer 樹狀列表雜訊。
+  - 支援規則啟用/停用、即時新增/編輯/刪除，附帶即時命中測試面板。
+- **危險查詢安全防護 (Dangerous Query Safe Guard)**：
+  - 內建 DML 關鍵字偵測引擎（`DELETE`、`DROP`、`TRUNCATE`、`ALTER`、`UPDATE` 等），執行前自動彈出雙重確認對話框。
+  - 對話框明確顯示目標連線名稱、資料庫名稱、偵測到的危險關鍵字清單與即將執行的 SQL 預覽。
 - **關於與手冊 (About)**：
   - 完整常用鍵盤快捷鍵清單與快速 SQL 代碼範本操作說明。
   - 支援一鍵重設所有設定為原廠預設值。
@@ -387,6 +416,7 @@ SQLight 採用現代跨平台桌面客戶端的雙層解耦架構：
 | <kbd>Shift</kbd> + <kbd>Alt</kbd> + <kbd>F</kbd> | SQL 編輯器 | **格式化 SQL**：有選取時格式化選取部分；無選取時格式化游標所在獨立語句 |
 | <kbd>Ctrl</kbd> + <kbd>S</kbd> | 全域 / 編輯器 | **儲存 SQL 檔案**：將當前查詢內容另存或儲存至本機檔案 |
 | <kbd>Ctrl</kbd> + <kbd>O</kbd> | 全域 | **開啟 SQL 檔案**：開啟本機 SQL 檔案至新查詢分頁 |
+| <kbd>Ctrl</kbd> + <kbd>N</kbd> | 全域 | **新增查詢分頁**：新開空白 SQL 編輯分頁並聚焦 |
 | <kbd>Ctrl</kbd> + <kbd>Space</kbd> | SQL 編輯器 | **程式碼智慧自動補全**：手動觸發 IntelliSense（關鍵字、資料庫、資料表、欄位） |
 | 滑鼠右鍵 (<kbd>Right Click</kbd>) | SQL 編輯器 | **編輯器快顯選單**：在物件總管中定位 (Locate in Explorer)、常用 SQL 範本庫 (SQL Templates)... |
 | 工具列按鈕 (<kbd>LocateFixed</kbd>) | 物件總管 (Explorer) | **快速定位資料表**：捕捉游標/反白處資料表名稱，左側自動連鎖展開、載入欄位、光暈高亮並置中捲動 |
@@ -455,7 +485,7 @@ npm run dev:tauri
 # 執行 TypeScript 靜態型別檢查
 npm run typecheck
 
-# 執行自動化單元測試套件 (90 項涵蓋連線、安全 DML、語句切分、Spotlight 模糊檢索、預估執行計畫 SHOWPLAN_ALL、資料表結構、分頁顏色、執行統計分析、長時間查詢中斷取消與 Task Killer、常用 SQL 範本庫與快速定位抽取器)
+# 執行自動化單元測試套件 (203 項涵蓋連線、安全 DML、語句切分、Spotlight 模糊檢索、預估執行計畫 SHOWPLAN_ALL、資料表結構、分頁顏色與主題系統、執行統計分析、長時間查詢中斷取消與 Task Killer、常用 SQL 範本庫、快速定位抽取器、資料庫/資料表正則過濾與 PrimeVue 佈景主題切換)
 npm test
 
 # 執行前端生產環境打包
