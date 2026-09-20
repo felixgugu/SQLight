@@ -248,6 +248,54 @@ export const useWorkspaceStore = defineStore('workspace', () => {
     return addSqlTab(content, fileName, undefined, undefined, filePath);
   }
 
+  /**
+   * 複製指定的 SQL 編輯分頁，將其查詢內容、連線與資料庫完整拷貝至新分頁
+   */
+  function duplicateSqlTab(tabId: string): string | null {
+    const sourceTab = tabs.value.find((t) => t.id === tabId);
+    if (!sourceTab || sourceTab.type !== 'sql_editor') {
+      return null;
+    }
+
+    const sqlTab = sourceTab as SqlEditorTab;
+    const existingTitles = tabs.value.map((t) => t.title);
+
+    const hasSqlExt = sqlTab.title.toLowerCase().endsWith('.sql');
+    const baseName = hasSqlExt ? sqlTab.title.slice(0, -4) : sqlTab.title;
+    const copyMatch = baseName.match(/^(.*?)(?:\s*\((?:Copy|複製)(?:\s*(\d+))?\))?$/i);
+    const rootName = copyMatch && copyMatch[1] ? copyMatch[1].trim() : baseName;
+
+    let newTitle = `${rootName} (Copy)${hasSqlExt ? '.sql' : ''}`;
+    let counter = 2;
+    while (existingTitles.includes(newTitle)) {
+      newTitle = `${rootName} (Copy ${counter})${hasSqlExt ? '.sql' : ''}`;
+      counter++;
+    }
+
+    const newTabId = `tab-sql-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
+    const newTab: SqlEditorTab = {
+      id: newTabId,
+      type: 'sql_editor',
+      title: newTitle,
+      query: sqlTab.query,
+      connectionId: sqlTab.connectionId,
+      database: sqlTab.database,
+      cursorPosition: sqlTab.cursorPosition ? { ...sqlTab.cursorPosition } : undefined,
+      filePath: undefined,
+      isDirty: sqlTab.query.trim().length > 0,
+    };
+
+    const sourceIdx = tabs.value.findIndex((t) => t.id === tabId);
+    if (sourceIdx !== -1) {
+      tabs.value.splice(sourceIdx + 1, 0, newTab);
+    } else {
+      tabs.value.unshift(newTab);
+    }
+
+    activeTabId.value = newTabId;
+    return newTabId;
+  }
+
   function addTableDataTab(
     schema: string,
     tableName: string,
@@ -656,6 +704,7 @@ export const useWorkspaceStore = defineStore('workspace', () => {
     markTabSaved,
     addSqlTab,
     openSqlFileTab,
+    duplicateSqlTab,
     addTableDataTab,
     addTableStructureTab,
     addExecutionPlanTab,

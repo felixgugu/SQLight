@@ -437,6 +437,11 @@ const tabContextMenuItems = computed(() => {
 
   if (tab.type === 'sql_editor') {
     items.push({
+      label: '複製此分頁 (Duplicate)',
+      icon: 'pi pi-copy',
+      command: handleContextMenuDuplicate,
+    });
+    items.push({
       label: '另存為 .sql 檔案...',
       icon: 'pi pi-save',
       command: handleContextMenuSaveAs,
@@ -468,6 +473,13 @@ function handleContextMenuRename() {
   const tab = tabContextMenu.tab;
   if (tab) {
     startRenameTab(tab);
+  }
+}
+
+function handleContextMenuDuplicate() {
+  const tab = tabContextMenu.tab;
+  if (tab && tab.type === 'sql_editor') {
+    workspaceStore.duplicateSqlTab(tab.id);
   }
 }
 

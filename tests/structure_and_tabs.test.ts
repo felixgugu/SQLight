@@ -383,3 +383,52 @@ test('refreshTabResultSet re-runs specific statement and updates target result s
   assert.equal(store.resultTabs[0]!.rowCount, 58);
 });
 
+test('duplicateSqlTab duplicates an SQL tab with all its content, connection, and database without linking original filePath', () => {
+  const store = useWorkspaceStore();
+
+  const originalSql = 'SELECT * FROM Users WHERE active = 1;\nSELECT 42;';
+  const originalTabId = store.addSqlTab(
+    originalSql,
+    'UsersReport.sql',
+    'conn-prod',
+    'ProdDB',
+    'C:/Projects/UsersReport.sql'
+  );
+
+  const initialCount = store.tabs.length;
+  const originalIdx = store.tabs.findIndex((t) => t.id === originalTabId);
+
+  // Execute duplicate
+  const newTabId = store.duplicateSqlTab(originalTabId);
+  assert.ok(newTabId);
+  assert.notEqual(newTabId, originalTabId);
+  assert.equal(store.tabs.length, initialCount + 1);
+
+  // New tab is active
+  assert.equal(store.activeTabId, newTabId);
+
+  // New tab should be inserted right next to original tab
+  const newIdx = store.tabs.findIndex((t) => t.id === newTabId);
+  assert.equal(newIdx, originalIdx + 1);
+
+  const newTab = store.tabs[newIdx];
+  assert.equal(newTab.type, 'sql_editor');
+  assert.equal(newTab.title, 'UsersReport (Copy).sql');
+  assert.equal((newTab as any).query, originalSql);
+  assert.equal(newTab.connectionId, 'conn-prod');
+  assert.equal(newTab.database, 'ProdDB');
+  // Should NOT inherit physical filePath to avoid unintended file overwrites
+  assert.equal((newTab as any).filePath, undefined);
+  assert.equal(newTab.isDirty, true);
+
+  // Duplicate again should yield (Copy 2)
+  const thirdTabId = store.duplicateSqlTab(originalTabId);
+  assert.ok(thirdTabId);
+  const thirdTab = store.tabs.find((t) => t.id === thirdTabId);
+  assert.equal(thirdTab?.title, 'UsersReport (Copy 2).sql');
+
+  // Duplicating non-existent or non-sql tab returns null
+  assert.equal(store.duplicateSqlTab('non-existent-id'), null);
+});
+
+
