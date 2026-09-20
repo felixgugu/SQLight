@@ -117,6 +117,19 @@
 
         <div class="h-4 w-px bg-dark-700 mx-0.5"></div>
 
+        <!-- AI Plan Tuning Advice Button -->
+        <Button
+          type="button"
+          icon="pi pi-sparkles"
+          label="AI 調校建議"
+          size="small"
+          severity="help"
+          outlined
+          @click="requestAiPlanTuning"
+          v-tooltip.top="'使用 AI 智能分析執行計畫瓶頸、缺失索引並提供 SQL 重構建言'"
+          class="!text-xs !py-1 !px-2.5 text-purple-400 border-purple-500/40 hover:bg-purple-950/30"
+        />
+
         <!-- Copy Raw XML Button -->
         <Button
           type="button"
@@ -274,6 +287,7 @@ import {
 import type { ExecutionPlanTab } from '@/types/workspace';
 import { useWorkspaceStore } from '@/stores/workspaceStore';
 import { useSettingsStore } from '@/stores/settingsStore';
+import { useAiChatStore } from '@/stores/aiChatStore';
 import { formatXml } from '@/utils/planXmlParser';
 import { savePlanToFile } from '@/utils/fileStorage';
 
@@ -288,6 +302,16 @@ const props = defineProps<{
 
 const workspaceStore = useWorkspaceStore();
 const settingsStore = useSettingsStore();
+const aiChatStore = useAiChatStore();
+
+function requestAiPlanTuning() {
+  aiChatStore.requestPlanAdvice({
+    sql: props.tab.querySql,
+    planXml: props.tab.planXml,
+    durationMs: props.tab.durationMs,
+    database: props.tab.database,
+  });
+}
 
 const PLAN_THEME_STORAGE_KEY = 'sqlight_plan_theme';
 const planTheme = ref<'dark' | 'classic'>(

@@ -550,3 +550,185 @@ html:not(.dark) .p-tooltip-bottom .p-tooltip-arrow {
   background-color: rgb(var(--color-dark-900)) !important;
   background-image: none !important;
 }
+
+/* ==========================================================================
+   AI SQL Chat Markdown HTML Body Styling (.ai-markdown-body)
+   ========================================================================== */
+.ai-markdown-body {
+  color: inherit;
+  line-height: 1.625;
+}
+
+/* Headings */
+.ai-markdown-body h1,
+.ai-markdown-body h2,
+.ai-markdown-body h3,
+.ai-markdown-body h4 {
+  font-weight: 600;
+  margin-top: 1rem;
+  margin-bottom: 0.5rem;
+  line-height: 1.35;
+  color: rgb(var(--color-dark-100));
+}
+.ai-markdown-body h1 { font-size: 1.125rem; }
+.ai-markdown-body h2 { font-size: 1rem; color: #a78bfa; }
+.ai-markdown-body h3 { font-size: 0.875rem; color: #c4b5fd; }
+.ai-markdown-body h4 { font-size: 0.8125rem; }
+
+/* Paragraphs */
+.ai-markdown-body p {
+  margin-top: 0.375rem;
+  margin-bottom: 0.375rem;
+}
+
+/* Lists */
+.ai-markdown-body ul,
+.ai-markdown-body ol {
+  margin-top: 0.375rem;
+  margin-bottom: 0.5rem;
+  padding-left: 1.375rem;
+}
+.ai-markdown-body ul {
+  list-style-type: disc;
+}
+.ai-markdown-body ol {
+  list-style-type: decimal;
+}
+.ai-markdown-body li {
+  margin-top: 0.125rem;
+  margin-bottom: 0.125rem;
+}
+
+/* Inline Code */
+.ai-markdown-body code:not(pre code) {
+  font-family: var(--font-mono, monospace);
+  font-size: 0.75rem;
+  padding: 0.125rem 0.375rem;
+  border-radius: 0.25rem;
+  background-color: rgba(147, 51, 234, 0.15);
+  color: #c084fc;
+  border: 1px solid rgba(168, 85, 247, 0.25);
+}
+
+/* Blockquotes */
+.ai-markdown-body blockquote {
+  border-left: 3px solid #8b5cf6;
+  background-color: rgba(139, 92, 246, 0.08);
+  padding: 0.375rem 0.75rem;
+  margin: 0.5rem 0;
+  border-radius: 0 0.25rem 0.25rem 0;
+  font-style: italic;
+  color: rgb(var(--color-dark-300));
+}
+
+/* Links */
+.ai-markdown-body a {
+  color: #60a5fa;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  transition: color 0.15s ease;
+}
+.ai-markdown-body a:hover {
+  color: #93c5fd;
+}
+
+/* Horizontal Divider */
+.ai-markdown-body hr {
+  border: 0;
+  border-top: 1px solid rgb(var(--color-dark-700));
+  margin: 0.75rem 0;
+}
+
+/* ==========================================================================
+   AI SQL Chat GFM Tables (.ai-table-wrapper & .ai-markdown-table)
+   ========================================================================== */
+.ai-table-wrapper {
+  width: 100%;
+  overflow-x: auto;
+  margin: 0.625rem 0;
+  border-radius: 0.375rem;
+  border: 1px solid rgb(var(--color-dark-700));
+  background-color: rgb(var(--color-dark-900));
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.2);
+}
+
+.ai-markdown-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.75rem;
+  text-align: left;
+}
+
+.ai-markdown-table thead {
+  background-color: rgb(var(--color-dark-800));
+  border-bottom: 1px solid rgb(var(--color-dark-700));
+}
+
+.ai-markdown-table th {
+  padding: 0.5rem 0.75rem;
+  font-weight: 600;
+  color: rgb(var(--color-dark-100));
+  white-space: nowrap;
+  letter-spacing: 0.01em;
+}
+
+.ai-markdown-table td {
+  padding: 0.375rem 0.75rem;
+  border-top: 1px solid rgb(var(--color-dark-750));
+  color: rgb(var(--color-dark-200));
+  line-height: 1.45;
+}
+
+.ai-markdown-table tbody tr:hover {
+  background-color: rgba(255, 255, 255, 0.03);
+}
+
+html:not(.dark) .ai-markdown-table tbody tr:hover {
+  background-color: rgba(0, 0, 0, 0.03);
+}
+
+/* ==========================================================================
+   AI SQL Chat Markdown - Light Mode Overrides (html:not(.dark))
+   ========================================================================== */
+html:not(.dark) .ai-markdown-body {
+  color: #1e293b;
+}
+
+/* 標題類改為黑色粗體 */
+html:not(.dark) .ai-markdown-body h1,
+html:not(.dark) .ai-markdown-body h2,
+html:not(.dark) .ai-markdown-body h3,
+html:not(.dark) .ai-markdown-body h4,
+html:not(.dark) .ai-markdown-body h5,
+html:not(.dark) .ai-markdown-body h6 {
+  color: #000000 !important;
+  font-weight: 700 !important;
+}
+
+/* 反引號行內程式碼 (Inline Code) 改為淺灰色底色 */
+html:not(.dark) .ai-markdown-body code:not(pre code) {
+  background-color: #f1f5f9;
+  color: #0f172a;
+  border: 1px solid #cbd5e1;
+  font-weight: 600;
+}
+
+/* 引用區塊與外鏈在淺色系下對比度優化 */
+html:not(.dark) .ai-markdown-body blockquote {
+  background-color: rgba(139, 92, 246, 0.06);
+  color: #334155;
+  border-left-color: #7c3aed;
+}
+
+html:not(.dark) .ai-markdown-body a {
+  color: #2563eb;
+}
+html:not(.dark) .ai-markdown-body a:hover {
+  color: #1d4ed8;
+}
+
+/* GFM 表格表頭在淺色系時同步加強黑色粗體 */
+html:not(.dark) .ai-markdown-table th {
+  color: #000000;
+  font-weight: 700;
+}

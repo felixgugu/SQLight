@@ -3,6 +3,14 @@ import { ref, watch } from 'vue';
 import type { AiChatMessage, AiProviderConfig, AiQuickPrompt } from '@/types/ai';
 import { DEFAULT_CURL_TEMPLATE, DEFAULT_QUICK_PROMPTS } from '@/types/ai';
 import { curlAiService } from '@/services/ai/curlAiService';
+import {
+  buildErrorDiagnosisPrompt,
+  buildExecutionPlanAdvicePrompt,
+  buildExecutionStatsAdvicePrompt,
+  type ErrorDiagnosisContext,
+  type PlanAdviceContext,
+  type StatsAdviceContext,
+} from '@/utils/aiPromptBuilder';
 
 const STORAGE_KEY_AI_CONFIG = 'sqlight_ai_config_v2';
 const STORAGE_KEY_AI_MESSAGES = 'sqlight_ai_messages';
@@ -240,6 +248,57 @@ export const useAiChatStore = defineStore('aiChat', () => {
     }
   }
 
+  /**
+   * 一鍵 AI 錯誤診斷 (Diagnose Error)
+   */
+  async function diagnoseError(context: ErrorDiagnosisContext): Promise<void> {
+    if (context.sql && context.sql.trim()) {
+      currentSql.value = context.sql.trim();
+      isSelectionOnly.value = false;
+    }
+    isChatOpen.value = true;
+    isMinimized.value = false;
+    const prompt = buildErrorDiagnosisPrompt(context);
+    if (isGenerating.value) {
+      cancelGeneration();
+    }
+    await askQuestion(prompt);
+  }
+
+  /**
+   * 一鍵 AI 執行計畫調校建議 (Execution Plan Tuning Advice)
+   */
+  async function requestPlanAdvice(context: PlanAdviceContext): Promise<void> {
+    if (context.sql && context.sql.trim()) {
+      currentSql.value = context.sql.trim();
+      isSelectionOnly.value = false;
+    }
+    isChatOpen.value = true;
+    isMinimized.value = false;
+    const prompt = buildExecutionPlanAdvicePrompt(context);
+    if (isGenerating.value) {
+      cancelGeneration();
+    }
+    await askQuestion(prompt);
+  }
+
+  /**
+   * 一鍵 AI 執行統計調校分析 (Execution Stats Advice)
+   */
+  async function requestStatsAdvice(context: StatsAdviceContext): Promise<void> {
+    if (context.sql && context.sql.trim()) {
+      currentSql.value = context.sql.trim();
+      isSelectionOnly.value = false;
+    }
+    isChatOpen.value = true;
+    isMinimized.value = false;
+    const prompt = buildExecutionStatsAdvicePrompt(context);
+    if (isGenerating.value) {
+      cancelGeneration();
+    }
+    await askQuestion(prompt);
+  }
+
   return {
     config,
     messages,
@@ -263,5 +322,8 @@ export const useAiChatStore = defineStore('aiChat', () => {
     resetQuickPrompts,
     askQuestion,
     cancelGeneration,
+    diagnoseError,
+    requestPlanAdvice,
+    requestStatsAdvice,
   };
 });

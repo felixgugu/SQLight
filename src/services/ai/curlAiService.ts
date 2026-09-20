@@ -54,8 +54,8 @@ export class CurlAiService {
     // 依據傳入的 messages 歷程格式化
     const formattedMessages = messages.map((m, idx) => {
       let content = m.content;
-      // 若有附帶 SQL 且為首則使用者訊息，組裝 SQL 脈絡
-      if (m.role === 'user' && m.sqlContext && idx === 0) {
+      // 若有附帶 SQL 且為首則使用者訊息，組裝 SQL 脈絡（若 content 尚未包含該 SQL）
+      if (m.role === 'user' && m.sqlContext && idx === 0 && !m.content.includes(m.sqlContext)) {
         content = `【參考 SQL 語法】：\n\`\`\`sql\n${m.sqlContext}\n\`\`\`\n\n【使用者問題】：\n${m.content}`;
       }
       return {

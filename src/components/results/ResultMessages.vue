@@ -5,6 +5,19 @@
       <span>{{ messages.length }} messages in this session</span>
       <div class="flex items-center space-x-2">
         <Button
+          v-if="hasErrorMessages"
+          type="button"
+          icon="pi pi-sparkles"
+          label="AI 診斷最新錯誤"
+          size="small"
+          text
+          severity="help"
+          @click="handleDiagnoseLatestError"
+          v-tooltip.top="'呼叫 AI 智能助手深度診斷最新發生的錯誤'"
+          class="!text-xxs !p-0 text-purple-400 hover:text-purple-300"
+        />
+        <span v-if="hasErrorMessages" class="text-dark-600">|</span>
+        <Button
           type="button"
           icon="pi pi-file"
           label="實體日誌 (Log)"
@@ -77,8 +90,21 @@
             </span>
           </div>
 
-          <!-- 右上角按鈕：展開|收合 與 複製 -->
+          <!-- 右上角按鈕：AI 診斷、展開|收合 與 複製 -->
           <div class="flex items-center space-x-1 flex-shrink-0 select-none">
+            <Button
+              v-if="msg.level === 'error' || msg.level === 'warning'"
+              type="button"
+              icon="pi pi-sparkles"
+              label="AI 診斷"
+              size="small"
+              severity="help"
+              text
+              @click.stop="handleDiagnoseWithAi(msg)"
+              v-tooltip.top="'使用 AI 智能診斷此錯誤並取得修復建議'"
+              class="!text-xxs !py-0.5 !px-1.5 !h-5 text-purple-400 hover:text-purple-300 hover:bg-purple-950/40 font-sans font-medium"
+            />
+
             <Button
               type="button"
               :icon="isExpanded(getMsgKey(msg, idx)) ? 'pi pi-chevron-up' : 'pi pi-chevron-down'"
@@ -127,8 +153,11 @@ import { ref, computed } from 'vue';
 import Button from 'primevue/button';
 import Tag from 'primevue/tag';
 import type { SessionMessageItem, QueryMessage } from '@/types/query';
+import type { SqlEditorTab } from '@/types/workspace';
 import { queryService } from '@/services/queryService';
 import { useWorkspaceStore } from '@/stores/workspaceStore';
+import { useAiChatStore } from '@/stores/aiChatStore';
+import { useQueryStore } from '@/stores/queryStore';
 
 const props = defineProps<{
   messages: (SessionMessageItem | QueryMessage)[];
@@ -139,6 +168,40 @@ defineEmits<{
 }>();
 
 const workspaceStore = useWorkspaceStore();
+const aiChatStore = useAiChatStore();
+const queryStore = useQueryStore();
+
+const hasErrorMessages = computed(() => {
+  return props.messages.some((m) => m.level === 'error');
+});
+
+function resolveMessageSql(msg: SessionMessageItem | QueryMessage): string {
+  if (msg.sql && msg.sql.trim()) return msg.sql.trim();
+  if (queryStore.activeResultTab?.sql) return queryStore.activeResultTab.sql.trim();
+  if (workspaceStore.activeTab?.type === 'sql_editor') {
+    return (workspaceStore.activeTab as SqlEditorTab).query?.trim() || '';
+  }
+  return '';
+}
+
+function handleDiagnoseWithAi(msg: SessionMessageItem | QueryMessage) {
+  const sql = resolveMessageSql(msg);
+  const db = workspaceStore.activeTab?.database || queryStore.activeResultTab?.database;
+  aiChatStore.diagnoseError({
+    message: msg.message,
+    code: msg.code,
+    lineNumber: msg.lineNumber,
+    sql,
+    database: db,
+  });
+}
+
+function handleDiagnoseLatestError() {
+  const latestError = props.messages.find((m) => m.level === 'error');
+  if (latestError) {
+    handleDiagnoseWithAi(latestError);
+  }
+}
 
 async function handleOpenLog() {
   try {

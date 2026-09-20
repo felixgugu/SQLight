@@ -23,6 +23,7 @@ export interface QueryMessage {
   timestamp: string;
   id?: string;
   seq?: number;
+  sql?: string;
 }
 
 export interface QueryResult {
@@ -53,6 +54,7 @@ export interface SessionMessageItem {
   code?: number;
   lineNumber?: number;
   timestamp: string;
+  sql?: string;
 }
 
 export interface QueryResultTab {

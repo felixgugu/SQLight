@@ -480,6 +480,7 @@ export const useQueryStore = defineStore('query', () => {
             code: m.code,
             lineNumber: m.lineNumber,
             timestamp: m.timestamp || new Date().toISOString(),
+            sql: m.sql || sql,
           };
         });
         sessionMessages.value.unshift(...newItems.reverse());
@@ -573,6 +574,7 @@ export const useQueryStore = defineStore('query', () => {
             level: 'error',
             message: msg,
             timestamp: new Date().toISOString(),
+            sql,
           },
         ],
         affectedRows: 0,
@@ -604,6 +606,7 @@ export const useQueryStore = defineStore('query', () => {
         level: 'error',
         message: msg,
         timestamp: new Date().toISOString(),
+        sql,
       });
 
       historySeq++;

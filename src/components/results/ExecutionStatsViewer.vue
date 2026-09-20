@@ -36,6 +36,18 @@
         <div class="flex items-center space-x-1.5 flex-shrink-0">
           <Button
             type="button"
+            icon="pi pi-sparkles"
+            label="AI 調校建議"
+            size="small"
+            severity="help"
+            outlined
+            @click="requestAiStatsTuning"
+            v-tooltip.top="'使用 AI 智能分析 IO 讀取瓶頸、等候事件與調校建言'"
+            class="!text-xxs !py-1 !px-2 text-purple-400 border-purple-500/40 hover:bg-purple-950/30"
+          />
+
+          <Button
+            type="button"
             icon="pi pi-copy"
             label="複製報告"
             size="small"
@@ -298,12 +310,34 @@ import DataTable from 'primevue/datatable';
 import Column from 'primevue/column';
 import { useQueryStore } from '@/stores/queryStore';
 import { useWorkspaceStore } from '@/stores/workspaceStore';
+import { useAiChatStore } from '@/stores/aiChatStore';
 
 const queryStore = useQueryStore();
 const workspaceStore = useWorkspaceStore();
+const aiChatStore = useAiChatStore();
 
 const stats = computed(() => queryStore.activeExecutionStats);
 const tableFilterQuery = ref('');
+
+function requestAiStatsTuning() {
+  if (!stats.value) return;
+  const s = stats.value;
+  const db = workspaceStore.activeTab?.database || queryStore.activeResultTab?.database;
+  aiChatStore.requestStatsAdvice({
+    sql: s.querySql,
+    cpuTimeMs: s.cpuTimeMs,
+    elapsedTimeMs: s.elapsedTimeMs,
+    compileCpuTimeMs: s.compileCpuTimeMs,
+    compileElapsedTimeMs: s.compileElapsedTimeMs,
+    totalLogicalReads: s.totalLogicalReads,
+    logicalReadsFormatted: s.logicalReadsFormatted,
+    totalPhysicalReads: s.totalPhysicalReads,
+    cacheHitRatio: s.cacheHitRatio,
+    tableStats: s.tableStats,
+    waitStats: s.waitStats,
+    database: db,
+  });
+}
 
 const hasHighIoAlert = computed(() => {
   return stats.value?.tableStats.some((t) => t.isHighIo) ?? false;

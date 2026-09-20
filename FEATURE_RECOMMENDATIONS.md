@@ -64,6 +64,7 @@
 | 16 | **📜 查詢日誌記錄與 SSMS 多結果集垂直堆疊** | `query_logger.rs`, `ResultGridItem.vue` | 後端非同步寫入 `query.log`，前端支援多結果集垂直堆疊與子分頁切換，支援原地快速重新整理。 |
 | 17 | **🎨 PrimeVue 4 主題系統與雙模式適配** | `themeManager.ts`, `SettingsModal.vue` | 全面導入 PrimeVue 4（Aura/Lara/Nora），12 主色 × 5 表面灰階，深淺色一鍵切換與分頁啟用色自訂。 |
 | 18 | **📑 查詢分頁複製與正則物件過濾規則** | `workspaceStore.ts`, `TableFilterTab.vue` | 支援分頁右鍵一鍵複製會話，設定頁支援正則規則批次隱藏系統或特定資料庫/資料表並即時測試。 |
+| 19 | **🩺 AI 助手深度整合（錯誤一鍵診斷與計畫/IO調校）** | `ResultMessages.vue`, `ExecutionPlanViewer.vue`, `ExecutionStatsViewer.vue`, `aiPromptBuilder.ts` | 訊息面板每筆錯誤/警告即時「AI 診斷」、頂部「AI 診斷最新錯誤」；執行計畫自動萃取 Missing Index 與 Top 成本算子產生建議；執行統計自動換算 IO 瓶頸與等候事件分析。 |
 
 ---
 
@@ -242,6 +243,7 @@ flowchart LR
     C4["📁 本機 SQL 檔案監控區"]
     C5["🎨 PrimeVue 4 雙模式主題系統"]
     C6["📄 資料庫結構 CSV 匯出"]
+    C7["🩺 AI 錯誤診斷與計畫/IO調校"]
   end
 
   subgraph Phase2["Phase 1 (v0.3.0) - 核心外銷與編輯補完"]
@@ -262,7 +264,6 @@ flowchart LR
     direction TB
     P3A["⚡ 伺服器端動態分頁 (OFFSET-FETCH)"]
     P3B["📊 即時活動與阻塞監控儀表板"]
-    P3C["🩺 AI 錯誤一鍵診斷與執行計畫調校"]
   end
 
   Completed --> Phase2 --> Phase3 --> Phase4
@@ -270,10 +271,10 @@ flowchart LR
 
 | 階段 | 目標版本 | 規劃核心項目 | 預估工期 | 核心價值效益 |
 | :---: | :---: | :--- | :---: | :--- |
-| **已交付** | **v0.2.x** | 1. 🤖 **AI SQL 智能助理（通用 cURL 引擎、浮動視窗、Prompt 管理）**<br>2. 🔴 **連線環境色彩識別與 DML 危險語法攔截阻絕**<br>3. 🌐 **AntV X6 互動式 ER 關聯圖檢視器**<br>4. 📁 **本機 SQL 檔案即時監控與原地儲存**<br>5. 🎨 **PrimeVue 4 雙模式主題與 12 主色 × 5 表面色引擎**<br>6. 📄 **資料庫結構 CSV 4 步驟匯出精靈與 13 組結構探勘範本** | 已完成 | 建立極具競爭力的輕量桌面端核心體驗，兼具現代感與生產安全。 |
+| **已交付** | **v0.2.x** | 1. 🤖 **AI SQL 智能助理（通用 cURL 引擎、浮動視窗、Prompt 管理）**<br>2. 🔴 **連線環境色彩識別與 DML 危險語法攔截阻絕**<br>3. 🌐 **AntV X6 互動式 ER 關聯圖檢視器**<br>4. 📁 **本機 SQL 檔案即時監控與原地儲存**<br>5. 🎨 **PrimeVue 4 雙模式主題與 12 主色 × 5 表面色引擎**<br>6. 📄 **資料庫結構 CSV 4 步驟匯出精靈與 13 組結構探勘範本**<br>7. 🩺 **AI 助手深度整合（Messages 錯誤診斷、執行計畫/IO 調校建議）** | 已完成 | 建立極具競爭力的輕量桌面端核心體驗，兼具現代感、生產安全與 AI 調優。 |
 | **Phase 1** | **v0.3.0** | 1. 💾 **實體檔案串流匯出精靈 (Excel .xlsx / CSV with BOM / SQL)**<br>2. ✏️ **資料瀏覽器 (`TableDataViewer`) 補齊行內編輯與新增列**<br>3. 🔐 **連線設定檔 AES-256 加密匯出與匯入** | 1 ~ 2 週 | 解決大數據導出崩潰痛點，補齊基礎資料快速維護閉環，強化團隊配置遷移體驗。 |
 | **Phase 2** | **v0.4.0** | 1. 🧱 **資料表結構進階檢視（索引管理、外鍵、檢查約束、觸發程序）**<br>2. 🔍 **雙結果集資料比對工具 (Result Diff & Data Comparator)**<br>3. 🔗 **外鍵關聯快速跳轉與資料穿透 (FK Quick Peek & Navigation)** | 2 週 | 躍升為專業級 DBA 結構設計與除錯工具，重構預存程序與跨環境對齊效率翻倍。 |
-| **Phase 3** | **v0.5.0+** | 1. ⚡ **資料瀏覽器伺服器端動態分頁 (Server-side Pagination & Keyset)**<br>2. 📊 **資料庫即時活動與阻塞鏈監控儀表板 (Live Activity Monitor)**<br>3. 🩺 **AI 助手深度整合（錯誤一鍵診斷與執行計畫調校建議）** | 2 ~ 3 週 | 突破巨量資料瀏覽瓶頸，提供即時系統健康監控，讓 AI 深植於日常除錯流程。 |
+| **Phase 3** | **v0.5.0+** | 1. ⚡ **資料瀏覽器伺服器端動態分頁 (Server-side Pagination & Keyset)**<br>2. 📊 **資料庫即時活動與阻塞鏈監控儀表板 (Live Activity Monitor)** | 2 ~ 3 週 | 突破巨量資料瀏覽瓶頸，提供即時系統健康監控，讓客戶端具備企業級承載力。 |
 
 ---
 

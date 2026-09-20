@@ -196,14 +196,16 @@
               <div class="max-w-[95%] rounded-lg px-3.5 py-2.5 shadow-sm text-xs leading-relaxed border border-dark-750 bg-dark-850 dark:bg-[#1e1e26] text-dark-200 select-text">
                 <div class="prose prose-invert max-w-none">
                   <template v-for="(segment, sIdx) in parseMessageSegments(msg.content)" :key="sIdx">
-                    <div v-if="segment.type === 'text'" class="whitespace-pre-wrap leading-relaxed mb-2 font-sans">
-                      {{ segment.value }}
-                    </div>
+                    <div
+                      v-if="segment.type === 'text'"
+                      class="ai-markdown-body font-sans text-xs leading-relaxed mb-2"
+                      v-html="renderMarkdownToHtml(segment.value)"
+                    />
 
                     <!-- SQL Code Block -->
                     <div v-else-if="segment.type === 'sql'" class="my-2.5 rounded border border-dark-700 bg-dark-900 overflow-hidden select-none">
-                      <div class="flex items-center justify-between px-3 py-1 text-[11px] border-b border-dark-750 bg-dark-800 text-purple-300">
-                        <span class="font-mono font-semibold">T-SQL 語法建議</span>
+                      <div class="flex items-center justify-between px-3 py-1 text-[11px] border-b border-dark-750 bg-dark-800 text-black dark:text-purple-300">
+                        <span class="font-mono font-semibold text-black dark:text-purple-300">T-SQL 語法建議</span>
                         <div class="flex items-center space-x-1.5">
                           <Button
                             label="複製"
@@ -327,6 +329,7 @@ import { useToast } from 'primevue/usetoast';
 import { useAiChatStore } from '@/stores/aiChatStore';
 import { useWorkspaceStore } from '@/stores/workspaceStore';
 import { aiLoggerService } from '@/services/aiLoggerService';
+import { renderMarkdownToHtml } from '@/utils/markdownRenderer';
 
 const aiChatStore = useAiChatStore();
 const workspaceStore = useWorkspaceStore();

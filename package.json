@@ -27,6 +27,7 @@
     "ag-grid-vue3": "^36.1.0",
     "html-query-plan": "^2.6.1",
     "lucide-vue-next": "^0.475.0",
+    "marked": "^18.0.13",
     "monaco-editor": "^0.56.0",
     "pinia": "^3.0.1",
     "primeicons": "^7.0.0",
