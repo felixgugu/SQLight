@@ -19,3 +19,8 @@ pub async fn read_sql_file(file_path: String) -> Result<String, String> {
 pub async fn write_sql_file(file_path: String, content: String) -> Result<(), String> {
     SqlFolderService::write_file(&file_path, &content)
 }
+
+#[tauri::command]
+pub async fn rename_sql_path(old_path: String, new_path: String) -> Result<(), String> {
+    SqlFolderService::rename_path(&old_path, &new_path)
+}

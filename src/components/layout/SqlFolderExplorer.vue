@@ -8,8 +8,21 @@
         <span>SQL 檔案</span>
       </div>
 
-      <!-- Right: Toolbar (新增, 重新整理, 全部收合) -->
+      <!-- Right: Toolbar (新增, 恢復排除, 重新整理, 全部收合) -->
       <div class="flex items-center space-x-1">
+        <!-- 恢復取消監控的檔案 (Restore Excluded Items) -->
+        <Button
+          v-if="sqlFolderStore.excludedPaths.length > 0"
+          icon="pi pi-eye"
+          severity="warn"
+          size="small"
+          text
+          rounded
+          class="!h-6 !w-6 !p-0 !text-amber-400"
+          v-tooltip.bottom="`恢復已取消監控的項目 (${sqlFolderStore.excludedPaths.length})`"
+          @click="sqlFolderStore.restoreExcludedPaths"
+        />
+
         <!-- 新增 (Add Folder) -->
         <Button
           icon="pi pi-plus"
@@ -83,7 +96,7 @@
           <!-- Root Folder Item -->
           <div
             @click="sqlFolderStore.toggleNode(folder.path)"
-            @contextmenu.prevent="openFolderContextMenu($event, folder)"
+            @contextmenu.prevent="openRootFolderContextMenu($event, folder)"
             :class="[
               'flex items-center space-x-1.5 px-1.5 py-1 rounded cursor-pointer transition-colors group select-none',
               'hover:bg-dark-750 text-dark-200'
@@ -128,9 +141,9 @@
               <!-- Remove from monitoring -->
               <button
                 type="button"
-                @click.stop="sqlFolderStore.removeFolder(folder.path)"
+                @click.stop="sqlFolderStore.unmonitorItem(folder.path, folder.name, true)"
                 class="p-0.5 hover:bg-dark-700 text-dark-400 hover:text-rose-400 rounded"
-                title="自監控清單移除"
+                title="取消監控"
               >
                 <X class="w-2.5 h-2.5" />
               </button>
@@ -173,8 +186,59 @@
       </div>
     </div>
 
-    <!-- PrimeVue ContextMenu for Root Folders -->
-    <ContextMenu ref="folderMenuRef" :model="folderMenuItems" />
+    <!-- PrimeVue ContextMenu for Folders & Files -->
+    <ContextMenu ref="contextMenuRef" :model="contextMenuItems" />
+
+    <!-- Rename Modal -->
+    <Dialog
+      v-model:visible="isRenameModalOpen"
+      modal
+      :header="targetNode?.isDir ? '重新命名資料夾' : '重新命名檔案'"
+      class="w-full max-w-md font-sans"
+    >
+      <div class="space-y-3 text-xs py-1">
+        <p class="text-dark-300 leading-relaxed">
+          請輸入新的{{ targetNode?.isDir ? '資料夾' : '檔案' }}名稱：
+        </p>
+        <div>
+          <label class="block text-xxs text-dark-400 mb-1">新名稱</label>
+          <InputText
+            id="rename-target-input"
+            v-model="renameInput"
+            :placeholder="targetNode?.isDir ? '例如: Scripts' : '例如: query.sql'"
+            class="w-full font-mono text-xs"
+            @keyup.enter="handleConfirmRename"
+          />
+          <p v-if="renameError" class="text-rose-400 text-xxs mt-1.5">{{ renameError }}</p>
+          <p v-else-if="!targetNode?.isDir" class="text-dark-400 text-xxs mt-1.5">
+            若未輸入 .sql 副檔名，系統將會自動補齊。
+          </p>
+        </div>
+      </div>
+
+      <template #footer>
+        <div class="flex items-center justify-end space-x-2 pt-2">
+          <Button
+            type="button"
+            label="取消"
+            severity="secondary"
+            size="small"
+            text
+            @click="isRenameModalOpen = false"
+          />
+          <Button
+            type="button"
+            label="確認"
+            icon="pi pi-check"
+            severity="primary"
+            size="small"
+            :disabled="!renameInput.trim() || isSubmittingRename"
+            :loading="isSubmittingRename"
+            @click="handleConfirmRename"
+          />
+        </div>
+      </template>
+    </Dialog>
 
     <!-- Manual Path Input Modal (Alternative to native picker) -->
     <Dialog
@@ -224,7 +288,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, provide, nextTick } from 'vue';
 import Button from 'primevue/button';
 import InputText from 'primevue/inputtext';
 import Dialog from 'primevue/dialog';
@@ -240,13 +304,26 @@ import {
   X,
 } from 'lucide-vue-next';
 import { useSqlFolderStore } from '@/stores/sqlFolderStore';
-import type { MonitoredFolder } from '@/types/sqlFolder';
+import type { MonitoredFolder, SqlFileNode } from '@/types/sqlFolder';
 import SqlFileTreeNode from './SqlFileTreeNode.vue';
+
+interface ContextMenuTarget {
+  name: string;
+  path: string;
+  isDir: boolean;
+  isRoot: boolean;
+  rawNode?: SqlFileNode;
+}
 
 const sqlFolderStore = useSqlFolderStore();
 
-const folderMenuRef = ref();
-const targetContextMenuFolder = ref<MonitoredFolder | null>(null);
+const contextMenuRef = ref();
+const targetNode = ref<ContextMenuTarget | null>(null);
+
+const isRenameModalOpen = ref(false);
+const renameInput = ref('');
+const renameError = ref('');
+const isSubmittingRename = ref(false);
 
 const isManualPathModalOpen = ref(false);
 const manualPathInput = ref('');
@@ -255,55 +332,161 @@ onMounted(async () => {
   await sqlFolderStore.init();
 });
 
-async function handleAddFolder() {
-  const success = await sqlFolderStore.addFolder();
-  if (!success) {
-    // If native picker wasn't invoked or returned nothing, user can choose manual input
+function openNodeContextMenu(event: MouseEvent, node: SqlFileNode, isRoot = false) {
+  targetNode.value = {
+    name: node.name,
+    path: node.path,
+    isDir: node.is_dir,
+    isRoot,
+    rawNode: node,
+  };
+  contextMenuRef.value?.show(event);
+}
+
+provide('openSqlNodeContextMenu', openNodeContextMenu);
+
+function openRootFolderContextMenu(event: MouseEvent, folder: MonitoredFolder) {
+  openNodeContextMenu(
+    event,
+    {
+      name: folder.name,
+      path: folder.path,
+      is_dir: true,
+    },
+    true
+  );
+}
+
+function openRenameModal(target: ContextMenuTarget) {
+  renameInput.value = target.name;
+  renameError.value = '';
+  isRenameModalOpen.value = true;
+  nextTick(() => {
+    const el = document.querySelector('#rename-target-input') as HTMLInputElement | null;
+    if (el) {
+      el.focus();
+      if (!target.isDir && target.name.toLowerCase().endsWith('.sql')) {
+        const dotIdx = target.name.lastIndexOf('.');
+        el.setSelectionRange(0, dotIdx);
+      } else {
+        el.select();
+      }
+    }
+  });
+}
+
+async function handleConfirmRename() {
+  if (!targetNode.value) return;
+  const input = renameInput.value.trim();
+  if (!input) {
+    renameError.value = '名稱不能為空';
+    return;
   }
+  if (/[\\/:*?"<>|]/.test(input)) {
+    renameError.value = '名稱不可包含特殊字元: \\ / : * ? " < > |';
+    return;
+  }
+
+  const target = targetNode.value;
+  const finalName = !target.isDir && !input.toLowerCase().endsWith('.sql') ? `${input}.sql` : input;
+
+  if (finalName === target.name) {
+    isRenameModalOpen.value = false;
+    return;
+  }
+
+  isSubmittingRename.value = true;
+  try {
+    const success = await sqlFolderStore.renameItem(target.path, finalName, target.isDir);
+    if (success) {
+      isRenameModalOpen.value = false;
+    }
+  } finally {
+    isSubmittingRename.value = false;
+  }
+}
+
+const contextMenuItems = computed(() => {
+  const target = targetNode.value;
+  if (!target) return [];
+
+  const copyPathItem = {
+    label: '複製完整路徑',
+    icon: 'pi pi-copy',
+    command: () => {
+      try {
+        navigator.clipboard.writeText(target.path);
+      } catch {}
+    },
+  };
+
+  const renameMenuItem = {
+    label: '重新命名',
+    icon: 'pi pi-pencil',
+    command: () => openRenameModal(target),
+  };
+
+  const unmonitorMenuItem = {
+    label: '取消監控',
+    icon: 'pi pi-eye-slash',
+    class: '!text-rose-400',
+    command: () => sqlFolderStore.unmonitorItem(target.path, target.name, target.isRoot),
+  };
+
+  if (target.isDir) {
+    return [
+      {
+        label: target.name,
+        disabled: true,
+      },
+      { separator: true },
+      {
+        label: '重新整理此資料夾',
+        icon: 'pi pi-refresh',
+        command: () => {
+          if (target.isRoot) {
+            sqlFolderStore.refreshFolder(target.path);
+          } else {
+            sqlFolderStore.refreshAll();
+          }
+        },
+      },
+      renameMenuItem,
+      copyPathItem,
+      { separator: true },
+      unmonitorMenuItem,
+    ];
+  }
+
+  return [
+    {
+      label: target.name,
+      disabled: true,
+    },
+    { separator: true },
+    {
+      label: '在編輯區開啟',
+      icon: 'pi pi-file-edit',
+      command: () => {
+        if (target.rawNode) {
+          sqlFolderStore.openFile(target.rawNode);
+        }
+      },
+    },
+    renameMenuItem,
+    copyPathItem,
+    { separator: true },
+    unmonitorMenuItem,
+  ];
+});
+
+async function handleAddFolder() {
+  await sqlFolderStore.addFolder();
 }
 
 async function handleRefreshAll() {
   await sqlFolderStore.refreshAll();
 }
-
-function openFolderContextMenu(event: MouseEvent, folder: MonitoredFolder) {
-  targetContextMenuFolder.value = folder;
-  folderMenuRef.value?.show(event);
-}
-
-const folderMenuItems = computed(() => {
-  const folder = targetContextMenuFolder.value;
-  if (!folder) return [];
-
-  return [
-    {
-      label: folder.name,
-      disabled: true,
-    },
-    { separator: true },
-    {
-      label: '重新整理此資料夾',
-      icon: 'pi pi-refresh',
-      command: () => sqlFolderStore.refreshFolder(folder.path),
-    },
-    {
-      label: '複製完整路徑',
-      icon: 'pi pi-copy',
-      command: () => {
-        try {
-          navigator.clipboard.writeText(folder.path);
-        } catch {}
-      },
-    },
-    { separator: true },
-    {
-      label: '自監控清單移除',
-      icon: 'pi pi-trash',
-      class: '!text-rose-400',
-      command: () => sqlFolderStore.removeFolder(folder.path),
-    },
-  ];
-});
 
 async function handleConfirmManualPath() {
   const path = manualPathInput.value.trim();

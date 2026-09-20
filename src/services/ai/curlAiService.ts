@@ -1,5 +1,6 @@
 import type { AiChatMessage, AiProviderConfig, AiChatCompletionResponse } from '@/types/ai';
 import { parseCurlCommand } from './curlParser';
+import { aiLoggerService } from '@/services/aiLoggerService';
 
 export class CurlAiService {
   /**
@@ -76,25 +77,86 @@ export class CurlAiService {
 
     // 4. 發送 HTTP 請求 (URL 支援替換 <token>)
     const targetUrl = parsed.url.replace(/<token>/gi, apiKey);
-    const response = await fetch(targetUrl, {
-      method: parsed.method || 'POST',
-      headers,
-      body: JSON.stringify(payloadObj),
-      signal,
-    });
+    const method = parsed.method || 'POST';
+    const requestPayloadStr = JSON.stringify(payloadObj, null, 2);
+
+    // 紀錄 AI API 每次送出的請求內容至 ai.log
+    try {
+      await aiLoggerService.logAiRequest(targetUrl, requestPayloadStr, method);
+    } catch (logErr) {
+      console.warn('[CurlAiService] 記錄 AI 請求至 ai.log 失敗:', logErr);
+    }
+
+    const requestStartTime = performance.now();
+    let response: Response;
+    try {
+      response = await fetch(targetUrl, {
+        method,
+        headers,
+        body: JSON.stringify(payloadObj),
+        signal,
+      });
+    } catch (networkErr: unknown) {
+      const elapsedMs = Math.round(performance.now() - requestStartTime);
+      const errMsg = networkErr instanceof Error ? `${networkErr.name}: ${networkErr.message}` : String(networkErr);
+      try {
+        await aiLoggerService.logAiResponse(targetUrl, errMsg, undefined, elapsedMs, true);
+      } catch {}
+      throw networkErr;
+    }
+
+    const elapsedMs = Math.round(performance.now() - requestStartTime);
 
     if (!response.ok) {
+      let rawErrorText = '';
+      try {
+        rawErrorText = await response.text();
+      } catch {}
+
+      // 紀錄 AI API 錯誤回應內容至 ai.log
+      try {
+        await aiLoggerService.logAiResponse(
+          targetUrl,
+          rawErrorText || response.statusText,
+          response.status,
+          elapsedMs,
+          true
+        );
+      } catch (logErr) {
+        console.warn('[CurlAiService] 記錄 AI 回應至 ai.log 失敗:', logErr);
+      }
+
       let errorDetail = '';
       try {
-        const errorJson = await response.json();
-        errorDetail = errorJson?.error?.message || errorJson?.message || JSON.stringify(errorJson);
+        const errorJson = JSON.parse(rawErrorText);
+        errorDetail = errorJson?.error?.message || errorJson?.message || rawErrorText;
       } catch {
-        errorDetail = await response.text();
+        errorDetail = rawErrorText;
       }
       throw new Error(`AI API 呼叫失敗 [${response.status}]: ${errorDetail || response.statusText}`);
     }
 
-    const data = await response.json();
+    const rawResponseText = await response.text();
+
+    // 紀錄 AI API 成功回應內容至 ai.log
+    try {
+      await aiLoggerService.logAiResponse(
+        targetUrl,
+        rawResponseText,
+        response.status,
+        elapsedMs,
+        false
+      );
+    } catch (logErr) {
+      console.warn('[CurlAiService] 記錄 AI 回應至 ai.log 失敗:', logErr);
+    }
+
+    let data: any = {};
+    try {
+      data = JSON.parse(rawResponseText);
+    } catch (parseErr) {
+      throw new Error(`無法解析 AI API 回傳之 JSON: ${parseErr instanceof Error ? parseErr.message : String(parseErr)}`);
+    }
 
     // 5. 智能解析回傳內容
     // 優先順序:

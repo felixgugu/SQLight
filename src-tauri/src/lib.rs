@@ -4,6 +4,7 @@ pub mod error;
 pub mod models;
 pub mod services;
 
+use commands::ai_commands::*;
 use commands::connection_commands::*;
 use commands::query_commands::*;
 use commands::schema_commands::*;
@@ -16,6 +17,11 @@ pub fn run() {
     // Initialize/clear the query log file on each application launch
     if let Err(e) = services::QueryLogger::init() {
         eprintln!("[SQLight] Failed to initialize query log file: {}", e);
+    }
+
+    // Initialize/clear the AI request log file on each application launch
+    if let Err(e) = services::AiLogger::init() {
+        eprintln!("[SQLight] Failed to initialize AI log file: {}", e);
     }
 
     let connection_manager = ConnectionManager::new();
@@ -48,6 +54,12 @@ pub fn run() {
             scan_sql_folder,
             read_sql_file,
             write_sql_file,
+            rename_sql_path,
+            log_ai_request,
+            log_ai_response,
+            open_ai_log_file,
+            get_ai_log_path,
+            clear_ai_log,
         ])
 
         .run(tauri::generate_context!())

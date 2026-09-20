@@ -88,22 +88,204 @@
         class="w-full !text-[11px] font-mono !bg-dark-900 !border-dark-750 !p-3 leading-relaxed !resize-y"
       />
     </div>
+
+    <!-- 3. AI 請求記錄檔 (ai.log) -->
+    <div class="pt-3 border-t border-dark-800 flex items-center justify-between">
+      <div class="space-y-0.5">
+        <div class="text-xs font-medium text-dark-200">AI 請求記錄檔 (ai.log)</div>
+        <div class="text-xxs text-dark-400">每次發送 AI API 請求時自動記錄請求與回應內容，並於應用程式開啟時自動清空</div>
+      </div>
+      <Button
+        label="開啟 ai.log"
+        icon="pi pi-external-link"
+        severity="secondary"
+        size="small"
+        class="!text-xs !py-1 flex-shrink-0"
+        @click="handleOpenAiLog"
+      />
+    </div>
+
+    <!-- 4. 快捷提問選項設定 (Quick Prompts) -->
+    <div class="space-y-3 pt-4 border-t border-dark-800">
+      <div class="flex items-center justify-between">
+        <div>
+          <label class="font-medium text-dark-100 block text-xs">快捷提問選項設定 (Quick Prompts)</label>
+          <span class="text-xxs text-dark-400">自訂 AI SQL 智能助理的快捷提問按鈕，點選後會自動填入聊天輸入框</span>
+        </div>
+        <div class="flex items-center space-x-2">
+          <Button
+            label="還原預設選項"
+            severity="secondary"
+            text
+            size="small"
+            class="!text-xxs !p-0 hover:text-dark-100"
+            @click="aiChatStore.resetQuickPrompts()"
+          />
+          <Button
+            label="新增選項"
+            icon="pi pi-plus"
+            severity="primary"
+            outlined
+            size="small"
+            class="!text-xs !py-1 !px-2.5 flex-shrink-0"
+            @click="openAddPromptDialog"
+          />
+        </div>
+      </div>
+
+      <!-- 選項清單 -->
+      <div class="space-y-2">
+        <div
+          v-for="item in aiChatStore.quickPrompts"
+          :key="item.id"
+          class="p-2.5 rounded-lg border border-dark-750 bg-dark-850/60 hover:border-dark-700 transition-colors flex items-start justify-between space-x-3"
+        >
+          <div class="flex-1 min-w-0 space-y-1">
+            <div class="text-xs font-semibold text-purple-300 font-sans">
+              {{ item.label }}
+            </div>
+            <p class="text-[11px] text-dark-300 leading-relaxed break-words font-sans m-0">
+              {{ item.prompt }}
+            </p>
+          </div>
+          <div class="flex items-center space-x-1 flex-shrink-0 pt-0.5">
+            <Button
+              icon="pi pi-pencil"
+              severity="secondary"
+              text
+              rounded
+              size="small"
+              v-tooltip.top="'修改此提示詞'"
+              class="!w-6 !h-6 !p-0 hover:text-dark-100"
+              @click="openEditPromptDialog(item)"
+            />
+            <Button
+              icon="pi pi-trash"
+              severity="secondary"
+              text
+              rounded
+              size="small"
+              v-tooltip.top="'刪除此選項'"
+              class="!w-6 !h-6 !p-0 hover:text-rose-400"
+              @click="handleDeletePrompt(item.id)"
+            />
+          </div>
+        </div>
+
+        <div
+          v-if="aiChatStore.quickPrompts.length === 0"
+          class="text-center py-6 border border-dashed border-dark-800 rounded-lg text-dark-400 text-xs"
+        >
+          尚無任何快捷提問選項，請點選上方「新增選項」或「還原預設選項」。
+        </div>
+      </div>
+    </div>
+
+    <!-- 新增 / 修改 快捷提問對話框 -->
+    <Dialog
+      v-model:visible="isPromptDialogVisible"
+      :header="editingPromptId ? '修改快捷提問選項' : '新增快捷提問選項'"
+      modal
+      :style="{ width: '520px' }"
+    >
+      <div class="space-y-4 pt-2">
+        <div class="space-y-1">
+          <label class="text-xs font-medium text-dark-200 block">選項名稱 (按鈕標籤) *</label>
+          <InputText
+            v-model="promptForm.label"
+            placeholder="例如：查詢最佳化、檢查死鎖風險..."
+            class="w-full !text-xs !bg-dark-900 !border-dark-700"
+          />
+        </div>
+        <div class="space-y-1">
+          <label class="text-xs font-medium text-dark-200 block">提示詞內容 (Prompt) *</label>
+          <Textarea
+            v-model="promptForm.prompt"
+            rows="5"
+            placeholder="請輸入點選此快捷選項時，自動帶入聊天輸入框的提問內容..."
+            class="w-full !text-xs !p-2.5 font-sans !bg-dark-900 !border-dark-700 leading-relaxed !resize-y"
+          />
+        </div>
+      </div>
+      <template #footer>
+        <div class="flex items-center justify-end space-x-2 pt-2">
+          <Button
+            label="取消"
+            severity="secondary"
+            text
+            size="small"
+            class="!text-xs"
+            @click="isPromptDialogVisible = false"
+          />
+          <Button
+            label="儲存"
+            icon="pi pi-check"
+            severity="primary"
+            size="small"
+            class="!text-xs"
+            :disabled="!promptForm.label.trim() || !promptForm.prompt.trim()"
+            @click="savePromptDialog"
+          />
+        </div>
+      </template>
+    </Dialog>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref, reactive } from 'vue';
 import InputText from 'primevue/inputtext';
 import Button from 'primevue/button';
 import Textarea from 'primevue/textarea';
+import Dialog from 'primevue/dialog';
 import { useAiChatStore } from '@/stores/aiChatStore';
 import { curlAiService } from '@/services/ai/curlAiService';
+import { aiLoggerService } from '@/services/aiLoggerService';
+import type { AiQuickPrompt } from '@/types/ai';
 
 const aiChatStore = useAiChatStore();
 
 const showApiKey = ref(false);
 const isTesting = ref(false);
 const testResult = ref<{ success: boolean; message: string } | null>(null);
+
+const isPromptDialogVisible = ref(false);
+const editingPromptId = ref<string | null>(null);
+const promptForm = reactive({
+  label: '',
+  prompt: '',
+});
+
+function openAddPromptDialog() {
+  editingPromptId.value = null;
+  promptForm.label = '';
+  promptForm.prompt = '';
+  isPromptDialogVisible.value = true;
+}
+
+function openEditPromptDialog(item: AiQuickPrompt) {
+  editingPromptId.value = item.id;
+  promptForm.label = item.label;
+  promptForm.prompt = item.prompt;
+  isPromptDialogVisible.value = true;
+}
+
+function handleDeletePrompt(id: string) {
+  aiChatStore.deleteQuickPrompt(id);
+}
+
+function savePromptDialog() {
+  const lbl = promptForm.label.trim();
+  const pmt = promptForm.prompt.trim();
+  if (!lbl || !pmt) return;
+
+  if (editingPromptId.value) {
+    aiChatStore.updateQuickPrompt(editingPromptId.value, lbl, pmt);
+  } else {
+    aiChatStore.addQuickPrompt(lbl, pmt);
+  }
+  isPromptDialogVisible.value = false;
+}
 
 async function handleTestConnection() {
   isTesting.value = true;
@@ -118,6 +300,14 @@ async function handleTestConnection() {
     };
   } finally {
     isTesting.value = false;
+  }
+}
+
+async function handleOpenAiLog() {
+  try {
+    await aiLoggerService.openAiLogFile();
+  } catch (err) {
+    console.warn('[AiSettingsTab] 開啟 ai.log 失敗:', err);
   }
 }
 </script>

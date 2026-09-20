@@ -5,6 +5,7 @@ import { sqlFolderService } from '@/services/sqlFolderService';
 import { useWorkspaceStore } from './workspaceStore';
 
 const STORAGE_KEY = 'sqlight_monitored_sql_folders';
+const EXCLUDED_STORAGE_KEY = 'sqlight_excluded_sql_paths';
 
 function loadStoredFolders(): MonitoredFolder[] {
   try {
@@ -32,14 +33,78 @@ function saveStoredFolders(folders: MonitoredFolder[]) {
   }
 }
 
+function loadStoredExcludedPaths(): string[] {
+  try {
+    const raw = localStorage.getItem(EXCLUDED_STORAGE_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) {
+        return parsed.filter((p): p is string => typeof p === 'string');
+      }
+    }
+  } catch (err) {
+    console.warn('[sqlFolderStore] Failed to load excluded paths:', err);
+  }
+  return [];
+}
+
+function saveStoredExcludedPaths(paths: string[]) {
+  try {
+    localStorage.setItem(EXCLUDED_STORAGE_KEY, JSON.stringify(paths));
+  } catch (err) {
+    console.warn('[sqlFolderStore] Failed to save excluded paths:', err);
+  }
+}
+
+function normalizePath(p: string): string {
+  return p.replace(/\\/g, '/').toLowerCase();
+}
+
+function filterExcluded(node: SqlFileNode, excludedSet: Set<string>): SqlFileNode | null {
+  if (excludedSet.has(normalizePath(node.path))) {
+    return null;
+  }
+  if (node.is_dir && node.children) {
+    const filteredChildren = node.children
+      .map((child) => filterExcluded(child, excludedSet))
+      .filter((child): child is SqlFileNode => child !== null);
+    return {
+      ...node,
+      children: filteredChildren,
+    };
+  }
+  return node;
+}
+
 export const useSqlFolderStore = defineStore('sqlFolder', () => {
   const workspaceStore = useWorkspaceStore();
 
   const monitoredFolders = ref<MonitoredFolder[]>(loadStoredFolders());
+  const excludedPaths = ref<string[]>(loadStoredExcludedPaths());
+  const rawTrees = reactive<Record<string, SqlFileNode>>({});
   const folderTrees = reactive<Record<string, SqlFileNode>>({});
   const expandedNodes = reactive<Record<string, boolean>>({});
   const isLoading = ref(false);
   const refreshingPath = ref<string | null>(null);
+
+  /**
+   * Applies exclusion filter to raw scan trees
+   */
+  function applyExclusionFilter(folderPath?: string) {
+    const excludedSet = new Set(excludedPaths.value.map(normalizePath));
+    const targetPaths = folderPath ? [folderPath] : Object.keys(rawTrees);
+    for (const p of targetPaths) {
+      const raw = rawTrees[p];
+      if (raw) {
+        const filtered = filterExcluded(raw, excludedSet);
+        if (filtered) {
+          folderTrees[p] = filtered;
+        } else {
+          delete folderTrees[p];
+        }
+      }
+    }
+  }
 
   /**
    * Initializes store by scanning all registered monitored folders
@@ -55,8 +120,9 @@ export const useSqlFolderStore = defineStore('sqlFolder', () => {
   async function scanSingleFolder(folderPath: string): Promise<SqlFileNode | null> {
     try {
       const tree = await sqlFolderService.scanFolder(folderPath);
-      folderTrees[folderPath] = tree;
-      return tree;
+      rawTrees[folderPath] = tree;
+      applyExclusionFilter(folderPath);
+      return folderTrees[folderPath] ?? null;
     } catch (err: unknown) {
       console.error(`[sqlFolderStore] Failed to scan folder [${folderPath}]:`, err);
       return null;
@@ -85,7 +151,7 @@ export const useSqlFolderStore = defineStore('sqlFolder', () => {
 
     // Check duplicate
     const normalized = folderPath.trim();
-    if (monitoredFolders.value.some((f) => f.path === normalized)) {
+    if (monitoredFolders.value.some((f) => normalizePath(f.path) === normalizePath(normalized))) {
       workspaceStore.showToast('該資料夾已在監控清單中', 'info', 2000);
       return false;
     }
@@ -119,11 +185,101 @@ export const useSqlFolderStore = defineStore('sqlFolder', () => {
    * Removes a folder from monitoring
    */
   function removeFolder(folderPath: string) {
-    monitoredFolders.value = monitoredFolders.value.filter((f) => f.path !== folderPath);
+    monitoredFolders.value = monitoredFolders.value.filter(
+      (f) => normalizePath(f.path) !== normalizePath(folderPath)
+    );
+    delete rawTrees[folderPath];
     delete folderTrees[folderPath];
     delete expandedNodes[folderPath];
     saveStoredFolders(monitoredFolders.value);
-    workspaceStore.showToast('已自監控清單移除資料夾', 'info', 2000);
+    workspaceStore.showToast('已取消監控資料夾（檔案仍保留於磁碟）', 'info', 2000);
+  }
+
+  /**
+   * Unmonitors an individual file or subfolder or root folder without deleting physically
+   */
+  function unmonitorItem(nodePath: string, nodeName: string, isRoot = false) {
+    const isActuallyRoot =
+      isRoot || monitoredFolders.value.some((f) => normalizePath(f.path) === normalizePath(nodePath));
+
+    if (isActuallyRoot) {
+      removeFolder(nodePath);
+    } else {
+      if (!excludedPaths.value.some((p) => normalizePath(p) === normalizePath(nodePath))) {
+        excludedPaths.value.push(nodePath);
+        saveStoredExcludedPaths(excludedPaths.value);
+        applyExclusionFilter();
+      }
+      workspaceStore.showToast(`已取消監控「${nodeName}」（本機檔案未刪除）`, 'info', 2500);
+    }
+  }
+
+  /**
+   * Restores all unmonitored files and folders
+   */
+  function restoreExcludedPaths() {
+    excludedPaths.value = [];
+    saveStoredExcludedPaths([]);
+    applyExclusionFilter();
+    workspaceStore.showToast('已重設取消監控清單，所有檔案已恢復顯示', 'success', 2000);
+  }
+
+  /**
+   * Renames a file or folder on disk, syncing any open tab labels in workspaceStore
+   */
+  async function renameItem(oldPath: string, newName: string, isDir: boolean): Promise<boolean> {
+    const lastSlash = Math.max(oldPath.lastIndexOf('/'), oldPath.lastIndexOf('\\'));
+    const parentDir = lastSlash >= 0 ? oldPath.substring(0, lastSlash) : '';
+    const separator = oldPath.includes('\\') ? '\\' : '/';
+    const finalName = !isDir && !newName.toLowerCase().endsWith('.sql') ? `${newName}.sql` : newName;
+    const newPath = parentDir ? `${parentDir}${separator}${finalName}` : finalName;
+
+    if (/[\\/:*?"<>|]/.test(newName)) {
+      workspaceStore.showToast('名稱不可包含特殊字元: \\ / : * ? " < > |', 'error', 3000);
+      return false;
+    }
+
+    if (oldPath === newPath) {
+      return true;
+    }
+
+    try {
+      await sqlFolderService.renamePath(oldPath, newPath);
+
+      if (isDir) {
+        workspaceStore.syncRenamedFolder(oldPath, newPath);
+
+        const rootFolder = monitoredFolders.value.find(
+          (f) => normalizePath(f.path) === normalizePath(oldPath)
+        );
+        if (rootFolder) {
+          rootFolder.path = newPath;
+          rootFolder.name = finalName;
+          saveStoredFolders(monitoredFolders.value);
+
+          if (expandedNodes[oldPath]) {
+            expandedNodes[newPath] = true;
+            delete expandedNodes[oldPath];
+          }
+          delete rawTrees[oldPath];
+          delete folderTrees[oldPath];
+          await scanSingleFolder(newPath);
+        } else {
+          await refreshAll();
+        }
+      } else {
+        workspaceStore.syncRenamedFile(oldPath, newPath, finalName);
+        await refreshAll();
+      }
+
+      workspaceStore.showToast(`已成功重新命名為「${finalName}」`, 'success', 2500);
+      return true;
+    } catch (err: unknown) {
+      console.error(`[sqlFolderStore] Failed to rename [${oldPath} -> ${newPath}]:`, err);
+      const msg = err instanceof Error ? err.message : String(err);
+      workspaceStore.showToast(`重新命名失敗: ${msg}`, 'error', 4000);
+      return false;
+    }
   }
 
   /**
@@ -184,6 +340,7 @@ export const useSqlFolderStore = defineStore('sqlFolder', () => {
 
   return {
     monitoredFolders,
+    excludedPaths,
     folderTrees,
     expandedNodes,
     isLoading,
@@ -191,6 +348,9 @@ export const useSqlFolderStore = defineStore('sqlFolder', () => {
     init,
     addFolder,
     removeFolder,
+    unmonitorItem,
+    restoreExcludedPaths,
+    renameItem,
     refreshAll,
     refreshFolder,
     collapseAll,

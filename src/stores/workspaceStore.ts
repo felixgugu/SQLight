@@ -3,6 +3,8 @@ import { ref, computed, watch } from 'vue';
 import type { WorkspaceTab, BottomPanelTab, SqlEditorTab, TableDataTab, TableStructureTab, ExecutionPlanTab, ErDiagramTab } from '@/types/workspace';
 import { format as formatSql } from 'sql-formatter';
 import { useConnectionStore } from './connectionStore';
+import { useSqlFolderStore } from './sqlFolderStore';
+import { sqlFolderService } from '@/services/sqlFolderService';
 
 const STORAGE_TABS_KEY = 'sqlight_workspace_tabs';
 const STORAGE_ACTIVE_TAB_KEY = 'sqlight_active_tab_id';
@@ -215,7 +217,7 @@ export const useWorkspaceStore = defineStore('workspace', () => {
         return match ? parseInt(match[1] || '0', 10) : 0;
       });
     const nextNum = existingNums.length > 0 ? Math.max(...existingNums) + 1 : 1;
-    const tabId = `tab-sql-${Date.now()}`;
+    const tabId = `tab-sql-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
     const effectiveConnId = connectionId || connectionStore.activeConnectionId || undefined;
     const effectiveDb = database || connectionStore.activeDatabase || 'master';
 
@@ -269,7 +271,7 @@ export const useWorkspaceStore = defineStore('workspace', () => {
       return;
     }
 
-    const tabId = `tab-data-${Date.now()}`;
+    const tabId = `tab-data-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
     const newTab: TableDataTab = {
       id: tabId,
       type: 'table_data',
@@ -307,7 +309,7 @@ export const useWorkspaceStore = defineStore('workspace', () => {
       return;
     }
 
-    const tabId = `tab-struct-${Date.now()}`;
+    const tabId = `tab-struct-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
     const newTab: TableStructureTab = {
       id: tabId,
       type: 'table_structure',
@@ -480,12 +482,59 @@ export const useWorkspaceStore = defineStore('workspace', () => {
     tabs.value.splice(toIndex, 0, moved);
   }
 
-  function renameTab(tabId: string, newTitle: string) {
+  async function renameTab(tabId: string, newTitle: string): Promise<boolean> {
     const trimmed = newTitle.trim();
-    if (!trimmed) return;
+    if (!trimmed) return false;
     const tab = tabs.value.find((t) => t.id === tabId);
-    if (tab) {
-      tab.title = trimmed;
+    if (!tab) return false;
+
+    if (tab.type === 'sql_editor') {
+      const sqlTab = tab as SqlEditorTab;
+      if (sqlTab.filePath) {
+        // Bi-directional synchronization: rename the physical SQL file on disk and update explorer tree
+        const sqlFolderStore = useSqlFolderStore();
+        return await sqlFolderStore.renameItem(sqlTab.filePath, trimmed, false);
+      }
+    }
+
+    tab.title = trimmed;
+    return true;
+  }
+
+  /**
+   * Updates filePath and tab title for an open SQL tab when a file is renamed
+   */
+  function syncRenamedFile(oldPath: string, newPath: string, newName: string) {
+    const normOld = oldPath.replace(/\\/g, '/').toLowerCase();
+    for (const tab of tabs.value) {
+      if (tab.type === 'sql_editor') {
+        const sqlTab = tab as SqlEditorTab;
+        if (sqlTab.filePath && sqlTab.filePath.replace(/\\/g, '/').toLowerCase() === normOld) {
+          sqlTab.filePath = newPath;
+          sqlTab.title = newName;
+        }
+      }
+    }
+  }
+
+  /**
+   * Updates filePaths for any open SQL tabs inside a folder when the folder is renamed
+   */
+  function syncRenamedFolder(oldFolderPath: string, newFolderPath: string) {
+    const normOldDir = oldFolderPath.replace(/\\/g, '/').toLowerCase().replace(/\/$/, '') + '/';
+    const normNewDir = newFolderPath.replace(/\\/g, '/').replace(/\/$/, '') + '/';
+
+    for (const tab of tabs.value) {
+      if (tab.type === 'sql_editor') {
+        const sqlTab = tab as SqlEditorTab;
+        if (sqlTab.filePath) {
+          const normTabPath = sqlTab.filePath.replace(/\\/g, '/');
+          if (normTabPath.toLowerCase().startsWith(normOldDir)) {
+            const relPath = normTabPath.slice(normOldDir.length);
+            sqlTab.filePath = normNewDir + relPath;
+          }
+        }
+      }
     }
   }
 
@@ -528,6 +577,70 @@ export const useWorkspaceStore = defineStore('workspace', () => {
     }, duration);
   }
 
+  const AUTO_SAVE_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
+  let autoSaveTimer: ReturnType<typeof setInterval> | null = null;
+
+  /**
+   * Automatically saves all modified SQL editor tabs that have a filePath
+   */
+  async function autoSaveSqlFiles(force = false): Promise<number> {
+    const tabsToSave = tabs.value.filter(
+      (t): t is SqlEditorTab =>
+        t.type === 'sql_editor' &&
+        Boolean((t as SqlEditorTab).filePath) &&
+        (force || Boolean((t as SqlEditorTab).isDirty))
+    );
+
+    if (tabsToSave.length === 0) return 0;
+
+    let savedCount = 0;
+    for (const tab of tabsToSave) {
+      try {
+        if (tab.filePath) {
+          await sqlFolderService.writeFile(tab.filePath, tab.query);
+          tab.isDirty = false;
+          markTabSaved(tab.id);
+          savedCount++;
+        }
+      } catch (err) {
+        console.error(`[WorkspaceStore] Auto-save failed for ${tab.title} (${tab.filePath}):`, err);
+      }
+    }
+
+    if (savedCount > 0) {
+      showToast(`已自動儲存 ${savedCount} 個 SQL 檔案`, 'info', 2000);
+    }
+    return savedCount;
+  }
+
+  /**
+   * Starts or restarts the auto-save timer (default: 5 minutes)
+   */
+  function startAutoSaveTimer(intervalMs = AUTO_SAVE_INTERVAL_MS) {
+    stopAutoSaveTimer();
+    autoSaveTimer = setInterval(() => {
+      autoSaveSqlFiles().catch((err) => {
+        console.error('[WorkspaceStore] Auto-save error:', err);
+      });
+    }, intervalMs);
+    if (typeof autoSaveTimer === 'object' && autoSaveTimer !== null && 'unref' in autoSaveTimer) {
+      (autoSaveTimer as unknown as { unref: () => void }).unref();
+    }
+  }
+
+  /**
+   * Stops the auto-save timer
+   */
+  function stopAutoSaveTimer() {
+    if (autoSaveTimer) {
+      clearInterval(autoSaveTimer);
+      autoSaveTimer = null;
+    }
+  }
+
+  // Start the 5-minute auto-save timer
+  startAutoSaveTimer();
+
   return {
     tabs,
     activeTabId,
@@ -551,6 +664,8 @@ export const useWorkspaceStore = defineStore('workspace', () => {
     closeOtherTabs,
     reorderTabs,
     renameTab,
+    syncRenamedFile,
+    syncRenamedFolder,
     updateTabContent,
     updateTabData,
     formatActiveQuery,
@@ -562,5 +677,8 @@ export const useWorkspaceStore = defineStore('workspace', () => {
     consumePendingColumnToInsert,
     clearPendingColumnToInsert,
     showToast,
+    autoSaveSqlFiles,
+    startAutoSaveTimer,
+    stopAutoSaveTimer,
   };
 });

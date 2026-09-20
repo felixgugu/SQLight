@@ -172,4 +172,23 @@ impl SqlFolderService {
         std::fs::write(file_path, content)
             .map_err(|e| format!("無法寫入檔案 [{}]: {}", file_path, e))
     }
+
+    /// Renames a file or directory on disk
+    pub fn rename_path(old_path: &str, new_path: &str) -> Result<(), String> {
+        let old = PathBuf::from(old_path);
+        if !old.exists() {
+            return Err(format!("原檔案或資料夾不存在: {}", old_path));
+        }
+        let new = PathBuf::from(new_path);
+        if new.exists() {
+            return Err(format!("目標路徑已存在同名檔案或資料夾: {}", new_path));
+        }
+        if let Some(parent) = new.parent() {
+            if !parent.exists() {
+                return Err(format!("目標上層資料夾不存在: {}", parent.display()));
+            }
+        }
+        std::fs::rename(&old, &new)
+            .map_err(|e| format!("重新命名失敗: {}", e))
+    }
 }

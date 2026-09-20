@@ -393,14 +393,14 @@ function startRenameTab(tab: WorkspaceTab) {
   });
 }
 
-function saveRenameTab(tabId: string) {
+async function saveRenameTab(tabId: string) {
   if (!editingTabId.value || editingTabId.value !== tabId) return;
   const trimmed = editingTabTitle.value.trim();
-  if (trimmed) {
-    workspaceStore.renameTab(tabId, trimmed);
-  }
   editingTabId.value = null;
   editingTabTitle.value = '';
+  if (trimmed) {
+    await workspaceStore.renameTab(tabId, trimmed);
+  }
 }
 
 function cancelRenameTab() {

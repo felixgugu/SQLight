@@ -5,6 +5,7 @@ import type {
   AiModelOption,
   AiChatCompletionResponse,
 } from '@/types/ai';
+import { aiLoggerService } from '@/services/aiLoggerService';
 
 export abstract class BaseOpenAiCompatibleProvider implements AiProvider {
   abstract readonly id: AiProviderType;
@@ -59,28 +60,74 @@ export abstract class BaseOpenAiCompatibleProvider implements AiProvider {
       max_tokens: config.maxTokens ?? 2048,
     };
 
-    const response = await fetch(targetEndpoint, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${config.apiKey.trim()}`,
-      },
-      body: JSON.stringify(payload),
-      signal,
-    });
+    // 紀錄 AI API 每次送出的請求內容至 ai.log
+    try {
+      await aiLoggerService.logAiRequest(targetEndpoint, JSON.stringify(payload, null, 2), 'POST');
+    } catch (logErr) {
+      console.warn('[BaseOpenAiCompatibleProvider] 記錄 AI 請求至 ai.log 失敗:', logErr);
+    }
+
+    const requestStartTime = performance.now();
+    let response: Response;
+    try {
+      response = await fetch(targetEndpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${config.apiKey.trim()}`,
+        },
+        body: JSON.stringify(payload),
+        signal,
+      });
+    } catch (networkErr: unknown) {
+      const elapsedMs = Math.round(performance.now() - requestStartTime);
+      const errMsg = networkErr instanceof Error ? `${networkErr.name}: ${networkErr.message}` : String(networkErr);
+      try {
+        await aiLoggerService.logAiResponse(targetEndpoint, errMsg, undefined, elapsedMs, true);
+      } catch {}
+      throw networkErr;
+    }
+
+    const elapsedMs = Math.round(performance.now() - requestStartTime);
 
     if (!response.ok) {
+      let rawErrorText = '';
+      try {
+        rawErrorText = await response.text();
+      } catch {}
+
+      try {
+        await aiLoggerService.logAiResponse(
+          targetEndpoint,
+          rawErrorText || response.statusText,
+          response.status,
+          elapsedMs,
+          true
+        );
+      } catch {}
+
       let errorDetail = '';
       try {
-        const errorJson = await response.json();
-        errorDetail = errorJson?.error?.message || JSON.stringify(errorJson);
+        const errorJson = JSON.parse(rawErrorText);
+        errorDetail = errorJson?.error?.message || rawErrorText;
       } catch {
-        errorDetail = await response.text();
+        errorDetail = rawErrorText;
       }
       throw new Error(`AI API 呼叫失敗 [${response.status}]: ${errorDetail || response.statusText}`);
     }
 
-    const data = await response.json();
+    const rawResponseText = await response.text();
+    try {
+      await aiLoggerService.logAiResponse(
+        targetEndpoint,
+        rawResponseText,
+        response.status,
+        elapsedMs,
+        false
+      );
+    } catch {}
+
+    const data = JSON.parse(rawResponseText);
     const assistantMessage = data.choices?.[0]?.message?.content ?? '';
     const totalTokens = data.usage?.total_tokens;
 

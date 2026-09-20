@@ -1,11 +1,12 @@
 import { defineStore } from 'pinia';
 import { ref, watch } from 'vue';
-import type { AiChatMessage, AiProviderConfig } from '@/types/ai';
-import { DEFAULT_CURL_TEMPLATE } from '@/types/ai';
+import type { AiChatMessage, AiProviderConfig, AiQuickPrompt } from '@/types/ai';
+import { DEFAULT_CURL_TEMPLATE, DEFAULT_QUICK_PROMPTS } from '@/types/ai';
 import { curlAiService } from '@/services/ai/curlAiService';
 
 const STORAGE_KEY_AI_CONFIG = 'sqlight_ai_config_v2';
 const STORAGE_KEY_AI_MESSAGES = 'sqlight_ai_messages';
+const STORAGE_KEY_AI_QUICK_PROMPTS = 'sqlight_ai_quick_prompts_v2';
 
 const DEFAULT_AI_CONFIG: AiProviderConfig = {
   apiKey: '',
@@ -24,6 +25,21 @@ function loadStoredConfig(): AiProviderConfig {
   return { ...DEFAULT_AI_CONFIG };
 }
 
+function loadStoredQuickPrompts(): AiQuickPrompt[] {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY_AI_QUICK_PROMPTS);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        return parsed;
+      }
+    }
+  } catch (e) {
+    console.warn('Failed to load AI quick prompts from localStorage:', e);
+  }
+  return [...DEFAULT_QUICK_PROMPTS];
+}
+
 function loadStoredMessages(): AiChatMessage[] {
   try {
     const raw = localStorage.getItem(STORAGE_KEY_AI_MESSAGES);
@@ -40,6 +56,7 @@ export const useAiChatStore = defineStore('aiChat', () => {
   // 對話設定與狀態
   const config = ref<AiProviderConfig>(loadStoredConfig());
   const messages = ref<AiChatMessage[]>(loadStoredMessages());
+  const quickPrompts = ref<AiQuickPrompt[]>(loadStoredQuickPrompts());
 
   // 視窗開啟與縮小化狀態
   const isChatOpen = ref<boolean>(false);
@@ -80,6 +97,43 @@ export const useAiChatStore = defineStore('aiChat', () => {
     },
     { deep: true }
   );
+
+  watch(
+    quickPrompts,
+    (val) => {
+      try {
+        localStorage.setItem(STORAGE_KEY_AI_QUICK_PROMPTS, JSON.stringify(val));
+      } catch (e) {
+        console.warn('Failed to save AI quick prompts to localStorage:', e);
+      }
+    },
+    { deep: true }
+  );
+
+  function addQuickPrompt(label: string, prompt: string) {
+    const newPrompt: AiQuickPrompt = {
+      id: `prompt-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+      label: label.trim(),
+      prompt: prompt.trim(),
+    };
+    quickPrompts.value.push(newPrompt);
+  }
+
+  function updateQuickPrompt(id: string, label: string, prompt: string) {
+    const target = quickPrompts.value.find((p) => p.id === id);
+    if (target) {
+      target.label = label.trim();
+      target.prompt = prompt.trim();
+    }
+  }
+
+  function deleteQuickPrompt(id: string) {
+    quickPrompts.value = quickPrompts.value.filter((p) => p.id !== id);
+  }
+
+  function resetQuickPrompts() {
+    quickPrompts.value = [...DEFAULT_QUICK_PROMPTS];
+  }
 
   function openChat(sqlText = '', isSelection = false) {
     if (sqlText && sqlText.trim()) {
@@ -189,6 +243,7 @@ export const useAiChatStore = defineStore('aiChat', () => {
   return {
     config,
     messages,
+    quickPrompts,
     isChatOpen,
     isMinimized,
     currentSql,
@@ -202,6 +257,10 @@ export const useAiChatStore = defineStore('aiChat', () => {
     clearSqlContext,
     clearHistory,
     resetCurlTemplate,
+    addQuickPrompt,
+    updateQuickPrompt,
+    deleteQuickPrompt,
+    resetQuickPrompts,
     askQuestion,
     cancelGeneration,
   };

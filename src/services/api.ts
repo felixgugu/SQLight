@@ -377,6 +377,26 @@ function mockInvoke<T>(cmd: string, args?: Record<string, unknown>): Promise<T> 
     case 'get_query_log_path':
       return Promise.resolve('./sqlight.log' as unknown as T);
 
+    case 'log_ai_request':
+      console.info('[Dev/Browser] log_ai_request:', args);
+      return Promise.resolve(undefined as unknown as T);
+
+    case 'log_ai_response':
+      console.info('[Dev/Browser] log_ai_response:', args);
+      return Promise.resolve(undefined as unknown as T);
+
+    case 'open_ai_log_file':
+      console.info('[Dev/Browser] Opening mock AI log file: ./ai.log');
+      return Promise.resolve('./ai.log' as unknown as T);
+
+    case 'get_ai_log_path':
+      return Promise.resolve('./ai.log' as unknown as T);
+
+    case 'clear_ai_log':
+      console.info('[Dev/Browser] clear_ai_log');
+      return Promise.resolve('./ai.log' as unknown as T);
+
+
     case 'pick_sql_folder': {
       // In browser mock, provide default or prompt
       const defaultPath = 'C:/MyScripts/SQL';
@@ -477,6 +497,19 @@ ORDER BY p.rows DESC;
       const content = (args?.content as string) || '';
       try {
         localStorage.setItem(`sqlight_mock_file_${filePath}`, content);
+      } catch {}
+      return Promise.resolve(undefined as unknown as T);
+    }
+
+    case 'rename_sql_path': {
+      const oldPath = (args?.oldPath as string) || '';
+      const newPath = (args?.newPath as string) || '';
+      try {
+        const content = localStorage.getItem(`sqlight_mock_file_${oldPath}`);
+        if (content !== null) {
+          localStorage.setItem(`sqlight_mock_file_${newPath}`, content);
+          localStorage.removeItem(`sqlight_mock_file_${oldPath}`);
+        }
       } catch {}
       return Promise.resolve(undefined as unknown as T);
     }

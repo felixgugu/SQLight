@@ -35,6 +35,16 @@
         <!-- 視窗控制按鈕組 (點擊不觸發拖曳) -->
         <div class="flex items-center space-x-1" @pointerdown.stop>
           <Button
+            icon="pi pi-file-edit"
+            severity="secondary"
+            text
+            rounded
+            size="small"
+            v-tooltip.top="'開啟 AI 請求記錄檔 (ai.log)'"
+            class="!w-7 !h-7 !p-0 hover:text-purple-300"
+            @click="handleOpenAiLog"
+          />
+          <Button
             icon="pi pi-trash"
             severity="secondary"
             text
@@ -82,18 +92,54 @@
         <!-- 附帶 SQL 標籤欄 -->
         <div
           v-if="aiChatStore.currentSql"
-          class="flex items-center justify-between px-3 py-1.5 border-b border-dark-750 dark:border-dark-800 bg-dark-850/60 dark:bg-[#18181f]/80 text-xs flex-shrink-0"
+          class="flex items-center justify-between px-3 py-1.5 border-b border-dark-750 dark:border-dark-800 bg-dark-850/60 dark:bg-[#18181f]/80 text-xs flex-shrink-0 relative"
         >
-          <div class="flex items-center space-x-2 truncate">
+          <!-- 懸浮觸發區 (mouseover 浮動顯示完整 SQL) -->
+          <div
+            class="relative flex items-center space-x-2 cursor-pointer group select-none"
+            @mouseenter="isSqlHovered = true"
+            @mouseleave="isSqlHovered = false"
+          >
             <Tag
               :value="aiChatStore.isSelectionOnly ? '選取範圍 SQL' : '整頁 SQL'"
               severity="info"
-              class="!text-[10px] !py-0.5 !px-1.5"
+              class="!text-[10px] !py-0.5 !px-1.5 flex-shrink-0"
             />
-            <span class="text-dark-400 truncate max-w-[360px] font-mono">
+            <span class="text-dark-300 group-hover:text-purple-300 truncate max-w-[360px] font-mono transition-colors flex items-center gap-1">
               {{ sqlPreviewText }}
+              <i class="pi pi-eye text-[10px] text-dark-400 group-hover:text-purple-300 ml-0.5" />
             </span>
+
+            <!-- Mouseover 浮動完整 SQL 預覽視窗 -->
+            <Transition name="fade">
+              <div
+                v-if="isSqlHovered"
+                class="absolute left-0 top-full mt-1.5 z-[9999] w-[520px] max-h-80 flex flex-col rounded-lg border border-dark-600 bg-dark-900/95 dark:bg-[#121216]/95 backdrop-blur shadow-2xl overflow-hidden pointer-events-auto select-text"
+                @mouseenter="isSqlHovered = true"
+                @mouseleave="isSqlHovered = false"
+              >
+                <!-- 浮動卡片標題列 -->
+                <div class="px-3 py-1.5 bg-dark-800 dark:bg-[#1c1c22] border-b border-dark-700 flex items-center justify-between text-xxs text-dark-300 select-none">
+                  <span class="font-semibold text-purple-300 flex items-center gap-1.5">
+                    <i class="pi pi-code text-xs text-purple-400" />
+                    完整附帶 SQL (共 {{ sqlLineCount }} 行)
+                  </span>
+                  <div class="flex items-center space-x-2">
+                    <button
+                      type="button"
+                      class="text-dark-300 hover:text-emerald-400 transition-colors flex items-center gap-1 cursor-pointer"
+                      @click.stop="copySql(aiChatStore.currentSql)"
+                    >
+                      <i class="pi pi-copy text-[10px]" />複製
+                    </button>
+                  </div>
+                </div>
+                <!-- 浮動卡片程式碼區 -->
+                <pre class="p-3 overflow-y-auto max-h-72 m-0 text-[11px] font-mono leading-relaxed bg-black/40 text-emerald-300 whitespace-pre-wrap break-all select-text font-medium"><code>{{ aiChatStore.currentSql }}</code></pre>
+              </div>
+            </Transition>
           </div>
+
           <Button
             icon="pi pi-times"
             severity="secondary"
@@ -211,21 +257,21 @@
           </div>
         </div>
 
-        <!-- 快捷提示詞晶片 -->
+        <!-- 快捷提示詞晶片 (純文字無圖示，點選填入輸入框) -->
         <div class="px-3 py-1.5 border-t border-dark-750 bg-dark-850/80 flex items-center space-x-2 overflow-x-auto flex-shrink-0 select-none scrollbar-none">
-          <span class="text-[11px] text-dark-400 flex-shrink-0 flex items-center">
-            <i class="pi pi-bolt mr-1 text-amber-400" />快捷提問:
+          <span class="text-[11px] text-dark-400 flex-shrink-0">
+            快捷提問:
           </span>
           <Button
-            v-for="chip in quickChips"
-            :key="chip.label"
+            v-for="chip in aiChatStore.quickPrompts"
+            :key="chip.id"
             :label="chip.label"
             size="small"
             severity="secondary"
             outlined
-            class="!text-[11px] !py-0.5 !px-2 !rounded-full flex-shrink-0"
+            class="!text-[11px] !py-0.5 !px-2 !rounded-full flex-shrink-0 hover:border-purple-400 hover:text-purple-300 transition-colors"
             :disabled="aiChatStore.isGenerating"
-            @click="handleSendPrompt(chip.prompt)"
+            @click="handleSelectQuickPrompt(chip.prompt)"
           />
         </div>
 
@@ -233,6 +279,7 @@
         <div class="p-3 border-t border-dark-750 bg-dark-850/90 flex-shrink-0 select-none">
           <div class="relative flex items-end space-x-2">
             <Textarea
+              ref="inputTextareaRef"
               v-model="inputQuery"
               rows="2"
               auto-resize
@@ -279,15 +326,26 @@ import ProgressBar from 'primevue/progressbar';
 import { useToast } from 'primevue/usetoast';
 import { useAiChatStore } from '@/stores/aiChatStore';
 import { useWorkspaceStore } from '@/stores/workspaceStore';
+import { aiLoggerService } from '@/services/aiLoggerService';
 
 const aiChatStore = useAiChatStore();
 const workspaceStore = useWorkspaceStore();
 const toast = useToast();
 
+async function handleOpenAiLog() {
+  try {
+    await aiLoggerService.openAiLogFile();
+  } catch (err) {
+    console.warn('[AiSqlChatModal] 開啟 ai.log 失敗:', err);
+  }
+}
+
 const panelRef = ref<HTMLElement | null>(null);
 const messagesContainerRef = ref<HTMLElement | null>(null);
+const inputTextareaRef = ref<any>(null);
 const inputQuery = ref('');
 const isMaximized = ref(false);
+const isSqlHovered = ref(false);
 
 // 視窗定位與尺寸 (預設高度 80vh，靠右下角排列)
 const size = reactive({
@@ -433,20 +491,24 @@ function onPointerUpResize() {
   window.removeEventListener('pointercancel', onPointerUpResize);
 }
 
-// 快速提示詞列表
-const quickChips = [
-  { label: '🚀 查詢最佳化', prompt: '請針對附加的 SQL 語法進行效能診斷，指出潛在的效能瓶頸，並提供最佳化後的改寫建議與索引規劃。' },
-  { label: '🔍 語法邏輯解釋', prompt: '請逐步詳細解釋這段 SQL 的執行邏輯、關聯條件 (JOIN) 與各條件的預期結果。' },
-  { label: '⚠️ 效能與死鎖風險', prompt: '這段 SQL 在高併發交易下是否存在鎖定 (Locking)、死鎖 (Deadlock) 或隱式型別轉換 (Implicit Conversion) 的風險？' },
-  { label: '🛠️ 改寫相容語法', prompt: '請將這段語法改寫為標準、嚴謹且效能最佳的 T-SQL 寫法。' },
-];
-
 const sqlPreviewText = computed(() => {
   if (!aiChatStore.currentSql) return '';
   const lines = aiChatStore.currentSql.trim().split('\n');
   const firstLine = lines[0] ?? '';
   return `(${lines.length} 行) ${firstLine.slice(0, 45)}...`;
 });
+
+const sqlLineCount = computed(() => {
+  if (!aiChatStore.currentSql) return 0;
+  return aiChatStore.currentSql.trim().split('\n').length;
+});
+
+function handleSelectQuickPrompt(prompt: string) {
+  inputQuery.value = prompt;
+  nextTick(() => {
+    inputTextareaRef.value?.$el?.focus?.() || inputTextareaRef.value?.focus?.();
+  });
+}
 
 function formatTime(ts: number): string {
   const d = new Date(ts);
@@ -504,11 +566,6 @@ function handleSubmit() {
   const q = inputQuery.value;
   inputQuery.value = '';
   aiChatStore.askQuestion(q);
-  scrollToBottom();
-}
-
-function handleSendPrompt(prompt: string) {
-  aiChatStore.askQuestion(prompt);
   scrollToBottom();
 }
 

@@ -29,4 +29,11 @@ export const sqlFolderService = {
   async writeFile(filePath: string, content: string): Promise<void> {
     return invokeCommand<void>('write_sql_file', { filePath, content });
   },
+
+  /**
+   * Renames a .sql file or directory on disk
+   */
+  async renamePath(oldPath: string, newPath: string): Promise<void> {
+    return invokeCommand<void>('rename_sql_path', { oldPath, newPath });
+  },
 };

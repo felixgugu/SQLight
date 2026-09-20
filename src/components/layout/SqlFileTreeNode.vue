@@ -4,12 +4,13 @@
     <template v-if="node.is_dir">
       <div
         @click="toggleExpand"
+        @contextmenu.prevent.stop="handleContextMenu"
         :class="[
           'flex items-center space-x-1.5 px-1.5 py-1 rounded cursor-pointer transition-colors group',
           'text-dark-300 hover:bg-dark-750 hover:text-dark-100'
         ]"
         :style="{ paddingLeft: `${depth * 14 + 6}px` }"
-        :title="`${node.path} (點擊展開/收合)`"
+        :title="`${node.path} (點擊展開/收合，右鍵開啟選單)`"
       >
         <!-- Chevron -->
         <button
@@ -58,6 +59,7 @@
     <template v-else>
       <div
         @click="handleFileClick"
+        @contextmenu.prevent.stop="handleContextMenu"
         :class="[
           'flex items-center space-x-1.5 px-1.5 py-1 rounded cursor-pointer transition-colors group relative',
           isActiveFile
@@ -65,7 +67,7 @@
             : 'text-dark-300 hover:bg-dark-750 hover:text-dark-100'
         ]"
         :style="{ paddingLeft: `${depth * 14 + 20}px` }"
-        :title="`${node.path} (點擊在編輯區開啟)`"
+        :title="`${node.path} (點擊在編輯區開啟，右鍵開啟選單)`"
       >
         <FileCode class="w-3.5 h-3.5 text-brand-400 flex-shrink-0" />
 
@@ -87,7 +89,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, inject } from 'vue';
 import {
   ChevronRight,
   ChevronDown,
@@ -112,6 +114,10 @@ const props = withDefaults(defineProps<Props>(), {
 const sqlFolderStore = useSqlFolderStore();
 const workspaceStore = useWorkspaceStore();
 
+const openContextMenu = inject<((event: MouseEvent, node: SqlFileNode) => void) | undefined>(
+  'openSqlNodeContextMenu'
+);
+
 const isExpanded = computed(() => !!sqlFolderStore.expandedNodes[props.node.path]);
 
 const isActiveFile = computed(() => {
@@ -131,6 +137,10 @@ function handleFileClick() {
   if (!props.node.is_dir) {
     sqlFolderStore.openFile(props.node);
   }
+}
+
+function handleContextMenu(event: MouseEvent) {
+  openContextMenu?.(event, props.node);
 }
 
 function formatByteSize(bytes: number): string {
