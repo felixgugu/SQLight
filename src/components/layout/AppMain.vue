@@ -5,7 +5,7 @@
       @dragover.prevent="handleBarDragOver"
       @dragleave="handleBarDragLeave"
       @drop.prevent="handleBarDrop"
-      class="h-9 bg-dark-850 flex items-center px-1.5 space-x-1 select-none flex-shrink-0 overflow-hidden transition-colors"
+      class="workspace-tab-bar h-9 bg-dark-850 flex items-center px-1.5 space-x-1 select-none flex-shrink-0 overflow-hidden transition-colors"
       :class="[isBarDragOver ? 'bg-dark-800 ring-1 ring-inset ring-brand-500/40' : '']"
     >
       <!-- Fixed Left: Add New Query Tab Button -->
@@ -999,6 +999,11 @@ defineExpose({
 
 .query-tabs-scroll::-webkit-scrollbar-thumb:hover {
   background: #525266;
+}
+
+.workspace-tab-bar {
+    padding-top: 6px;
+    border-bottom: 1px solid rgb(var(--color-dark-600) / var(--tw-text-opacity, 1));
 }
 </style>
 
