@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia';
-import { ref, computed, watch } from 'vue';
+import { ref, computed, watch, markRaw } from 'vue';
 import type { QueryResult, QueryHistoryItem, QueryResultTab, QueryMessage, ResultSet, SessionMessageItem } from '@/types/query';
 import { queryService } from '@/services/queryService';
 import { useSettingsStore } from './settingsStore';
@@ -442,6 +442,14 @@ export const useQueryStore = defineStore('query', () => {
         isShowplan,
       };
 
+      if (result.resultSets) {
+        for (const rs of result.resultSets) {
+          if (rs.rows && Array.isArray(rs.rows)) {
+            rs.rows = markRaw(rs.rows);
+          }
+        }
+      }
+
       insertNewTab(newTab);
 
       if (isShowplan) {
@@ -784,6 +792,14 @@ export const useQueryStore = defineStore('query', () => {
       }
 
       const duration = res.executionTimeMs || (Date.now() - startTime);
+
+      if (res.resultSets) {
+        for (const rs of res.resultSets) {
+          if (rs.rows && Array.isArray(rs.rows)) {
+            rs.rows = markRaw(rs.rows);
+          }
+        }
+      }
 
       // In-place update of target result set or all result sets
       if (res.resultSets.length === 1 && isMultiSet && targetSql !== tab.sql && tab.result.resultSets[setIndex]) {

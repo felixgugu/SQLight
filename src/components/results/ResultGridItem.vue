@@ -217,12 +217,15 @@
         :column-defs="columnDefs"
         :quick-filter-text="quickFilter"
         :enable-cell-text-selection="false"
-        :ensure-dom-order="true"
+        :ensure-dom-order="false"
+        :column-buffer="4"
+        :animate-rows="false"
+        :suppress-move-when-column-dragging="true"
+        :suppress-row-hover-highlight="true"
         :prevent-default-on-context-menu="true"
         :tooltip-show-mode="'whenTruncated'"
         :tooltip-show-delay="150"
         :tooltip-hide-delay="6000"
-        :suppress-row-hover-highlight="false"
         :stop-editing-when-cells-lose-focus="true"
         @grid-ready="onGridReady"
         @cell-context-menu="onCellContextMenu"
@@ -345,6 +348,14 @@
       >
         <Braces class="w-3.5 h-3.5 text-teal-400" />
         <span>複製整列為 JSON (Row JSON)</span>
+      </button>
+
+      <button
+        @click="openDataView"
+        class="w-full text-left px-2.5 py-1.5 hover:bg-dark-750 hover:text-dark-100 flex items-center space-x-2 transition-colors"
+      >
+        <Eye class="w-3.5 h-3.5 text-sky-400" />
+        <span>資料檢視 (Data View)</span>
       </button>
 
       <!-- Cell Editing Quick Actions in Context Menu -->
@@ -652,6 +663,7 @@ import {
   Table as TableIcon,
   Slash,
   Undo2,
+  Eye,
 } from 'lucide-vue-next';
 import { AgGridVue } from 'ag-grid-vue3';
 import {
@@ -661,7 +673,6 @@ import {
   type GridReadyEvent,
   type ColDef,
   type CellContextMenuEvent,
-  type ICellRendererParams,
 } from 'ag-grid-community';
 import { sqlightDarkGridTheme, sqlightLightGridTheme } from '@/styles/gridTheme';
 import { useSettingsStore } from '@/stores/settingsStore';
@@ -669,12 +680,12 @@ import { useQueryStore } from '@/stores/queryStore';
 import { useWorkspaceStore } from '@/stores/workspaceStore';
 import { useConnectionStore } from '@/stores/connectionStore';
 import { useSchemaStore } from '@/stores/schemaStore';
+import { useDataViewStore } from '@/stores/dataViewStore';
 import { queryService } from '@/services/queryService';
 import { checkTableEditability } from '@/utils/tableEditability';
 import { generateBatchUpdateScript, type RowModification } from '@/utils/batchUpdateGenerator';
 import SqlCodeViewer from '@/components/common/SqlCodeViewer.vue';
 import {
-  escapeHtml,
   calculateColumnWidth,
 } from '@/composables/useColumnAutoWidth';
 import { useGridSelection } from '@/composables/useGridSelection';
@@ -709,6 +720,7 @@ const queryStore = useQueryStore();
 const workspaceStore = useWorkspaceStore();
 const connectionStore = useConnectionStore();
 const schemaStore = useSchemaStore();
+const dataViewStore = useDataViewStore();
 
 const activeGridTheme = computed(() => {
   return settingsStore.colorMode === 'light' ? sqlightLightGridTheme : sqlightDarkGridTheme;
@@ -837,18 +849,28 @@ interface CellModification {
 const modifiedCells = ref<Record<string, CellModification>>({});
 const modifiedCount = computed(() => Object.keys(modifiedCells.value).length);
 
-function getRowPkKey(row: CellValue[] | undefined): string {
-  if (!row || !props.resultSet || editability.value.pkColumns.length === 0) return '';
+const pkColumnIndices = computed<number[]>(() => {
+  if (!props.resultSet || editability.value.pkColumns.length === 0) return [];
+  const map = new Map<string, number>();
+  props.resultSet.columns.forEach((c, idx) => map.set(c.name.toLowerCase(), idx));
   return editability.value.pkColumns
-    .map((pk) => {
-      const idx = props.resultSet.columns.findIndex((c) => c.name.toLowerCase() === pk.toLowerCase());
-      return idx !== undefined && idx >= 0 ? String(row[idx]) : '';
-    })
-    .join(':::');
+    .map((pk) => map.get(pk.toLowerCase()))
+    .filter((idx): idx is number => idx !== undefined);
+});
+
+function getRowPkKey(row: CellValue[] | undefined): string {
+  if (!row || pkColumnIndices.value.length === 0) return '';
+  const indices = pkColumnIndices.value;
+  let key = '';
+  for (let i = 0; i < indices.length; i++) {
+    if (i > 0) key += ':::';
+    key += String(row[indices[i]!] ?? '');
+  }
+  return key;
 }
 
 function isCellModified(rowData: CellValue[] | undefined, colIdx: number): boolean {
-  if (!rowData) return false;
+  if (modifiedCount.value === 0 || !rowData) return false;
   const rowKey = getRowPkKey(rowData);
   if (!rowKey) return false;
   return `${rowKey}___col_${colIdx}` in modifiedCells.value;
@@ -1173,6 +1195,23 @@ function copyCurrentRowAsJson() {
   }
 }
 
+function openDataView() {
+  const row = contextMenu.rowData || (contextMenu.rowIndex >= 0 && props.resultSet ? props.resultSet.rows[contextMenu.rowIndex] : null);
+  if (!row || !props.resultSet) {
+    contextMenu.visible = false;
+    return;
+  }
+  dataViewStore.openDataView({
+    columns: props.resultSet.columns,
+    row,
+    rowIndex: contextMenu.rowIndex,
+    totalRows: props.resultSet.rows.length,
+    allRows: props.resultSet.rows,
+    tableName: currentTab.value?.title || currentTab.value?.tableName,
+  });
+  contextMenu.visible = false;
+}
+
 const isColPinned = computed(() => {
   if (!gridApi.value || !contextMenu.colId) return false;
   const col = gridApi.value.getColumn(contextMenu.colId);
@@ -1228,6 +1267,10 @@ const columnDefs = computed<ColDef[]>(() => {
       cellClass: isStmtText ? '!whitespace-pre font-mono text-dark-100' : '',
       cellClassRules: {
         'sqlight-cell-modified': (params) => isCellModified(params.data, colIdx),
+        'sqlight-cell-null': (params) => params.value === null || params.value === undefined,
+        'sqlight-cell-bool-true': (params) => params.value === true,
+        'sqlight-cell-bool-false': (params) => params.value === false,
+        'sqlight-cell-binary': (params) => typeof params.value === 'object' && params.value !== null && 'type' in params.value && (params.value as any).type === 'binary',
       },
       editable: () => {
         return editability.value.canEdit && !isPk && !isIdentity;
@@ -1326,22 +1369,14 @@ const columnDefs = computed<ColDef[]>(() => {
       filter: true,
       resizable: true,
       valueGetter: (params) => params.data?.[colIdx],
-      cellRenderer: (params: ICellRendererParams) => {
+      valueFormatter: (params) => {
         const val = params.value;
-        if (val === null || val === undefined) {
-          return '<span class="italic text-dark-500 font-mono text-xxs">NULL</span>';
-        }
+        if (val === null || val === undefined) return 'NULL';
+        if (typeof val === 'boolean') return val ? 'TRUE' : 'FALSE';
         if (typeof val === 'object' && val !== null && 'type' in val && (val as any).type === 'binary') {
-          return `<span class="bg-indigo-950/60 text-indigo-300 px-1.5 py-0.5 rounded text-xxs font-sans font-medium border border-indigo-800/50">[Binary ${(val as any).length} B]</span>`;
+          return `[Binary ${(val as any).length} B]`;
         }
-        if (typeof val === 'boolean') {
-          const color = val ? 'text-emerald-400' : 'text-rose-400';
-          return `<span class="${color} font-semibold text-xxs">${val ? 'TRUE' : 'FALSE'}</span>`;
-        }
-        if (isStmtText) {
-          return `<span class="whitespace-pre font-mono text-dark-100">${escapeHtml(String(val))}</span>`;
-        }
-        return escapeHtml(String(val));
+        return val != null ? String(val) : '';
       },
     };
   });
@@ -1523,5 +1558,31 @@ function togglePinColumn() {
   background-color: rgba(245, 158, 11, 0.15) !important;
   box-shadow: inset 3px 0 0 0 #f59e0b !important;
   color: #fef08a !important;
+}
+
+/* Zero-overhead CSS styling for NULL, Booleans, and Binary cells (Native text performance) */
+:deep(.sqlight-cell-null) {
+  color: rgb(var(--color-dark-500)) !important;
+  font-style: italic !important;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace !important;
+  font-size: 0.6875rem !important;
+}
+
+:deep(.sqlight-cell-bool-true) {
+  color: #34d399 !important;
+  font-weight: 600 !important;
+  font-size: 0.6875rem !important;
+}
+
+:deep(.sqlight-cell-bool-false) {
+  color: #fb7185 !important;
+  font-weight: 600 !important;
+  font-size: 0.6875rem !important;
+}
+
+:deep(.sqlight-cell-binary) {
+  color: #93c5fd !important;
+  font-weight: 500 !important;
+  font-size: 0.6875rem !important;
 }
 </style>

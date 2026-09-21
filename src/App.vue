@@ -104,6 +104,10 @@
     <!-- AI Floating Progress Pill (縮小化浮動膠囊) -->
     <AiFloatingPill />
 
+    <!-- 資料檢視 (Data View Dialog & Minimized Floating Pill) -->
+    <DataViewModal />
+    <DataViewFloatingPill />
+
     <!-- PrimeVue Global Toast Notification -->
     <Toast position="bottom-right" />
   </div>
@@ -125,6 +129,8 @@ import QuickObjectFinderModal from '@/components/modals/QuickObjectFinderModal.v
 import SqlTemplateModal from '@/components/modals/SqlTemplateModal.vue';
 import AiSqlChatModal from '@/components/modals/AiSqlChatModal.vue';
 import AiFloatingPill from '@/components/ai/AiFloatingPill.vue';
+import DataViewModal from '@/components/modals/DataViewModal.vue';
+import DataViewFloatingPill from '@/components/modals/DataViewFloatingPill.vue';
 import { usePrimeVue } from 'primevue/config';
 import { useSplitter } from '@/composables/useSplitter';
 import { useWorkspaceStore } from '@/stores/workspaceStore';

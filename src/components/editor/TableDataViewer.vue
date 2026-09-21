@@ -106,12 +106,15 @@
         :column-defs="columnDefs"
         :quick-filter-text="quickFilter"
         :enable-cell-text-selection="false"
-        :ensure-dom-order="true"
+        :ensure-dom-order="false"
+        :column-buffer="4"
+        :animate-rows="false"
+        :suppress-move-when-column-dragging="true"
+        :suppress-row-hover-highlight="true"
         :prevent-default-on-context-menu="true"
         :tooltip-show-mode="'whenTruncated'"
         :tooltip-show-delay="150"
         :tooltip-hide-delay="6000"
-        :suppress-row-hover-highlight="false"
         @grid-ready="onGridReady"
         @cell-context-menu="onCellContextMenu"
         @body-scroll="onBodyScroll"
@@ -322,7 +325,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, reactive, onMounted, watch } from 'vue';
+import { ref, computed, reactive, onMounted, watch, markRaw } from 'vue';
 import Button from 'primevue/button';
 import InputText from 'primevue/inputtext';
 import IconField from 'primevue/iconfield';
@@ -347,7 +350,6 @@ import {
   type GridReadyEvent,
   type ColDef,
   type CellContextMenuEvent,
-  type ICellRendererParams,
 } from 'ag-grid-community';
 import { sqlightDarkGridTheme, sqlightLightGridTheme } from '@/styles/gridTheme';
 import { queryService } from '@/services/queryService';
@@ -357,7 +359,6 @@ import { useWorkspaceStore } from '@/stores/workspaceStore';
 import { useSchemaStore } from '@/stores/schemaStore';
 import { useSettingsStore } from '@/stores/settingsStore';
 import {
-  escapeHtml,
   calculateColumnWidth,
 } from '@/composables/useColumnAutoWidth';
 import { useGridSelection } from '@/composables/useGridSelection';
@@ -575,19 +576,20 @@ const columnDefs = computed<ColDef[]>(() => {
       filter: true,
       resizable: true,
       valueGetter: (params) => params.data?.[colIdx],
-      cellRenderer: (params: ICellRendererParams) => {
+      cellClassRules: {
+        'sqlight-cell-null': (params) => params.value === null || params.value === undefined,
+        'sqlight-cell-bool-true': (params) => params.value === true,
+        'sqlight-cell-bool-false': (params) => params.value === false,
+        'sqlight-cell-binary': (params) => typeof params.value === 'object' && params.value !== null && 'type' in params.value && (params.value as any).type === 'binary',
+      },
+      valueFormatter: (params) => {
         const val = params.value;
-        if (val === null || val === undefined) {
-          return '<span class="italic text-dark-500 font-mono text-xxs">NULL</span>';
-        }
+        if (val === null || val === undefined) return 'NULL';
+        if (typeof val === 'boolean') return val ? 'TRUE' : 'FALSE';
         if (typeof val === 'object' && val !== null && 'type' in val && (val as any).type === 'binary') {
-          return `<span class="bg-indigo-950/60 text-indigo-300 px-1.5 py-0.5 rounded text-xxs font-sans font-medium border border-indigo-800/50">[Binary ${(val as any).length} B]</span>`;
+          return `[Binary ${(val as any).length} B]`;
         }
-        if (typeof val === 'boolean') {
-          const color = val ? 'text-emerald-400' : 'text-rose-400';
-          return `<span class="${color} font-semibold text-xxs">${val ? 'TRUE' : 'FALSE'}</span>`;
-        }
-        return escapeHtml(String(val));
+        return val != null ? String(val) : '';
       },
     };
   });
@@ -725,7 +727,7 @@ async function loadData() {
     const res = await queryService.executeQuery(connId, db, sql, limit);
     if (res.resultSets.length > 0 && res.resultSets[0]) {
       columns.value = res.resultSets[0].columns;
-      rows.value = res.resultSets[0].rows;
+      rows.value = markRaw(res.resultSets[0].rows);
     } else {
       columns.value = [];
       rows.value = [];
@@ -781,5 +783,31 @@ onMounted(() => {
 
 :deep(.sqlight-header-selected.pk-column-header .ag-header-cell-text::before) {
   background-color: #fef08a !important;
+}
+
+/* Zero-overhead CSS styling for NULL, Booleans, and Binary cells (Native text performance) */
+:deep(.sqlight-cell-null) {
+  color: rgb(var(--color-dark-500)) !important;
+  font-style: italic !important;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace !important;
+  font-size: 0.6875rem !important;
+}
+
+:deep(.sqlight-cell-bool-true) {
+  color: #34d399 !important;
+  font-weight: 600 !important;
+  font-size: 0.6875rem !important;
+}
+
+:deep(.sqlight-cell-bool-false) {
+  color: #fb7185 !important;
+  font-weight: 600 !important;
+  font-size: 0.6875rem !important;
+}
+
+:deep(.sqlight-cell-binary) {
+  color: #93c5fd !important;
+  font-weight: 500 !important;
+  font-size: 0.6875rem !important;
 }
 </style>

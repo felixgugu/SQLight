@@ -240,14 +240,22 @@ export function useGridSelection(options: UseGridSelectionOptions): UseGridSelec
     const container = options.getGridContainer();
     if (!container) return;
 
+    if (!hasSelection.value) {
+      const selectedCells = container.querySelectorAll('.sqlight-cell-selected');
+      selectedCells.forEach((cell) => cell.classList.remove('sqlight-cell-selected'));
+      const selectedHeaders = container.querySelectorAll('.sqlight-header-selected');
+      selectedHeaders.forEach((hCell) => hCell.classList.remove('sqlight-header-selected'));
+      return;
+    }
+
     const visualIndices = getVisualDataColIndices();
+    const vIdxMap = new Map<number, number>();
+    for (let i = 0; i < visualIndices.length; i++) {
+      vIdxMap.set(visualIndices[i]!, i);
+    }
 
     const cells = container.querySelectorAll('.ag-cell');
     cells.forEach((cell) => {
-      if (!hasSelection.value) {
-        cell.classList.remove('sqlight-cell-selected');
-        return;
-      }
       const rStr = cell.getAttribute('row-index');
       const cId = cell.getAttribute('col-id');
       if (rStr == null || !cId) {
@@ -257,8 +265,8 @@ export function useGridSelection(options: UseGridSelectionOptions): UseGridSelec
       const r = parseInt(rStr, 10);
       const c = getColIndex(cId);
       if (c !== undefined) {
-        const vIdx = visualIndices.indexOf(c);
-        if (isCellInSelection(r, c, vIdx >= 0 ? vIdx : undefined)) {
+        const vIdx = vIdxMap.get(c);
+        if (isCellInSelection(r, c, vIdx)) {
           cell.classList.add('sqlight-cell-selected');
         } else {
           cell.classList.remove('sqlight-cell-selected');
@@ -274,8 +282,8 @@ export function useGridSelection(options: UseGridSelectionOptions): UseGridSelec
       const cId = hCell.getAttribute('col-id');
       const c = getColIndex(cId);
       if (c !== undefined) {
-        const vIdx = visualIndices.indexOf(c);
-        if (isColumnSelected(c, vIdx >= 0 ? vIdx : undefined)) {
+        const vIdx = vIdxMap.get(c);
+        if (isColumnSelected(c, vIdx)) {
           hCell.classList.add('sqlight-header-selected');
         } else {
           hCell.classList.remove('sqlight-header-selected');
@@ -528,8 +536,7 @@ export function useGridSelection(options: UseGridSelectionOptions): UseGridSelec
             minCol: 0,
             maxCol: visualIndices.length > 0 ? visualIndices.length - 1 : options.getColumns().length - 1,
           };
-          computeSelectionStats();
-          updateSelectionHighlight();
+          scheduleDragHighlight();
         }
       }
       return;
@@ -549,9 +556,16 @@ export function useGridSelection(options: UseGridSelectionOptions): UseGridSelec
       const c = getColIndex(cId);
       if (isNaN(r) || c === undefined) return;
 
-      const visualIndices = getVisualDataColIndices();
-      const vIdx = visualIndices.indexOf(c);
-      if (vIdx === -1) return;
+      if (!activeDragVisualIndices || !activeDragVIdxMap) {
+        activeDragVisualIndices = getVisualDataColIndices();
+        activeDragVIdxMap = new Map();
+        for (let i = 0; i < activeDragVisualIndices.length; i++) {
+          activeDragVIdxMap.set(activeDragVisualIndices[i]!, i);
+        }
+      }
+
+      const vIdx = activeDragVIdxMap.get(c);
+      if (vIdx === undefined || vIdx === -1) return;
 
       if (cellDragEnd.value?.rowIndex !== r || cellDragEnd.value?.colIndex !== vIdx) {
         cellDragEnd.value = { rowIndex: r, colIndex: vIdx };
@@ -560,15 +574,39 @@ export function useGridSelection(options: UseGridSelectionOptions): UseGridSelec
         const minCol = Math.min(cellDragStart.value.colIndex, vIdx);
         const maxCol = Math.max(cellDragStart.value.colIndex, vIdx);
         selectionRange.value = { minRow, maxRow, minCol, maxCol };
-        computeSelectionStats();
-        updateSelectionHighlight();
+        scheduleDragHighlight();
       }
     }
   }
 
+  let activeDragVisualIndices: number[] | null = null;
+  let activeDragVIdxMap: Map<number, number> | null = null;
+  let dragHighlightRafId: number | null = null;
+
+  function scheduleDragHighlight() {
+    if (dragHighlightRafId !== null) return;
+    dragHighlightRafId = requestAnimationFrame(() => {
+      dragHighlightRafId = null;
+      updateSelectionHighlight();
+    });
+  }
+
   function handleGlobalMouseUp() {
+    const wasDragging = isCellDragging.value || isRowDragging.value;
     if (isCellDragging.value) isCellDragging.value = false;
     if (isRowDragging.value) isRowDragging.value = false;
+    activeDragVisualIndices = null;
+    activeDragVIdxMap = null;
+
+    if (dragHighlightRafId !== null) {
+      cancelAnimationFrame(dragHighlightRafId);
+      dragHighlightRafId = null;
+    }
+
+    if (wasDragging) {
+      computeSelectionStats();
+      updateSelectionHighlight();
+    }
   }
 
   function handleGlobalKeyDown(e: KeyboardEvent) {
@@ -600,8 +638,14 @@ export function useGridSelection(options: UseGridSelectionOptions): UseGridSelec
     }
   }
 
+  let scrollRafId: number | null = null;
   function onBodyScroll() {
-    updateSelectionHighlight();
+    if (!hasSelection.value) return;
+    if (scrollRafId !== null) return;
+    scrollRafId = requestAnimationFrame(() => {
+      scrollRafId = null;
+      updateSelectionHighlight();
+    });
   }
 
   onMounted(() => {
@@ -611,6 +655,14 @@ export function useGridSelection(options: UseGridSelectionOptions): UseGridSelec
   });
 
   onUnmounted(() => {
+    if (scrollRafId !== null) {
+      cancelAnimationFrame(scrollRafId);
+      scrollRafId = null;
+    }
+    if (dragHighlightRafId !== null) {
+      cancelAnimationFrame(dragHighlightRafId);
+      dragHighlightRafId = null;
+    }
     window.removeEventListener('mousemove', handleGlobalMouseMove);
     window.removeEventListener('mouseup', handleGlobalMouseUp);
     window.removeEventListener('keydown', handleGlobalKeyDown);

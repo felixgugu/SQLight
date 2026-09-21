@@ -2,7 +2,10 @@
  * Utilities and sizing helpers for AG Grid column auto-width calculation and value formatting.
  */
 
+const HTML_CHARS_REGEX = /[&<>"']/;
+
 export function escapeHtml(str: string): string {
+  if (!HTML_CHARS_REGEX.test(str)) return str;
   return str
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
