@@ -26,7 +26,8 @@
    - [ER 關聯圖視覺化檢視器 (ER Diagram Viewer)](#9-er-關聯圖視覺化檢視器-er-diagram-viewer)
    - [AI SQL 智能助理 (AI SQL Assistant)](#10-ai-sql-智能助理-ai-sql-assistant)
    - [本機 SQL 檔案監控與瀏覽區 (SQL Files Folder Explorer)](#11-本機-sql-檔案監控與瀏覽區-sql-files-folder-explorer)
-   - [個人化設定與安全防護 (Settings & Preferences)](#12-個人化設定與安全防護-settings--preferences)
+  - [個人化設定與安全防護 (Settings & Preferences)](#12-個人化設定與安全防護-settings--preferences)
+   - [TSV 資料匯入精靈 (TSV Import Wizard)](#13-tsv-資料匯入精靈-tsv-import-wizard)
 4. [鍵盤快捷鍵與快速代碼範本 (Shortcuts & Snippets)](#-鍵盤快捷鍵與快速代碼範本-shortcuts--snippets)
 5. [安裝、開發與建置指南 (Installation & Development)](#-安裝開發與建置指南-installation--development)
 
@@ -433,6 +434,13 @@ SQLight 採用現代跨平台桌面客戶端的雙層解耦架構：
 - **關於與手冊 (About)**：
   - 完整常用鍵盤快捷鍵清單與快速 SQL 代碼範本操作說明。
   - 支援一鍵重設所有設定為原廠預設值。
+
+### 13. TSV 資料匯入精靈 (TSV Import Wizard)
+- **入口**：左側 Explorer 的**資料表**節點右鍵 →「TSV 匯入」，以該資料表為目標（檢視表、預存程序與函式不提供）。
+- **第一階段（來源與設定）**：二選一來源（上傳 UTF-8 `.tsv` 檔／貼上 Tab 分隔文字，上限 20 MB）、略過首行、允許手動指定識別值（`SET IDENTITY_INSERT`，權限或引擎不支援時停用並顯示原因）；畫面同時顯示目標表格與**依序對應**的預期欄位（型別、必填、PK/Identity 備註），僅排除自動產生且不可寫入的欄位（computed／rowversion），**識別欄位一律列入**。勾選只控制是否送出 `SET IDENTITY_INSERT ON`；未勾選時識別值仍會隨 INSERT 送出，由資料庫回報錯誤並整批回滾（畫面會顯示非阻擋性警告）。
+- **解析與預先驗證**：Tab 分隔、支援 Windows／Unix 換行、保留連續與行尾 Tab 的空欄位、忽略檔尾換行、忽略 `\N` 為 NULL；逐列檢查欄位數、型別（整數範圍、小數精度、日期時間、GUID、二進位十六進位、字串長度）、必填與檔內主鍵／唯一鍵重複。包含識別欄位的鍵與識別值的範圍交由資料庫在寫入時檢查。驗證階段不寫入任何資料。
+- **第二階段（驗證結果與確認）**：通過時顯示目標表格、來源、筆數／欄數、略過首行與識別值設定，以及前 20 筆預覽；失敗時顯示總筆數／有效筆數／異常筆數與錯誤清單（行數、欄位位置與名稱、原始值、錯誤原因，最多列出 100 筆），並停用「開始匯入」。
+- **執行匯入**：新增模式（重複主鍵不覆寫），後端在**單一交易**內分批（每批 200 列）執行逐列 `TRY/CATCH` INSERT，任一列失敗即整批 `ROLLBACK` 並回報行號與資料庫訊息；匯入期間顯示進度且不可取消或關閉。成功後顯示實際匯入筆數，並自動重新載入該資料表已開啟的資料分頁。
 
 ---
 

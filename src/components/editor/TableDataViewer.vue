@@ -743,6 +743,22 @@ async function loadData() {
 onMounted(() => {
   loadData();
 });
+
+// Refresh when the table data changes elsewhere (e.g. a TSV import for this table).
+const tableDataVersionKey = computed(() => {
+  const connId = connectionStore.activeConnectionId ?? '';
+  const database = connectionStore.activeDatabase || 'master';
+  return `${connId}|${database}|${props.schema}|${props.tableName}`.toLowerCase();
+});
+
+watch(
+  () => workspaceStore.tableDataVersions[tableDataVersionKey.value] ?? 0,
+  (version, previous) => {
+    if (version !== previous) {
+      loadData();
+    }
+  }
+);
 </script>
 
 <style scoped>

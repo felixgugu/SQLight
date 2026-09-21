@@ -108,6 +108,9 @@
     <DataViewModal />
     <DataViewFloatingPill />
 
+    <!-- TSV 匯入精靈 (Explorer 資料表右鍵) -->
+    <TsvImportModal />
+
     <!-- PrimeVue Global Toast Notification -->
     <Toast position="bottom-right" />
   </div>
@@ -131,6 +134,7 @@ import AiSqlChatModal from '@/components/modals/AiSqlChatModal.vue';
 import AiFloatingPill from '@/components/ai/AiFloatingPill.vue';
 import DataViewModal from '@/components/modals/DataViewModal.vue';
 import DataViewFloatingPill from '@/components/modals/DataViewFloatingPill.vue';
+import TsvImportModal from '@/components/modals/TsvImportModal.vue';
 import { usePrimeVue } from 'primevue/config';
 import { useSplitter } from '@/composables/useSplitter';
 import { useWorkspaceStore } from '@/stores/workspaceStore';
@@ -424,4 +428,3 @@ onBeforeUnmount(() => {
   window.removeEventListener('sqlight:open-ai-chat', handleAiChatCustomEvent);
 });
 </script>
-

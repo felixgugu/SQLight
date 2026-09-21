@@ -1,5 +1,7 @@
 use crate::drivers::DatabaseConnection;
-use crate::error::AppResult;
+use crate::drivers::mssql::import_sql;
+use crate::error::{AppError, AppResult};
+use crate::models::import::{ImportCapabilities, ImportResult, ImportRowError, ImportRowPayload};
 use crate::models::query::{CellValue, ColumnDef, QueryMessage, QueryResult, ResultSet};
 use crate::models::schema::{ColumnItem, DatabaseItem, ForeignKeyItem, SchemaItem, TableItem, TableSchema};
 use async_trait::async_trait;
@@ -7,6 +9,7 @@ use chrono::{NaiveDate, NaiveDateTime, NaiveTime, Timelike, Utc};
 use std::time::Instant;
 use tiberius::{Client, Column, ColumnData, FromSql, Row};
 use tokio::net::TcpStream;
+use tokio::sync::mpsc::UnboundedSender;
 use tokio_util::compat::Compat;
 
 pub type TiberiusClient = Client<Compat<TcpStream>>;
@@ -190,6 +193,70 @@ impl SqlServerConnection {
             return Some(s.eq_ignore_ascii_case("yes") || s == "1" || s.eq_ignore_ascii_case("true"));
         }
         None
+    }
+
+    /// Executes a script and drains the response; used for transaction control statements.
+    async fn exec_script(&mut self, sql: &str) -> AppResult<()> {
+        let stream = self.client.simple_query(sql).await?;
+        let _ = stream.into_results().await?;
+        Ok(())
+    }
+
+    /// Executes one import batch and returns (recorded error count, XACT_STATE()).
+    /// `None` means the batch summary could not be read, which is treated as a failure.
+    async fn exec_import_batch(&mut self, sql: &str) -> AppResult<Option<(i32, i32)>> {
+        let stream = self.client.simple_query(sql).await?;
+        let results = stream.into_results().await?;
+        if let Some(rows) = results.first() {
+            if let Some(row) = rows.first() {
+                let err_count = Self::col_i32(row, 0).unwrap_or(0);
+                let xact_state = Self::col_i32(row, 1).unwrap_or(0);
+                return Ok(Some((err_count, xact_state)));
+            }
+        }
+        Ok(None)
+    }
+
+    /// Reads whether the login may run `SET IDENTITY_INSERT` together with the engine edition.
+    async fn query_alter_permission(&mut self, qualified: &str) -> AppResult<(bool, i32)> {
+        let sql = format!(
+            "SELECT CAST(ISNULL(HAS_PERMS_BY_NAME('{}', 'OBJECT', 'ALTER'), 0) AS INT) AS can_alter, \
+             CAST(ISNULL(CAST(SERVERPROPERTY('EngineEdition') AS INT), 0) AS INT) AS engine_edition;",
+            qualified.replace('\'', "''")
+        );
+        let stream = self.client.simple_query(sql).await?;
+        let results = stream.into_results().await?;
+        if let Some(rows) = results.first() {
+            if let Some(row) = rows.first() {
+                return Ok((
+                    Self::col_bool(row, 0).unwrap_or(false),
+                    Self::col_i32(row, 1).unwrap_or(0),
+                ));
+            }
+        }
+        Ok((false, 0))
+    }
+
+    /// Runs the rollback script, which first selects the collected row errors.
+    async fn query_import_errors(&mut self, sql: &str) -> AppResult<Vec<ImportRowError>> {
+        let stream = self.client.simple_query(sql).await?;
+        let results = stream.into_results().await?;
+        let mut errors = Vec::new();
+        if let Some(rows) = results.first() {
+            for row in rows {
+                let line = Self::col_i32(row, 0).unwrap_or(0);
+                if line <= 0 {
+                    continue;
+                }
+                errors.push(ImportRowError {
+                    line: line.max(0) as u32,
+                    column: Self::col_str(row, 1).map(|c| c.to_string()),
+                    message: Self::col_str(row, 2).unwrap_or("匯入失敗").to_string(),
+                    server_code: Self::col_i32(row, 3),
+                });
+            }
+        }
+        Ok(errors)
     }
 }
 
@@ -398,7 +465,9 @@ impl DatabaseConnection for SqlServerConnection {
                 CAST(c.NUMERIC_SCALE AS INT) AS NUMERIC_SCALE,
                 CASE WHEN c.IS_NULLABLE = 'YES' THEN 1 ELSE 0 END AS IS_NULLABLE,
                 CASE WHEN pk.COLUMN_NAME IS NOT NULL THEN 1 ELSE 0 END AS IS_PRIMARY_KEY,
-                CAST(ISNULL(COLUMNPROPERTY(OBJECT_ID(c.TABLE_SCHEMA + '.' + c.TABLE_NAME), c.COLUMN_NAME, 'IsIdentity'), 0) AS INT) AS IS_IDENTITY
+                CAST(ISNULL(COLUMNPROPERTY(OBJECT_ID(c.TABLE_SCHEMA + '.' + c.TABLE_NAME), c.COLUMN_NAME, 'IsIdentity'), 0) AS INT) AS IS_IDENTITY,
+                CAST(ISNULL(COLUMNPROPERTY(OBJECT_ID(c.TABLE_SCHEMA + '.' + c.TABLE_NAME), c.COLUMN_NAME, 'IsComputed'), 0) AS INT) AS IS_COMPUTED,
+                CASE WHEN c.DATA_TYPE IN ('timestamp', 'rowversion') THEN 1 ELSE 0 END AS IS_ROW_VERSION
             FROM INFORMATION_SCHEMA.COLUMNS c
             LEFT JOIN (
                 SELECT ku.TABLE_SCHEMA, ku.TABLE_NAME, ku.COLUMN_NAME
@@ -431,6 +500,8 @@ impl DatabaseConnection for SqlServerConnection {
                 let is_nullable = Self::col_bool(row, 5).unwrap_or(true);
                 let is_primary_key = Self::col_bool(row, 6).unwrap_or(false);
                 let is_identity = Self::col_bool(row, 7).unwrap_or(false);
+                let is_computed = Self::col_bool(row, 8).unwrap_or(false);
+                let is_row_version = Self::col_bool(row, 9).unwrap_or(false);
 
                 if !name.is_empty() {
                     columns.push(ColumnItem {
@@ -442,6 +513,8 @@ impl DatabaseConnection for SqlServerConnection {
                         is_nullable,
                         is_primary_key,
                         is_identity,
+                        is_computed,
+                        is_row_version,
                     });
                 }
             }
@@ -566,7 +639,9 @@ impl DatabaseConnection for SqlServerConnection {
                 CAST(c.NUMERIC_SCALE AS INT) AS NUMERIC_SCALE,
                 CASE WHEN c.IS_NULLABLE = 'YES' THEN 1 ELSE 0 END AS IS_NULLABLE,
                 CASE WHEN pk.COLUMN_NAME IS NOT NULL THEN 1 ELSE 0 END AS IS_PRIMARY_KEY,
-                CAST(ISNULL(COLUMNPROPERTY(OBJECT_ID(c.TABLE_SCHEMA + '.' + c.TABLE_NAME), c.COLUMN_NAME, 'IsIdentity'), 0) AS INT) AS IS_IDENTITY
+                CAST(ISNULL(COLUMNPROPERTY(OBJECT_ID(c.TABLE_SCHEMA + '.' + c.TABLE_NAME), c.COLUMN_NAME, 'IsIdentity'), 0) AS INT) AS IS_IDENTITY,
+                CAST(ISNULL(COLUMNPROPERTY(OBJECT_ID(c.TABLE_SCHEMA + '.' + c.TABLE_NAME), c.COLUMN_NAME, 'IsComputed'), 0) AS INT) AS IS_COMPUTED,
+                CASE WHEN c.DATA_TYPE IN ('timestamp', 'rowversion') THEN 1 ELSE 0 END AS IS_ROW_VERSION
             FROM INFORMATION_SCHEMA.TABLES t
             LEFT JOIN INFORMATION_SCHEMA.COLUMNS c 
                 ON t.TABLE_SCHEMA = c.TABLE_SCHEMA AND t.TABLE_NAME = c.TABLE_NAME
@@ -615,6 +690,8 @@ impl DatabaseConnection for SqlServerConnection {
                         let is_nullable = Self::col_bool(row, 8).unwrap_or(true);
                         let is_primary_key = Self::col_bool(row, 9).unwrap_or(false);
                         let is_identity = Self::col_bool(row, 10).unwrap_or(false);
+                        let is_computed = Self::col_bool(row, 11).unwrap_or(false);
+                        let is_row_version = Self::col_bool(row, 12).unwrap_or(false);
 
                         entry.columns.push(ColumnItem {
                             name: col_name.to_string(),
@@ -625,6 +702,8 @@ impl DatabaseConnection for SqlServerConnection {
                             is_nullable,
                             is_primary_key,
                             is_identity,
+                            is_computed,
+                            is_row_version,
                         });
                     }
                 }
@@ -640,5 +719,208 @@ impl DatabaseConnection for SqlServerConnection {
         let _ = stream.into_results().await?;
         self.current_database = database.to_string();
         Ok(())
+    }
+
+    async fn get_import_capabilities(
+        &mut self,
+        database: Option<&str>,
+        schema: &str,
+        table: &str,
+    ) -> AppResult<ImportCapabilities> {
+        if let Some(db) = database {
+            if !db.is_empty() && self.current_database != db {
+                self.switch_database(db).await?;
+            }
+        }
+
+        let columns = self.get_columns(None, schema, table).await?;
+        let qualified = import_sql::qualified_table(schema, table);
+        let (can_alter_table, engine_edition) =
+            self.query_alter_permission(&qualified).await?;
+
+        let writable = import_sql::writable_columns(&columns);
+        let identity_column = writable
+            .iter()
+            .find(|c| c.is_identity)
+            .map(|c| c.name.clone());
+        let supports_identity_insert = engine_edition != 6;
+
+        let disabled_reason = if identity_column.is_none() {
+            Some("此資料表沒有識別欄位 (IDENTITY)".to_string())
+        } else if !supports_identity_insert {
+            Some("此資料庫引擎不支援 SET IDENTITY_INSERT".to_string())
+        } else if !can_alter_table {
+            Some(format!(
+                "目前使用者沒有 {} 的 ALTER 權限，無法使用 SET IDENTITY_INSERT",
+                qualified
+            ))
+        } else {
+            None
+        };
+
+        Ok(ImportCapabilities {
+            identity_column,
+            writable_column_count: writable.len(),
+            can_alter_table,
+            engine_edition,
+            supports_identity_insert,
+            disabled_reason,
+        })
+    }
+
+    async fn import_table_rows(
+        &mut self,
+        database: Option<&str>,
+        schema: &str,
+        table: &str,
+        columns: &[String],
+        rows: &[ImportRowPayload],
+        manual_identity: bool,
+        progress: Option<UnboundedSender<usize>>,
+    ) -> AppResult<ImportResult> {
+        let start = Instant::now();
+        if let Some(db) = database {
+            if !db.is_empty() && self.current_database != db {
+                self.switch_database(db).await?;
+            }
+        }
+
+        let server_columns = self.get_columns(None, schema, table).await?;
+        if server_columns.is_empty() {
+            return Err(AppError::Database {
+                message: format!("找不到資料表 [{}].[{}] 的欄位定義", schema, table),
+                code: None,
+                line_number: None,
+            });
+        }
+
+        let expected = import_sql::import_columns(&server_columns);
+        let mismatch = expected.len() != columns.len()
+            || columns
+                .iter()
+                .zip(expected.iter())
+                .any(|(provided, column)| !provided.eq_ignore_ascii_case(&column.name));
+        if mismatch {
+            return Err(AppError::Database {
+                message: "匯入欄位清單與資料表目前定義不符，請關閉後重新開啟匯入視窗".to_string(),
+                code: None,
+                line_number: None,
+            });
+        }
+
+        if rows.is_empty() {
+            return Ok(ImportResult {
+                inserted_count: 0,
+                rolled_back: false,
+                errors: Vec::new(),
+                execution_time_ms: 0,
+            });
+        }
+
+        let qualified = import_sql::qualified_table(schema, table);
+        let use_identity_insert = manual_identity && expected.iter().any(|c| c.is_identity);
+        let total_rows = rows.len();
+
+        let (prepared, preparation_errors) = import_sql::prepare_rows(rows, &expected, &qualified);
+        if !preparation_errors.is_empty() {
+            return Ok(ImportResult {
+                inserted_count: 0,
+                rolled_back: true,
+                errors: preparation_errors,
+                execution_time_ms: start.elapsed().as_millis() as u64,
+            });
+        }
+
+        if let Err(err) = self
+            .exec_script(&import_sql::build_setup_script(&qualified, use_identity_insert))
+            .await
+        {
+            let _ = self
+                .exec_script(&import_sql::build_rollback_script(&qualified, use_identity_insert))
+                .await;
+            return Err(err);
+        }
+
+        let batches = import_sql::chunk_prepared_rows(&prepared);
+        let mut processed = 0usize;
+        let mut failure_message: Option<String> = None;
+
+        for batch in batches.iter() {
+            match self
+                .exec_import_batch(&import_sql::build_batch_script(batch))
+                .await
+            {
+                Ok(Some((err_count, xact_state))) => {
+                    processed += batch.len();
+                    if let Some(sender) = progress.as_ref() {
+                        let _ = sender.send(processed);
+                    }
+                    if err_count > 0 || xact_state == -1 {
+                        failure_message = Some(format!(
+                            "第 {} 列批次寫入失敗（伺服器回報 {} 筆錯誤）",
+                            processed,
+                            err_count.max(1)
+                        ));
+                        break;
+                    }
+                }
+                Ok(None) => {
+                    failure_message =
+                        Some("無法確認批次執行結果，已停止匯入並回滾".to_string());
+                    break;
+                }
+                Err(err) => {
+                    failure_message = Some(err.to_string());
+                    break;
+                }
+            }
+        }
+
+        if let Some(message) = failure_message {
+            return match self
+                .query_import_errors(&import_sql::build_rollback_script(
+                    &qualified,
+                    use_identity_insert,
+                ))
+                .await
+            {
+                Ok(mut errors) => {
+                    if errors.is_empty() {
+                        errors.push(ImportRowError {
+                            line: 0,
+                            column: None,
+                            message: message.clone(),
+                            server_code: None,
+                        });
+                    }
+                    Ok(ImportResult {
+                        inserted_count: 0,
+                        rolled_back: true,
+                        errors,
+                        execution_time_ms: start.elapsed().as_millis() as u64,
+                    })
+                }
+                // The transaction could not be confirmed as rolled back; surface it as an
+                // error so the caller can drop this session instead of reusing it.
+                Err(err) => Err(AppError::Database {
+                    message: format!("匯入失敗且無法確認交易已回滾：{}（原始錯誤：{}）", err, message),
+                    code: None,
+                    line_number: None,
+                }),
+            };
+        }
+
+        self.exec_script(&import_sql::build_commit_script(&qualified, use_identity_insert))
+            .await?;
+        if let Some(sender) = progress.as_ref() {
+            let _ = sender.send(total_rows);
+        }
+
+        Ok(ImportResult {
+            inserted_count: total_rows as u64,
+            rolled_back: false,
+            errors: Vec::new(),
+            execution_time_ms: start.elapsed().as_millis() as u64,
+        })
     }
 }

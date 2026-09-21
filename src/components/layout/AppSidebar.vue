@@ -728,6 +728,7 @@ import { useConnectionStore } from '@/stores/connectionStore';
 import { useWorkspaceStore } from '@/stores/workspaceStore';
 import { useSchemaStore } from '@/stores/schemaStore';
 import { useSettingsStore } from '@/stores/settingsStore';
+import { useTsvImportStore } from '@/stores/tsvImportStore';
 import { schemaService } from '@/services/schemaService';
 import { connectionService } from '@/services/connectionService';
 import { wrapIdentifierIfNeeded } from '@/utils/sqlParser';
@@ -753,6 +754,7 @@ const emit = defineEmits<{
 
 const connectionStore = useConnectionStore();
 const workspaceStore = useWorkspaceStore();
+const tsvImportStore = useTsvImportStore();
 const schemaStore = useSchemaStore();
 const settingsStore = useSettingsStore();
 
@@ -1344,6 +1346,11 @@ const objectMenuItems = computed(() => {
       icon: 'pi pi-file',
       command: handleGenerateCreateTableDdl,
     });
+    items.push({
+      label: 'TSV 匯入 (Import TSV)',
+      icon: 'pi pi-upload',
+      command: handleTsvImport,
+    });
   }
   if (isView || isProc || isFunc) {
     items.push({
@@ -1630,6 +1637,19 @@ async function handleGenerateSelect() {
     contextMenu.database
   );
   contextMenu.visible = false;
+}
+
+async function handleTsvImport() {
+  const { connId, database, schema, tableName } = contextMenu;
+  if (!connId || !database || !schema || !tableName) return;
+  const connection = connectionStore.getConnectionById(connId);
+  await tsvImportStore.open({
+    connId,
+    connectionName: connection?.name,
+    database,
+    schema,
+    table: tableName,
+  });
 }
 
 async function handleGenerateCreateTableDdl() {

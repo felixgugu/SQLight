@@ -219,6 +219,80 @@ export async function openSqlFromFile(): Promise<OpenFileResult> {
   });
 }
 
+export interface OpenTsvResult {
+  opened: boolean;
+  fileName?: string;
+  content?: string;
+}
+
+/**
+ * Rejects files that cannot be a UTF-8 TSV (a decoded UTF-16 file is full of NUL chars).
+ * Returns an error message, or `null` when the content looks usable.
+ */
+export function checkUtf8File(content: string): string | null {
+  if (content.includes('\u0000')) {
+    return '檔案不是 UTF-8 編碼（偵測到 UTF-16 或二進位內容），請另存為 UTF-8 後再匯入';
+  }
+  return null;
+}
+
+/**
+ * Opens a local UTF-8 `.tsv` file (File System Access API with `<input type="file">` fallback).
+ * Used by the TSV import wizard; size limits are enforced by the caller.
+ */
+export async function openTsvFile(): Promise<OpenTsvResult> {
+  if (typeof window !== 'undefined' && 'showOpenFilePicker' in window) {
+    try {
+      // @ts-expect-error showOpenFilePicker is modern web standard
+      const [handle] = await window.showOpenFilePicker({
+        types: [
+          {
+            description: 'Tab-Separated Values (*.tsv)',
+            accept: { 'text/tab-separated-values': ['.tsv', '.txt'] },
+          },
+        ],
+        multiple: false,
+      });
+      if (!handle) return { opened: false };
+      const file = await handle.getFile();
+      return { opened: true, fileName: file.name, content: await file.text() };
+    } catch (err: unknown) {
+      if (err instanceof Error && err.name === 'AbortError') {
+        return { opened: false };
+      }
+      console.warn('showOpenFilePicker failed or was rejected, trying fallback:', err);
+    }
+  }
+
+  return new Promise((resolve) => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.tsv,.txt';
+    input.style.display = 'none';
+    input.onchange = async () => {
+      const file = input.files?.[0];
+      if (!file) {
+        resolve({ opened: false });
+        return;
+      }
+      try {
+        resolve({ opened: true, fileName: file.name, content: await file.text() });
+      } catch (e) {
+        console.error('Failed to read TSV file:', e);
+        resolve({ opened: false });
+      } finally {
+        input.parentNode?.removeChild(input);
+      }
+    };
+    input.oncancel = () => {
+      input.parentNode?.removeChild(input);
+      resolve({ opened: false });
+    };
+    document.body.appendChild(input);
+    input.click();
+  });
+}
+
 /**
  * Saves arbitrary Blob content to disk via File System Access API (native Save As dialog)
  * with Blob download fallback.
@@ -412,4 +486,3 @@ export function downloadTextFile(content: string, filename: string, mimeType = '
   document.body.removeChild(link);
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
-

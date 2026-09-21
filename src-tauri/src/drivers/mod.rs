@@ -1,8 +1,10 @@
 use crate::error::AppResult;
 use crate::models::connection::ConnectionProfile;
+use crate::models::import::{ImportCapabilities, ImportResult, ImportRowPayload};
 use crate::models::query::QueryResult;
 use crate::models::schema::{ColumnItem, DatabaseItem, ForeignKeyItem, SchemaItem, TableItem, TableSchema};
 use async_trait::async_trait;
+use tokio::sync::mpsc::UnboundedSender;
 
 pub mod mssql;
 
@@ -18,6 +20,23 @@ pub trait DatabaseConnection: Send + Sync {
     async fn get_foreign_keys(&mut self, database: Option<&str>, schema: Option<&str>, table: Option<&str>) -> AppResult<Vec<ForeignKeyItem>>;
     async fn get_database_schema(&mut self, database: Option<&str>) -> AppResult<Vec<TableSchema>>;
     async fn switch_database(&mut self, database: &str) -> AppResult<()>;
+    async fn get_import_capabilities(
+        &mut self,
+        database: Option<&str>,
+        schema: &str,
+        table: &str,
+    ) -> AppResult<ImportCapabilities>;
+    /// Inserts every row inside a single transaction. Any failure rolls the whole batch back.
+    async fn import_table_rows(
+        &mut self,
+        database: Option<&str>,
+        schema: &str,
+        table: &str,
+        columns: &[String],
+        rows: &[ImportRowPayload],
+        manual_identity: bool,
+        progress: Option<UnboundedSender<usize>>,
+    ) -> AppResult<ImportResult>;
 }
 
 #[async_trait]

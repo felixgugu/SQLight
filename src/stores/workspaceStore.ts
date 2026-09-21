@@ -485,6 +485,41 @@ export const useWorkspaceStore = defineStore('workspace', () => {
     }
   }
 
+  // Cross component reload signal (SSOT). Bumped after a TSV import so that any open
+  // `table_data` tab for that table refreshes itself.
+  const tableDataVersions = ref<Record<string, number>>({});
+
+  function tableDataVersionKey(
+    connId: string,
+    database: string,
+    schema: string,
+    table: string
+  ): string {
+    return `${connId}|${database}|${schema}|${table}`.toLowerCase();
+  }
+
+  function bumpTableDataVersion(
+    connId: string,
+    database: string,
+    schema: string,
+    table: string
+  ): void {
+    const key = tableDataVersionKey(connId, database, schema, table);
+    tableDataVersions.value = {
+      ...tableDataVersions.value,
+      [key]: (tableDataVersions.value[key] ?? 0) + 1,
+    };
+  }
+
+  function getTableDataVersion(
+    connId: string,
+    database: string,
+    schema: string,
+    table: string
+  ): number {
+    return tableDataVersions.value[tableDataVersionKey(connId, database, schema, table)] ?? 0;
+  }
+
   function formatActiveQuery(): void {
     const current = activeTab.value;
     if (current && current.type === 'sql_editor') {
@@ -717,6 +752,9 @@ export const useWorkspaceStore = defineStore('workspace', () => {
     syncRenamedFolder,
     updateTabContent,
     updateTabData,
+    tableDataVersions,
+    bumpTableDataVersion,
+    getTableDataVersion,
     formatActiveQuery,
     setBottomPanelTab,
     toggleBottomPanel,

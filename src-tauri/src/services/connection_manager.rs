@@ -2,6 +2,7 @@ use crate::drivers::mssql::SqlServerDriver;
 use crate::drivers::{DatabaseConnection, DatabaseDriver};
 use crate::error::{AppError, AppResult};
 use crate::models::connection::{ConnectionProfile, SaveConnectionRequest};
+use crate::models::import::{ImportCapabilities, ImportResult, ImportRowPayload};
 use crate::models::query::{QueryMessage, QueryResult};
 use crate::models::schema::{ColumnItem, DatabaseItem, ForeignKeyItem, TableItem, TableSchema};
 use crate::services::credential_store::CredentialStore;
@@ -11,6 +12,7 @@ use chrono::Utc;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex as StdMutex};
 use tokio::sync::Mutex as TokioMutex;
+use tokio::sync::mpsc::UnboundedSender;
 use uuid::Uuid;
 
 #[allow(dead_code)]
@@ -469,5 +471,109 @@ impl ConnectionManager {
         let conn_arc = self.get_or_connect(id).await?;
         let mut conn = conn_arc.lock().await;
         conn.switch_database(database).await
+    }
+
+    pub async fn get_import_capabilities(
+        &self,
+        id: &str,
+        database: Option<&str>,
+        schema: &str,
+        table: &str,
+    ) -> AppResult<ImportCapabilities> {
+        let conn_arc = self.get_or_connect(id).await?;
+        let mut conn = conn_arc.lock().await;
+        conn.get_import_capabilities(database, schema, table).await
+    }
+
+    /// Runs a TSV import inside a single transaction. On a driver level failure the pooled
+    /// session is dropped, because an open transaction would otherwise leak into the next query.
+    pub async fn import_table_rows(
+        &self,
+        id: &str,
+        database: Option<&str>,
+        schema: &str,
+        table: &str,
+        columns: Vec<String>,
+        rows: Vec<ImportRowPayload>,
+        manual_identity: bool,
+        progress: Option<UnboundedSender<usize>>,
+    ) -> AppResult<ImportResult> {
+        let conn_arc = self.get_or_connect(id).await?;
+        let mut conn = conn_arc.lock().await;
+
+        let db_name = database
+            .map(|db| db.to_string())
+            .filter(|db| !db.is_empty())
+            .unwrap_or_else(|| conn.current_database().to_string());
+
+        let result = conn
+            .import_table_rows(
+                database,
+                schema,
+                table,
+                &columns,
+                &rows,
+                manual_identity,
+                progress,
+            )
+            .await;
+
+        let summary = format!(
+            "-- TSV import into [{}].[{}] ({} row(s), {} column(s))",
+            schema,
+            table,
+            rows.len(),
+            columns.len()
+        );
+        match &result {
+            Ok(imported) => {
+                let message = if imported.rolled_back {
+                    format!(
+                        "TSV import rolled back. {} problem row(s) reported.",
+                        imported.errors.len()
+                    )
+                } else {
+                    format!("TSV import completed. {} row(s) inserted.", imported.inserted_count)
+                };
+                QueryLogger::log_query(
+                    id,
+                    &db_name,
+                    &summary,
+                    &[QueryMessage {
+                        level: if imported.rolled_back { "error" } else { "info" }.to_string(),
+                        message,
+                        code: None,
+                        line_number: None,
+                        timestamp: Utc::now().to_rfc3339(),
+                    }],
+                    imported.execution_time_ms,
+                    if imported.rolled_back { "ERROR" } else { "SUCCESS" },
+                );
+            }
+            Err(err) => {
+                QueryLogger::log_query(
+                    id,
+                    &db_name,
+                    &summary,
+                    &[QueryMessage {
+                        level: "error".to_string(),
+                        message: err.to_string(),
+                        code: None,
+                        line_number: None,
+                        timestamp: Utc::now().to_rfc3339(),
+                    }],
+                    0,
+                    "ERROR",
+                );
+            }
+        }
+
+        if result.is_err() {
+            drop(conn);
+            let mut conns = self.active_connections.lock().await;
+            conns.remove(id);
+        }
+
+        result
     }
 }

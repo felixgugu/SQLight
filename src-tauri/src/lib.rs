@@ -6,6 +6,7 @@ pub mod services;
 
 use commands::ai_commands::*;
 use commands::connection_commands::*;
+use commands::import_commands::*;
 use commands::query_commands::*;
 use commands::schema_commands::*;
 use commands::sql_folder_commands::*;
@@ -47,6 +48,8 @@ pub fn run() {
             get_foreign_keys,
             get_database_schema,
             switch_database,
+            get_table_import_capabilities,
+            import_table_rows,
             load_custom_templates,
             save_custom_templates,
             open_custom_templates_file,

@@ -84,6 +84,26 @@ function mockInvoke<T>(cmd: string, args?: Record<string, unknown>): Promise<T> 
     case 'cancel_query':
       return Promise.resolve(undefined as unknown as T);
 
+    case 'get_table_import_capabilities':
+      return Promise.resolve({
+        identityColumn: 'UserID',
+        writableColumnCount: 6,
+        canAlterTable: true,
+        engineEdition: 3,
+        supportsIdentityInsert: true,
+        disabledReason: null,
+      } as unknown as T);
+
+    case 'import_table_rows': {
+      const rows = (args?.rows as unknown[] | undefined) ?? [];
+      return Promise.resolve({
+        insertedCount: rows.length,
+        rolledBack: false,
+        errors: [],
+        executionTimeMs: 12,
+      } as unknown as T);
+    }
+
     case 'get_connection_spid':
       return Promise.resolve(55 as unknown as T);
 
@@ -141,6 +161,33 @@ function mockInvoke<T>(cmd: string, args?: Record<string, unknown>): Promise<T> 
           messages: [],
           affectedRows: 8,
           executionTimeMs: 24,
+        } as unknown as T);
+      }
+
+      // Unique index metadata for the TSV import pre-check.
+      if (sql.includes('sys.indexes') && sql.includes('is_unique') && sql.includes('KeyColumns')) {
+        return Promise.resolve({
+          resultSets: [
+            {
+              columns: [
+                { name: 'Schema', dataType: 'nvarchar', nullable: false, ordinal: 0 },
+                { name: 'Table', dataType: 'nvarchar', nullable: false, ordinal: 1 },
+                { name: 'IndexName', dataType: 'nvarchar', nullable: false, ordinal: 2 },
+                { name: 'IsPrimaryKey', dataType: 'bit', nullable: false, ordinal: 3 },
+                { name: 'IsUnique', dataType: 'bit', nullable: false, ordinal: 4 },
+                { name: 'HasFilter', dataType: 'bit', nullable: false, ordinal: 5 },
+                { name: 'KeyColumns', dataType: 'nvarchar', nullable: false, ordinal: 6 },
+              ],
+              rows: [
+                ['dbo', 'Users', 'PK_Users', true, true, false, 'UserID'],
+                ['dbo', 'Users', 'IX_Users_Email', false, true, false, 'Email'],
+              ],
+              rowCount: 2,
+            },
+          ],
+          messages: [],
+          affectedRows: 2,
+          executionTimeMs: 9,
         } as unknown as T);
       }
 
@@ -518,4 +565,3 @@ ORDER BY p.rows DESC;
       return Promise.reject(new Error(`Unknown command '${cmd}'`));
   }
 }
-
