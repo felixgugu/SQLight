@@ -52,6 +52,54 @@ export const SURFACE_OPTIONS: SurfaceOption[] = [
   { name: 'stone', label: '微暖石灰 (Stone)', sampleDark: '#1c1917', sampleLight: '#fafaf9', token: '{stone}' },
 ];
 
+export interface GlobalFontOption {
+  name: string;
+  label: string;
+  value: string;
+  description: string;
+}
+
+export const GLOBAL_FONT_OPTIONS: GlobalFontOption[] = [
+  {
+    name: 'default',
+    label: '預設 (Inter / System)',
+    value: '"Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft JhengHei UI", "Noto Sans TC", sans-serif',
+    description: '沿用 SQLight 預設字型，缺少指定字型時自動回退至系統字型。',
+  },
+  {
+    name: 'system',
+    label: '系統預設 (System UI)',
+    value: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft JhengHei UI", "Noto Sans TC", sans-serif',
+    description: '跟隨 Windows 或 macOS 的系統介面字型。',
+  },
+  {
+    name: 'jhenghei',
+    label: '微軟正黑體 (Microsoft JhengHei)',
+    value: '"Microsoft JhengHei UI", "Microsoft JhengHei", system-ui, sans-serif',
+    description: 'Windows 繁體中文環境常用的清晰介面字型。',
+  },
+  {
+    name: 'noto-sans-tc',
+    label: 'Noto Sans TC',
+    value: '"Noto Sans TC", "Microsoft JhengHei UI", system-ui, sans-serif',
+    description: '適合繁體中文閱讀的無襯線字型，需系統已安裝。',
+  },
+  {
+    name: 'pingfang',
+    label: '蘋方 (PingFang TC)',
+    value: '"PingFang TC", "Microsoft JhengHei UI", system-ui, sans-serif',
+    description: 'macOS 繁體中文預設字型，未安裝時回退至系統字型。',
+  },
+  {
+    name: 'segoe-ui',
+    label: 'Segoe UI',
+    value: '"Segoe UI", "Microsoft JhengHei UI", system-ui, sans-serif',
+    description: 'Windows 標準介面字型，拉丁文字顯示較為緊湊。',
+  },
+];
+
+export const DEFAULT_GLOBAL_FONT_FAMILY = GLOBAL_FONT_OPTIONS[0]!.value;
+
 export type SurfaceShade = '50' | '100' | '200' | '300' | '400' | '500' | '600' | '700' | '800' | '900' | '950';
 export type SurfacePalette = Record<SurfaceShade, string>;
 
@@ -292,6 +340,16 @@ export const themeManager = {
   },
 
   /**
+   * Apply the global UI font family without affecting explicitly monospace areas
+   * or the SQL editor, which uses its own editor font settings.
+   */
+  applyGlobalFontFamily(fontFamily: string) {
+    if (typeof document === 'undefined') return;
+    const value = fontFamily?.trim() || DEFAULT_GLOBAL_FONT_FAMILY;
+    document.documentElement.style.setProperty('--app-font-sans', value);
+  },
+
+  /**
    * Initialize all theme settings from stored preferences
    */
   initTheme(settings: AppSettings, primevueConfig?: any) {
@@ -302,6 +360,6 @@ export const themeManager = {
     this.applyPrimaryColor(settings.primaryColor || 'blue');
     this.applySurfaceColor(currentSurfaceName);
     this.applyRipple(settings.ripple ?? true, primevueConfig);
+    this.applyGlobalFontFamily(settings.globalFontFamily || DEFAULT_GLOBAL_FONT_FAMILY);
   },
 };
-

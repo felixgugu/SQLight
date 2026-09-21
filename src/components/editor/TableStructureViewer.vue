@@ -101,6 +101,7 @@
     >
       <AgGridVue
         class="w-full h-full"
+        :style="{ '--ag-font-family': settingsStore.gridFontFamily }"
         :theme="activeGridTheme"
         :row-data="columns"
         :column-defs="columnDefs"

@@ -43,7 +43,7 @@ export default {
       },
       fontFamily: {
         mono: ['"Fira Code"', 'Consolas', 'Monaco', 'monospace'],
-        sans: ['"Inter"', 'system-ui', '-apple-system', 'sans-serif'],
+        sans: ['var(--app-font-sans)'],
       },
       fontSize: {
         'xxs': '0.6875rem',

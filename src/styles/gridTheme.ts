@@ -1,4 +1,5 @@
 import { themeQuartz, colorSchemeDark, colorSchemeLight } from 'ag-grid-community';
+import { DEFAULT_GRID_FONT_FAMILY } from '@/data/fontOptions';
 
 export const sqlightDarkGridTheme = themeQuartz
   .withPart(colorSchemeDark)
@@ -10,7 +11,7 @@ export const sqlightDarkGridTheme = themeQuartz
     borderColor: '#2e2e33',
     rowHoverColor: '#27272a',
     selectedRowBackgroundColor: '#27272a',
-    fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
+    fontFamily: DEFAULT_GRID_FONT_FAMILY,
     fontSize: 12,
     headerFontSize: 11,
     rowHeight: 28,
@@ -28,7 +29,7 @@ export const sqlightLightGridTheme = themeQuartz
     borderColor: '#e2e8f0',
     rowHoverColor: '#f1f5f9',
     selectedRowBackgroundColor: '#e0f2fe',
-    fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
+    fontFamily: DEFAULT_GRID_FONT_FAMILY,
     fontSize: 12,
     headerFontSize: 11,
     rowHeight: 28,

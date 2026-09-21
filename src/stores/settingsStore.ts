@@ -10,7 +10,12 @@ import {
   testTablePatternByRules,
 } from '@/utils/tableFilter';
 
-import { themeManager, type ThemePresetName } from '@/services/themeManager';
+import {
+  DEFAULT_GLOBAL_FONT_FAMILY,
+  themeManager,
+  type ThemePresetName,
+} from '@/services/themeManager';
+import { DEFAULT_GRID_FONT_FAMILY } from '@/data/fontOptions';
 
 export type { FilterRule, FilterTarget, HiddenTableRule, ThemePresetName };
 
@@ -21,6 +26,7 @@ export interface AppSettings {
   primaryColor: string;
   surfaceColor: string;
   ripple: boolean;
+  globalFontFamily: string;
 
   editorFontSize: number;
   editorFontFamily: string;
@@ -31,6 +37,7 @@ export interface AppSettings {
   editorHighlightColor: string;
   activeSqlTabBgColor: string;
   activeSqlTabTextColor: string;
+  gridFontFamily: string;
   erTheme: 'dark' | 'light';
   hiddenTableRules?: FilterRule[];
 }
@@ -43,6 +50,7 @@ const DEFAULT_SETTINGS: AppSettings = {
   primaryColor: 'blue',
   surfaceColor: 'slate',
   ripple: true,
+  globalFontFamily: DEFAULT_GLOBAL_FONT_FAMILY,
 
   editorFontSize: 13,
   editorFontFamily: '"Fira Code", Consolas, Monaco, monospace',
@@ -53,6 +61,7 @@ const DEFAULT_SETTINGS: AppSettings = {
   editorHighlightColor: '#feffe0',
   activeSqlTabBgColor: '#1e40af',
   activeSqlTabTextColor: '#ffffff',
+  gridFontFamily: DEFAULT_GRID_FONT_FAMILY,
   erTheme: 'dark',
   hiddenTableRules: [],
 };
@@ -84,6 +93,7 @@ export const useSettingsStore = defineStore('settings', () => {
   const primaryColor = ref<string>(initial.primaryColor || 'blue');
   const surfaceColor = ref<string>(initial.surfaceColor || 'slate');
   const ripple = ref<boolean>(initial.ripple ?? true);
+  const globalFontFamily = ref<string>(initial.globalFontFamily || DEFAULT_GLOBAL_FONT_FAMILY);
 
   const editorFontSize = ref<number>(initial.editorFontSize);
   const editorFontFamily = ref<string>(initial.editorFontFamily);
@@ -94,6 +104,7 @@ export const useSettingsStore = defineStore('settings', () => {
   const editorHighlightColor = ref<string>(initial.editorHighlightColor || '#feffe0');
   const activeSqlTabBgColor = ref<string>(initial.activeSqlTabBgColor || '#1e40af');
   const activeSqlTabTextColor = ref<string>(initial.activeSqlTabTextColor || '#ffffff');
+  const gridFontFamily = ref<string>(initial.gridFontFamily || DEFAULT_GRID_FONT_FAMILY);
   const erTheme = ref<'dark' | 'light'>(initial.erTheme || 'dark');
   const hiddenTableRules = ref<FilterRule[]>(
     initial.hiddenTableRules
@@ -125,6 +136,11 @@ export const useSettingsStore = defineStore('settings', () => {
   function setRipple(enabled: boolean, primevueConfig?: any) {
     ripple.value = enabled;
     themeManager.applyRipple(enabled, primevueConfig);
+  }
+
+  function setGlobalFontFamily(fontFamily: string) {
+    globalFontFamily.value = fontFamily;
+    themeManager.applyGlobalFontFamily(fontFamily);
   }
 
   function addFilterRule(pattern: string, target: FilterTarget = 'all', description?: string) {
@@ -209,6 +225,7 @@ export const useSettingsStore = defineStore('settings', () => {
       primaryColor: primaryColor.value,
       surfaceColor: surfaceColor.value,
       ripple: ripple.value,
+      globalFontFamily: globalFontFamily.value,
       editorFontSize: editorFontSize.value,
       editorFontFamily: editorFontFamily.value,
       editorWordWrap: editorWordWrap.value,
@@ -218,6 +235,7 @@ export const useSettingsStore = defineStore('settings', () => {
       editorHighlightColor: editorHighlightColor.value,
       activeSqlTabBgColor: activeSqlTabBgColor.value,
       activeSqlTabTextColor: activeSqlTabTextColor.value,
+      gridFontFamily: gridFontFamily.value,
       erTheme: erTheme.value,
       hiddenTableRules: hiddenTableRules.value,
     };
@@ -236,6 +254,7 @@ export const useSettingsStore = defineStore('settings', () => {
       primaryColor,
       surfaceColor,
       ripple,
+      globalFontFamily,
       editorFontSize,
       editorFontFamily,
       editorWordWrap,
@@ -245,6 +264,7 @@ export const useSettingsStore = defineStore('settings', () => {
       editorHighlightColor,
       activeSqlTabBgColor,
       activeSqlTabTextColor,
+      gridFontFamily,
       erTheme,
       hiddenTableRules,
     ],
@@ -260,6 +280,7 @@ export const useSettingsStore = defineStore('settings', () => {
     setPrimaryColor(DEFAULT_SETTINGS.primaryColor);
     setSurfaceColor(DEFAULT_SETTINGS.surfaceColor);
     setRipple(DEFAULT_SETTINGS.ripple);
+    setGlobalFontFamily(DEFAULT_SETTINGS.globalFontFamily);
 
     editorFontSize.value = DEFAULT_SETTINGS.editorFontSize;
     editorFontFamily.value = DEFAULT_SETTINGS.editorFontFamily;
@@ -270,6 +291,7 @@ export const useSettingsStore = defineStore('settings', () => {
     editorHighlightColor.value = DEFAULT_SETTINGS.editorHighlightColor;
     activeSqlTabBgColor.value = DEFAULT_SETTINGS.activeSqlTabBgColor;
     activeSqlTabTextColor.value = DEFAULT_SETTINGS.activeSqlTabTextColor;
+    gridFontFamily.value = DEFAULT_SETTINGS.gridFontFamily;
     erTheme.value = DEFAULT_SETTINGS.erTheme;
     hiddenTableRules.value = [];
   }
@@ -280,11 +302,13 @@ export const useSettingsStore = defineStore('settings', () => {
     primaryColor,
     surfaceColor,
     ripple,
+    globalFontFamily,
     setColorMode,
     setThemePreset,
     setPrimaryColor,
     setSurfaceColor,
     setRipple,
+    setGlobalFontFamily,
     editorFontSize,
     editorFontFamily,
     editorWordWrap,
@@ -294,6 +318,7 @@ export const useSettingsStore = defineStore('settings', () => {
     editorHighlightColor,
     activeSqlTabBgColor,
     activeSqlTabTextColor,
+    gridFontFamily,
     erTheme,
     hiddenTableRules,
     addFilterRule,

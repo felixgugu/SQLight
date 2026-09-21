@@ -8,6 +8,8 @@
   }
 
   :root {
+    --app-font-sans: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft JhengHei UI", "Noto Sans TC", sans-serif;
+
     /* ==========================================================================
        Light Mode Semantic Palette (Channels for rgb(var(...) / <alpha>))
        ========================================================================== */
@@ -52,7 +54,7 @@
     overflow: hidden;
     user-select: none;
     -webkit-user-select: none;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    font-family: var(--app-font-sans);
   }
 
   html.dark, body.dark, html.dark body {
@@ -731,4 +733,13 @@ html:not(.dark) .ai-markdown-body a:hover {
 html:not(.dark) .ai-markdown-table th {
   color: #000000;
   font-weight: 700;
+}
+
+/* ==========================================================================
+   AG Grid Typography
+   ========================================================================== */
+
+/* Keep explicit Tailwind mono cells aligned with the configured AG Grid font. */
+.ag-styled-root .font-mono {
+  font-family: var(--ag-font-family) !important;
 }

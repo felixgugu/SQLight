@@ -34,6 +34,33 @@
     <div class="p-6 overflow-y-auto flex-1 space-y-6 text-xs text-dark-200">
       <!-- Tab 0: Appearance & Theme Settings -->
       <div v-if="activeTab === 'theme'" class="space-y-6">
+        <!-- Global UI Font -->
+        <div class="space-y-2.5 pb-4 border-b border-dark-800">
+          <div class="flex items-center justify-between gap-4">
+            <div>
+              <label class="font-medium text-dark-100 block">全域介面字型 (Global UI Font)</label>
+              <span class="text-xxs text-dark-400">套用至按鈕、選單、對話框與一般介面文字；SQL 編輯器與既有等寬資料區不受影響。</span>
+            </div>
+            <Select
+              :model-value="settingsStore.globalFontFamily"
+              :options="GLOBAL_FONT_OPTIONS"
+              option-label="label"
+              option-value="value"
+              class="min-w-[240px] !text-xs !bg-dark-900 !border-dark-700"
+              @update:model-value="handleGlobalFontChange"
+            />
+          </div>
+          <div
+            class="rounded-md border border-dark-750 bg-dark-900/70 px-3 py-2.5 text-sm text-dark-100"
+            :style="{ fontFamily: settingsStore.globalFontFamily }"
+          >
+            SQLight 資料庫工具 · 查詢結果 · ABC 123
+          </div>
+          <span v-if="selectedGlobalFont" class="text-xxs text-dark-500 block">
+            {{ selectedGlobalFont.description }}
+          </span>
+        </div>
+
         <!-- 1. Color Mode (Dark / Light) -->
         <div class="flex items-center justify-between pb-4 border-b border-dark-800">
           <div>
@@ -224,7 +251,7 @@
           </div>
           <Select
             v-model="settingsStore.editorFontFamily"
-            :options="fontFamilyOptions"
+            :options="EDITOR_FONT_FAMILY_OPTIONS"
             option-label="label"
             option-value="value"
             class="w-full !text-xs !bg-dark-900 !border-dark-700 font-mono"
@@ -377,6 +404,23 @@
 
       <!-- Tab 2: Query & Results Settings -->
       <div v-else-if="activeTab === 'results'" class="space-y-5">
+        <!-- AG Grid Font -->
+        <div class="flex items-center justify-between pb-4 border-b border-dark-800">
+          <div class="pr-4">
+            <label class="font-medium text-dark-100 block">AG Grid 表格字型 (Grid Font)</label>
+            <span class="text-xxs text-dark-400">
+              套用至查詢結果、檢視資料與資料表結構中的所有欄位、列號與表頭。
+            </span>
+          </div>
+          <Select
+            v-model="settingsStore.gridFontFamily"
+            :options="GRID_FONT_FAMILY_OPTIONS"
+            option-label="label"
+            option-value="value"
+            class="min-w-[240px] !text-xs !bg-dark-900 !border-dark-700 font-mono"
+          />
+        </div>
+
         <!-- Max Result Tabs -->
         <div class="flex items-center justify-between">
           <div class="pr-4">
@@ -589,10 +633,15 @@ import Tag from 'primevue/tag';
 import { usePrimeVue } from 'primevue/config';
 import { useSettingsStore } from '@/stores/settingsStore';
 import {
+  GLOBAL_FONT_OPTIONS,
   PRIMARY_COLOR_OPTIONS,
   SURFACE_OPTIONS,
   type ThemePresetName,
 } from '@/services/themeManager';
+import {
+  EDITOR_FONT_FAMILY_OPTIONS,
+  GRID_FONT_FAMILY_OPTIONS,
+} from '@/data/fontOptions';
 import TableFilterTab from './TableFilterTab.vue';
 import AiSettingsTab from './settings/AiSettingsTab.vue';
 
@@ -634,6 +683,16 @@ const currentSurfaceLabel = computed(() => {
   return match ? match.label : settingsStore.surfaceColor;
 });
 
+const selectedGlobalFont = computed(() =>
+  GLOBAL_FONT_OPTIONS.find((option) => option.value === settingsStore.globalFontFamily)
+);
+
+function handleGlobalFontChange(fontFamily: unknown) {
+  if (typeof fontFamily === 'string' && fontFamily.trim()) {
+    settingsStore.setGlobalFontFamily(fontFamily);
+  }
+}
+
 function handleRippleToggle(val: boolean) {
   settingsStore.setRipple(val, primevue.config);
 }
@@ -646,15 +705,6 @@ const fontSizeOptions = [
   { label: '16 px', value: 16 },
   { label: '18 px', value: 18 },
   { label: '20 px', value: 20 },
-];
-
-const fontFamilyOptions = [
-  { label: 'Fira Code (預設推薦，支援連字)', value: '"Fira Code", Consolas, Monaco, monospace' },
-  { label: 'JetBrains Mono', value: '"JetBrains Mono", Consolas, Monaco, monospace' },
-  { label: 'Cascadia Code', value: '"Cascadia Code", Consolas, monospace' },
-  { label: 'Consolas', value: 'Consolas, Monaco, monospace' },
-  { label: 'Monaco', value: 'Monaco, "Courier New", monospace' },
-  { label: 'System Monospace', value: 'monospace' },
 ];
 
 function handleReset() {

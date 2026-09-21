@@ -213,6 +213,7 @@
     >
       <AgGridVue
         class="w-full h-full"
+        :style="{ '--ag-font-family': settingsStore.gridFontFamily }"
         :theme="activeGridTheme"
         :row-data="gridRowData"
         :column-defs="columnDefs"
@@ -1694,7 +1695,7 @@ function togglePinColumn() {
 :deep(.sqlight-cell-null) {
   color: rgb(var(--color-dark-500)) !important;
   font-style: italic !important;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace !important;
+  font-family: var(--ag-font-family) !important;
   font-size: 0.6875rem !important;
 }
 
