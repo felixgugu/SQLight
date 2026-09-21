@@ -42,6 +42,7 @@ export interface UseGridSelectionReturn {
   selectedColumnsCount: ComputedRef<number>;
   getColIndex: (colId: string | null | undefined) => number | undefined;
   getVisualDataColIndices: () => number[];
+  invalidateVisualColIndices: () => void;
   isCellInSelection: (r: number, c: number, vColIdx?: number) => boolean;
   isColumnSelected: (c: number, vColIdx?: number) => boolean;
   formatAggregateNumber: (num: number) => string;
@@ -96,21 +97,53 @@ export function useGridSelection(options: UseGridSelectionOptions): UseGridSelec
     colId: string;
   } | null = null;
 
+  // Visual (displayed) column order is expensive to derive for wide result sets, so the
+  // result is cached and only invalidated when the column layout actually changes.
+  let cachedVisualIndices: number[] | null = null;
+  let cachedVisualIndicesKey = '';
+  let cachedVisualIndexMap: Map<number, number> | null = null;
+
+  function invalidateVisualColIndices() {
+    cachedVisualIndices = null;
+    cachedVisualIndicesKey = '';
+    cachedVisualIndexMap = null;
+  }
+
   function getVisualDataColIndices(): number[] {
     const gridApi = options.getGridApi();
     const columns = options.getColumns();
-    if (!gridApi) {
-      return columns.map((_, i) => i);
+    const cacheKey = `${gridApi ? 'api' : 'fallback'}:${columns.length}`;
+    if (cachedVisualIndices && cachedVisualIndicesKey === cacheKey) {
+      return cachedVisualIndices;
     }
-    const cols = gridApi.getAllGridColumns();
-    if (!cols || !cols.length) {
-      return columns.map((_, i) => i);
+
+    let indices: number[];
+    const cols = gridApi?.getAllGridColumns();
+    if (!gridApi || !cols || !cols.length) {
+      indices = columns.map((_, i) => i);
+    } else {
+      indices = cols
+        .map((c) => c.getColId())
+        .filter((id) => id && id !== 'row_index' && id !== '#')
+        .map((id) => getColIndex(id))
+        .filter((idx): idx is number => idx !== undefined);
     }
-    return cols
-      .map((c) => c.getColId())
-      .filter((id) => id && id !== 'row_index' && id !== '#')
-      .map((id) => getColIndex(id))
-      .filter((idx): idx is number => idx !== undefined);
+
+    cachedVisualIndices = indices;
+    cachedVisualIndicesKey = cacheKey;
+    cachedVisualIndexMap = null;
+    return indices;
+  }
+
+  function getVisualColIndexMap(): Map<number, number> {
+    if (cachedVisualIndexMap) return cachedVisualIndexMap;
+    const visualIndices = getVisualDataColIndices();
+    const map = new Map<number, number>();
+    for (let i = 0; i < visualIndices.length; i++) {
+      map.set(visualIndices[i]!, i);
+    }
+    cachedVisualIndexMap = map;
+    return map;
   }
 
   const hasSelection = computed(() => {
@@ -241,18 +274,31 @@ export function useGridSelection(options: UseGridSelectionOptions): UseGridSelec
     if (!container) return;
 
     if (!hasSelection.value) {
-      const selectedCells = container.querySelectorAll('.sqlight-cell-selected');
-      selectedCells.forEach((cell) => cell.classList.remove('sqlight-cell-selected'));
-      const selectedHeaders = container.querySelectorAll('.sqlight-header-selected');
-      selectedHeaders.forEach((hCell) => hCell.classList.remove('sqlight-header-selected'));
+      // Hot path: this runs on every scroll frame while nothing is selected. Bail out
+      // without walking the cell DOM unless a stale highlight class is still present.
+      if (
+        !container.querySelector('.sqlight-cell-selected') &&
+        !container.querySelector('.sqlight-header-selected')
+      ) {
+        return;
+      }
+      container
+        .querySelectorAll('.sqlight-cell-selected')
+        .forEach((cell) => cell.classList.remove('sqlight-cell-selected'));
+      container
+        .querySelectorAll('.sqlight-header-selected')
+        .forEach((hCell) => hCell.classList.remove('sqlight-header-selected'));
       return;
     }
 
-    const visualIndices = getVisualDataColIndices();
-    const vIdxMap = new Map<number, number>();
-    for (let i = 0; i < visualIndices.length; i++) {
-      vIdxMap.set(visualIndices[i]!, i);
-    }
+    const vIdxMap = getVisualColIndexMap();
+
+    // Cells outside the displayed row window are either not rendered or will be
+    // re-evaluated by the next scroll event, so they never need the full selection test.
+    const gridApi = options.getGridApi();
+    const firstRow = gridApi?.getFirstDisplayedRowIndex?.() ?? -1;
+    const lastRow = gridApi?.getLastDisplayedRowIndex?.() ?? -1;
+    const hasRowWindow = firstRow >= 0 && lastRow >= firstRow;
 
     const cells = container.querySelectorAll('.ag-cell');
     cells.forEach((cell) => {
@@ -263,6 +309,10 @@ export function useGridSelection(options: UseGridSelectionOptions): UseGridSelec
         return;
       }
       const r = parseInt(rStr, 10);
+      if (hasRowWindow && (r < firstRow || r > lastRow)) {
+        cell.classList.remove('sqlight-cell-selected');
+        return;
+      }
       const c = getColIndex(cId);
       if (c !== undefined) {
         const vIdx = vIdxMap.get(c);
@@ -387,6 +437,7 @@ export function useGridSelection(options: UseGridSelectionOptions): UseGridSelec
       } else {
         lastAnchorRow.value = r;
         rowDragStart.value = r;
+        attachDragListeners();
         isRowDragging.value = true;
         selectionRange.value = { minRow: r, maxRow: r, minCol: 0, maxCol: maxVCol };
       }
@@ -420,6 +471,7 @@ export function useGridSelection(options: UseGridSelectionOptions): UseGridSelec
     lastAnchorCell.value = { rowIndex: r, colIndex: startVCol };
     cellDragStart.value = { rowIndex: r, colIndex: startVCol };
     cellDragEnd.value = { rowIndex: r, colIndex: startVCol };
+    attachDragListeners();
     isCellDragging.value = true;
     selectionRange.value = { minRow: r, maxRow: r, minCol: startVCol, maxCol: startVCol };
     computeSelectionStats();
@@ -510,6 +562,7 @@ export function useGridSelection(options: UseGridSelectionOptions): UseGridSelec
 
   function onColumnMoved(event: ColumnMovedEvent) {
     if (event.finished) {
+      invalidateVisualColIndices();
       updateSelectionHighlight();
     }
   }
@@ -582,6 +635,24 @@ export function useGridSelection(options: UseGridSelectionOptions): UseGridSelec
   let activeDragVisualIndices: number[] | null = null;
   let activeDragVIdxMap: Map<number, number> | null = null;
   let dragHighlightRafId: number | null = null;
+  let dragListenersAttached = false;
+
+  // The move/up listeners are only needed while a range selection drag is in progress.
+  // Attaching them lazily keeps the global mousemove path completely free while the user
+  // drags the grid's horizontal scrollbar.
+  function attachDragListeners() {
+    if (dragListenersAttached || typeof window === 'undefined') return;
+    dragListenersAttached = true;
+    window.addEventListener('mousemove', handleGlobalMouseMove);
+    window.addEventListener('mouseup', handleGlobalMouseUp);
+  }
+
+  function detachDragListeners() {
+    if (!dragListenersAttached || typeof window === 'undefined') return;
+    dragListenersAttached = false;
+    window.removeEventListener('mousemove', handleGlobalMouseMove);
+    window.removeEventListener('mouseup', handleGlobalMouseUp);
+  }
 
   function scheduleDragHighlight() {
     if (dragHighlightRafId !== null) return;
@@ -595,6 +666,7 @@ export function useGridSelection(options: UseGridSelectionOptions): UseGridSelec
     const wasDragging = isCellDragging.value || isRowDragging.value;
     if (isCellDragging.value) isCellDragging.value = false;
     if (isRowDragging.value) isRowDragging.value = false;
+    detachDragListeners();
     activeDragVisualIndices = null;
     activeDragVIdxMap = null;
 
@@ -649,8 +721,6 @@ export function useGridSelection(options: UseGridSelectionOptions): UseGridSelec
   }
 
   onMounted(() => {
-    window.addEventListener('mousemove', handleGlobalMouseMove);
-    window.addEventListener('mouseup', handleGlobalMouseUp);
     window.addEventListener('keydown', handleGlobalKeyDown);
   });
 
@@ -663,8 +733,7 @@ export function useGridSelection(options: UseGridSelectionOptions): UseGridSelec
       cancelAnimationFrame(dragHighlightRafId);
       dragHighlightRafId = null;
     }
-    window.removeEventListener('mousemove', handleGlobalMouseMove);
-    window.removeEventListener('mouseup', handleGlobalMouseUp);
+    detachDragListeners();
     window.removeEventListener('keydown', handleGlobalKeyDown);
   });
 
@@ -678,6 +747,7 @@ export function useGridSelection(options: UseGridSelectionOptions): UseGridSelec
     selectedColumnsCount,
     getColIndex,
     getVisualDataColIndices,
+    invalidateVisualColIndices,
     isCellInSelection,
     isColumnSelected,
     formatAggregateNumber,

@@ -206,6 +206,7 @@
       v-else
       ref="gridContainerRef"
       class="flex-1 w-full overflow-hidden relative"
+      :class="{ 'is-h-scrolling': isHorizontalScrolling }"
       @contextmenu.prevent
       @mousedown="onGridMouseDown"
       @click="onGridClick"
@@ -213,7 +214,7 @@
       <AgGridVue
         class="w-full h-full"
         :theme="activeGridTheme"
-        :row-data="resultSet.rows"
+        :row-data="gridRowData"
         :column-defs="columnDefs"
         :quick-filter-text="quickFilter"
         :enable-cell-text-selection="false"
@@ -228,9 +229,11 @@
         :tooltip-hide-delay="6000"
         :stop-editing-when-cells-lose-focus="true"
         @grid-ready="onGridReady"
+        @first-data-rendered="handleFirstDataRendered"
         @cell-context-menu="onCellContextMenu"
-        @body-scroll="onBodyScroll"
+        @body-scroll="handleBodyScroll"
         @column-moved="onColumnMoved"
+        @column-pinned="handleColumnLayoutChanged"
       />
     </div>
 
@@ -642,7 +645,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, reactive, watch } from 'vue';
+import { ref, computed, reactive, watch, toRaw, onBeforeUnmount } from 'vue';
 import Button from 'primevue/button';
 import InputText from 'primevue/inputtext';
 import IconField from 'primevue/iconfield';
@@ -673,6 +676,7 @@ import {
   type GridReadyEvent,
   type ColDef,
   type CellContextMenuEvent,
+  type BodyScrollEvent,
 } from 'ag-grid-community';
 import { sqlightDarkGridTheme, sqlightLightGridTheme } from '@/styles/gridTheme';
 import { useSettingsStore } from '@/stores/settingsStore';
@@ -690,6 +694,7 @@ import {
 } from '@/composables/useColumnAutoWidth';
 import { useGridSelection } from '@/composables/useGridSelection';
 import { useGridExport } from '@/composables/useGridExport';
+import { startGridPerfDiag } from '@/composables/useGridPerfDiag';
 import {
   generateInsertStatement,
   generateUpdateStatement,
@@ -729,6 +734,40 @@ const activeGridTheme = computed(() => {
 const quickFilter = ref('');
 const gridApi = ref<GridApi | null>(null);
 const gridContainerRef = ref<HTMLDivElement | null>(null);
+
+// AG Grid must not hold a Vue reactive proxy for the row data: with wide result sets the
+// proxy cost is paid on every cell read, and ag-grid-vue3 also deep-watches the rowData
+// prop (which registers a dependency per nested value). Raw arrays keep rendering on plain
+// objects while all modification tracking stays in `modifiedCells`.
+const gridRowData = computed<CellValue[][]>(() => {
+  const rows = props.resultSet?.rows;
+  return rows ? (toRaw(rows) as CellValue[][]) : [];
+});
+
+// Horizontal-scroll mode: while the user drags the horizontal scrollbar, decorative
+// transitions inside the grid are switched off so each frame stays paint-cheap.
+const isHorizontalScrolling = ref(false);
+let horizontalScrollTimer: ReturnType<typeof setTimeout> | null = null;
+
+function markHorizontalScrolling() {
+  if (!isHorizontalScrolling.value) {
+    isHorizontalScrolling.value = true;
+  }
+  if (horizontalScrollTimer) {
+    clearTimeout(horizontalScrollTimer);
+  }
+  horizontalScrollTimer = setTimeout(() => {
+    horizontalScrollTimer = null;
+    isHorizontalScrolling.value = false;
+  }, 150);
+}
+
+function handleBodyScroll(event?: BodyScrollEvent) {
+  if (!event || event.direction === 'horizontal') {
+    markHorizontalScrolling();
+  }
+  onBodyScroll();
+}
 
 const currentTab = computed(() => props.queryTab ?? queryStore.activeResultTab);
 
@@ -1119,16 +1158,24 @@ const {
   getColIndex,
   formatAggregateNumber,
   clearCellSelection,
+  invalidateVisualColIndices,
+  updateSelectionHighlight,
   onGridMouseDown,
   onGridClick,
   onColumnMoved,
   onBodyScroll,
 } = selection;
 
+function handleColumnLayoutChanged() {
+  invalidateVisualColIndices();
+  updateSelectionHighlight();
+}
+
 // Clear selection when result set changes
 watch(
   () => props.resultSet,
   () => {
+    invalidateVisualColIndices();
     clearCellSelection();
   }
 );
@@ -1220,10 +1267,57 @@ const isColPinned = computed(() => {
 
 function onGridReady(params: GridReadyEvent) {
   gridApi.value = params.api;
+  const container = gridContainerRef.value;
+  if (container) {
+    disposeGridPerfDiag?.();
+    disposeGridPerfDiag = startGridPerfDiag({
+      api: params.api,
+      container,
+      label: currentTab.value?.title,
+    });
+  }
 }
 
+let disposeGridPerfDiag: (() => void) | null = null;
+
+// AG Grid suppresses column virtualisation while its viewport width is still unknown
+// (viewportRight === 0), which renders every column of a wide result set at once. Nudging
+// the viewport once after the first render makes the grid recompute the visible window.
+function handleFirstDataRendered() {
+  const api = gridApi.value;
+  const container = gridContainerRef.value;
+  if (!api || !container) return;
+  ensureColumnVirtualisation(api, container);
+}
+
+function ensureColumnVirtualisation(api: GridApi, container: HTMLElement) {
+  if (api.getAllGridColumns().length <= 30) return;
+  const viewport = container.querySelector<HTMLElement>('.ag-grid-viewport');
+  if (!viewport || viewport.scrollWidth <= viewport.clientWidth) return;
+
+  const renderedColumns = new Set<string>();
+  container.querySelectorAll('.ag-cell[col-id]').forEach((cell) => {
+    const colId = cell.getAttribute('col-id');
+    if (colId) renderedColumns.add(colId);
+  });
+  if (renderedColumns.size <= 40) return;
+
+  const left = viewport.scrollLeft;
+  viewport.scrollLeft = left + 1;
+  viewport.scrollLeft = left;
+}
+
+onBeforeUnmount(() => {
+  disposeGridPerfDiag?.();
+  disposeGridPerfDiag = null;
+  if (horizontalScrollTimer) {
+    clearTimeout(horizontalScrollTimer);
+    horizontalScrollTimer = null;
+  }
+});
+
 // AG Grid Column Definitions
-const columnDefs = computed<ColDef[]>(() => {
+function buildColumnDefs(): ColDef[] {
   if (!props.resultSet) return [];
 
   // 1. Pinned Row Index Column (#)
@@ -1243,7 +1337,9 @@ const columnDefs = computed<ColDef[]>(() => {
     filter: false,
     resizable: true,
     valueGetter: (params) => (params.node?.rowIndex != null ? params.node.rowIndex + 1 : ''),
-    cellClass: 'text-dark-500 bg-dark-850/40 text-center font-mono text-xxs select-none !px-1 cursor-pointer',
+    // Opaque background: a translucent pinned cell would force per-frame blending of the
+    // horizontally scrolled content underneath it while the scrollbar is being dragged.
+    cellClass: 'text-dark-500 bg-dark-850 text-center font-mono text-xxs select-none !px-1 cursor-pointer',
     headerClass: 'text-center !px-1 cursor-pointer select-none',
     headerTooltip: '點選此處全選表格 (Select All)',
   };
@@ -1382,6 +1478,32 @@ const columnDefs = computed<ColDef[]>(() => {
   });
 
   return [indexCol, ...dataCols];
+}
+
+// Rebuilding 100+ column definitions on unrelated reactive changes makes AG Grid re-apply
+// the whole column model, so identical inputs reuse the previous array instance.
+let cachedColumnDefs: ColDef[] = [];
+let cachedColumnDefsSignature = '';
+
+function buildColumnDefsSignature(): string {
+  if (!props.resultSet) return 'empty';
+  return [
+    props.resultSet.columns.map((c) => `${c.name}|${c.dataType}|${c.nullable ? 1 : 0}`).join('\u0001'),
+    [...primaryKeyColumnNames.value].sort().join(','),
+    [...identityColumnNames.value].sort().join(','),
+    editability.value.canEdit ? '1' : '0',
+    String(props.resultSet.rows.length),
+  ].join('\u0002');
+}
+
+const columnDefs = computed<ColDef[]>(() => {
+  const signature = buildColumnDefsSignature();
+  if (signature === cachedColumnDefsSignature && cachedColumnDefs.length > 0) {
+    return cachedColumnDefs;
+  }
+  cachedColumnDefsSignature = signature;
+  cachedColumnDefs = buildColumnDefs();
+  return cachedColumnDefs;
 });
 
 function onCellContextMenu(event: CellContextMenuEvent) {
@@ -1509,6 +1631,8 @@ function togglePinColumn() {
 
   const newPinState = col.isPinned() ? null : 'left';
   gridApi.value.setColumnsPinned([contextMenu.colId], newPinState);
+  invalidateVisualColIndices();
+  updateSelectionHighlight();
   contextMenu.visible = false;
 }
 </script>
@@ -1516,7 +1640,13 @@ function togglePinColumn() {
 <style scoped>
 :deep(.sqlight-cell-selected) {
   background-color: rgba(59, 130, 246, 0.22) !important;
-  box-shadow: inset 0 0 0 1px #3b82f6 !important;
+}
+
+/* While the horizontal scrollbar is being dragged the grid repaints every frame, so
+   decorative transitions/animations are switched off until the scroll settles. */
+.is-h-scrolling :deep(*) {
+  transition: none !important;
+  animation: none !important;
 }
 
 :deep(.sqlight-header-selected) {

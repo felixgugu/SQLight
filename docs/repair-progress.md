@@ -17,6 +17,32 @@
 - 語句擷取先遮蔽字串、識別字、巢狀註解，再判斷 GO。控制流程、變數與交易保留整個 batch；不因一般空白行移除 WHERE。空擷取結果不再退回執行整頁。
 - 新增 npm test 及 Rust 核心測試。核心單元測試不引用 Tauri UI 啟動程式，避免 GNU 測試執行檔缺 Common Controls v6 manifest 的 TaskDialogIndirect 入口點問題。
 
+## 已實作（2026-09-21）：寬表格水平捲軸拖曳效能
+
+症狀：查詢結果欄位過多（實測 140 欄、約 1000 列）時，於 Tauri 桌面版拖曳水平捲軸非常慢。
+
+量測（暫存區獨立 benchmark，使用 repo 內同一顆 ag-grid-community 36.1.0，重現同一組 grid options、pinned `#` 欄、每欄 valueGetter/valueFormatter/5 條 cellClassRules、Vue reactive 列資料、140 欄 × 1000 列）：
+
+- 純 AG Grid 預設：frame 平均 16.7ms、p90 17.8ms、max 18.9ms（336 cells 在 DOM）。
+- SQLight 完整設定：平均 16.7ms、p90 17.7ms、max 18.9ms。
+- 加上捲動時選取高亮 DOM 掃描、Vue reactive 列資料、長文字欄位：皆維持 60fps。
+- 快速拖曳（每 frame 跳約 17 欄）：平均 16.9ms、max 20.2ms。
+- 對照組強制關閉欄虛擬化：3384 cells 在 DOM，仍為 16.7ms。
+
+結論：目前 grid 設定與此資料規模本身不是瓶頸，欄虛擬化正常運作；因此改為「先量測、再依判準修正」，並移除已知的每幀額外成本。
+
+已實作：
+
+1. 新增 dev-only 診斷 `src/composables/useGridPerfDiag.ts`：即時 FPS/p95/max、DOM cell 數、DOM/可見/總欄數、viewport 寬度與 dpr，並內建「Run scroll benchmark」以 120 幀掃過整個水平範圍。啟用方式：`localStorage.setItem('sqlight.perfHud', '1')` 後重載，正式版不註冊任何程式碼。
+2. `useGridSelection`：可見欄順序改為快取（欄位搬移／釘選／換結果集時失效）；無選取時捲動不再走訪 cell DOM；捲動高亮只處理可見列範圍；window `mousemove`/`mouseup` 改為僅在框選拖曳期間掛載。
+3. `ResultGridItem`：交給 AG Grid 的 `rowData` 改為 `toRaw(...)`（避免 10 萬筆以上的深層 reactive proxy 與 ag-grid-vue3 的 deep watch）；`columnDefs` 以欄位簽章記憶化，避免 AG Grid 重套整個欄位模型；`#` 釘選欄改為不透明底色；選取高亮移除 inset box-shadow；水平捲動期間加 `.is-h-scrolling` 關閉裝飾性 transition。
+4. `ResultGridItem`：`first-data-rendered` 後檢查欄虛擬化是否被抑制（AG Grid 在 `viewportRight === 0` 時會渲染全部欄位），必要時微調 viewport 觸發重算。
+
+待確認（需實機量測）：
+
+- 若 HUD 顯示 `virtualisation ok`、benchmark 亦順暢，但手動拖曳捲軸仍卡，代表瓶頸落在 WebView2 的原生捲軸拖曳繪製路徑，才進一步評估 `additionalBrowserArgs`（`--enable-gpu-rasterization` 等）並以同一 benchmark 前後比較。
+- `TableDataViewer`（資料表瀏覽網格）尚未套用 raw rowData 與 `#` 欄不透明底色，如需一致化可後續處理。
+
 ## 待完成與待審核
 
 1. **DML 來源可靠性**：目前仍由 SQL 文字猜測來源；JOIN、別名／運算式、跨庫、跨 server、多結果集的來源應以可驗證 metadata 解析，不能僅依第一個表名。表格與結果面板應共用來源／DML 邏輯。確認 computed、rowversion 等不可寫欄位。
@@ -32,6 +58,8 @@
 
 ## 驗證紀錄
 
+- （2026-09-21）`npm test`：271 個通過（新增 grid 捲動效能回歸：可見欄快取、無選取時零 DOM 走訪、raw rowData 交付、selection 高亮不繪製陰影、mousemove 僅延遲掛載）。
+- （2026-09-21）`npm run typecheck`：通過。
 - `npm test`：19 個通過（連線狀態／IPC、DML、語句擷取）。
 - `cargo test --offline --manifest-path src-tauri/Cargo.toml --lib`：8 個通過（目標資料庫、不同連線並行、資料型別與逐列保留上限）。
 - `npm run typecheck`：通過。
