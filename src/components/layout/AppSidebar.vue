@@ -206,7 +206,10 @@
             ]"
           />
 
-          <span class="font-sans font-medium truncate flex-1">{{ conn.name }}</span>
+          <span
+            class="font-sans font-medium truncate flex-1"
+            :style="getConnectionNameStyle(conn)"
+          >{{ conn.name }}</span>
 
           <!-- Status indicator (when active in workspace) -->
           <Tag
@@ -793,6 +796,13 @@ function resetFolderSplitter() {
   try {
     localStorage.setItem(STORAGE_FOLDER_SPLITTER_KEY, '220');
   } catch {}
+}
+
+/** 連線名稱套用「標籤色彩」設定；未設定時沿用節點原本的文字樣式。 */
+function getConnectionNameStyle(conn: ConnectionProfile): Record<string, string> {
+  const color = conn.color?.trim();
+  if (!color) return {};
+  return { color };
 }
 
 function isPendingColumn(colName: string): boolean {

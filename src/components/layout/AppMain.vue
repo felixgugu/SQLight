@@ -72,13 +72,6 @@
             @dblclick.stop="startRenameTab(tab)"
             class="flex items-center space-x-1.5 min-w-0 flex-1"
           >
-            <!-- Tab Connection Color Dot -->
-            <span
-              v-if="getTabConnectionColor(tab)"
-              class="w-2 h-2 rounded-full shrink-0 ring-1 ring-black/40 shadow-xs"
-              :style="{ backgroundColor: getTabConnectionColor(tab) }"
-              :title="`連線標籤色彩: ${getTabConnectionColor(tab)}`"
-            />
             <!-- Tab Name (left-aligned) -->
             <span
               class="truncate min-w-0"

@@ -25,12 +25,15 @@
         >
           <template #value="slotProps">
             <div v-if="slotProps.value && connectionStore.activeConnection" class="flex items-center space-x-1.5 min-w-0">
-              <span
-                v-if="connectionStore.status === 'connected'"
-                class="w-2 h-2 rounded-full bg-emerald-400 flex-shrink-0 animate-pulse shadow-xs shadow-emerald-400/80"
+              <i
+                class="pi pi-server text-xs flex-shrink-0"
+                :class="connectionStore.status === 'connected' ? 'text-emerald-400' : 'text-dark-400'"
+                :title="connectionStore.status === 'connected' ? '已連線 (Connected)' : '未連線 (Disconnected)'"
               />
-              <i v-else class="pi pi-server text-dark-400 text-xs flex-shrink-0" />
-              <span class="font-semibold text-xs truncate text-dark-100">
+              <span
+                class="font-semibold text-xs truncate text-dark-100"
+                :style="activeConnNameStyle"
+              >
                 {{ connectionStore.activeConnection.name }}
               </span>
               <Tag
@@ -45,14 +48,17 @@
 
           <template #option="slotProps">
             <div class="flex items-center space-x-2 w-full py-0.5">
-              <span
-                v-if="connectionStore.activeConnectionId === slotProps.option.id && connectionStore.status === 'connected'"
-                class="w-2 h-2 rounded-full bg-emerald-400 flex-shrink-0"
+              <i
+                class="pi pi-server text-xs flex-shrink-0"
+                :class="isOptionConnected(slotProps.option) ? 'text-emerald-400' : 'text-dark-400'"
+                :title="isOptionConnected(slotProps.option) ? '已連線 (Connected)' : '未連線 (Disconnected)'"
               />
-              <i v-else class="pi pi-server text-dark-400 text-xs flex-shrink-0" />
               <div class="flex-1 min-w-0 flex flex-col">
                 <div class="flex items-center space-x-1.5">
-                  <span class="font-medium text-xs truncate">{{ slotProps.option.name }}</span>
+                  <span
+                    class="font-medium text-xs truncate"
+                    :style="getConnectionLabelStyle(slotProps.option)"
+                  >{{ slotProps.option.name }}</span>
                   <Tag
                     v-if="slotProps.option.alias"
                     severity="info"
@@ -384,6 +390,7 @@ import { useConnectionStore } from '@/stores/connectionStore';
 import { useQueryStore } from '@/stores/queryStore';
 import { useSettingsStore } from '@/stores/settingsStore';
 import { DBA_QUERIES, type DbaQueryItem } from '@/utils/dbaQueries';
+import type { ConnectionProfile } from '@/types/connection';
 
 const workspaceStore = useWorkspaceStore();
 const connectionStore = useConnectionStore();
@@ -407,6 +414,20 @@ const activeConnStyle = computed(() => {
     boxShadow: `0 0 0 1px ${conn.color}44`,
   };
 });
+
+/** 連線名稱套用「標籤色彩」設定；未設定時沿用原本文字樣式。 */
+function getConnectionLabelStyle(conn: ConnectionProfile | null | undefined): Record<string, string> {
+  const color = conn?.color?.trim();
+  if (!color) return {};
+  return { color };
+}
+
+const activeConnNameStyle = computed(() => getConnectionLabelStyle(connectionStore.activeConnection));
+
+/** 該選項是否為「目前工作區使用中且已連線」的連線。 */
+function isOptionConnected(option: ConnectionProfile): boolean {
+  return connectionStore.activeConnectionId === option.id && connectionStore.status === 'connected';
+}
 
 const filteredAvailableDatabases = computed(() => {
   const current = connectionStore.activeDatabase;
