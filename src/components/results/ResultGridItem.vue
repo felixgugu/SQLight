@@ -232,6 +232,7 @@
         @grid-ready="onGridReady"
         @first-data-rendered="handleFirstDataRendered"
         @cell-context-menu="onCellContextMenu"
+        @cell-double-clicked="onCellDoubleClicked"
         @body-scroll="handleBodyScroll"
         @column-moved="onColumnMoved"
         @column-pinned="handleColumnLayoutChanged"
@@ -686,6 +687,7 @@ import {
   type GridReadyEvent,
   type ColDef,
   type CellContextMenuEvent,
+  type CellDoubleClickedEvent,
   type BodyScrollEvent,
 } from 'ag-grid-community';
 import { sqlightDarkGridTheme, sqlightLightGridTheme } from '@/styles/gridTheme';
@@ -701,6 +703,7 @@ import { generateBatchUpdateScript, type RowModification } from '@/utils/batchUp
 import SqlCodeViewer from '@/components/common/SqlCodeViewer.vue';
 import {
   calculateColumnWidth,
+  formatCellForExport,
 } from '@/composables/useColumnAutoWidth';
 import { useGridSelection } from '@/composables/useGridSelection';
 import { useGridExport } from '@/composables/useGridExport';
@@ -1206,6 +1209,24 @@ const {
 function handleColumnLayoutChanged() {
   invalidateVisualColIndices();
   updateSelectionHighlight();
+}
+
+// Double-click copies the cell value on read-only cells (read-only result sets, PK/Identity
+// columns). Editable cells keep their double-click-to-edit behaviour: AG Grid starts the
+// editor right after dispatching `cellDoubleClicked` and never consults `preventDefault`,
+// so the two actions cannot share the same gesture on the same cell.
+function onCellDoubleClicked(event: CellDoubleClickedEvent) {
+  const colIdx = getColIndex(event.column.getColId());
+  if (colIdx === undefined || !props.resultSet) return;
+  if (event.column.isCellEditable(event.node)) return;
+
+  const colName = props.resultSet.columns[colIdx]?.name ?? '';
+  const text = formatCellForExport(event.value);
+
+  navigator.clipboard.writeText(text).then(
+    () => workspaceStore.showToast(`已複製「${colName}」的值至剪貼簿`, 'success', 1800),
+    () => workspaceStore.showToast('複製失敗：無法寫入剪貼簿', 'warning', 2500)
+  );
 }
 
 // Clear selection when result set changes
