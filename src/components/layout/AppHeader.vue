@@ -1,11 +1,21 @@
 <template>
-  <Toolbar class="!h-10 !bg-dark-850 !border-b !border-dark-700 !rounded-none !px-2.5 !py-0 select-none flex-shrink-0 relative z-30 font-sans text-xs">
+  <!-- The toolbar row doubles as the custom window title bar: empty areas are draggable (deep),
+       while buttons/selects stay clickable because Tauri ignores interactive elements. -->
+  <Toolbar
+    data-tauri-drag-region="deep"
+    class="!h-10 !bg-dark-850 !border-b !border-dark-700 !rounded-none !px-2.5 !py-0 !flex-nowrap select-none flex-shrink-0 relative z-30 font-sans text-xs"
+  >
     <!-- Start: Branding & Connection / Database Pickers -->
     <template #start>
       <div class="flex items-center space-x-2">
         <!-- App Brand -->
-        <div class="flex items-center h-7 font-bold text-dark-100 tracking-wide pr-2 border-r border-dark-700">
-          <span class="text-lg font-bold leading-none text-dark-100">SQLight</span>
+        <div class="flex items-center h-7 pr-2 border-r border-dark-700">
+          <img
+            :src="appIcon"
+            alt="SQLight"
+            class="h-6 w-6 select-none"
+            draggable="false"
+          />
         </div>
 
         <!-- Connection Select -->
@@ -118,7 +128,7 @@
 
     <!-- End: Actions Toolbar & Settings -->
     <template #end>
-      <div class="flex items-center space-x-1">
+      <div class="flex items-center justify-end space-x-1 min-w-0 overflow-hidden">
         <!-- Run / Stop Query Button -->
         <Button
           v-if="!queryStore.isExecuting"
@@ -376,6 +386,9 @@
           @click="$emit('open-settings-modal')"
         />
       </div>
+
+      <!-- Custom window controls (Windows only, where native decorations are hidden) -->
+      <WindowControls v-if="showWindowControls" />
     </template>
   </Toolbar>
 </template>
@@ -389,10 +402,14 @@ import Tag from 'primevue/tag';
 import Divider from 'primevue/divider';
 import Popover from 'primevue/popover';
 import SqlEditorToolbarActions from '@/components/layout/SqlEditorToolbarActions.vue';
+import WindowControls from '@/components/layout/WindowControls.vue';
+// Single source of truth for the brand mark: the icon set shipped with the Tauri app.
+import appIcon from '../../../src-tauri/icons/64x64.png';
 import { useWorkspaceStore } from '@/stores/workspaceStore';
 import { useConnectionStore } from '@/stores/connectionStore';
 import { useQueryStore } from '@/stores/queryStore';
 import { useSettingsStore } from '@/stores/settingsStore';
+import { windowService } from '@/services/windowService';
 import { DBA_QUERIES, type DbaQueryItem } from '@/utils/dbaQueries';
 import type { ConnectionProfile } from '@/types/connection';
 import type { SqlEditorToolbarAction } from '@/types/editor';
@@ -402,6 +419,9 @@ const connectionStore = useConnectionStore();
 const queryStore = useQueryStore();
 const settingsStore = useSettingsStore();
 const dbaPopoverRef = ref();
+
+/** Windows 使用自繪標題列，其餘平台保留系統原生視窗裝飾。 */
+const showWindowControls = windowService.isCustomTitleBar();
 
 const limitOptions = [
   { label: '1,000', value: 1000 },

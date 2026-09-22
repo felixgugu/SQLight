@@ -12,10 +12,11 @@
   "app": {
     "windows": [
       {
+        "label": "main",
         "title": "SQLight - Lightweight SQL Client",
         "width": 1280,
         "height": 800,
-        "minWidth": 900,
+        "minWidth": 1368,
         "minHeight": 600,
         "resizable": true,
         "decorations": true,

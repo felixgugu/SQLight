@@ -1,0 +1,19 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "app": {
+    "windows": [
+      {
+        "label": "main",
+        "title": "SQLight - Lightweight SQL Client",
+        "width": 1280,
+        "height": 800,
+        "minWidth": 1368,
+        "minHeight": 600,
+        "resizable": true,
+        "decorations": false,
+        "center": true,
+        "dragDropEnabled": false
+      }
+    ]
+  }
+}
