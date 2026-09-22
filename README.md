@@ -1,558 +1,121 @@
-# SQLight - 輕量的 Microsoft SQL Server 桌面客戶端
+# SQLight
 
-<p align="center">
-  <strong>基於 Tauri v2 + Rust + Vue 3 + TypeScript + PrimeVue 4 + Monaco Editor + AG Grid Community 打造</strong>
-</p>
+**極致輕量的 Microsoft SQL Server (T-SQL) 跨平台桌面客戶端**
 
----
-
-## 📖 目錄 (Table of Contents)
-
-1. [專案簡介與特色 (Overview)](#-專案簡介與特色-overview)
-2. [系統架構與技術棧 (Architecture & Tech Stack)](#-系統架構與技術棧-architecture--tech-stack)
-3. [核心功能與設計細節 (Feature Deep Dive)](#-核心功能與設計細節-feature-deep-dive)
-   - [連線與資料庫物件瀏覽 (Connection & Schema Explorer)](#1-連線與資料庫物件瀏覽)
-   - [快速定位游標處資料表 (Locate Table in Explorer)](#-快速定位游標處資料表-locate-table-in-explorer)
-   - [智慧記憶與自動復原 (Auto-Restore Last Session)](#2-智慧記憶與自動復原)
-   - [Monaco SQL 編輯器與常用查詢工具 (Monaco SQL Workspace & Utilities)](#3-monaco-sql-編輯器與常用查詢工具)
-   - [長時間查詢中斷與取消機制 (Cancel Query / Task Killer & SPID)](#-長時間查詢中斷與取消機制-cancel-query--task-killer)
-   - [常用 SQL 範本庫與同層自訂語法文件 (SQL Templates & Co-located Custom File)](#-常用-sql-範本庫與應用程式同層自訂文件-sql_custom_templatesjson)
-   - [客戶端 GO 批次分割執行引擎 (Client-Side GO Batch Runner)](#-客戶端-go-批次分割執行引擎-client-side-go-batch-runner)
-   - [多結果歷史分頁、AG Grid & 即時統計列 (Multi-Result Tabs, AG Grid & Live Stats)](#4-多結果歷史分頁-ag-grid--即時統計列)
-   - [訊息面板與執行歷史 (Messages & Query History)](#5-訊息面板與執行歷史)
-   - [執行統計與 IO 分析器 (Execution Stats & IO Analyzer)](#6-執行統計與-io-分析器-execution-stats--io-analyzer)
-   - [資料表資料與結構瀏覽器 (Table Data & Structure Viewer)](#7-資料表資料與結構瀏覽器-table-data--structure-viewer)
-   - [實際執行計畫與 XML 視覺化檢視器 (Actual Execution Plan & XML Viewer)](#8-實際執行計畫與-xml-視覺化檢視器)
-   - [ER 關聯圖視覺化檢視器 (ER Diagram Viewer)](#9-er-關聯圖視覺化檢視器-er-diagram-viewer)
-   - [AI SQL 智能助理 (AI SQL Assistant)](#10-ai-sql-智能助理-ai-sql-assistant)
-   - [本機 SQL 檔案監控與瀏覽區 (SQL Files Folder Explorer)](#11-本機-sql-檔案監控與瀏覽區-sql-files-folder-explorer)
-  - [個人化設定與安全防護 (Settings & Preferences)](#12-個人化設定與安全防護-settings--preferences)
-   - [TSV 資料匯入精靈 (TSV Import Wizard)](#13-tsv-資料匯入精靈-tsv-import-wizard)
-4. [鍵盤快捷鍵與快速代碼範本 (Shortcuts & Snippets)](#-鍵盤快捷鍵與快速代碼範本-shortcuts--snippets)
-5. [安裝、開發與建置指南 (Installation & Development)](#-安裝開發與建置指南-installation--development)
+Tauri v2 + Rust + Vue 3 + TypeScript + PrimeVue 4 + Monaco Editor + AG Grid Community
 
 ---
 
-## 🌟 專案簡介與特色 (Overview)
+SQLight 是為日常 T-SQL 查詢與簡單資料庫操作設計的桌面客戶端。相較 SSMS、DataGrip、DBeaver 等完整工具，它主打**啟動快、體積小**，把日常最常用的功能做順：原生 Rust 後端、Monaco 編輯器、物件總管、可承載大量資料的結果網格，以及執行計畫與統計分析。
 
-**SQLight** 是一款 Microsoft SQL Server (T-SQL) 桌面管理客戶端，適合日常開發與簡單的資料庫查詢操作。
+## 核心特色
 
-相較於 SSMS、DataGrip、DBeaver 等功能完整的工具，**SQLight** 更著重於輕量與快速啟動，提供日常最常用的功能：
-- ⚡ **快速啟動**：原生 Rust 後端，體積小、啟動快。
-- 🎨 **深色 / 亮色主題**：整合 PrimeVue 4 主題系統，支援深色與亮色模式切換，可自訂主色調與表面色調。
-- 🤖 **AI SQL 助理**：自訂通用 cURL 範本引擎，去識別化適配任何 AI 供應商，支援上下文 SQL 帶入與多輪智慧對話。
-- 💻 **Monaco 編輯器**：整合 VS Code 核心編輯元件，支援語法高亮、自動補全與代碼格式化。
-- 🛑 **查詢取消**：支援中斷執行中的查詢，後端透過獨立連線發送 `KILL <spid>;` 釋放資料庫資源。
-- 🎯 **物件定位**：編輯器游標處的資料表名稱可快速在左側 Explorer 展開並定位。
-- 📁 **本機檔案監控**：側邊欄整合本機 SQL 資料夾監控區，支援檔案樹瀏覽與原地即時儲存。
-- 📚 **SQL 範本庫**：內建常用 T-SQL 語法範例，支援同層自訂檔案。
-- 🚀 **GO 批次執行**：客戶端自動依 `GO` 拆分批次，解決 TDS 驅動不支援 `GO` 的問題。
-- 📊 **AG Grid 表格**：採用 AG Grid 虛擬捲動，可處理較大量的查詢結果。
-- 🔧 **常用操作**：記憶上次連線、分頁拖曳排序、結果釘選保留等。
+- ⚡ **原生輕量後端**：Tauri v2 搭配純 Rust 的 TDS 驅動 (Tiberius)，安裝檔與記憶體佔用遠低於 Electron 方案。
+- 💻 **Monaco SQL 編輯器**：語法高亮、IntelliSense 物件補全、Snippet 範本、SQL 格式化與獨立語句執行。
+- 🗂️ **物件總管**：資料表 / 檢視表 / 預存程序 / 函數樹狀瀏覽，支援正則過濾與 `Ctrl + P` 模糊檢索。
+- 📊 **AG Grid 結果表格**：虛擬捲動承載大量資料，框選即時統計，複製為 TSV / JSON / Markdown。
+- 🛑 **查詢取消**：後端以獨立連線發送 `KILL <spid>`，實體中斷長時間執行的查詢。
+- 🧭 **執行計畫與統計**：預估 / 實際執行計畫圖形化檢視（可匯出 `.sqlplan`），並解析 `STATISTICS IO, TIME`。
+- 🕸️ **ER 關聯圖**：以 AntV X6 依外鍵遞迴展開關聯圖，可匯出 PNG / JSON。
+- 🤖 **AI SQL 助理**：自訂 cURL 範本引擎，可介接任何支援 HTTP POST 的 LLM 服務。
+- 📥 **TSV 匯入精靈**：逐列驗證、單一交易分批寫入，任一列失敗即整批回滾。
+- 🔐 **安全防護**：系統 Keyring 儲存密碼、危險語句雙重確認、連線環境色彩標識。
 
----
+## 技術棧
 
-## 🏗️ 系統架構與技術棧 (Architecture & Tech Stack)
+| 層 | 技術 |
+| :--- | :--- |
+| 桌面宿主 | Tauri v2（Windows 使用原生 WebView2） |
+| 後端核心 | Rust 2021、Tokio、Tiberius（純 Rust TDS 協定）、Keyring |
+| 前端 | Vue 3 Composition API、TypeScript 5、Vite 6、Tailwind CSS |
+| 狀態與 UI | Pinia 3、PrimeVue 4、Lucide Vue Next |
+| 編輯器與圖表 | Monaco Editor、AG Grid Community、AntV X6、html-query-plan |
 
-SQLight 採用現代跨平台桌面客戶端的雙層解耦架構：
+架構為前後端雙層解耦：Vue 前端經 Tauri IPC 呼叫 Rust 後端，後端以 Tiberius 連線 SQL Server（2012 ~ 2022 / Azure SQL）。
 
-```
-+-------------------------------------------------------------------------+
-|                              SQLight UI                                 |
-|          (Vue 3 Composition API + TypeScript + Tailwind CSS)           |
-+-----------+--------------+--------------+-------------+----------------+
-|  PrimeVue | Monaco Editor|   AG Grid    |  AntV X6    |html-query-plan |
-|  (Theme)  | (T-SQL Edit) | (Data Grid)  | (ER Diagram)|(Execution Plan)|
-+-----------+--------------+--------------+-------------+----------------+
-|                         Pinia State Stores                              |
-|   (connectionStore / workspaceStore / queryStore / settingsStore)       |
-+------------------------------------+------------------------------------+
-                                      |
-                     Tauri IPC Bridge (invoke / events)
-                                      |
-+-------------------------------------+-----------------------------------+
-|                        Tauri v2 Rust Backend                            |
-|             (Tokio Async Runtime + Tiberius TDS Protocol)               |
-+-------------------------------------------------------------------------+
-|                  Microsoft SQL Server (2012 ~ 2022 / Azure SQL)         |
-+-------------------------------------------------------------------------+
-```
+## 功能總覽
 
-### 技術選型：
-- **桌面宿主 (Desktop Host)**：[Tauri v2](https://v2.tauri.app/) — 使用作業系統原生 WebView2 (Windows)，大幅降低安裝檔大小與記憶體佔用。
-- **後端非同步連線 (Rust Core)**：[Tiberius](https://github.com/steffengy/tiberius) — 純 Rust 實作的 TDS (Tabular Data Stream) 協定驅動，搭配 `tokio` 與連線池管理，提供高併發、極致效能的查詢傳輸。
-- **前端核心框架 (Frontend UI)**：Vue 3 (Composition API / `<script setup>`) + Vite 6 + TypeScript 5。
-- **UI 元件庫與主題系統 (Component Library & Theming)**：[PrimeVue 4](https://primevue.org/) — 提供 Button、Dialog、Select、Toast、ContextMenu、Tooltip 等豐富元件，搭配 `@primevue/themes` Aura / Lara / Nora 佈景預設與 12 色主色調 × 5 色表面色調即時切換。
-- **狀態集中管理 (State Management)**：Pinia 3。
-- **代碼編輯核心 (Code Editor)**：Monaco Editor (VS Code 核心編輯器)。
-- **高效表格引擎 (Data Grid Engine)**：AG Grid Community (支援百萬列虛擬滾動、儲存格複製、自適應寬度)。
-- **ER 關聯圖引擎 (ER Diagram Engine)**：AntV X6 (圖視覺化與互動引擎)。
-- **樣式與主題 (Styling)**：Tailwind CSS (動態綁定 PrimeVue CSS 設計 Token 以支援深色/亮色雙模式) + Lucide Vue Next 圖標庫 + PrimeIcons。
-- **SQL 格式化**：`sql-formatter` (T-SQL Dialect)。
+**SQL 編輯與執行**
 
----
+- 選取優先執行；未選取時只執行游標所在的獨立語句，並以暫態高亮標示本次執行範圍。
+- 客戶端依 `GO` 自動拆分批次（TDS 驅動不支援 `GO`），並提供常用查詢下拉選單與 SQL 範本庫。
+- 內建 `SET STATISTICS IO, TIME ON` 效能分析、預估執行計畫、實際執行計畫三種互斥模式。
 
-## 🚀 核心功能與設計細節 (Feature Deep Dive)
+**物件總管與瀏覽**
 
-### 1. 連線與資料庫物件瀏覽
-- **彈性連線設定**：
-  - 支援設定伺服器位址 (Host)、連接埠 (Port，預設 1433)、資料庫名稱 (Database)、帳號 (Username) 與密碼 (Password)。
-  - 支援 SSL/TLS 加密連線開關 (`encrypt`) 與信任伺服器憑證 (`trustServerCertificate`)，可順暢連線內部自簽憑證或雲端 Azure SQL。
-  - **連線別名 (Alias)**：為每條連線自訂簡短易識別的別名（如 `生產DB`、`測試機`），自動顯示於編輯器分頁右側徽章。
-  - **環境色彩標識 (Connection Color)**：為每條連線指定代表色（如正式環境紅色 🔴、測試環境黃色 🟡、開發環境綠色 🟢），分頁標籤自動呈現對應色彩邊框，防止跨環境誤操作。
-  - 內建**測試連線 (Test Connection)** 功能，連線前先行驗證網路與帳密正確性。
-- **樹狀結構分類瀏覽 (Database Objects Tree)**：
-  - 清晰展開 `連線` &rarr; `資料庫 (Databases)`，底下分類歸檔為四大資料夾：
-    - 📁 **資料表 (Tables)**：以標準資料表圖示展示所有資料表，點擊可進一步展開欄位清單。
-    - 📁 **檢視表 (Views)**：以專屬檢視圖示展示所有檢視表，支援右鍵檢視定義與查詢。
-    - 📁 **預存程序 (Stored Procedures)**：列出資料庫中所有預存程序，支援右鍵檢視定義與產生 EXEC 呼叫樣板。
-    - 📁 **函數 (Functions)**：列出資料庫中所有純量與資料表值函數，支援右鍵檢視定義與產生呼叫語法。
-  - 支援搜尋過濾框，輸入關鍵字即時跨資料表、檢視表、預存程序與函數進行全域過濾，並動態展開包含符合項目的分類資料夾。
-- **快速物件檢索器 (Quick Object Finder / Spotlight `Ctrl + P`)**：
-  - 按下 <kbd>Ctrl</kbd> + <kbd>P</kbd>（或點擊頂部工具列「物件檢索」按鈕），立即彈出懸浮 Spotlight 檢索視窗。
-  - 支援極速**子序列模糊搜尋 (Fuzzy Search)** 與 PascalCase/縮寫匹配（如輸入 `uslog` 命中 `UserLoginLogs`），匹配字元即時高亮呈現。
-  - 物件彩標：🟩 `TABLE`、🟪 `VIEW`、🟧 `PROC`、🟦 `FUNC`，支援類型標籤頁切換或前綴過濾（如 `t: `、`v: `、`p: `、`f: `）。
-  - 鍵盤一鍵直覺操作：
-    - <kbd>↑</kbd> / <kbd>↓</kbd>：快速切換選取項目並自動平滑滾動。
-    - <kbd>Enter</kbd>：開啟資料表/檢視表資料 (`TableDataViewer`)，或檢視程序/函數定義。
-    - <kbd>Shift</kbd> + <kbd>Enter</kbd>：開啟資料表結構 (`TableStructureViewer`)。
-    - <kbd>Ctrl</kbd> + <kbd>Enter</kbd>：新分頁產生 `SELECT TOP 1000 ...` 或 `EXEC ...` 呼叫腳本。
-    - <kbd>Esc</kbd>：隨時關閉並交還編輯器焦點。
-  - 檢索器頂端支援即時切換同一連線下的其他資料庫，自動重載並同步檢索。
-- **資料表結構檢視 (Table Structure Viewer)**：
-  - 於側邊欄任何資料表或檢視表按右鍵點選「**資料表結構 (Table Structure)**」，即刻開啟專屬結構分頁。
-  - 清晰呈現欄位序號 (`#`)、主鍵標記 (`PK`)、欄位名稱、基礎型別 (`Data Type`)、完整型別與長度/精度 (`Full Type`，如 `nvarchar(50)`、`decimal(18, 2)`)、可為 NULL (`YES`/`NO`)、自動識別 (`Identity`)、預設值、最大字節長度、數值精度與小數位數、資料定序 (`Collation`)。
-  - 支援文字搜尋過濾、Excel 等級儲存格/整欄/整列選取、動態數值統計列與複製為 TSV、JSON、Markdown 表格。
-- **一鍵產生資料表結構腳本 (Generate CREATE TABLE DDL)**：
-  - 於側邊欄任何資料表右鍵點選「**產生 CREATE TABLE 腳本**」，系統自動解析欄位型態、長度（如 `varchar(50)`、`nvarchar(MAX)`）、精度與小數位數（如 `decimal(18, 2)`）、Nullable、Identity(1,1) 與主鍵 (Primary Key Clustered) 條件，產出格式優美、可直接執行的標準 T-SQL DDL 腳本並在新分頁開啟。
-- **檢視表與預存程序原始定義檢視 (View Definition / Script ALTER)**：
-  - 於任何檢視表、預存程序或函數按右鍵點選「**檢視定義 (View Definition)**」或直接雙擊，自動透過 SQL Server 系統層級之 `OBJECT_DEFINITION(OBJECT_ID(...))` 秒級讀取原始 SQL 原始碼，直接載入 Monaco Editor 供閱讀與修改。
-- **欄位智慧複製貼上 (Smart Context-Aware Column Paste)**：
-  - 滑鼠雙擊展開清單中的任意欄位名稱，系統立即記住該欄位並複製到剪貼簿，側邊欄顯示「待貼上」呼吸燈標籤。
-  - 點擊 Monaco 編輯區時，自動根據游標當前 SQL 語境進行極致貼心的格式化：
-    - **`SELECT` 清單**：自動判斷前後欄位並智慧補齊逗號 `,`（例如 `SELECT id |` &rarr; `SELECT id, [col]`；`SELECT | name` &rarr; `SELECT [col], name`）。
-    - **`WHERE` / `ON` / `SET` 條件**：自動補齊 ` = ?`（例如 `WHERE |` &rarr; `WHERE [col] = ?`），並**自動反白聚焦 `?`**，鍵入數值立即覆寫。若後方或前方已有比較運算子則絕不重複加上。
-    - **一般語境防黏結**：若緊鄰字母數字單字，最少自動補上空白間隔（如 `foo [col] bar`）。
-- **快速定位游標處資料表 (Locate Table in Explorer)**：
-  - **雙重入口**：點選 Explorer 頂部工具列「**定位**」按鈕（`LocateFixed` 準星圖示），或於 Monaco 編輯器內任何資料表/檢視表名稱處按右鍵選擇「**在物件總管中定位 (Locate Table in Explorer)**」。
-  - **智慧識別抽取器**：
-    - **選取優先**：使用者反白文字（如 `Orders`、`[Orders]`、`'Orders'`）優先解析。
-    - **行內游標邊界解析**：自動精準解析單段或多段式識別字，包括 `[dbo].[Orders]`、`dbo.Orders`、`[Sales].[Order Details]`（支援空格）、`[Northwind].[dbo].[Customers]` 與一般單詞。
-    - **SQL 關鍵字防誤判**：自動排除 `SELECT`、`FROM`、`WHERE`、`JOIN` 等語法關鍵字。
-  - **智慧連鎖展開與載入**：
-    - 若 Explorer 搜尋框（`filterQuery`）有過濾字串且會遮蔽目標物件，自動清空搜尋框以確保可見。
-    - 依序自動展開「`連線` &rarr; `資料庫` &rarr; `資料表 (或檢視表/預存程序/函數)` &rarr; `目標物件`」。
-    - 自動背景非同步載入該資料表之欄位清單。
-  - **醒目反饋與置中滾動**：
-    - 節點套用品牌色微亮背景、高對比發光邊框與動態呼吸「**已定位**」標籤。
-    - 自動觸發平滑滾動 (`scrollIntoView({ behavior: 'smooth', block: 'center' })`) 將該資料表捲動至畫面可視正中央，並於 3.5 秒後優雅恢復常態。
-- **連線右鍵操作選單**：
-  - **重新整理**：即時從伺服器重新讀取資料庫與物件清單。
-  - **行內重新命名 (Inline Rename)**：在側邊欄直接雙擊或右鍵重新命名連線代稱，並自動防重名檢查。
-  - **編輯連線**：開啟彈窗修改主機或認證參數。
-  - **中斷連線 / 刪除連線**：安全清理連線會話。
+- 連線 / 資料庫 / 資料表 / 檢視表 / 預存程序 / 函數樹狀瀏覽，支援搜尋過濾與正則規則隱藏。
+- 右鍵可檢視定義、產生 `CREATE TABLE` DDL、開啟資料表資料或結構、產生 DML 語法。
+- 從編輯器游標或反白文字快速在 Explorer 定位資料表（連鎖展開並高亮置中）。
 
-### 2. 智慧記憶與自動復原
-- **跨工作階段記憶**：
-  - 系統於使用者切換連線或資料庫時，即刻將連線 ID、資料庫名稱及每個連線專屬的最後資料庫對應記錄於本機持久化儲存 (`localStorage`)。
-- **開啟即連線**：
-  - 下次啟動 SQLight 時，程式會自動讀取最後紀錄，**直接將左上角的「連線下拉選單」與「資料庫下拉選單」復原至上次狀態**，並在背景自動發起連線與切換，無需每次反覆點選。
+**結果檢視與分析**
 
-### 3. Monaco SQL 編輯器與常用查詢工具
-- **頂部工具列 (Toolbar)**：
-  - 操作按鈕以圖示呈現，功能說明與快捷鍵收於浮動提示 (`tooltip`)。
-  - 整合「**效能分析**」核取方塊，勾選後查詢時自動附加 `SET STATISTICS IO, TIME ON` 以測量 IO 與 CPU 耗時。
-  - 整合「**預估執行計畫**」核取方塊（`SET SHOWPLAN_ALL ON;`），以表格形式輸出編譯期執行計畫，不實際執行語句。
-  - 整合「**實際執行計畫**」核取方塊（`SET STATISTICS XML ON;`），執行語句後擷取 XML Showplan 並以圖形化方式呈現。
-  - 三個模式內建互斥保護，避免同時勾選造成衝突。
-- **內建常用查詢語法 (Preset SQL Queries)**：
-  - 頂部工具列提供「常用查詢」下拉選單，內建幾組常用的 SQL Server 排查語法：
-    1. 🔒 **鎖定與阻塞查詢 (Locks & Blocking)**：查看目前的阻塞鏈與等待狀態。
-    2. ⚡ **慢查詢排行 (Top Slow Queries)**：透過 DMV 查看累計 CPU 較高的語句。
-    3. 💾 **資料表空間統計 (Table Sizes)**：查看各資料表的列數與佔用空間。
-    4. 🧩 **索引破碎度 (Index Fragmentation)**：查看破碎度較高的索引。
-    5. 🗑️ **未使用索引 (Unused Indexes)**：查看幾乎沒被使用的索引。
-    6. 🌐 **活動連線 (Active Sessions)**：查看目前的連線 SPID 與來源資訊。
-  - 點擊後自動開啟新分頁並填入語法，按 <kbd>Ctrl</kbd> + <kbd>Enter</kbd> 即可執行。
-- **多分頁標籤管理 (Multi-Tab SQL Editor)**：
-  - 支援多開查詢分頁，各分頁擁有獨立的 SQL 內容與游標狀態。
-  - 分頁列超出寬度時，支援**滑鼠滾輪直接左右橫向滾動**。
-  - **Pointer Events 無縫拖曳換位**：上方查詢分頁支援滑鼠按住拖曳自由調整排列順序，具備目標落點藍色指示條。
-  - **分頁色彩與主題整合**：當前分頁以頂部強調線標示，色彩隨 PrimeVue 主題設定自動變化；各分頁類別（SQL、表格資料、結構、執行計畫、ER 圖）有各自的圖示色彩。連線別名與色彩會顯示在分頁上。可於設定中自訂。
-  - **行內重新命名 (Inline Tab Rename)**：滑鼠雙擊分頁名稱即可直接在原地編輯命名，按下 <kbd>Enter</kbd> 保存、<kbd>Esc</kbd> 取消；亦可透過**滑鼠右鍵選單**選擇「重新命名」、「關閉此分頁」或「關閉其他分頁」。
-- **介面佈局靈活掌控 (Layout Controls)**：
-  - **側邊欄快速收合/展開**：於右上角版面控制區點擊側邊欄按鈕，即可一鍵收合左方 Explorer 側邊欄，釋放最大代碼編輯空間，並自動記憶收合狀態。
-  - **結果面板收合/展開**：右上角一鍵折疊下方查詢結果面板，專注於 SQL 撰寫。
-- **智慧語法高亮與 IntelliSense 補全**：
-  - 內建 T-SQL 關鍵字、系統函數、聚合函數語法高亮。
-  - **即時物件補全**：連線後背景預先載入快取，編輯器中輸入即自動提示當前資料庫中的資料表名稱、檢視表名稱與欄位名稱。
-  - **常用代碼範本 (Snippets)**：輸入 `sel`、`upd`、`join` 等前綴按 <kbd>Tab</kbd> / <kbd>Enter</kbd> 即可展開完整 SQL 語句骨架。
-- **獨立語句智慧識別與執行**：
-  - **選取優先**：若有反白選取文字，按下 <kbd>Ctrl</kbd> + <kbd>Enter</kbd> 僅執行選取內容。
-  - **無選取時單句執行**：自動依據空白行、分號 (`;`) 或 `GO` 關鍵字精準切分，只執行游標所在的那一段獨立 SQL，絕不誤執行整頁。
-  - **暫態高亮反饋**：按下執行瞬間，被執行的語句區塊會以**淡黃色高亮 (#feffe0)** 漸變閃爍，明確告知使用者本次執行的範圍，護眼且直觀。
-- **快速向下複製 (`Ctrl + D`)**：
-  - **無選取時**：游標所在整行往下複製一行。
-  - **有選取時**：將整個選取區塊往下複製一份，並**自動在中間插入空白行**隔開，避免頭尾 SQL 黏在一起。
-- **智慧 SQL 格式化 (`Shift + Alt + F`)**：
-  - 有選取時僅格式化選取的 SQL；未選取時僅格式化當前游標所在的獨立語句。
-- **長時間查詢中斷與伺服器 Task Killer (Cancel Query / Task Killer & SPID)**：
-  - **細粒度連線鎖定**：後端由全域獨占鎖重構為細粒度連線鎖，查詢執行期間微秒級釋放，確保取消信號立即可達。
-  - **動態執行/取消按鈕與停止按鈕**：
-    - 查詢執行中時，頂部綠色執行按鈕動態轉化為紅色呼吸燈「**點擊中斷並取消查詢**」按鈕，獨立停止按鈕同步點亮。
-    - 支援快捷鍵 <kbd>Alt</kbd> + <kbd>Break</kbd> / <kbd>Pause</kbd>（SSMS 標準）與 <kbd>Escape</kbd> 秒級取消。
-  - **伺服器端 KILL 命令發送 (Task Killer)**：
-    - 在連線建立時自動記錄當前會話 `SELECT @@SPID;`。
-    - 取消觸發時，透過 `tokio::select!` 毫秒級中斷本機讀取，並立即透過獨立背景連線向 SQL Server 發送 `KILL <spid>;`，即刻終止伺服器端計算、回滾交易並釋放資料庫鎖定 (Locks)。
-  - **即時 SPID 與碼錶計時**：狀態列左側常駐顯示 `SPID: <id>`，右側動態顯示 `執行中 (00:04)...` 與中斷狀態。
-  - **髒連線隔離與透明自動重連**：被中斷的 TCP 連線自動安全捨棄並在背景重連，使用者完全無感，後續查詢順暢無阻。
-- **常用 SQL 範本庫與應用程式同層自訂文件 (`sql_custom_templates.json`)**：
-  - **雙重入口**：頂部工具列專屬 `BookOpen` 圖示按鈕（位於「快速物件檢索」旁），或 Monaco 編輯器內滑鼠右鍵「**常用 SQL 範本庫 (SQL Templates)...**」。
-  - **豐富內建語法庫**：
-    - **常用語法**：高效分頁 (`OFFSET...FETCH`)、關聯更新 (`UPDATE...FROM...JOIN`)、`MERGE` (UPSERT)、`OUTPUT` 異動擷取、防重複插入 (`WHERE NOT EXISTS`)。
-    - **變數與中繼運算**：純量變數預設值宣告與賦值、含索引資料表變數 (`@TableVariable`)、區域暫存表 (`#TempTable`) 與索引最佳化、系統環境變數 (`SCOPE_IDENTITY()`、`@@ROWCOUNT`、`@@SPID`)、自訂 TVP 資料表型別批次傳遞。
-    - **CTE 語法**：多重 CTE 串接、遞迴樹狀組織階層展開 (`OrgHierarchy`)、CTE 刪除重複資料、遞迴日期序列生成。
-    - **進階用法**：視窗函數 (`DENSE_RANK`, `Running Total`)、`CROSS APPLY` 取得分組最新 Top N、`STRING_SPLIT` 與 `STRING_AGG`、動態 PIVOT 行列轉置、生產級交易防護 (`TRY...CATCH` + `XACT_ABORT`)、安全參數化動態 SQL (`sp_executesql`)、分批刪除海量資料防鎖定升級。
-    - **診斷維護**：DMV 缺失索引建議、即時鎖定與阻塞源頭排查。
-  - **應用程式同層實體自訂文件 (`sql_custom_templates.json`)**：
-    - 正式打包版本自動座落於 `SQLight.exe` 同層目錄（免安裝可攜版隨拷隨走，極致方便團隊統一共用）。
-    - 支援外部編輯器（VS Code、記事本）自由維護修改，視窗內支援「**📂 在檔案總管顯示**」與「**🔄 重新載入**」熱重載。
-    - 介面內建完整 CRUD（新增、編輯、刪除自訂範本），自動即時回寫該實體 JSON 檔。
-  - **游標處一鍵插入**：支援按下 <kbd>Enter</kbd> 精準貼入編輯器當前游標處（自動覆蓋選區），或以新分頁開啟。
-- **客戶端 GO 批次分割執行引擎 (Client-Side GO Batch Runner)**：
-  - **智慧 GO 解析器**：內建狀態機語意掃描，精確略過字串常值 (`'...'`) 與單行/多行註解（`--`, `/*...*/`）中的 `GO` 關鍵字，解決 TDS 驅動傳送未支援的 `GO` 造成之 Msg 102 語法報錯。
-  - **多批次連續執行**：將大型 SQL 腳本依 `GO` 邊界自動拆分為多個獨立 Batch 循序發送至資料庫執行，並自動整合所有 ResultSets、受影響列數與訊息。
-  - **DDL 體驗優化**：產生與執行 `CREATE TABLE` 等無資料列回傳之指令時，執行後自動導向「Messages」面板顯示完成狀態，貼合 SSMS 標準使用體驗。
+- 多結果歷史分頁、訊息面板、查詢歷史，結果分頁可釘選保留。
+- 儲存格 / 整欄 / 整列框選與即時統計（Sum / Avg / Min / Max / Count / Distinct）。
+- 複製選取範圍為 TSV、JSON、Markdown；雙擊唯讀儲存格可複製該格值。
+- 表格資料與結構瀏覽器、ER 關聯圖、執行計畫 XML 視覺化。
 
-### 4. 多結果歷史分頁、AG Grid & 即時統計列
-- **欄位拖曳重排與全方位選取引擎 (Column Reordering & Selection Engine)**：
-  - **欄位拖曳重排 (Column Reordering)**：滑鼠於任何欄位標題按住拖曳（移動距離 > 4px），即可自由調換欄位前後排列順序，具備原生的拖曳陰影與插入定位箭頭。已選取的欄位在重排後持續維持選取高亮狀態。
-  - **單擊欄位標題 (Click Header)**：單擊任一欄位標題即可選取該整欄所有儲存格，底部統計列即時更新該欄之數值總和與平均。
-  - **Shift + 點擊欄位標題 (Shift + Click Header)**：點擊起點欄位後，按住 <kbd>Shift</kbd> 點擊另一欄位，自動依據當前畫面最新排列順序，連續選取兩欄間的所有整欄。
-  - **Ctrl + 點擊欄位標題 (Ctrl + Click Header)**：按住 <kbd>Ctrl</kbd>（或 <kbd>Cmd</kbd>）點擊欄位標題，支援非連續性自由挑選多個欄位（如同時選取第 1 欄與第 5 欄）。
-  - **儲存格拖曳矩形框選 (Cell Box Drag)**：滑鼠於任一儲存格按住拖曳，自由框選任意跨列、跨欄的矩形資料區域。
-  - **Shift + 點擊儲存格 (Shift + Click Cell)**：點擊起始儲存格後，按住 <kbd>Shift</kbd> 點擊結束儲存格，快速建立矩形選取範圍。
-  - **點擊左上角 `#` 標題或快捷鍵 <kbd>Ctrl</kbd> + <kbd>A</kbd> 全選**：一鍵選取整張表格所有列與欄位。
-  - **點擊列號 `#` 整列選取與拖曳**：點擊左側行號選取整列，按住拖曳或配合 <kbd>Shift</kbd> 快速連續選取多列。
-  - **視覺順序同步匯出**：當欄位經過拖曳調整前後順序後，選取複製、TSV、CSV、JSON 與 Markdown 匯出自動忠實依據使用者所排定之**畫面視覺順序**輸出。
-  - **直觀視覺高亮與清除**：被選取的欄位標題以專屬淡藍色高亮標示（`.sqlight-header-selected`），儲存格呈現清晰反白效果；按 <kbd>Esc</kbd> 鍵隨時清除所有選取。
-- **即時統計列 (Live Aggregate Bar)**：
-  - 於查詢結果表格（`ResultGrid`）與資料表瀏覽器（`TableDataViewer`）底部配備即時統計狀態列。
-  - **任意區域拖曳框選**：按住滑鼠左鍵自由拖曳框選一格或多格儲存格（或多欄選取、多列選取），立即呈現：
-    - `選取: N 格 (M 個數值)`（多欄選取時顯示 `選取: X 欄 / Y 列`）
-    - `總和 (Sum): 1,540,200`
-    - `平均 (Avg): 128,350`
-    - `最小值 (Min): 1,200`
-    - `最大值 (Max): 890,000`
-    - `非重複計數 (Distinct): 11`
-  - **框選複製快捷**：支援選取後直接點擊「複製選取」或按下 <kbd>Ctrl</kbd> + <kbd>C</kbd>，直接將選取區塊複製為 TSV 貼入 Excel；按下 <kbd>Esc</kbd> 立即清除選取。
-- **現代程式碼匯出（Export as JSON / Markdown）**：
-  - 工具列與右鍵選單全面支援一鍵匯出：
-    - **複製為 JSON 物件陣列**：直接將全表或選取區域轉為 `[ { "id": 1, "name": "Alice" }, ... ]`，單元測試、Mock API 開發即貼即用。
-    - **複製整列為 JSON**：複製單筆物件 `{ "id": 1, "name": "Alice" }`。
-    - **複製為 Markdown 表格**：自動處理 Pipe 轉義與斷行，直接貼入 GitHub Issue、Pull Request 或 Notion 文件中呈現排版漂亮的表格。
-- **分頁序號累計與命名規範 (`$SEQ.$Tabname $rowNumber'r'`)**：
-  - 記憶體維護單調遞增計數器（由 0 起算持續累計），每次執行查詢自動依序編號，分頁名稱自動格式化為 `$SEQ.$Tabname $rowNumber'r'`（例如 `1.Customers 50r`、`2.Orders 12r`、出錯時為 `3.Query 0r`）。
-  - 分頁列排版乾淨俐落，若標題已內含筆數資訊則不重複顯示額外徽章，發生錯誤時自動以高警示紅色 `Err` 徽章標示。
-  - **支援重新命名**：滑鼠雙擊結果分頁名稱或點擊右鍵「重新命名」，即可自由更改為易識別的自訂名稱。
-- **結果分頁色彩 (Active Result Tab Colors)**：
-  - 當前結果分頁以顯眼色彩標示，與上方 SQL 分頁區分。
-  - 顏色可於設定中自訂。
-- **釘選保護機制 (Pin / Unpin)**：
-  - 點擊分頁左側圖釘或右鍵選單即可釘選；**被釘選的分頁會自動移動至最左側**，受特殊保護，即使超過歷史保留上限也不會被自動清理。
-- **嚴謹的分頁排列順序**：
-  - `[所有釘選分頁] -> [最新執行分頁] -> [次新分頁] -> [更舊分頁...]`
-- **Pointer Events 無縫拖曳換位**：
-  - 捨棄 HTML5 原生拖曳（解決 Windows Tauri WebView2 下觸發系統 OLE 拖放時強制覆蓋的 🚫 禁止圖示）。
-  - 全程採用 Pointer Events 搭配抓手手勢 (`grabbing`)，支援任意拖曳分頁變更左右排列順序，並具備即時目標落點高亮。
-- **AG Grid 現代化暗色資料表格**：
-  - 支援百萬列等級 DOM 虛擬捲動，流暢無阻。
-  - 欄位寬度智慧自適應內容。
-  - 儲存格選取與複製。
-  - **右鍵快捷選單**：支援「複製儲存格」、「複製整行」、「匯出/複製為 TSV」、「匯出/複製為 CSV」、「複製為 JSON」、「複製為 Markdown 表格」。
-- **一鍵自動產生 INSERT / UPDATE / DELETE 語法（內建交易安全防護）**：
-  - 於結果列任何一處點選滑鼠右鍵，即可一鍵建立該列的 **INSERT、UPDATE 或 DELETE** SQL 語句。
-  - **時間戳記註解**：自動於首行附加註解 `-- 自動產生語法 時間: YYYY-MM-DD HH:mm:ss`。
-  - **複合主鍵完整性驗證 (Composite PK Validation)**：
-    - 嚴格比對資料表所有主鍵欄位：只有當資料表定義的**所有複合主鍵欄位**皆完整存在於查詢結果中時，才以主鍵建立 `WHERE` 條件。
-    - **若無 PK、未取得 PK 定義或僅投影部分主鍵**：自動安全退回（fallback）改以**當前查詢結果的全部欄位**作為 `WHERE` 條件（並將 NULL 轉為 `IS NULL`），徹底防範因部分複合主鍵匹配多筆資料而造成誤更新或誤刪！
-  - **自動交易保護機制 (Transaction Guards)**：
-    - 產生的 `UPDATE` 與 `DELETE` 自動包覆於 `BEGIN TRANSACTION`、`BEGIN TRY ... COMMIT`、`BEGIN CATCH ... ROLLBACK` 結構中。
-    - 前置防護檢查 `IF @@TRANCOUNT <> 0 THROW`，執行後檢查 `IF @@ROWCOUNT <> 1 THROW`，確保影響筆數恰為 1 筆，否則自動 `ROLLBACK`。
-  - **欄位安全過濾與逸出**：
-    - `INSERT` 與 `UPDATE SET` 自動排除 `Identity` 自動識別欄位。
-    - 二進位佔位符與超出 JS 安全範圍的超大整數主動防呆攔截，防止資料截斷與失真。
-    - 識別字逸出改為標準 T-SQL `[${name.replace(/\]/g, ']]')}]`，完整支援包含閉合括號 `]` 的欄位名稱。
-  - **自動開分頁與剪貼簿**：自動建立新 SQL 查詢分頁開啟並聚焦，且同步寫入剪貼簿與跳出 Toast 通知。
-- **多結果集 (Multiple Result Sets)**：
-  - 單次查詢返回多張表格時，自動提供子分頁標籤切換檢視。
+**個人化與安全**
 
-### 5. 訊息面板與執行歷史
-- **Messages 面板**：
-  - 顯示查詢執行歷時、受影響列數 (Affected Rows) 以及資料庫伺服器傳回的 Print 訊息。
-  - 查詢發生錯誤時，標籤顯示紅色錯誤徽章，並提供清楚的錯誤碼與說明。
-- **History 面板**：
-  - 自動記錄歷次執行的 SQL 語句、執行時間與耗時，點擊歷史記錄可直接重新填入新查詢分頁。
+- 深色 / 亮色模式、PrimeVue 佈景預設、12 色主色調與 5 色表面色調即時切換。
+- 編輯器字型 / 大小 / 縮排 / 自動換行、AG Grid 字型與分頁啟用色彩皆可自訂。
+- 記憶上次連線與資料庫、開啟即自動復原；連線可設定別名與環境代表色。
+- AI 助理 API Key、cURL 請求範本與測試連線設定。
 
-### 6. 執行統計與 IO 分析器 (Execution Stats & IO Analyzer)
-- **頂部開關隨選啟用 (On-Demand Performance Toggle)**：
-  - 預設保持關閉 (`false`)，避免日常查詢產生非必要的伺服器追蹤與網路開銷。
-  - 勾選頂部功能列的「**效能分析**」核取方塊後執行查詢，系統自動注入 `SET STATISTICS IO, TIME ON` 與階段性 DMV 遙測腳本。
-  - 執行完成後自動切換至底部「**Stats (效能)**」儀表板分頁，並主動將底層遙測資料集隔離剔除，使用者查詢結果集 100% 保持乾淨。
-- **效能摘要 (Performance Summary)**：
-  1. ⏱️ **總執行時間 (Elapsed Time)**
-  2. ⚡ **CPU 時間 (CPU Time)**
-  3. 🛠️ **編譯時間 (Compile Time)**
-  4. 📖 **邏輯讀取量 (Logical Reads)**：頁數與換算容量（如 `1,250 頁 (9.8 MB)`）
-  5. 🎯 **緩衝快取命中率 (Buffer Cache Hit Ratio)**
-- **各資料表實體/邏輯 IO 細部展開 (Per-Table Breakdown)**：
-  - 清晰列出查詢所涉及的每一張資料表：掃描次數 (`Scan Count`)、邏輯讀取 (`Logical Reads`)、實體讀取 (`Physical Reads`)、預讀次數 (`Read-Ahead`)、LOB 大型物件讀取。
-  - **自動容量換算**：根據 SQL Server 內部 8KB 資料頁規格，自動換算為人類友善的資料量單位（`B` / `KB` / `MB` / `GB`）。
-  - **高 IO 提示 (High IO Alert)**：當單表邏輯讀取較高或發生全表掃描時，以警示標記提醒注意。
-- **工作階段等待事件統計 (Session Wait Stats)**：
-  - 自動抓取當次查詢在 `sys.dm_exec_session_wait_stats` 中所累積的等待事件（如 `PAGEIOLATCH_SH`、`ASYNC_NETWORK_IO`、`CXPACKET` 等）。
-  - 清楚展示等待任務數 (`Waiting Tasks`)、累計等待毫秒數 (`Wait Time`) 與最大單次等待時間。
-- **一鍵匯出 Markdown 效能調優報告**：
-  - 點擊「複製 Markdown 報告」，即可產出包含總結指標、高 IO 警示標記、各資料表詳細 IO 表格與等待事件分析的完整排版報告，方便直接貼入 Pull Request、Jira 效能工單或 Slack/Teams 團隊討論。
+## 鍵盤快捷鍵
 
-### 7. 資料表資料與結構瀏覽器 (Table Data & Structure Viewer)
-- **資料表資料瀏覽器 (Table Data Viewer)**：
-  - 於側邊欄任何資料表右鍵點選「**開啟資料表 (Open Data)**」，立即以獨立分頁開啟該資料表資料。
-  - 採用 AG Grid 虛擬滾動瀏覽，支援文字篩選、儲存格框選、多欄多列選取、即時統計列（Sum/Avg/Min/Max/Distinct）、複製為 TSV/JSON/Markdown 與 DML 產生。
-- **資料表結構檢視器 (Table Structure Viewer)**：
-  - 於側邊欄任何資料表或檢視表右鍵點選「**資料表結構 (Table Structure)**」，即刻開啟專屬結構分頁。
-  - 完整展示 12 大欄位中繼資料屬性：
-    1. `# (Ordinal)`：欄位序號
-    2. `PK`：主鍵金黃色徽章標記
-    3. `欄位名稱 (Column Name)`：主鍵高亮呈現
-    4. `基礎型別 (Data Type)`：如 `nvarchar`、`int`、`decimal`
-    5. `完整型別與長度 (Full Type)`：如 `nvarchar(50)`、`decimal(18, 2)`、`nvarchar(MAX)`
-    6. `可為 NULL (IsNullable)`：YES（綠色徽章）／NO（紅色徽章）
-    7. `自動識別 (Identity)`：YES（青色徽章）／`-`
-    8. `預設值 (Default)`：預設值內容或 NULL
-    9. `最大長度 (Bytes)`：文字或二進位長度（支援 MAX）
-    10. `精確度 (Precision)`：數值型別精確度
-    11. `小數位數 (Scale)`：數值型別小數位數
-    12. `定序 (Collation)`：資料定序名稱
-  - 支援快速搜尋過濾、多格/多欄/多列框選、即時統計與一鍵匯出為 TSV、JSON、Markdown 表格。
+| 快捷鍵 | 功能 |
+| :--- | :--- |
+| `Ctrl` + `Enter` | 執行當前語句（有選取時執行選取範圍） |
+| `Ctrl` + `Shift` + `Enter` | 執行全部語句 |
+| `Alt` + `Break` / `Pause` | 中斷並取消查詢 |
+| `Escape` | 取消查詢 / 關閉浮窗 / 清除表格選取 |
+| `Ctrl` + `P` | 快速物件檢索 (Spotlight) |
+| `Ctrl` + `Alt` + `A` | 喚起 AI SQL 助理 |
+| `Ctrl` + `Space` | 手動觸發程式碼自動補全 |
+| `Shift` + `Alt` + `F` | 格式化 SQL（有選取時僅格式化選取範圍） |
+| `Ctrl` + `D` | 向下複製整行或選取區塊 |
+| `Ctrl` + `S` / `Ctrl` + `O` / `Ctrl` + `N` | 儲存 / 開啟 / 新增 SQL 分頁 |
+| `Ctrl` + `C` | 複製結果表格選取範圍為 TSV |
 
-### 8. 實際執行計畫與 XML 視覺化檢視器 (Actual Execution Plan & XML Viewer)
-- **隨選勾選實際執行計畫 (SET STATISTICS XML ON)**：
-  - 勾選頂部功能列的「**實際執行計畫**」核取方塊（`Network` 網狀節點圖示，霓虹紫色高亮）。
-  - 執行查詢時，系統以非同步方式啟用 `SET STATISTICS XML ON;`，實際執行語句以取得真實執行統計（包括實際處理列數、運算子成本比例、實際執行時間與平行處理資訊）。
-  - **Fail-Safe 連線保護**：在 `try ... finally` 區塊中嚴格調用 `SET STATISTICS XML OFF;`，即使查詢因語法或逾時報錯，也 100% 確保連線工作階段不會殘留 XML 統計模式。
-- **資料結果集潔淨分離 (Clean Result Sets)**：
-  - SQL Server 傳回的 ShowPlan XML 欄位（`Microsoft SQL Server 2005 XML Showplan`）由底層引擎自動識別並安全抽離。
-  - 使用者執行的業務查詢資料（如 `SELECT * FROM Orders`）依然正常、乾淨地呈現在底部「**Results**」資料表格中，完全不被巨大的 XML 字串污染。
-- **獨立工作區分頁 (`ExecutionPlanTab` & `ExecutionPlanViewer`)**：
-  - 自動於上方工作區開啟專屬分頁（紫色標籤，圖示為 `Network`），以專屬視覺化畫布呈現圖形化計畫。
-  - **整合開源 `html-query-plan` 視覺化引擎**：
-    - 將 XML Showplan 精準轉譯為與 SSMS / Azure Data Studio 高度相符的樹狀圖形化計畫。
-    - 完整呈現各節點圖示（Clustered Index Scan/Seek、Table Scan、Hash Match、Nested Loops、Sort、Filter 等）。
-    - 清楚標記每個算子的**相對成本百分比 (Cost %)** 與資料流線段寬度（依實際資料傳輸量動態粗細）。
-    - **智慧懸浮資訊卡 (Rich Tooltips)**：滑鼠懸停於任何算子或線段上，即刻彈出包含實際列數、估計列數、述詞 (Predicate)、輸出欄位 (Output List)、I/O 與 CPU 成本的完整規格卡片。
-- **縮放與平移導覽控制 (Zoom & Pan Controls)**：
-  - 支援 <kbd>+</kbd> 放大（最高 250%）、<kbd>-</kbd> 縮小（最低 30%）、<kbd>100%</kbd> 一鍵重設大小。
-  - 大畫布自由捲動瀏覽，適合分析大型多表 JOIN 與複雜平行處理查詢。
-- **雙模式檢視：圖形計畫 (Diagram) 與 原始 XML (Raw XML)**：
-  - 支援一鍵於「**圖形計畫**」與「**原始 XML**」間無縫切換。
-  - 原始 XML 模式提供完整排版縮排、總行數統計、KB 容量換算與自動換行開關。
-- **一鍵複製原始 XML (One-Click Copy XML)**：
-  - 工具列提供專屬「**複製原始 XML**」按鈕，點擊後毫秒級寫入作業系統剪貼簿，並附帶動態綠色 Checkmark 與 Toast 提示反饋。
-- **一鍵另存為 `.sqlplan` 檔案 (Export to .sqlplan)**：
-  - 點擊「**另存為 .sqlplan**」按鈕，直接將完整的 ShowPlanXML 匯出為微軟標準的 `.sqlplan` 副檔名檔案。
-  - 下載之檔案可直接使用官方 **SQL Server Management Studio (SSMS)**、**Azure Data Studio** 或 **SentryOne Plan Explorer** 開啟、分析與分享。
+編輯器內輸入 `sel`、`ins`、`upd`、`del`、`join`、`cte` 等前綴後按 `Tab`，可展開對應 SQL 範本。
 
-### 9. ER 關聯圖視覺化檢視器 (ER Diagram Viewer)
-- **一鍵生成 ER 圖**：
-  - 於側邊欄任何資料表右鍵點選「**ER 關聯圖 (ER Diagram)**」，自動以該資料表為中心，遞迴查詢外鍵 (Foreign Key) 關聯並生成完整的實體關聯圖。
-  - 支援自訂遞迴深度（預設 2 層，可於開啟時調整），控制圖的展開範圍。
-- **AntV X6 互動式畫布**：
-  - 採用 AntV X6 圖視覺化引擎，提供流暢的節點拖曳、縮放 (Zoom)、平移 (Pan) 與自動佈局 (Auto Layout)。
-  - 每張資料表以卡片節點呈現，清楚列出欄位名稱、型別、主鍵 (PK 🔑) 與外鍵 (FK 🔗) 標記。
-  - 關聯線條以箭頭與標籤標示外鍵欄位與參考目標。
-- **雙模式匯出**：
-  - 支援一鍵匯出為 PNG 圖片或 JSON 結構資料。
-  - 支援從已儲存的 JSON 檔案還原 ER 圖工作區。
+## 快速開始
 
-### 10. AI SQL 智能助理 (AI SQL Assistant)
-- **通用自訂 cURL 請求範本引擎**：
-  - **去識別化與跨廠商相容**：不強制綁定特定廠商 SDK，全面適配任何支援 HTTP POST 的主流 LLM 服務商（如 MiniMax、OpenAI、Anthropic Claude、DeepSeek、Google Gemini、Groq、Ollama、vLLM 本地模型等）。
-  - **智慧替換變數**：
-    - `<token>`：系統自動置換為設定頁所保存之 API Key。
-    - `<content>`：自動封裝提問內容與上下文，並多輪追加至請求的 `messages` 陣列中。
-  - **結構化 JSON 容錯解析**：內建括號深度感知解析引擎，即使使用者貼上的 cURL 指令末尾缺失引號或含有換行反斜線，亦能精確提取正確的 JSON Payload。
-- **上下文感知與快捷喚起**：
-  - **快速喚起**：按 <kbd>Ctrl</kbd> + <kbd>Alt</kbd> + <kbd>A</kbd> 或點選頂部工具列「AI 助理 (<kbd>Sparkles</kbd>)」按鈕隨時開啟。
-  - **SQL 上下文自動注入**：在 Monaco 編輯器中反白語法或游標停留於語句時呼出，系統自動將該 SQL 作為參考脈絡帶入，輔助 AI 進行錯誤修正、效能優化或代碼重構。
-  - **代碼一鍵操作**：AI 回傳之 SQL 程式碼區塊提供「**複製代碼**」、「**填入當前編輯器**」與「**新開查詢分頁**」快捷按鈕。
-- **原生懸浮對話視窗 (Native Floating Window)**：
-  - **自由拖曳移動**：採用高靈敏 Pointer Events，按住標題列即可平滑拖曳至桌面任意位置。
-  - **8 方向邊緣/角落自由縮放**：四個邊框與四個角落皆具備縮放控柄，支援按住拉伸調整視窗尺寸。
-  - **全螢幕最大化與還原**：支援雙擊標題列或點擊右上角最大化按鈕，秒級切換為 `100vw × 100vh` 全螢幕工作區。
-  - **最小化為懸浮膠囊列**：點擊最小化可收合至右下角小巧的膠囊列（AiFloatingPill），即時顯示思考/旋轉動態與未讀訊息徽章，點擊即刻還原視窗。
+環境需求：
 
-### 11. 本機 SQL 檔案監控與瀏覽區 (SQL Files Folder Explorer)
-- **專屬本機目錄監控**：
-  - 於左側 Explorer 下方整合「**SQL 檔案**」專屬監控區塊，可自由選擇或切換本機工作資料夾。
-  - 記憶最後開啟之路徑，啟動時自動掃描並載入所有 `.sql` 腳本檔案。
-- **雙向高度拖曳分割條 (Draggable Splitter)**：
-  - 兩區塊之間配置原生拖曳把手，可依當前工作重心自由拖動調整資料庫物件樹與本機檔案樹的高度佔比。
-- **無縫開啟與原地儲存**：
-  - 點擊本機檔案清單中的 `.sql` 檔案，直接於 Monaco 編輯器開啟專屬標籤分頁。
-  - 編輯後按下 <kbd>Ctrl</kbd> + <kbd>S</kbd>，直接將變更寫回本機實體檔案，無需透過另存新檔對話框。
-
-### 12. 個人化設定與安全防護 (Settings & Preferences)
-透過右上角齒輪開啟設定對話框（固定尺寸設計，切換分頁不晃動）：
-- **AI 助手設定 (AI Settings)**：
-  - **API Key**：輸入個人金鑰（支援遮蔽與顯示切換）。
-  - **cURL 請求範本**：提供標準多行文字編輯區，可自由自訂任何廠商的 curl 指令、模型名稱、思考設定（`thinking`）或參數，並具備「**還原預設範本**」按鈕。
-  - **測試連線 (Test Connection)**：一鍵發送真實 Ping 請求測試端點連線與金鑰有效性，即時反饋回傳訊息與延遲毫秒數 (Latency)。
-- **佈景主題設定 (Theme)**：
-  - **色彩模式 (Color Mode)**：深色 (Dark) / 亮色 (Light) 一鍵切換，Monaco Editor、AG Grid、執行計畫檢視器、ER 圖與全域 CSS 同步自適應。
-  - **佈景預設 (Theme Preset)**：Aura（現代立體圓潤）/ Lara（均衡專業）/ Nora（平坦極簡），即時套用全部 PrimeVue 元件。
-  - **主色調 (Primary Color)**：12 種設計師精選主色（Emerald、Green、Lime、Orange、Amber、Yellow、Teal、Cyan、Sky、Blue、Indigo、Violet），所有 PrimeVue 元件、分頁強調線與操作按鈕同步連動。
-  - **表面色調 (Surface Color)**：5 種表面灰階（Slate、Gray、Zinc、Neutral、Stone），控制面板、卡片與背景明暗層次。
-  - **漣漪效果 (Ripple)**：開啟/關閉 PrimeVue Material Design 觸擊漣漪動畫。
-- **編輯器設定 (Editor)**：
-  - 字型大小 (12px ~ 20px)。
-  - 字型家族 (Font Family，支援 Fira Code, JetBrains Mono, Cascadia Code, Consolas, Monaco 等寬字型)。
-  - 自動換行 (Word Wrap) 開關 (On / Off)。
-  - Tab 縮排空格數 (2 空格 / 4 空格)。
-  - 執行暫態高亮色彩自訂（預設柔和淡黃色 `#feffe0`，附調色盤與色碼輸入）。
-  - **SQL 編輯分頁啟用色彩 (Active Tab Colors)**：自訂上方分頁在選取時的背景色與前景色（預設皇家藍 `#1e40af` 配純白字 `#ffffff`），提供 7 種設計師快速預設與即時分頁預覽。
-- **查詢與結果設定 (Results)**：
-  - Results 歷史分頁保留上限（5 ~ 50 組，預設 10 組，超額自動清理最舊未釘選分頁）。
-  - 預設最大查詢筆數截斷防護（1,000 ~ 50,000 筆或無限制，防止意外撈取海量資料打爆記憶體）。
-  - **查詢結果分頁啟用色彩 (Active Result Tab Colors)**：自訂下方結果分頁在選取時的背景色與前景色（預設深森林綠 `#065f46` 配純白字 `#ffffff`），提供 7 種設計師快速預設與即時分頁預覽。
-- **過濾規則 (Filter Rules)**：
-  - **資料庫/資料表正則過濾**：以正則表達式 (Regex) 自訂隱藏規則，可按前綴、後綴或自訂正則模式批次過濾系統資料庫或不常用的資料表（如 `^sys`、`_backup$`、`__EFMigrations`），減少 Explorer 樹狀列表雜訊。
-  - 支援規則啟用/停用、即時新增/編輯/刪除，附帶即時命中測試面板。
-- **危險查詢安全防護 (Dangerous Query Safe Guard)**：
-  - 內建 DML 關鍵字偵測引擎（`DELETE`、`DROP`、`TRUNCATE`、`ALTER`、`UPDATE` 等），執行前自動彈出雙重確認對話框。
-  - 對話框明確顯示目標連線名稱、資料庫名稱、偵測到的危險關鍵字清單與即將執行的 SQL 預覽。
-- **關於與手冊 (About)**：
-  - 完整常用鍵盤快捷鍵清單與快速 SQL 代碼範本操作說明。
-  - 支援一鍵重設所有設定為原廠預設值。
-
-### 13. TSV 資料匯入精靈 (TSV Import Wizard)
-- **入口**：左側 Explorer 的**資料表**節點右鍵 →「TSV 匯入」，以該資料表為目標（檢視表、預存程序與函式不提供）。
-- **第一階段（來源與設定）**：二選一來源（上傳 UTF-8 `.tsv` 檔／貼上 Tab 分隔文字，上限 20 MB）、略過首行、允許手動指定識別值（`SET IDENTITY_INSERT`，權限或引擎不支援時停用並顯示原因）；畫面同時顯示目標表格與**依序對應**的預期欄位（型別、必填、PK/Identity 備註），僅排除自動產生且不可寫入的欄位（computed／rowversion），**識別欄位一律列入**。勾選只控制是否送出 `SET IDENTITY_INSERT ON`；未勾選時識別值仍會隨 INSERT 送出，由資料庫回報錯誤並整批回滾（畫面會顯示非阻擋性警告）。
-- **解析與預先驗證**：Tab 分隔、支援 Windows／Unix 換行、保留連續與行尾 Tab 的空欄位、忽略檔尾換行、忽略 `\N` 為 NULL；逐列檢查欄位數、型別（整數範圍、小數精度、日期時間、GUID、二進位十六進位、字串長度）、必填與檔內主鍵／唯一鍵重複。包含識別欄位的鍵與識別值的範圍交由資料庫在寫入時檢查。驗證階段不寫入任何資料。
-- **第二階段（驗證結果與確認）**：通過時顯示目標表格、來源、筆數／欄數、略過首行與識別值設定，以及前 20 筆預覽；失敗時顯示總筆數／有效筆數／異常筆數與錯誤清單（行數、欄位位置與名稱、原始值、錯誤原因，最多列出 100 筆），並停用「開始匯入」。
-- **執行匯入**：新增模式（重複主鍵不覆寫），後端在**單一交易**內分批（每批 200 列）執行逐列 `TRY/CATCH` INSERT，任一列失敗即整批 `ROLLBACK` 並回報行號與資料庫訊息；匯入期間顯示進度且不可取消或關閉。成功後顯示實際匯入筆數，並自動重新載入該資料表已開啟的資料分頁。
-
----
-
-## ⌨️ 鍵盤快捷鍵與快速代碼範本 (Shortcuts & Snippets)
-
-### 常用快捷鍵總表
-
-| 快捷鍵 | 作用範圍 | 功能說明 |
-| :--- | :--- | :--- |
-| <kbd>Ctrl</kbd> + <kbd>P</kbd> | 全域 / 編輯器 | **快速物件檢索 (Spotlight)**：呼出浮動搜尋面板，模糊檢索資料表、檢視表、預存程序、函數 |
-| <kbd>Ctrl</kbd> + <kbd>Alt</kbd> + <kbd>A</kbd> | SQL 編輯器 | **詢問 AI SQL 助理**：呼出對話視窗，自動將反白或游標處 SQL 作為上下文脈絡帶入 |
-| 工具列按鈕 (<kbd>Sparkles</kbd>) | 頂部工具列 | **AI SQL 助理**：開啟或還原 AI 對話浮動視窗 |
-| 膠囊懸浮列 | 右下角視窗 | **還原 AI 對話視窗**：點擊右下角膠囊懸浮列即刻還原視窗，顯示未讀計數與動態 |
-| <kbd>Ctrl</kbd> + <kbd>Enter</kbd> | SQL 編輯器 | **執行當前語句**：若有選取文字則執行選取範圍；無選取時自動執行游標所在獨立 SQL |
-| <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>Enter</kbd> | SQL 編輯器 | **執行全部語句**：無條件執行整個編輯器內的所有 SQL 代碼 |
-| <kbd>Alt</kbd> + <kbd>Break</kbd> / <kbd>Pause</kbd> | 全域 / 編輯器 | **中斷並取消查詢 (Cancel Query)**：微軟 SSMS 標準中斷快捷鍵，中止本地讀取並發送 `KILL <spid>` 終止伺服器運算 |
-| <kbd>Escape</kbd> | 全域 / 編輯器 | **取消查詢 / 關閉浮窗**：查詢執行中時中斷取消查詢；浮窗/檢索器開啟時關閉並交還編輯器焦點；表格選取時清除框選 |
-| <kbd>Ctrl</kbd> + <kbd>D</kbd> | SQL 編輯器 | **向下快速複製**：無選取時向下複製游標行；有選取時向下複製區塊並插入空白行間隔 |
-| <kbd>Shift</kbd> + <kbd>Alt</kbd> + <kbd>F</kbd> | SQL 編輯器 | **格式化 SQL**：有選取時格式化選取部分；無選取時格式化游標所在獨立語句 |
-| <kbd>Ctrl</kbd> + <kbd>S</kbd> | 全域 / 編輯器 | **儲存 SQL 檔案**：將當前查詢內容另存或儲存至本機檔案 |
-| <kbd>Ctrl</kbd> + <kbd>O</kbd> | 全域 | **開啟 SQL 檔案**：開啟本機 SQL 檔案至新查詢分頁 |
-| <kbd>Ctrl</kbd> + <kbd>N</kbd> | 全域 | **新增查詢分頁**：新開空白 SQL 編輯分頁並聚焦 |
-| <kbd>Ctrl</kbd> + <kbd>Space</kbd> | SQL 編輯器 | **程式碼智慧自動補全**：手動觸發 IntelliSense（關鍵字、資料庫、資料表、欄位） |
-| 滑鼠右鍵 (<kbd>Right Click</kbd>) | SQL 編輯器 | **編輯器快顯選單**：在物件總管中定位 (Locate in Explorer)、常用 SQL 範本庫 (SQL Templates)... |
-| 工具列按鈕 (<kbd>LocateFixed</kbd>) | 物件總管 (Explorer) | **快速定位資料表**：捕捉游標/反白處資料表名稱，左側自動連鎖展開、載入欄位、光暈高亮並置中捲動 |
-| 工具列按鈕 (<kbd>BookOpen</kbd>) | 頂部工具列 | **常用 SQL 範本庫**：開啟內建常用/CTE/進階/變數範本與應用程式同層實體自訂文件 |
-| 滑鼠雙擊 (<kbd>Double Click</kbd>) | 查詢/結果分頁 | **分頁重新命名**：行內雙擊分頁標籤名稱即可直接修改名稱 |
-| 滑鼠右鍵 (<kbd>Right Click</kbd>) | 查詢/結果分頁 | **分頁操作選單**：重新命名、關閉分頁、關閉其他分頁（結果分頁可釘選） |
-| 滑鼠滾輪 (<kbd>Wheel</kbd>) | 分頁列 | **橫向滾動**：於頂部 Query 分頁列或底部 Results 分頁列滾動滑鼠可左右橫向捲動 |
-| 滑鼠拖曳 (<kbd>Pointer Drag</kbd>) | 查詢/結果分頁 | **拖曳排序**：按住分頁左右拖動可自由調整排列順序（無禁止符號） |
-| 滑鼠框選 (<kbd>Mouse Drag</kbd>) | 結果表格 | **即時統計**：拖曳選取儲存格，底端狀態列即時計算 Sum / Avg / Min / Max / Count / Distinct |
-| <kbd>Ctrl</kbd> + <kbd>C</kbd> | 結果表格 | **複製選取內容**：框選儲存格後按下即可將選取區域複製為 TSV 貼入 Excel |
-| <kbd>Esc</kbd> | 結果表格 | **清除選取**：取消儲存格框選狀態並還原列數統計 |
-
----
-
-### 快速代碼範本 (SQL Code Snippets)
-
-於 Monaco 編輯器中輸入前綴代碼後，按下 <kbd>Tab</kbd> 或 <kbd>Enter</kbd> 鍵即可快速展開範本：
-
-| 前綴代碼 | 範本名稱 | 展開效果預覽 |
-| :--- | :--- | :--- |
-| `sel` | SELECT 基礎查詢 | `SELECT * FROM table WHERE 1 = 1;` |
-| `seltop` | TOP N 限制筆數查詢 | `SELECT TOP 100 * FROM table ORDER BY 1;` |
-| `ins` | INSERT 資料新增 | `INSERT INTO table (col1, col2) VALUES (val1, val2);` |
-| `upd` | UPDATE 資料更新 | `UPDATE table SET col = val WHERE id = val;` |
-| `del` | DELETE 資料刪除 | `DELETE FROM table WHERE condition;` |
-| `join` | INNER JOIN 內部關聯 | `JOIN table t ON t.id = other.id` |
-| `leftjoin` | LEFT JOIN 左外部關聯 | `LEFT JOIN table t ON t.id = other.id` |
-| `cte` | WITH CTE 通用資料表運算式 | `WITH CteName AS (SELECT * FROM table) SELECT * FROM CteName;` |
-
----
-
-## 🛠️ 安裝、開發與建置指南 (Installation & Development)
-
-### 環境需求 (Prerequisites)
-1. **Node.js**：建議 `v18.0.0` 或更高版本。
-2. **Rust & Cargo**：建議 `1.75.0` 或更高版本（可透過 [rustup.rs](https://rustup.rs/) 安裝）。
-3. **C++ 建置工具 (Windows)**：需安裝 Microsoft C++ Build Tools 或 Visual Studio（包含 C++ 桌面開發工作負載）。
-4. **WebView2**：Windows 10/11 通常已內建。
-
----
-
-### 安裝依賴 (Install Dependencies)
+- Node.js 18+
+- Rust 1.75+（透過 [rustup.rs](https://rustup.rs/) 安裝）
+- Windows 需安裝 Microsoft C++ Build Tools 或 Visual Studio（C++ 桌面開發工作負載）
+- WebView2（Windows 10/11 通常已內建）
 
 ```bash
-# 安裝前端 NPM 套件
-npm install
+npm install          # 安裝依賴
+npm run dev:tauri    # 啟動桌面端開發模式（推薦）
+npm run dev          # 僅啟動 Vite 前端開發伺服器（瀏覽器模式）
 ```
 
----
-
-### 本地開發 (Local Development)
+驗證與建置：
 
 ```bash
-# 僅啟動前端 Vite 開發伺服器 (網頁模式)
-npm run dev
-
-# 啟動完整 Tauri 桌面端偵錯應用 (推薦)
-npm run dev:tauri
+npm run typecheck          # TypeScript 靜態型別檢查
+npm test                   # 單元與回歸測試（Node 原生 test runner）
+npm run build              # 前端生產環境打包
+npm run build:tauri        # 建置桌面安裝檔
+npm run build:portable:ps1 # 免安裝可攜版（亦可執行 build-portable.bat）
 ```
 
----
+建置輸出位於 `src-tauri/target/release/`。
 
-### 程式碼檢查、測試與打包建置 (Verification & Build)
+## 專案結構
 
-```bash
-# 執行 TypeScript 靜態型別檢查
-npm run typecheck
-
-# 執行自動化單元測試套件 (226 項涵蓋連線、安全 DML、語句切分、Spotlight 模糊檢索、預估執行計畫 SHOWPLAN_ALL、資料表結構、分頁顏色與主題系統、執行統計分析、長時間查詢中斷取消與 Task Killer、常用 SQL 範本庫、快速定位抽取器、資料庫/資料表正則過濾、PrimeVue 佈景主題切換與 AI 自訂 cURL 請求範本引擎)
-npm test
-
-# 執行前端生產環境打包
-npm run build
-
-# 建置發布版桌面應用程式 (.exe 安裝包 / 二進位檔)
-npm run build:tauri
-
-# 建置免安裝綠色版可攜式執行檔 (Portable .exe)
-npm run build:portable
-
-# 執行自動化一鍵打包腳本 (自動匯出執行檔、WebView2Loader.dll、自訂範本並壓縮為 zip)
-npm run build:portable:ps1
-# 或於終端機執行 .\build-portable.ps1，亦可直接雙擊 build-portable.bat
+```text
+src/             Vue 3 前端（components / composables / services / stores / utils）
+src-tauri/src/   Rust 後端（commands / drivers / models / services）
+tests/           單元與回歸測試
+scripts/         建置、依賴修補與測試腳本
+docs/            架構規劃與維護進度
 ```
 
-打包完成後的 Windows 執行檔將位於 `src-tauri/target/release/` 目錄中。
+## 授權
 
----
-
-## 📄 授權條款 (License)
-
-本專案採用私有或開放授權規範，詳見儲存庫授權聲明。
 Copyright © 2026 SQLight Team. All rights reserved.
