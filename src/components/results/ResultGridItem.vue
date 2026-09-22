@@ -224,6 +224,7 @@
         :animate-rows="false"
         :suppress-move-when-column-dragging="true"
         :suppress-row-hover-highlight="true"
+        :suppress-column-virtualisation="true"
         :prevent-default-on-context-menu="true"
         :tooltip-show-mode="'whenTruncated'"
         :tooltip-show-delay="150"
