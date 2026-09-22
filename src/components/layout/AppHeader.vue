@@ -157,6 +157,12 @@
 
         <Divider layout="vertical" class="!my-0 !h-4 !mx-0.5" />
 
+        <!-- SQL Editor Clipboard & Folding Actions -->
+        <SqlEditorToolbarActions
+          :disabled="workspaceStore.activeTab?.type !== 'sql_editor'"
+          @action="handleSqlEditorAction"
+        />
+
         <!-- Format SQL Button -->
         <Button
           icon="pi pi-align-left"
@@ -385,12 +391,14 @@ import Select from 'primevue/select';
 import Tag from 'primevue/tag';
 import Divider from 'primevue/divider';
 import Popover from 'primevue/popover';
+import SqlEditorToolbarActions from '@/components/layout/SqlEditorToolbarActions.vue';
 import { useWorkspaceStore } from '@/stores/workspaceStore';
 import { useConnectionStore } from '@/stores/connectionStore';
 import { useQueryStore } from '@/stores/queryStore';
 import { useSettingsStore } from '@/stores/settingsStore';
 import { DBA_QUERIES, type DbaQueryItem } from '@/utils/dbaQueries';
 import type { ConnectionProfile } from '@/types/connection';
+import type { SqlEditorToolbarAction } from '@/types/editor';
 
 const workspaceStore = useWorkspaceStore();
 const connectionStore = useConnectionStore();
@@ -449,6 +457,7 @@ function openDbaQuery(query: DbaQueryItem) {
 const emit = defineEmits<{
   (e: 'run-query', mode?: 'current' | 'all'): void;
   (e: 'cancel-query'): void;
+  (e: 'sql-editor-action', action: SqlEditorToolbarAction): void;
   (e: 'format-sql'): void;
   (e: 'open-sql-file'): void;
   (e: 'save-sql-file'): void;
@@ -458,6 +467,10 @@ const emit = defineEmits<{
   (e: 'open-sql-templates'): void;
   (e: 'open-ai-chat'): void;
 }>();
+
+function handleSqlEditorAction(action: SqlEditorToolbarAction) {
+  emit('sql-editor-action', action);
+}
 
 async function handleSelectConnection(connId: string) {
   if (!connId || (connectionStore.activeConnectionId === connId && connectionStore.status === 'connected')) {

@@ -12,6 +12,7 @@ import { extractStatementAtCursor, type ExtractedStatement } from '@/utils/sqlSt
 import { extractTableIdentifierAtCursor, type ExtractedTableIdentifier } from '@/utils/sqlIdentifierExtractor';
 import { analyzeSmartPasteContext } from '@/utils/sqlSmartPaste';
 import { format as formatSql } from 'sql-formatter';
+import type { SqlEditorToolbarAction } from '@/types/editor';
 
 const props = defineProps<{
   modelValue: string;
@@ -32,6 +33,14 @@ let editorInstance: monaco.editor.IStandaloneCodeEditor | null = null;
 let highlightDecorations: monaco.editor.IEditorDecorationsCollection | null = null;
 let dragOverHandler: ((e: DragEvent) => void) | null = null;
 let dropHandler: ((e: DragEvent) => void) | null = null;
+
+const SQL_EDITOR_ACTION_COMMANDS: Record<SqlEditorToolbarAction, string> = {
+  cut: 'editor.action.clipboardCutAction',
+  copy: 'editor.action.clipboardCopyAction',
+  paste: 'editor.action.clipboardPasteAction',
+  unfoldAll: 'editor.unfoldAll',
+  foldAll: 'editor.foldAll',
+};
 
 function hexToRgba(hex: string, alpha: number): string {
   let cleanHex = hex.replace('#', '');
@@ -283,6 +292,14 @@ function formatCode() {
   } catch (err) {
     console.warn('SQL format statement failed:', err);
   }
+}
+
+function runEditorAction(action: SqlEditorToolbarAction) {
+  if (!editorInstance || !editorInstance.getModel()) return;
+
+  // Restore text focus so Monaco's clipboard and folding commands target this editor.
+  editorInstance.focus();
+  editorInstance.trigger('sqlight-toolbar', SQL_EDITOR_ACTION_COMMANDS[action], null);
 }
 
 onMounted(() => {
@@ -746,9 +763,9 @@ defineExpose({
   getSelectedOrFullQuery,
   duplicateLineOrSelection,
   formatCode,
+  runEditorAction,
   insertTextAtCursor,
   getTableNameAtCursor,
   focus,
 });
 </script>
-

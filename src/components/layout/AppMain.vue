@@ -198,6 +198,7 @@ import { saveSqlToFile, openSqlFromFile } from '@/utils/fileStorage';
 import { sqlFolderService } from '@/services/sqlFolderService';
 import { getTabThemeStyle } from '@/utils/tabTheme';
 import { detectDangerousSqlStatements } from '@/utils/sqlGuard';
+import type { SqlEditorToolbarAction } from '@/types/editor';
 import type { SqlEditorTab, TableDataTab, TableStructureTab, ExecutionPlanTab, ErDiagramTab, WorkspaceTab } from '@/types/workspace';
 
 const workspaceStore = useWorkspaceStore();
@@ -586,6 +587,11 @@ function formatCode() {
   }
 }
 
+function runEditorAction(action: SqlEditorToolbarAction) {
+  if (workspaceStore.activeTab?.type !== 'sql_editor') return;
+  monacoRef.value?.runEditorAction(action);
+}
+
 // ========================
 // Dangerous Query Double-Confirmation Safe Guard
 // ========================
@@ -943,6 +949,7 @@ onBeforeUnmount(() => {
 defineExpose({
   runQuery,
   formatCode,
+  runEditorAction,
   saveActiveTab,
   openSqlFile,
   insertTextAtCursor,
