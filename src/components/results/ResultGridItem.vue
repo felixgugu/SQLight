@@ -339,6 +339,14 @@
       </button>
 
       <button
+        @click="copyColumnName"
+        class="w-full text-left px-2.5 py-1.5 hover:bg-dark-750 hover:text-dark-100 flex items-center space-x-2 transition-colors"
+      >
+        <Heading class="w-3.5 h-3.5 text-violet-400" />
+        <span>複製欄位名稱 (Column Name)</span>
+      </button>
+
+      <button
         @click="copyCurrentRow"
         class="w-full text-left px-2.5 py-1.5 hover:bg-dark-750 hover:text-dark-100 flex items-center space-x-2 transition-colors"
       >
@@ -668,6 +676,7 @@ import {
   Slash,
   Undo2,
   Eye,
+  Heading,
 } from 'lucide-vue-next';
 import { AgGridVue } from 'ag-grid-vue3';
 import {
@@ -1217,6 +1226,7 @@ const {
   copiedTsv,
   copiedCsv,
   copyCellValue: exportCopyCellValue,
+  copyColumnName: exportCopyColumnName,
   copyCurrentRow: exportCopyCurrentRow,
   copyCurrentRowAsJson: exportCopyCurrentRowAsJson,
   copySelectedCells,
@@ -1229,6 +1239,10 @@ const {
 
 function copyCellValue() {
   exportCopyCellValue(contextMenu.cellValue);
+}
+
+function copyColumnName() {
+  exportCopyColumnName(contextMenu.colName);
 }
 
 function copyCurrentRow() {
@@ -1516,7 +1530,7 @@ function onCellContextMenu(event: CellContextMenuEvent) {
   if (!mouseEvent) return;
 
   const menuWidth = 220;
-  const menuHeight = 360;
+  const menuHeight = 390;
   const x = Math.min(mouseEvent.clientX, Math.max(0, window.innerWidth - menuWidth - 8));
   const y = Math.min(mouseEvent.clientY, Math.max(0, window.innerHeight - menuHeight - 8));
 

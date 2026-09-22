@@ -16,6 +16,7 @@ export interface UseGridExportReturn {
   copiedTsv: Ref<boolean>;
   copiedCsv: Ref<boolean>;
   copyCellValue: (value: unknown) => void;
+  copyColumnName: (name: string) => void;
   copyCurrentRow: (row: CellValue[] | null | undefined) => void;
   copyCurrentRowAsJson: (columns: ColumnDef[], row: CellValue[] | null | undefined) => void;
   copySelectedCells: () => void;
@@ -43,6 +44,18 @@ export function useGridExport(options: UseGridExportOptions): UseGridExportRetur
     } else {
       navigator.clipboard.writeText('NULL');
     }
+    options.onMenuClose?.();
+  }
+
+  function copyColumnName(name: string) {
+    const text = (name ?? '').trim();
+    if (!text) {
+      options.showToast('無法取得欄位名稱', 'warning', 2000);
+      options.onMenuClose?.();
+      return;
+    }
+    navigator.clipboard.writeText(text);
+    options.showToast(`已複製欄位名稱「${text}」至剪貼簿`, 'success', 2000);
     options.onMenuClose?.();
   }
 
@@ -208,6 +221,7 @@ export function useGridExport(options: UseGridExportOptions): UseGridExportRetur
     copiedTsv,
     copiedCsv,
     copyCellValue,
+    copyColumnName,
     copyCurrentRow,
     copyCurrentRowAsJson,
     copySelectedCells,

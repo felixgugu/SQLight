@@ -41,12 +41,11 @@
               <label class="font-medium text-dark-100 block">全域介面字型 (Global UI Font)</label>
               <span class="text-xxs text-dark-400">套用至按鈕、選單、對話框與一般介面文字；SQL 編輯器與既有等寬資料區不受影響。</span>
             </div>
-            <Select
+            <FontFamilyPicker
               :model-value="settingsStore.globalFontFamily"
-              :options="GLOBAL_FONT_OPTIONS"
-              option-label="label"
-              option-value="value"
-              class="min-w-[240px] !text-xs !bg-dark-900 !border-dark-700"
+              :options="globalFontSelectOptions"
+              :default-value="DEFAULT_GLOBAL_FONT_FAMILY"
+              select-class="min-w-[240px] !text-xs !bg-dark-900 !border-dark-700"
               @update:model-value="handleGlobalFontChange"
             />
           </div>
@@ -249,12 +248,11 @@
             <label class="font-medium text-dark-100">字型家族 (Font Family)</label>
             <span class="text-xxs text-dark-400 font-mono">等寬字型 (Monospace)</span>
           </div>
-          <Select
+          <FontFamilyPicker
             v-model="settingsStore.editorFontFamily"
             :options="EDITOR_FONT_FAMILY_OPTIONS"
-            option-label="label"
-            option-value="value"
-            class="w-full !text-xs !bg-dark-900 !border-dark-700 font-mono"
+            :default-value="DEFAULT_EDITOR_FONT_FAMILY"
+            preview
           />
         </div>
 
@@ -412,12 +410,12 @@
               套用至查詢結果、檢視資料與資料表結構中的所有欄位、列號與表頭。
             </span>
           </div>
-          <Select
+          <FontFamilyPicker
             v-model="settingsStore.gridFontFamily"
             :options="GRID_FONT_FAMILY_OPTIONS"
-            option-label="label"
-            option-value="value"
-            class="min-w-[240px] !text-xs !bg-dark-900 !border-dark-700 font-mono"
+            :default-value="DEFAULT_GRID_FONT_FAMILY"
+            select-class="min-w-[240px] !text-xs !bg-dark-900 !border-dark-700 font-mono"
+            preview
           />
         </div>
 
@@ -634,14 +632,18 @@ import { usePrimeVue } from 'primevue/config';
 import { useSettingsStore } from '@/stores/settingsStore';
 import {
   GLOBAL_FONT_OPTIONS,
+  DEFAULT_GLOBAL_FONT_FAMILY,
   PRIMARY_COLOR_OPTIONS,
   SURFACE_OPTIONS,
   type ThemePresetName,
 } from '@/services/themeManager';
 import {
+  DEFAULT_EDITOR_FONT_FAMILY,
+  DEFAULT_GRID_FONT_FAMILY,
   EDITOR_FONT_FAMILY_OPTIONS,
   GRID_FONT_FAMILY_OPTIONS,
 } from '@/data/fontOptions';
+import FontFamilyPicker from '@/components/common/FontFamilyPicker.vue';
 import TableFilterTab from './TableFilterTab.vue';
 import AiSettingsTab from './settings/AiSettingsTab.vue';
 
@@ -682,6 +684,11 @@ const currentSurfaceLabel = computed(() => {
   const match = SURFACE_OPTIONS.find((s) => s.name === settingsStore.surfaceColor);
   return match ? match.label : settingsStore.surfaceColor;
 });
+
+const globalFontSelectOptions = GLOBAL_FONT_OPTIONS.map(({ label, value }) => ({
+  label,
+  value,
+}));
 
 const selectedGlobalFont = computed(() =>
   GLOBAL_FONT_OPTIONS.find((option) => option.value === settingsStore.globalFontFamily)
