@@ -161,3 +161,102 @@ test('grid scroll path avoids per-frame paint and listener costs', () => {
   assert.match(selectionSource, /attachDragListeners\(\)/, 'drag listeners must be attached on demand');
   assert.match(selectionSource, /detachDragListeners\(\)/, 'drag listeners must be detached again');
 });
+
+test('result grid keeps column virtualisation enabled', () => {
+  const gridSource = readFileSync(
+    resolve(process.cwd(), 'src/components/results/ResultGridItem.vue'),
+    'utf-8'
+  );
+  // Disabling column virtualisation renders every column of a wide result set into the DOM,
+  // which is the single biggest AG Grid cost this grid can avoid. The wide-viewport guard in
+  // `ensureColumnVirtualisation` is what keeps AG Grid honest instead.
+  assert.doesNotMatch(
+    gridSource,
+    /:suppress-column-virtualisation="true"/,
+    'column virtualisation must not be suppressed unconditionally'
+  );
+  assert.doesNotMatch(
+    gridSource,
+    /suppressColumnVirtualisation:\s*true/,
+    'column virtualisation must not be suppressed from the column definitions either'
+  );
+  assert.match(
+    gridSource,
+    /function ensureColumnVirtualisation\(/,
+    'the wide-viewport virtualisation guard must stay in place'
+  );
+});
+
+test('perf fixture is dev-gated before the IPC layer', () => {
+  const serviceSource = readFileSync(
+    resolve(process.cwd(), 'src/services/queryService.ts'),
+    'utf-8'
+  );
+  assert.match(
+    serviceSource,
+    /import\.meta\.env\?\.DEV \? parsePerfFixtureSpec\(sql\) : null/,
+    'the fixture shortcut must be gated behind import.meta.env.DEV'
+  );
+  assert.match(serviceSource, /buildPerfFixture\(fixture\)/);
+});
+
+test('grid perf HUD can measure quick-filter cost and restores the filter afterwards', () => {
+  const diagSource = readFileSync(
+    resolve(process.cwd(), 'src/composables/useGridPerfDiag.ts'),
+    'utf-8'
+  );
+  assert.match(diagSource, /export async function runFilterSettleBenchmark\(/);
+  assert.equal(
+    (diagSource.match(/getGridOption\('quickFilterText'\)/g) ?? []).length,
+    1,
+    'the original filter value must be captured exactly once'
+  );
+  assert.match(
+    diagSource,
+    /api\.setGridOption\('quickFilterText', original\)/,
+    'the benchmark must put the grid back how the component believes it is'
+  );
+  assert.match(diagSource, /Run filter benchmark/);
+});
+
+test('quick filter debounces large result sets and cleans up its timer', () => {
+  const gridSource = readFileSync(
+    resolve(process.cwd(), 'src/components/results/ResultGridItem.vue'),
+    'utf-8'
+  );
+
+  assert.match(
+    gridSource,
+    /v-model="quickFilterInput"/,
+    'the input must bind the raw value, not the debounced one'
+  );
+  assert.doesNotMatch(
+    gridSource,
+    /v-model="quickFilter"/,
+    'binding the grid value directly to the input would skip the debounce'
+  );
+  assert.match(
+    gridSource,
+    /:quick-filter-text="quickFilter"/,
+    'the grid must receive the debounced value'
+  );
+  assert.match(gridSource, /const QUICK_FILTER_DEBOUNCE_MS = 250;/);
+  assert.match(
+    gridSource,
+    /const QUICK_FILTER_DEBOUNCE_ROW_THRESHOLD = 10000;/,
+    'the measured ~100ms crossing is around 10k rows'
+  );
+  assert.match(
+    gridSource,
+    /\}, QUICK_FILTER_DEBOUNCE_MS\);/,
+    'the debounce delay constant must actually drive the timer'
+  );
+
+  const unmountBlock = /onBeforeUnmount\(\(\) => \{([\s\S]*?)\n\}\);/.exec(gridSource);
+  assert.ok(unmountBlock, 'the component must still tear down on unmount');
+  assert.match(
+    unmountBlock![1]!,
+    /clearTimeout\(quickFilterTimer\)/,
+    'a pending debounce must not fire after the grid is gone'
+  );
+});

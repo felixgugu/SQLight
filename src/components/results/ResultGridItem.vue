@@ -20,7 +20,7 @@
         <IconField class="w-44 sm:w-56">
           <InputIcon class="pi pi-search text-dark-500 text-xs" />
           <InputText
-            v-model="quickFilter"
+            v-model="quickFilterInput"
             type="text"
             placeholder="Search grid..."
             size="small"
@@ -224,7 +224,6 @@
         :animate-rows="false"
         :suppress-move-when-column-dragging="true"
         :suppress-row-hover-highlight="true"
-        :suppress-column-virtualisation="true"
         :prevent-default-on-context-menu="true"
         :tooltip-show-mode="'whenTruncated'"
         :tooltip-show-delay="150"
@@ -742,7 +741,34 @@ const activeGridTheme = computed(() => {
   return settingsStore.colorMode === 'light' ? sqlightLightGridTheme : sqlightDarkGridTheme;
 });
 
+// Quick filter input is debounced once the result set is big enough for a single filter pass to
+// be felt. Measured on a 150 column result set: ~21ms per pass at 1k rows, ~497ms at 50k rows,
+// so ~10k rows (also the app's default row cap) is where one pass reaches the ~100ms budget.
+// Below the threshold the grid updates as you type, which is the nicer behaviour when it's free.
+const QUICK_FILTER_DEBOUNCE_MS = 250;
+const QUICK_FILTER_DEBOUNCE_ROW_THRESHOLD = 10000;
+
+const quickFilterInput = ref('');
 const quickFilter = ref('');
+let quickFilterTimer: ReturnType<typeof setTimeout> | null = null;
+
+watch(quickFilterInput, (value) => {
+  if (quickFilterTimer) {
+    clearTimeout(quickFilterTimer);
+    quickFilterTimer = null;
+  }
+
+  if ((props.resultSet?.rows.length ?? 0) < QUICK_FILTER_DEBOUNCE_ROW_THRESHOLD) {
+    quickFilter.value = value;
+    return;
+  }
+
+  quickFilterTimer = setTimeout(() => {
+    quickFilterTimer = null;
+    quickFilter.value = value;
+  }, QUICK_FILTER_DEBOUNCE_MS);
+});
+
 const gridApi = ref<GridApi | null>(null);
 const gridContainerRef = ref<HTMLDivElement | null>(null);
 
@@ -1329,6 +1355,10 @@ onBeforeUnmount(() => {
   if (horizontalScrollTimer) {
     clearTimeout(horizontalScrollTimer);
     horizontalScrollTimer = null;
+  }
+  if (quickFilterTimer) {
+    clearTimeout(quickFilterTimer);
+    quickFilterTimer = null;
   }
 });
 

@@ -5,8 +5,12 @@ import type { GridApi } from 'ag-grid-community';
  *
  * Enable with `localStorage.setItem('sqlight.perfHud', '1')` in a dev build, then reload.
  * It renders a small overlay with live frame timings and rendered-column counts, plus a
- * scripted horizontal scroll benchmark so the real (WebView2) render path can be measured
- * without relying on a manual scrollbar drag.
+ * scripted horizontal scroll benchmark and a quick-filter settle benchmark, so the real
+ * (WebView2) render path can be measured without relying on a manual scrollbar drag or on
+ * typing fast enough to catch the filter cost.
+ *
+ * Pair it with the synthetic result set from `src/utils/perfGridFixture.ts` so both the layout
+ * and the data stay identical between the before/after runs.
  *
  * Production builds never register anything.
  */
@@ -43,6 +47,13 @@ const FRAME_BUDGET_MS = 32;
 const SAMPLE_WINDOW = 120;
 const DISPLAY_INTERVAL_MS = 250;
 const BENCHMARK_FRAMES = 120;
+const FILTER_SETTLE_WINDOW_FRAMES = 30;
+
+/**
+ * Quick-filter terms used by the scripted benchmark. The short ones match most rows (worst
+ * case scan), the long one matches almost nothing, so both ends of the filter cost are covered.
+ */
+export const FILTER_BENCHMARK_TERMS = ['1', '12', '123', 'abc', 'zzzz'];
 
 export function isGridPerfDiagEnabled(): boolean {
   try {
@@ -131,6 +142,81 @@ export async function runHorizontalScrollBenchmark(
   return { ...computeFrameStats(samples), maxScrollPx };
 }
 
+export interface FilterSettleSample {
+  term: string;
+  /** Main-thread time spent applying the filter, i.e. the cost paid per keystroke. */
+  applyMs: number;
+  /** Time from just before the change until the browser painted the following frame. */
+  settleMs: number;
+  /** Frame timings collected in the window right after the change. */
+  stats: FrameStats;
+}
+
+export interface FilterSettleReport {
+  samples: FilterSettleSample[];
+  p95ApplyMs: number;
+  maxApplyMs: number;
+  p95SettleMs: number;
+}
+
+function percentile(values: number[], fraction: number): number {
+  if (values.length === 0) return 0;
+  const sorted = [...values].sort((a, b) => a - b);
+  return round2(sorted[Math.min(sorted.length - 1, Math.floor(sorted.length * fraction))]!);
+}
+
+/**
+ * Applies each quick-filter term through the grid API and reports both the blocking cost of the
+ * call itself and the time until the next paint. This is what decides whether the result grid
+ * needs a debounced quick-filter input: the meaningful number is the p95 of `applyMs`.
+ */
+export async function runFilterSettleBenchmark(
+  api: GridApi,
+  terms: string[] = FILTER_BENCHMARK_TERMS,
+  windowFrames = FILTER_SETTLE_WINDOW_FRAMES
+): Promise<FilterSettleReport> {
+  const original = (api.getGridOption('quickFilterText') ?? '') as string;
+  const samples: FilterSettleSample[] = [];
+
+  try {
+    for (const term of terms) {
+      const before = await nextFrame();
+      const applyStart = performance.now();
+      api.setGridOption('quickFilterText', term);
+      const applyMs = performance.now() - applyStart;
+      const settled = await nextFrame();
+
+      const durations: number[] = [settled - before];
+      let previous = settled;
+      for (let i = 1; i < windowFrames; i++) {
+        const now = await nextFrame();
+        durations.push(now - previous);
+        previous = now;
+      }
+
+      samples.push({
+        term,
+        applyMs: round2(applyMs),
+        settleMs: round2(settled - before),
+        stats: computeFrameStats(durations),
+      });
+    }
+  } finally {
+    // The API call bypasses the Vue-bound prop, so put the grid back the way the component
+    // believes it is before returning.
+    api.setGridOption('quickFilterText', original);
+  }
+
+  const applyTimes = samples.map((sample) => sample.applyMs);
+  const settleTimes = samples.map((sample) => sample.settleMs);
+  return {
+    samples,
+    p95ApplyMs: percentile(applyTimes, 0.95),
+    maxApplyMs: applyTimes.length > 0 ? round2(Math.max(...applyTimes)) : 0,
+    p95SettleMs: percentile(settleTimes, 0.95),
+  };
+}
+
 export function startGridPerfDiag(options: GridPerfDiagOptions): () => void {
   if (!isGridPerfDiagEnabled() || typeof document === 'undefined') {
     return () => {};
@@ -160,13 +246,21 @@ export function startGridPerfDiag(options: GridPerfDiagOptions): () => void {
 
   const body = document.createElement('div');
 
+  const buttonStyle =
+    'margin-top:4px;padding:2px 6px;border-radius:4px;border:1px solid #3c3c4e;background:#27272a;color:#e4e4e7;font:11px ui-monospace,Consolas,monospace;cursor:pointer';
+
   const button = document.createElement('button');
   button.type = 'button';
   button.textContent = 'Run scroll benchmark';
-  button.style.cssText =
-    'margin-top:4px;padding:2px 6px;border-radius:4px;border:1px solid #3c3c4e;background:#27272a;color:#e4e4e7;font:11px ui-monospace,Consolas,monospace;cursor:pointer';
+  button.style.cssText = buttonStyle;
 
-  hud.append(title, body, button);
+  const filterButton = document.createElement('button');
+  filterButton.type = 'button';
+  filterButton.textContent = 'Run filter benchmark';
+  filterButton.style.cssText = buttonStyle;
+  filterButton.style.marginLeft = '4px';
+
+  hud.append(title, body, button, filterButton);
   document.body.appendChild(hud);
 
   const samples: number[] = [];
@@ -175,6 +269,7 @@ export function startGridPerfDiag(options: GridPerfDiagOptions): () => void {
   let running = true;
   let frameStart = performance.now();
   let benchmarkResult = '';
+  let filterResult = '';
 
   const renderHud = () => {
     const live = computeFrameStats(samples);
@@ -185,6 +280,7 @@ export function startGridPerfDiag(options: GridPerfDiagOptions): () => void {
       `viewport ${snapshot.viewportClientWidth}/${snapshot.viewportScrollWidth}px  dpr ${snapshot.devicePixelRatio}`,
       snapshot.columnVirtualisationSuspected ? 'WARN: column virtualisation looks suppressed' : 'virtualisation ok',
       benchmarkResult,
+      filterResult,
     ]
       .filter(Boolean)
       .join('\n');
@@ -221,6 +317,27 @@ export function startGridPerfDiag(options: GridPerfDiagOptions): () => void {
       .finally(() => {
         button.disabled = false;
         button.textContent = 'Run scroll benchmark';
+      });
+  });
+
+  filterButton.addEventListener('click', () => {
+    filterButton.disabled = true;
+    filterButton.textContent = 'Running...';
+    runFilterSettleBenchmark(api)
+      .then((report) => {
+        filterResult =
+          `filter p95 apply ${report.p95ApplyMs}ms max ${report.maxApplyMs}ms ` +
+          `p95 settle ${report.p95SettleMs}ms (${report.samples.map((s) => s.applyMs).join('/')})`;
+        console.info('[SQLight][grid-perf][filter]', label ?? '', report);
+        renderHud();
+      })
+      .catch((err) => {
+        filterResult = `filter benchmark failed: ${String(err)}`;
+        renderHud();
+      })
+      .finally(() => {
+        filterButton.disabled = false;
+        filterButton.textContent = 'Run filter benchmark';
       });
   });
 

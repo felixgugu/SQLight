@@ -43,6 +43,56 @@
 - 若 HUD 顯示 `virtualisation ok`、benchmark 亦順暢，但手動拖曳捲軸仍卡，代表瓶頸落在 WebView2 的原生捲軸拖曳繪製路徑，才進一步評估 `additionalBrowserArgs`（`--enable-gpu-rasterization` 等）並以同一 benchmark 前後比較。
 - `TableDataViewer`（資料表瀏覽網格）尚未套用 raw rowData 與 `#` 欄不透明底色，如需一致化可後續處理。
 
+## 已實作（2026-09-22）：AG Grid 官方 Scrolling Performance 對照
+
+對照 AG Grid 官方 «Scrolling Performance»（v36.2.0）逐項檢查結果網格：
+
+| 文章建議 | SQLight 現況 | 處置 |
+| --- | --- | --- |
+| Setting Expectations | 已有 dev-only HUD + 捲動 benchmark | 擴充 filter benchmark |
+| Check / Defer / Avoid Cell Renderers | 結果網格完全沒有 cellRenderer，只用 valueGetter / valueFormatter | 無需處理 |
+| Avoid Auto Height | 主題固定 rowHeight 28、headerHeight 30 | 無需處理 |
+| Skip Off-screen Grids | `App.vue` 底部面板為 `v-if`，`AppBottomPanel` 分頁與 `AppMain` 編輯分頁皆為 `v-else-if`，同時只掛載一個網格；堆疊模式各窗格本身仍在可視區內 | 評估後不採用 `enableContentVisibilityAuto` |
+| Configure Row Buffer | `columnBuffer: 4` 已調降，`rowBuffer` 維持預設 10 | 維持預設（量測後無垂直重繪症狀） |
+| Debounce Vertical Scroll | 未設定 | 不採用（垂直捲動是核心操作，且症狀在水平方向） |
+| Disable Row Highlighting | 已開 `suppressRowHoverHighlight` | 無需處理 |
+
+已實作：
+
+1. **移除 `:suppress-column-virtualisation="true"`**（2026-09-22 的 `2d56f02` 所加）。該設定會讓寬結果集把全部欄位鋪進 DOM，與同檔案的 `ensureColumnVirtualisation()` 修補、以及 HUD 的 `columnVirtualisationSuspected` 判準直接矛盾，是本輪最可能造成回歸的一行。
+2. **新增 dev-only 合成結果集** `src/utils/perfGridFixture.ts`：固定種子的決定性產生器，型別混合 int / bigint / nvarchar / nvarchar(max) / bit / datetime2 / decimal / uniqueidentifier / varbinary，可為 NULL 的欄位每 17 列插入 NULL。`queryService.executeQuery` 在 `import.meta.env?.DEV` 且 SQL 帶有 `sqlight:perf-fixture` 區塊註解時直接回傳 fixture，不走 IPC，因此 Tauri 桌面版也能重現。已確認正式建置中查無 fixture 的任何痕跡（rollup 已移除整支模組）。
+3. **擴充 `useGridPerfDiag`**：新增 `runFilterSettleBenchmark()` 與 HUD 上的「Run filter benchmark」按鈕，量測 quick filter 每次套用的主執行緒阻塞時間（`applyMs`）與下一次繪製的 settle 時間，並在結束後還原原本的 `quickFilterText`。
+4. **Quick Filter debounce**：超過門檻的結果集改為 250ms debounce，門檻 10,000 列。輸入框綁 `quickFilterInput`，網格綁 debounce 後的 `quickFilter`；門檻以下維持即時篩選，timer 於 `onBeforeUnmount` 清除。
+
+### 實機量測（2026-09-22，Tauri desktop，150 欄）
+
+水平捲動 benchmark（120 幀）：
+
+| 資料量 | avg | p95 | max | over32 |
+| --- | --- | --- | --- | --- |
+| 150 欄 × 1,000 列 | 16.67ms | 17.8ms | 24.8ms | 0 |
+| 150 欄 × 50,000 列 | 16.68ms | 17.4ms | 23.3ms | 0 |
+
+Quick filter benchmark（`applyMs` = 單次套用阻塞主執行緒的時間）：
+
+| 資料量 | 1 | 12 | 123 | abc | zzzz | p95 |
+| --- | --- | --- | --- | --- | --- | --- |
+| 150 欄 × 1,000 列 | 1.2ms | 1.7ms | 17.3ms | 20.9ms | 17.7ms | 20.9ms |
+| 150 欄 × 50,000 列 | 19.8ms | 57.2ms | 411ms | 497ms | 465ms | 497ms |
+
+判讀：
+
+- **捲動不是瓶頸**：兩個資料量都維持 60fps、`overBudgetFrames` 皆為 0，與 2026-09-21 的基準一致（avg 16.7ms / p95 17.8ms）。移除 `suppressColumnVirtualisation` 沒有讓捲動變差。max 由 18.9ms 變為 22.3～24.8ms 屬單一尖峰，p95 未變；同一設定重跑兩次的 p95 分別為 17.4ms 與 17.6ms，fixture 的重複性成立。
+- **欄虛擬化已回復**（驗收關閉）：HUD 快照在兩個資料量下都相同 —— `cells 286 cols dom/visible/total 22/150/151`、`virtualisation ok`。150 個顯示欄只把 22 個放進 DOM（1780px viewport / 13884px 內容寬），且 1,000 列與 50,000 列的 DOM 足跡完全一致，代表 DOM 大小已與資料量脫鉤。對照 2026-09-21 停用欄虛擬化時的 3,384 cells（140 欄、不同 viewport），DOM cell 數降低約 92%。
+- **Quick Filter 才是真瓶頸**：1,000 列時單次套用最高 20.9ms（可接受），50,000 列時變成 411～497ms。以兩點線性推估，單次套用達到 100ms 預算約在 10,000 列，正好是應用程式的預設 `maxRows`，因此 debounce 門檻訂在 10,000 列。debounce 不會降低單次成本，但會把「每敲一鍵各付一次」收斂成「停手後付一次」：輸入 `abc` 由 19.8 + 57.2 + 411ms 降為單次 411ms。
+- **`cacheQuickFilter` 不採用**：官方語意是每列預先串接所有欄位值（含 value getter）後只做字串搜尋，對 150 欄 × 7.5M 次 valueGetter 的掃描確實對症，但它標記為 `@initial`，只能在建立網格時決定，而同一元件實例會因切換結果分頁／重新整理而換掉資料集，無法隨列數動態開關；加上每列約 1.5–2KB 的聚合字串，50,000 列約 75–90MB、無上限（`maxRows = none`）情境可達 GB 級。決策理由：5 萬列的篩選本來就應該下推成 SQL `WHERE` 由伺服器執行，用戶端 quick filter 只是已載回結果集的便利功能，不該為一個不應存在的用法付出 GB 級記憶體。
+- **`rowBuffer` 維持預設 10**：沒有觀察到垂直重繪問題，且調整它是拿首次繪製時間去換一個尚未出現的症狀。
+
+後續待辦：
+
+- 移除 `suppressColumnVirtualisation` 後若出現可重現的渲染缺陷（捲動空白欄、釘選欄錯位、右鍵選單對錯儲存格）：先把 `columnBuffer` 由 4 提高到 8 再測；仍存在才改為條件式啟用（computed 初值 false，僅在重現出的確切條件下為 true，並註記症狀）。
+- 尚未人工確認移除該行後的互動正確性：捲動時無空白欄、釘選 `#` 欄對齊、欄位拖曳排序、釘選切換、右鍵選單與 DML 產生、框選高亮、匯出。
+
 ## 待完成與待審核
 
 1. **DML 來源可靠性**：目前仍由 SQL 文字猜測來源；JOIN、別名／運算式、跨庫、跨 server、多結果集的來源應以可驗證 metadata 解析，不能僅依第一個表名。表格與結果面板應共用來源／DML 邏輯。確認 computed、rowversion 等不可寫欄位。
@@ -58,6 +108,9 @@
 
 ## 驗證紀錄
 
+- （2026-09-22）`npm test`：311 個通過（新增合成 fixture 的 spec 解析／維度／決定性／NULL 分佈／型別，以及「結果網格不得無條件停用欄虛擬化」「fixture 必須 dev-gated」「filter benchmark 必須還原 quickFilterText」「quick filter 必須 debounce 並清除 timer」四項回歸）。
+- （2026-09-22）`npm run typecheck`、`npm run build`：通過；已確認 `dist/` 無 `sqlight:perf-fixture` 任何痕跡。
+- （2026-09-22）Tauri 實機量測（150 欄 × 1,000 / 50,000 列）已完成，數據與判讀見上一節；欄虛擬化驗收關閉（`virtualisation ok`、dom/visible/total = 22/150/151）。`cacheQuickFilter` 決策為不採用（理由見上）。移除該行後的互動人工確認仍待補。
 - （2026-09-21）`npm test`：271 個通過（新增 grid 捲動效能回歸：可見欄快取、無選取時零 DOM 走訪、raw rowData 交付、selection 高亮不繪製陰影、mousemove 僅延遲掛載）。
 - （2026-09-21）`npm run typecheck`：通過。
 - `npm test`：19 個通過（連線狀態／IPC、DML、語句擷取）。
