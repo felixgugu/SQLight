@@ -4,11 +4,8 @@
     <template #start>
       <div class="flex items-center space-x-2">
         <!-- App Brand -->
-        <div class="flex items-center space-x-1.5 font-bold text-dark-100 tracking-wide pr-2 border-r border-dark-700">
-          <div class="w-5 h-5 rounded bg-brand-500/20 text-brand-400 flex items-center justify-center font-mono text-xs font-black">
-            SQL
-          </div>
-          <span class="text-xs font-bold text-dark-100">SQLight</span>
+        <div class="flex items-center h-7 font-bold text-dark-100 tracking-wide pr-2 border-r border-dark-700">
+          <span class="text-lg font-bold leading-none text-dark-100">SQLight</span>
         </div>
 
         <!-- Connection Select -->
