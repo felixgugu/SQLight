@@ -270,6 +270,23 @@ impl DatabaseConnection for SqlServerConnection {
         &self.current_database
     }
 
+    async fn ping(&mut self) -> AppResult<()> {
+        let stream = self
+            .client
+            .simple_query("SELECT 1;")
+            .await
+            .map_err(|e| AppError::Connection {
+                message: format!("Pooled connection is no longer usable: {}", e),
+            })?;
+        stream
+            .into_results()
+            .await
+            .map_err(|e| AppError::Connection {
+                message: format!("Pooled connection is no longer usable: {}", e),
+            })?;
+        Ok(())
+    }
+
     async fn execute_query(&mut self, sql: &str, max_rows: Option<usize>) -> AppResult<QueryResult> {
         let start = Instant::now();
 

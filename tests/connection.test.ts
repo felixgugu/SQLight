@@ -79,3 +79,52 @@ test('query IPC includes the requested database, SQL and limit', async () => {
     } });
   } finally { delete (globalThis as any).window; }
 });
+
+async function twoConnectionWorkspace() {
+  const store = useConnectionStore();
+  const profile = (id: string) => ({
+    id, name: id, engine: 'mssql' as const, host: 'localhost', port: 1433,
+    database: 'master', username: 'sa', encrypt: false, trustServerCertificate: true,
+    createdAt: '', updatedAt: '',
+  });
+  connectionService.getConnections = async () => [profile('A'), profile('B')];
+  await store.connect('A', 'master');
+  await store.loadConnections();
+
+  const connected: string[] = [];
+  connectionService.connect = async (id) => { connected.push(id); };
+
+  const workspace = useWorkspaceStore();
+  workspace.addSqlTab('SELECT 1', 'a.sql', 'A', 'master');
+  const tabA = workspace.activeTabId;
+  workspace.addSqlTab('SELECT 2', 'b.sql', 'B', 'master');
+  const tabB = workspace.activeTabId;
+  return { workspace, tabA, tabB, connected };
+}
+
+test('rapid tab switching only connects to the tab the user settles on', async () => {
+  const { workspace, tabA, tabB, connected } = await twoConnectionWorkspace();
+
+  workspace.setActiveTab(tabA);
+  workspace.setActiveTab(tabB);
+  workspace.setActiveTab(tabA);
+  workspace.setActiveTab(tabB);
+  assert.deepEqual(connected, [], 'nothing should connect while the switch is still settling');
+
+  await new Promise((resolve) => setTimeout(resolve, 260));
+  assert.deepEqual(connected, ['B']);
+});
+
+test('executing right after a tab switch flushes the pending connection sync', async () => {
+  const { workspace, tabA, tabB, connected } = await twoConnectionWorkspace();
+
+  workspace.setActiveTab(tabA);
+  workspace.setActiveTab(tabB);
+  assert.deepEqual(connected, []);
+
+  await workspace.ensureActiveTabConnection();
+  assert.deepEqual(connected, ['B'], 'the flush must not wait for the debounce');
+
+  await new Promise((resolve) => setTimeout(resolve, 260));
+  assert.deepEqual(connected, ['B'], 'the flushed timer must not fire a second time');
+});

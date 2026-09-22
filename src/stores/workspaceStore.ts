@@ -169,12 +169,44 @@ export const useWorkspaceStore = defineStore('workspace', () => {
 
   function setActiveTab(id: string) {
     activeTabId.value = id;
-    const targetTab = tabs.value.find((t) => t.id === id);
-    if (targetTab) {
-      syncTabConnectionAndDatabase(targetTab).catch((err) => {
-        console.warn('Sync connection for tab error:', err);
-      });
+    scheduleTabConnectionSync();
+  }
+
+  /**
+   * Hand-clicking through tabs tends to come in bursts (scanning a few queries, or
+   * flipping back and forth between two). Waiting briefly before touching the
+   * connection means only the tab the user settles on triggers a switch.
+   */
+  const CONNECTION_SYNC_DEBOUNCE_MS = 180;
+  let connectionSyncTimer: ReturnType<typeof setTimeout> | null = null;
+
+  function runTabConnectionSync(): Promise<void> {
+    const targetTab = tabs.value.find((t) => t.id === activeTabId.value);
+    if (!targetTab) return Promise.resolve();
+    return syncTabConnectionAndDatabase(targetTab).catch((err) => {
+      console.warn('Sync connection for tab error:', err);
+    });
+  }
+
+  function scheduleTabConnectionSync() {
+    if (connectionSyncTimer) clearTimeout(connectionSyncTimer);
+    connectionSyncTimer = setTimeout(() => {
+      connectionSyncTimer = null;
+      void runTabConnectionSync();
+    }, CONNECTION_SYNC_DEBOUNCE_MS);
+  }
+
+  /**
+   * Drops any pending debounce and syncs immediately. Callers about to touch the
+   * database must await this so their work cannot land on the previous tab's
+   * connection.
+   */
+  async function ensureActiveTabConnection(): Promise<void> {
+    if (connectionSyncTimer) {
+      clearTimeout(connectionSyncTimer);
+      connectionSyncTimer = null;
     }
+    await runTabConnectionSync();
   }
 
   function updateActiveTabConnection(connId: string, database?: string) {
@@ -734,6 +766,7 @@ export const useWorkspaceStore = defineStore('workspace', () => {
     pendingColumnToInsert,
     activeToast,
     setActiveTab,
+    ensureActiveTabConnection,
     updateActiveTabConnection,
     updateActiveTabDatabase,
     markTabSaved,

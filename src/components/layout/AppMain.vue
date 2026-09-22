@@ -648,8 +648,24 @@ async function runQuery(mode: 'current' | 'all' = 'current', queryOverride?: str
 
   if (!targetSql || !targetSql.trim()) return;
 
+  // Tab clicks debounce the connection sync, so flush it here: a statement must run
+  // against the connection its own tab belongs to, not the one we were just on.
+  await workspaceStore.ensureActiveTabConnection();
+
   const connId = connectionStore.activeConnectionId || 'default';
   const db = connectionStore.activeDatabase || 'master';
+
+  const tabConnId = workspaceStore.activeTab?.connectionId;
+  if (tabConnId && connectionStore.activeConnectionId !== tabConnId) {
+    const targetName = connectionStore.getConnectionById(tabConnId)?.name ?? '目標連線';
+    const currentName = connectionStore.activeConnection?.name ?? '目前連線';
+    workspaceStore.showToast(
+      `無法切換至「${targetName}」，已取消執行以免誤用「${currentName}」`,
+      'error',
+      4000
+    );
+    return;
+  }
 
   // Check safety guard if modificationPrompt is enabled on active connection
   const activeConn = connectionStore.getConnectionById(connId) || connectionStore.activeConnection;
@@ -999,4 +1015,3 @@ defineExpose({
     border-bottom: 1px solid rgb(var(--color-dark-600) / var(--tw-text-opacity, 1));
 }
 </style>
-

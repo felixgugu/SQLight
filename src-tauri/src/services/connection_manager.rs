@@ -47,7 +47,7 @@ impl ConnectionManager {
         self.storage.load_profiles()
     }
 
-    pub fn save_profile(&self, req: SaveConnectionRequest) -> AppResult<ConnectionProfile> {
+    pub async fn save_profile(&self, req: SaveConnectionRequest) -> AppResult<ConnectionProfile> {
         let mut profiles = self.storage.load_profiles()?;
         let now = Utc::now().to_rfc3339();
 
@@ -111,17 +111,23 @@ impl ConnectionManager {
             modification_prompt: req.modification_prompt,
         };
 
-        if let Some(idx) = profiles.iter().position(|p| p.id == id) {
+        let saved = if let Some(idx) = profiles.iter().position(|p| p.id == id) {
             let mut existing = profile.clone();
             existing.created_at = profiles[idx].created_at.clone();
             profiles[idx] = existing.clone();
             self.storage.save_profiles(&profiles)?;
-            Ok(existing)
+            existing
         } else {
             profiles.push(profile.clone());
             self.storage.save_profiles(&profiles)?;
-            Ok(profile)
-        }
+            profile
+        };
+
+        // Editing a profile must not keep reusing the previous handshake, which may
+        // point at a different host/credentials; let the next connect() dial afresh.
+        self.active_connections.lock().await.remove(&saved.id);
+
+        Ok(saved)
     }
 
     pub async fn delete_profile(&self, id: &str) -> AppResult<()> {
@@ -202,6 +208,12 @@ impl ConnectionManager {
     }
 
     pub async fn connect(&self, id: &str) -> AppResult<()> {
+        // Fast path: keep the pooled session when it is still healthy so switching
+        // between tabs bound to different connections skips the full TDS handshake.
+        if self.reuse_pooled_connection(id).await {
+            return Ok(());
+        }
+
         let profiles = self.storage.load_profiles()?;
         let profile = profiles
             .iter()
@@ -218,6 +230,39 @@ impl ConnectionManager {
         let mut conns = self.active_connections.lock().await;
         conns.insert(id.to_string(), Arc::new(TokioMutex::new(conn)));
         Ok(())
+    }
+
+    /// Keeps an existing pooled connection for `id` when it is still usable.
+    ///
+    /// Returns `true` when the caller can skip dialing. A connection that is currently
+    /// locked is mid-request and therefore alive, so it is reused without queueing
+    /// behind the in-flight call. A connection that fails its probe is dropped so the
+    /// caller falls back to a fresh handshake.
+    async fn reuse_pooled_connection(&self, id: &str) -> bool {
+        let pooled = {
+            let conns = self.active_connections.lock().await;
+            conns.get(id).cloned()
+        };
+
+        let Some(conn_arc) = pooled else {
+            return false;
+        };
+
+        let healthy = match conn_arc.try_lock() {
+            Ok(mut conn) => conn.ping().await.is_ok(),
+            Err(_) => true,
+        };
+        if healthy {
+            return true;
+        }
+
+        // Only evict the exact entry we probed; a concurrent connect may have already
+        // replaced it with a fresh session.
+        let mut conns = self.active_connections.lock().await;
+        if conns.get(id).is_some_and(|current| Arc::ptr_eq(current, &conn_arc)) {
+            conns.remove(id);
+        }
+        false
     }
 
     pub async fn get_or_connect(&self, id: &str) -> AppResult<Arc<TokioMutex<Box<dyn DatabaseConnection>>>> {

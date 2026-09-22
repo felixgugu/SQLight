@@ -14,7 +14,7 @@ pub async fn save_connection(
     req: SaveConnectionRequest,
     manager: State<'_, ConnectionManager>,
 ) -> Result<ConnectionProfile, String> {
-    manager.save_profile(req).map_err(|e| e.to_string())
+    manager.save_profile(req).await.map_err(|e| e.to_string())
 }
 
 #[tauri::command]
