@@ -1,5 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import type { Tabulator } from 'tabulator-tables';
 import {
   formatAggregateNumber,
@@ -220,4 +222,34 @@ test('clearGridRanges uses the module teardown and falls back to the public API'
 
   // Must be a no-op rather than throwing when the grid is gone.
   clearGridRanges(null);
+});
+
+test('dark theme selection palette matches the agreed colours', () => {
+  const css = readFileSync(
+    resolve(process.cwd(), 'src/styles/tabulatorTheme.css'),
+    'utf-8'
+  );
+  const darkBlock = /html\.dark \.tabulator \{([\s\S]*?)\n\}/.exec(css)?.[1] ?? '';
+
+  assert.match(darkBlock, /--sq-grid-range: rgba\(56, 125, 237, 0\.25\)/, 'selection area tint');
+  assert.match(darkBlock, /--sq-grid-range-strong: rgba\(56, 125, 237, 0\.45\)/, 'active cell tint');
+  assert.match(darkBlock, /--sq-grid-range-border: #3b82f6/, 'selection border colour');
+  assert.match(darkBlock, /--sq-grid-range-text: #ffffff/, 'selection text colour');
+
+  const cellRule =
+    /\.tabulator-row \.tabulator-cell\.tabulator-range-selected \{([\s\S]*?)\n\}/.exec(css)?.[1] ?? '';
+  assert.match(cellRule, /background-color: var\(--sq-grid-range\)/);
+  assert.match(cellRule, /color: var\(--sq-grid-range-text\)/);
+
+  const outlineRule =
+    /\.tabulator-range-overlay \.tabulator-range \{([\s\S]*?)\n\}/.exec(css)?.[1] ?? '';
+  assert.match(
+    outlineRule,
+    /border: var\(--sq-grid-range-border-width\) solid var\(--sq-grid-range-border\)/
+  );
+
+  const activeRule =
+    /\.tabulator-range-cell-active \{([\s\S]*?)\n\}/.exec(css)?.[1] ?? '';
+  assert.match(activeRule, /background-color: var\(--sq-grid-range-strong\)/);
+  assert.match(activeRule, /border: 2px solid var\(--sq-grid-range-border\)/);
 });

@@ -18,8 +18,12 @@ html.dark .tabulator {
   --sq-grid-border: #2e2e33;
   --sq-grid-row-alt: #27272a;
   --sq-grid-accent: #0284c7;
-  --sq-grid-range: rgba(59, 130, 246, 0.22);
-  --sq-grid-range-strong: rgba(59, 130, 246, 0.38);
+  /* Selection palette (dark): tinted area, stronger focus cell, bright blue outline. */
+  --sq-grid-range: rgba(56, 125, 237, 0.25);
+  --sq-grid-range-strong: rgba(56, 125, 237, 0.45);
+  --sq-grid-range-border: #3b82f6;
+  --sq-grid-range-border-width: 1.5px;
+  --sq-grid-range-text: #ffffff;
   --sq-grid-editor-bg: #0f0f12;
 }
 
@@ -34,6 +38,10 @@ html:not(.dark) .tabulator {
   --sq-grid-accent: #0284c7;
   --sq-grid-range: rgba(59, 130, 246, 0.18);
   --sq-grid-range-strong: rgba(59, 130, 246, 0.32);
+  --sq-grid-range-border: #2563eb;
+  --sq-grid-range-border-width: 1.5px;
+  /* White would be unreadable on a light tint, so the light theme keeps the normal text colour. */
+  --sq-grid-range-text: var(--sq-grid-fg);
   --sq-grid-editor-bg: #ffffff;
 }
 
@@ -264,23 +272,45 @@ html:not(.dark) .tabulator {
    Range selection (Tabulator's own module paints the highlight)
    -------------------------------------------------------------------------- */
 
-.tabulator .tabulator-header .tabulator-col.tabulator-range-selected,
+/* Cells covered by the selection. The class is set on the cell — the row only carries
+   `tabulator-range-selected` in row-selection mode, which the grids do not use. */
+.tabulator-row .tabulator-cell.tabulator-range-selected {
+  background-color: var(--sq-grid-range);
+  color: var(--sq-grid-range-text);
+}
+
+/* Header of every column the selection touches. */
 .tabulator .tabulator-header .tabulator-col.tabulator-range-highlight {
-  background-color: var(--sq-grid-range-strong);
-  color: var(--sq-grid-fg);
+  background-color: var(--sq-grid-range);
+  color: var(--sq-grid-range-text);
   font-weight: 700;
 }
 
-.tabulator-row.tabulator-range-selected .tabulator-cell {
-  background-color: var(--sq-grid-range);
+/* Header of a fully selected column. */
+.tabulator .tabulator-header .tabulator-col.tabulator-range-selected {
+  background-color: var(--sq-grid-range-strong);
+  color: var(--sq-grid-range-text);
+  font-weight: 700;
 }
 
+/* Selection outline around the active range. */
 .tabulator .tabulator-tableholder .tabulator-range-overlay .tabulator-range {
-  border: 1px solid var(--sq-grid-accent);
+  border: var(--sq-grid-range-border-width) solid var(--sq-grid-range-border);
 }
 
+.tabulator
+  .tabulator-tableholder
+  .tabulator-range-overlay
+  .tabulator-range.tabulator-range-active::after {
+  background-color: var(--sq-grid-range-border);
+}
+
+/* Focused cell inside the selection.
+   Its fill stacks on top of the selection tint, so the rendered colour is slightly stronger than
+   the configured 45%; swap in an opaque value (≈ #26457A, or the requested #1E3A5F) to pin it. */
 .tabulator .tabulator-tableholder .tabulator-range-overlay .tabulator-range-cell-active {
-  box-shadow: inset 0 0 0 1px var(--sq-grid-accent);
+  background-color: var(--sq-grid-range-strong);
+  border: 2px solid var(--sq-grid-range-border);
 }
 
 /* --------------------------------------------------------------------------
