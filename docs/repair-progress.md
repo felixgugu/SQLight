@@ -129,22 +129,44 @@ Quick filter benchmark（`applyMs` = 單次套用阻塞主執行緒的時間）�
 2. 工具列內會蓋掉容器字型的寫法一併移除：`Result #N (N)` 標籤的 `!font-mono`、三處快速篩選 `InputText` 的 `font-mono`、`N rows` 列數的 `font-mono`、`TableStructureViewer` 三個統計 Tag 的 `!font-mono`、多結果集分頁按鈕的列數 `font-mono`。PrimeVue 的 `.p-button`／`.p-inputtext` 都是 `font-family: inherit`，因此會直接吃到新設定。
 3. 表格內容不受影響：`--sqlight-grid-font` 仍只綁在 `.sqlight-grid` 外框（`tests/grid_font_settings.test.ts` 既有斷言不變）。下方資訊列的統計數字、右鍵選單的欄名數值、Commit 對話框的 SQL 仍保留等寬字，因為它們顯示的是資料值／SQL，不是外框文案。
 
+## 已實作（2026-09-23）：GO 批次執行與連線 Session 鎖定
+
+解決先前「後端將整段含 GO 的 SQL 直接送交 TDS 導致語法錯誤」以及「前端迴圈執行多 batch 會釋放連線鎖導致 Session / 暫存表 / USE 狀態脫鉤」之問題。
+
+1. **後端 T-SQL GO 解析器 (`src-tauri/src/drivers/mssql/batch.rs`)**：
+   - 逐字元解析遮蔽單引號字串（`'...'`）、識別字（`[...]`、`"..."`）、單行註解（`--`）與支援巢狀之區塊註解（`/* /* ... */ */`）。
+   - 精確辨識獨立行 `GO`（不分大小寫），支援重複次數 `GO <count>`（如 `GO 5`）與同移行註解（如 `GO 3 -- repeat`）。
+   - 保留每個 batch 在完整指令稿中的 1-indexed `start_line`，用於伺服器錯誤行號映射。
+   - 內建 `detect_use_database` 識別 `USE [dbname]` 並在切換成功後同步連線之 `current_database`。
+2. **原子性 Session Lock 批次串行執行 (`connection.rs` / `connection_manager.rs`)**：
+   - `ConnectionManager::execute_query` 在同一把 Mutex 連線鎖內完成目標資料庫驗證/切換與所有 batches 依序執行。
+   - 暫存表 `#temp`、資料庫上下文 `USE`、交易 `BEGIN TRANSACTION` 跨 batch 完全保真，不受背景 metadata 或其他分頁請求插隊干擾。
+   - 伺服器報錯時，以 `start_line + srv.line() - 1` 精確對齊回 Monaco 編輯器實際行號，並中斷後續 batches 執行。
+   - 查詢取消（`KILL <spid>`）能即時中斷正在執行的 batch 並中止後續批次。
+   - 聚合所有 batches 的 `result_sets`、`messages`，累加 `affected_rows` 並記錄完整耗時。
+3. **前端調度與工具鏈強化 (`queryStore.ts` / `sqlStatementExtractor.ts`)**：
+   - `sqlStatementExtractor.ts` 新增 `splitSqlBatchesWithMeta`，輸出 `{ sql, startLine, repeatCount }`；`splitSqlBatches` 自動展開重複次數。
+   - `queryStore.execute` 將包含 GO 的腳本直接委任給後端單一 session lock 執行；僅在單一 batch 時注入效能統計腳本（避免跨 GO 變數失效）。
+
 ## 待完成與待審核
 
 1. **DML 來源可靠性**：目前仍由 SQL 文字猜測來源；JOIN、別名／運算式、跨庫、跨 server、多結果集的來源應以可驗證 metadata 解析，不能僅依第一個表名。表格與結果面板應共用來源／DML 邏輯。確認 computed、rowversion 等不可寫欄位。
 2. **查詢生命週期**：取消、逾時、連線建立逾時；取消後不能重用不完整協定 session，移除／中斷連線要停止或失效化正在執行與排隊的請求。目前移除 registry 不會終止已持有 Arc 的查詢。
-3. **GO 批次執行**：編輯器已識別 GO，但後端目前仍直接執行整段 SQL。需在同一連線／session lock 下依序執行 batches，保留 USE、暫存表、交易語意，處理 GO 次數與錯誤行號。
-4. **真實影響列數與 PRINT**：affected_rows 仍是回傳列數，需取得 TDS DONE 計數與 INFO 訊息。Tiberius 0.12.3 QueryStream 公開 API 只暴露 Metadata/Row，內部會忽略 DONE/INFO；不得重跑 SQL 或以 SELECT 筆數冒充 DML 影響筆數。
-5. **資料與資源限制**：binary 真實內容／匯出、各型別 round-trip；結果歷史及 pin、查詢歷史／localStorage 的容量；大型欄位與多結果集的總量限制。現有逐列上限不限制伺服器執行工作或網路流量。
-6. **前端狀態競態**：connect/switchDatabase 過期請求目前 return void，呼叫方仍可能更新當下 activeTab；需檢查使用者在等待期間切換分頁／伺服器的所有路徑。同步失敗要保留可辨識的目標並呈現錯誤。
-7. **連線與持久化**：重複 connect 目前會重建 session；儲存密碼錯誤仍被忽略，JSON parse 失敗仍轉成空清單。需修正並驗證不遺失原設定。
-8. **Schema/DDL**：來源名稱 escaping、相同表名跨 schema 的消歧；CREATE TABLE 目前仍簡化 Identity seed、PK 類型／順序、預設值與其他約束，需要明確界定腳本是否完整還原。
-9. **共用邏輯及文件**：兩個大型表格元件的選取、統計、匯出及 DML 重複邏輯；README 連線池、百萬列效能、PRINT、DDL、防誤刪等宣稱需對齊驗證後的實作。
-10. **完整驗證**：重跑前端測試、typecheck/build、Rust tests/check；增加真實 SQL Server 整合測試入口並驗證空集、多集、PRINT、DML、GO、取消／逾時、交易與型別。尚未使用任何使用者 SQL Server 或憑證，mock/unit tests 不能當作實機驗證。
-11. **Tabulator 寬表格水平虛擬化評估**：AG Grid 遷移至 Tabulator 6 時沿用全欄渲染。需以 100~150 欄以上寬結果集（如 `sqlight:perf-fixture`）進行水平捲動壓力測試，量測 DOM cell 膨脹狀況與掉幀現象，評估啟用 `renderHorizontal: "virtual"` 之相容性（釘選欄、CSS 樣式與選取框）。
-12. **ResultGridItem 與核心表格元件拆分重構**：`ResultGridItem.vue` 現已膨脹至 1675 行（違反 `AGENTS.md` 400 行原則），內部混雜 Tabulator 生命週期、右鍵 ContextMenu、DML Commit Modal、DataView Modal、內嵌編輯與匯出邏輯。需拆解出專屬子組件（如 `ResultGridContextMenu.vue`、`ResultGridCommitModal.vue`）與 Composables，降低維護成本與回歸風險。
+3. **真實影響列數與 PRINT**：affected_rows 仍是回傳列數，需取得 TDS DONE 計數與 INFO 訊息。Tiberius 0.12.3 QueryStream 公開 API 只暴露 Metadata/Row，內部會忽略 DONE/INFO；不得重跑 SQL 或以 SELECT 筆數冒充 DML 影響筆數。
+4. **資料與資源限制**：binary 真實內容／匯出、各型別 round-trip；結果歷史及 pin、查詢歷史／localStorage 的容量；大型欄位與多結果集的總量限制。現有逐列上限不限制伺服器執行工作或網路流量。
+5. **前端狀態競態**：connect/switchDatabase 過期請求目前 return void，呼叫方仍可能更新當下 activeTab；需檢查使用者在等待期間切換分頁／伺服器的所有路徑。同步失敗要保留可辨識的目標並呈現錯誤。
+6. **連線與持久化**：重複 connect 目前會重建 session；儲存密碼錯誤仍被忽略，JSON parse 失敗仍轉成空清單。需修正並驗證不遺失原設定。
+7. **Schema/DDL**：來源名稱 escaping、相同表名跨 schema 的消歧；CREATE TABLE 目前仍簡化 Identity seed、PK 類型／順序、預設值與其他約束，需要明確界定腳本是否完整還原。
+8. **共用邏輯及文件**：兩個大型表格元件的選取、統計、匯出及 DML 重複邏輯；README 連線池、百萬列效能、PRINT、DDL、防誤刪等宣稱需對齊驗證後的實作。
+9. **完整驗證**：重跑前端測試、typecheck/build、Rust tests/check；增加真實 SQL Server 整合測試入口並驗證空集、多集、PRINT、DML、GO、取消／逾時、交易與型別。尚未使用任何使用者 SQL Server 或憑證，mock/unit tests 不能當作實機驗證。
+10. **Tabulator 寬表格水平虛擬化評估**：AG Grid 遷移至 Tabulator 6 時沿用全欄渲染。需以 100~150 欄以上寬結果集（如 `sqlight:perf-fixture`）進行水平捲動壓力測試，量測 DOM cell 膨脹狀況與掉幀現象，評估啟用 `renderHorizontal: "virtual"` 之相容性（釘選欄、CSS 樣式與選取框）。
+11. **ResultGridItem 與核心表格元件拆分重構**：`ResultGridItem.vue` 現已膨脹至 1675 行（違反 `AGENTS.md` 400 行原則），內部混雜 Tabulator 生命週期、右鍵 ContextMenu、DML Commit Modal、DataView Modal、內嵌編輯與匯出邏輯。需拆解出專屬子組件（如 `ResultGridContextMenu.vue`、`ResultGridCommitModal.vue`）與 Composables，降低維護成本與回歸風險。
 
 ## 驗證紀錄
+
+- （2026-09-23）`npm test`：389 個通過（新增 `tests/statements.test.ts` 的 `splitSqlBatchesWithMeta` 起始行號與 `GO <count>` 展開測試、更新 `tests/cancel_query.test.ts` 驗證後端單一 session lock 委任）。
+- （2026-09-23）`cargo test`：23 個通過（新增 `drivers::mssql::batch::tests` 11 個單元測試，涵蓋各類 GO 邊界、註解/字串遮蔽、GO 次數、USE 資料庫偵測）。
+- （2026-09-23）`cargo check`、`npm run typecheck`、`npm run build`：全數通過。
 
 - （2026-09-23）`npm test`：388 個通過（新增 `tests/global_font_scope.test.ts` 三項：四個 DataGrid 根容器必須用 `font-sans` 且不得攜帶 `--sqlight-grid-font`、工具列區塊不得出現 `font-mono`、網格字型變數僅能綁在 `.sqlight-grid` 外框）。
 - （2026-09-23）`npm test`：385 個通過（新增 `tests/grid_layout.test.ts` 兩項：「隱藏工具列」狀態為每結果分頁獨立且隨分頁關閉清除、以及按鈕位於「等分高度」左側並傳到全部 4 種網格容器且上下兩列都受 `hideToolbar` 控制；新增 `tests/tab_label_weight.test.ts` 一項：多結果集 `Result #N (N)` 標籤必須為一般字重且仍只在 `totalSets > 1` 出現）。

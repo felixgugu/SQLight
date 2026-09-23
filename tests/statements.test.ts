@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { extractStatementAtCursor, splitSqlBatches } from '../src/utils/sqlStatementExtractor';
+import { extractStatementAtCursor, splitSqlBatches, splitSqlBatchesWithMeta } from '../src/utils/sqlStatementExtractor';
 import { generateDeleteStatement } from '../src/utils/sqlGenerator';
 
 test('transaction guards stay attached when the cursor is on the generated DELETE', () => {
@@ -64,5 +64,43 @@ SELECT /* GO inside comment */ 42;`;
   assert.equal(batches.length, 2);
   assert.equal(batches[0], "SELECT 'GO' AS val;");
   assert.equal(batches[1], "SELECT /* GO inside comment */ 42;");
+});
+
+test('splitSqlBatchesWithMeta accurately tracks startLine and repeatCount', () => {
+  const script = `
+-- Line 2 comment
+USE master;
+GO
+
+-- Line 6 comment
+INSERT INTO #temp VALUES (1);
+GO 3 -- repeat 3 times
+
+SELECT * FROM #temp;
+`;
+
+  const meta = splitSqlBatchesWithMeta(script);
+  assert.equal(meta.length, 3);
+
+  assert.equal(meta[0]?.sql, '-- Line 2 comment\nUSE master;');
+  assert.equal(meta[0]?.startLine, 2);
+  assert.equal(meta[0]?.repeatCount, 1);
+
+  assert.equal(meta[1]?.sql, '-- Line 6 comment\nINSERT INTO #temp VALUES (1);');
+  assert.equal(meta[1]?.startLine, 6);
+  assert.equal(meta[1]?.repeatCount, 3);
+
+  assert.equal(meta[2]?.sql, 'SELECT * FROM #temp;');
+  assert.equal(meta[2]?.startLine, 10);
+  assert.equal(meta[2]?.repeatCount, 1);
+
+  // splitSqlBatches should expand the 3 repetitions
+  const expanded = splitSqlBatches(script);
+  assert.equal(expanded.length, 5); // 1 + 3 + 1
+  assert.equal(expanded[0], '-- Line 2 comment\nUSE master;');
+  assert.equal(expanded[1], '-- Line 6 comment\nINSERT INTO #temp VALUES (1);');
+  assert.equal(expanded[2], '-- Line 6 comment\nINSERT INTO #temp VALUES (1);');
+  assert.equal(expanded[3], '-- Line 6 comment\nINSERT INTO #temp VALUES (1);');
+  assert.equal(expanded[4], 'SELECT * FROM #temp;');
 });
 

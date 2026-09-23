@@ -5,13 +5,14 @@ use tauri::State;
 #[tauri::command]
 pub async fn execute_query(
     connection_id: String,
+    database: Option<String>,
     sql: String,
     max_rows: Option<usize>,
     request_id: Option<String>,
     manager: State<'_, ConnectionManager>,
 ) -> Result<QueryResult, String> {
     manager
-        .execute_query(&connection_id, &sql, max_rows, request_id.as_deref())
+        .execute_query(&connection_id, database.as_deref(), &sql, max_rows, request_id.as_deref())
         .await
         .map_err(|e| e.to_string())
 }

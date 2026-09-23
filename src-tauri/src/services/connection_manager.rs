@@ -301,6 +301,7 @@ impl ConnectionManager {
     pub async fn execute_query(
         &self,
         id: &str,
+        database: Option<&str>,
         sql: &str,
         max_rows: Option<usize>,
         request_id: Option<&str>,
@@ -332,6 +333,14 @@ impl ConnectionManager {
         }
 
         let mut conn = conn_arc.lock().await;
+
+        if let Some(target_db) = database {
+            let target_db = target_db.trim();
+            if !target_db.is_empty() && conn.current_database() != target_db {
+                conn.switch_database(target_db).await?;
+            }
+        }
+
         let db_name = conn.current_database().to_string();
         let query_fut = conn.execute_query(sql, max_rows);
 

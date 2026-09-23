@@ -154,36 +154,31 @@ test('queryService exposes cancelQuery and getConnectionSpid methods', async () 
   assert.equal(cancelRes, undefined);
 });
 
-test('execute with multi-batch script executes each batch sequentially and aggregates results', async () => {
+test('execute with multi-batch script delegates to queryService under backend session lock and aggregates results', async () => {
   const store = useQueryStore();
 
-  const executedBatches: string[] = [];
+  let capturedConn = '';
+  let capturedDb = '';
+  let capturedSql = '';
 
-  queryService.executeQuery = async (_connId, _db, sql) => {
-    executedBatches.push(sql);
-    if (sql.startsWith('CREATE TABLE')) {
-      return {
-        resultSets: [],
-        messages: [{ level: 'info', message: 'Table created', timestamp: new Date().toISOString() }],
-        affectedRows: 0,
-        executionTimeMs: 15,
-      };
-    }
-    if (sql.startsWith('SELECT')) {
-      return {
-        resultSets: [
-          {
-            columns: [{ name: 'Done', dataType: 'int', nullable: false, ordinal: 0 }],
-            rows: [[1]],
-            rowCount: 1,
-          },
-        ],
-        messages: [],
-        affectedRows: 1,
-        executionTimeMs: 5,
-      };
-    }
-    return { resultSets: [], messages: [], affectedRows: 0, executionTimeMs: 2 };
+  queryService.executeQuery = async (connId, db, sql) => {
+    capturedConn = connId;
+    capturedDb = db;
+    capturedSql = sql;
+    return {
+      resultSets: [
+        {
+          columns: [{ name: 'Done', dataType: 'int', nullable: false, ordinal: 0 }],
+          rows: [[1]],
+          rowCount: 1,
+        },
+      ],
+      messages: [
+        { level: 'info', message: 'Query completed successfully. Executed 3 batch(es), 1 result set(s), 1 rows returned.', timestamp: new Date().toISOString() },
+      ],
+      affectedRows: 1,
+      executionTimeMs: 25,
+    };
   };
 
   const script = `SET ANSI_NULLS ON
@@ -194,15 +189,14 @@ SELECT 1 AS Done;`;
 
   const res = await store.execute('conn-1', 'master', script);
   assert.ok(res);
-  assert.equal(executedBatches.length, 3);
-  assert.equal(executedBatches[0], 'SET ANSI_NULLS ON');
-  assert.equal(executedBatches[1], 'CREATE TABLE dbo.MyTable (id int);');
-  assert.equal(executedBatches[2], 'SELECT 1 AS Done;');
+  assert.equal(capturedConn, 'conn-1');
+  assert.equal(capturedDb, 'master');
+  assert.equal(capturedSql, script);
 
-  // Results combined
+  // Results combined in store
   assert.equal(res.resultSets.length, 1);
   assert.equal(res.resultSets[0]?.rows[0]?.[0], 1);
   assert.equal(res.messages.length, 1);
-  assert.equal(res.messages[0]?.message, 'Table created');
+  assert.match(res.messages[0]?.message || '', /Executed 3 batch/);
 });
 

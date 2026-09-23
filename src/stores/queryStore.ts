@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia';
 import { ref, computed, watch, markRaw } from 'vue';
-import type { QueryResult, QueryHistoryItem, QueryResultTab, QueryMessage, ResultSet, SessionMessageItem } from '@/types/query';
+import type { QueryResult, QueryHistoryItem, QueryResultTab, QueryMessage, SessionMessageItem } from '@/types/query';
 import { queryService } from '@/services/queryService';
 import { useSettingsStore } from './settingsStore';
 import { useWorkspaceStore } from './workspaceStore';
@@ -258,50 +258,7 @@ export const useQueryStore = defineStore('query', () => {
 
       const batches = splitSqlBatches(sql);
 
-      if (batches.length > 1 && !isShowplan && !isActualPlan) {
-        // Multi-batch execution (Batch Runner - executes batches sequentially)
-        const combinedResultSets: ResultSet[] = [];
-        const combinedMessages: QueryMessage[] = [];
-        let totalAffectedRows = 0;
-
-        for (let bIdx = 0; bIdx < batches.length; bIdx++) {
-          if (isCancelling.value) break;
-          const batchSql = batches[bIdx];
-          if (!batchSql || !batchSql.trim()) continue;
-
-          const batchEffectiveSql = isStatsEnabled.value
-            ? wrapQueryWithPerfTelemetry(batchSql)
-            : batchSql;
-
-          const batchRes = await queryService.executeQuery(
-            connectionId,
-            database,
-            batchEffectiveSql,
-            limit,
-            reqId
-          );
-
-          if (batchRes.resultSets && batchRes.resultSets.length > 0) {
-            combinedResultSets.push(...batchRes.resultSets);
-          }
-          if (batchRes.messages) {
-            combinedMessages.push(...batchRes.messages);
-          }
-          totalAffectedRows += batchRes.affectedRows || 0;
-
-          // If a batch produced an error, stop executing subsequent batches
-          if (batchRes.messages && batchRes.messages.some((m) => m.level === 'error')) {
-            break;
-          }
-        }
-
-        result = {
-          resultSets: combinedResultSets,
-          messages: combinedMessages,
-          affectedRows: totalAffectedRows,
-          executionTimeMs: Date.now() - startTime,
-        };
-      } else if (isShowplan) {
+      if (isShowplan) {
         try {
           await queryService.executeQuery(connectionId, database, 'SET SHOWPLAN_ALL ON;', null, reqId);
           result = await queryService.executeQuery(connectionId, database, sql, limit, reqId);
@@ -324,7 +281,10 @@ export const useQueryStore = defineStore('query', () => {
           }
         }
       } else {
-        const effectiveSql = isStatsEnabled.value ? wrapQueryWithPerfTelemetry(sql) : sql;
+        // Only wrap with performance telemetry if single-batch (variable scope cannot cross GO boundaries)
+        const effectiveSql = isStatsEnabled.value && batches.length <= 1
+          ? wrapQueryWithPerfTelemetry(sql)
+          : sql;
         result = await queryService.executeQuery(connectionId, database, effectiveSql, limit, reqId);
       }
 

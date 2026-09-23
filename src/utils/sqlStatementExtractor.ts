@@ -11,6 +11,7 @@ interface LineMeta {
   lineIndex: number;
   codeOnly: string;
   isGo: boolean;
+  goCount?: number;
   isBlank: boolean;
 }
 
@@ -49,18 +50,21 @@ function parseSqlLines(fullText: string): { lines: string[]; lineMetas: LineMeta
       if (inLineComment) inLineComment = false;
 
       const trimmedCode = currentLineCode.trim();
-      const isGo =
+      const goMatch =
         commentDepth === 0 &&
         !inSingleQuote &&
         !inBracket &&
         !inDoubleQuote &&
-        /^GO(\s+\d+)?(\s+--.*)?$/i.test(trimmedCode);
+        /^GO(?:\s+(\d+))?(?:\s+--.*)?$/i.exec(trimmedCode);
+      const isGo = Boolean(goMatch);
+      const goCount = goMatch && goMatch[1] ? parseInt(goMatch[1], 10) : 1;
       const isBlank = (lines[currentLineIndex] ?? '').trim() === '';
 
       lineMetas.push({
         lineIndex: currentLineIndex,
         codeOnly: currentLineCode,
         isGo,
+        goCount: isGo ? goCount : undefined,
         isBlank,
       });
 
@@ -162,18 +166,21 @@ function parseSqlLines(fullText: string): { lines: string[]; lineMetas: LineMeta
 
   if (currentLineIndex < lines.length) {
     const trimmedCode = currentLineCode.trim();
-    const isGo =
+    const goMatch =
       commentDepth === 0 &&
       !inSingleQuote &&
       !inBracket &&
       !inDoubleQuote &&
-      /^GO(\s+\d+)?(\s+--.*)?$/i.test(trimmedCode);
+      /^GO(?:\s+(\d+))?(?:\s+--.*)?$/i.exec(trimmedCode);
+    const isGo = Boolean(goMatch);
+    const goCount = goMatch && goMatch[1] ? parseInt(goMatch[1], 10) : 1;
     const isBlank = (lines[currentLineIndex] ?? '').trim() === '';
 
     lineMetas.push({
       lineIndex: currentLineIndex,
       codeOnly: currentLineCode,
       isGo,
+      goCount: isGo ? goCount : undefined,
       isBlank,
     });
   }
@@ -307,40 +314,87 @@ export function extractStatementAtCursor(
   };
 }
 
+export interface SqlBatchItem {
+  sql: string;
+  startLine: number;
+  repeatCount: number;
+}
+
 /**
- * Splits a full SQL script into separate executable batches by detecting GO boundaries.
- * Accurately ignores 'GO' inside string literals, comments, or bracketed identifiers.
+ * Splits a full SQL script into separate executable batches with line numbers and repeat counts.
  */
-export function splitSqlBatches(fullText: string): string[] {
+export function splitSqlBatchesWithMeta(fullText: string): SqlBatchItem[] {
   if (!fullText || !fullText.trim()) return [];
 
   const { lines, lineMetas } = parseSqlLines(fullText);
   if (lineMetas.length === 0) return [];
 
-  const batches: string[] = [];
-  let currentBatchLines: string[] = [];
+  const batches: SqlBatchItem[] = [];
+  let currentBatchLines: { lineIndex: number; text: string }[] = [];
 
   for (let i = 0; i < lineMetas.length; i++) {
     const meta = lineMetas[i];
     if (meta?.isGo) {
-      // Encountered a GO separator: flush current batch if not empty
-      const batchSql = currentBatchLines.join('\n').trim();
-      if (batchSql) {
-        batches.push(batchSql);
+      const repeatCount = meta.goCount && meta.goCount > 0 ? meta.goCount : 1;
+      const flushed = flushBatchItem(currentBatchLines, repeatCount);
+      if (flushed) {
+        batches.push(flushed);
       }
       currentBatchLines = [];
     } else {
-      const lineStr = lines[i] ?? '';
-      currentBatchLines.push(lineStr);
+      currentBatchLines.push({ lineIndex: i, text: lines[i] ?? '' });
     }
   }
 
-  const finalBatchSql = currentBatchLines.join('\n').trim();
-  if (finalBatchSql) {
-    batches.push(finalBatchSql);
+  const finalFlushed = flushBatchItem(currentBatchLines, 1);
+  if (finalFlushed) {
+    batches.push(finalFlushed);
   }
 
   return batches;
+}
+
+function flushBatchItem(
+  batchLines: { lineIndex: number; text: string }[],
+  repeatCount: number
+): SqlBatchItem | null {
+  if (batchLines.length === 0) return null;
+
+  const firstIdx = batchLines.findIndex((l) => l.text.trim() !== '');
+  if (firstIdx === -1) return null;
+
+  let lastIdx = batchLines.length - 1;
+  while (lastIdx >= firstIdx && (batchLines[lastIdx]?.text ?? '').trim() === '') {
+    lastIdx--;
+  }
+
+  if (firstIdx > lastIdx) return null;
+
+  const selected = batchLines.slice(firstIdx, lastIdx + 1);
+  const sql = selected.map((l) => l.text).join('\n').trim();
+  if (!sql) return null;
+
+  return {
+    sql,
+    startLine: (selected[0]?.lineIndex ?? 0) + 1,
+    repeatCount,
+  };
+}
+
+/**
+ * Splits a full SQL script into separate executable batches by detecting GO boundaries.
+ * Accurately ignores 'GO' inside string literals, comments, or bracketed identifiers.
+ * Respects repeat count (e.g. GO 5 repeats the batch 5 times).
+ */
+export function splitSqlBatches(fullText: string): string[] {
+  const metaBatches = splitSqlBatchesWithMeta(fullText);
+  const result: string[] = [];
+  for (const b of metaBatches) {
+    for (let r = 0; r < b.repeatCount; r++) {
+      result.push(b.sql);
+    }
+  }
+  return result;
 }
 
 /**

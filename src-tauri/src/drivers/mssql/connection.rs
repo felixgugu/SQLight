@@ -289,75 +289,95 @@ impl DatabaseConnection for SqlServerConnection {
 
     async fn execute_query(&mut self, sql: &str, max_rows: Option<usize>) -> AppResult<QueryResult> {
         let start = Instant::now();
+        let batches = super::batch::split_sql_batches(sql);
 
-        let stream = match self.client.simple_query(sql).await {
-            Ok(s) => s,
-            Err(e) => {
-                let duration = start.elapsed().as_millis() as u64;
-                let (code, line) = match &e {
-                    tiberius::error::Error::Server(srv) => (Some(srv.code() as i32), Some(srv.line())),
-                    _ => (None, None),
-                };
-                return Ok(QueryResult {
-                    result_sets: Vec::new(),
-                    messages: vec![QueryMessage {
-                        level: "error".to_string(),
-                        message: e.to_string(),
-                        code,
-                        line_number: line,
-                        timestamp: Utc::now().to_rfc3339(),
-                    }],
-                    affected_rows: 0,
-                    execution_time_ms: duration,
-                });
-            }
-        };
+        if batches.is_empty() {
+            return Ok(QueryResult {
+                result_sets: Vec::new(),
+                messages: Vec::new(),
+                affected_rows: 0,
+                execution_time_ms: 0,
+            });
+        }
 
-        let result_sets_raw = match stream.into_results().await {
-            Ok(r) => r,
-            Err(e) => {
-                let duration = start.elapsed().as_millis() as u64;
-                let (code, line) = match &e {
-                    tiberius::error::Error::Server(srv) => (Some(srv.code() as i32), Some(srv.line())),
-                    _ => (None, None),
-                };
-                return Ok(QueryResult {
-                    result_sets: Vec::new(),
-                    messages: vec![QueryMessage {
-                        level: "error".to_string(),
-                        message: e.to_string(),
-                        code,
-                        line_number: line,
-                        timestamp: Utc::now().to_rfc3339(),
-                    }],
-                    affected_rows: 0,
-                    execution_time_ms: duration,
-                });
-            }
-        };
-
-        let elapsed = start.elapsed().as_millis() as u64;
-        let mut result_sets = Vec::new();
-        let mut total_rows = 0;
+        let mut all_result_sets = Vec::new();
+        let mut all_messages = Vec::new();
+        let mut total_rows = 0u64;
         let mut has_truncated = false;
+        let mut stopped_due_to_error = false;
+        let mut executed_batch_count = 0usize;
 
-        for rows in result_sets_raw {
-            if let Some(first_row) = rows.first() {
-                let columns = first_row.columns();
-                let rs = Self::build_result_set(columns, &rows, max_rows);
-                if rs.is_truncated {
-                    has_truncated = true;
+        'batch_loop: for batch in &batches {
+            for _ in 0..batch.repeat_count {
+                executed_batch_count += 1;
+
+                let stream = match self.client.simple_query(&batch.sql).await {
+                    Ok(s) => s,
+                    Err(e) => {
+                        let (code, line) = match &e {
+                            tiberius::error::Error::Server(srv) => {
+                                let mapped_line = (batch.start_line + (srv.line().saturating_sub(1)) as usize) as u32;
+                                (Some(srv.code() as i32), Some(mapped_line))
+                            }
+                            _ => (None, None),
+                        };
+                        all_messages.push(QueryMessage {
+                            level: "error".to_string(),
+                            message: e.to_string(),
+                            code,
+                            line_number: line,
+                            timestamp: Utc::now().to_rfc3339(),
+                        });
+                        stopped_due_to_error = true;
+                        break 'batch_loop;
+                    }
+                };
+
+                let result_sets_raw = match stream.into_results().await {
+                    Ok(r) => r,
+                    Err(e) => {
+                        let (code, line) = match &e {
+                            tiberius::error::Error::Server(srv) => {
+                                let mapped_line = (batch.start_line + (srv.line().saturating_sub(1)) as usize) as u32;
+                                (Some(srv.code() as i32), Some(mapped_line))
+                            }
+                            _ => (None, None),
+                        };
+                        all_messages.push(QueryMessage {
+                            level: "error".to_string(),
+                            message: e.to_string(),
+                            code,
+                            line_number: line,
+                            timestamp: Utc::now().to_rfc3339(),
+                        });
+                        stopped_due_to_error = true;
+                        break 'batch_loop;
+                    }
+                };
+
+                for rows in result_sets_raw {
+                    if let Some(first_row) = rows.first() {
+                        let columns = first_row.columns();
+                        let rs = Self::build_result_set(columns, &rows, max_rows);
+                        if rs.is_truncated {
+                            has_truncated = true;
+                        }
+                        total_rows += rs.row_count as u64;
+                        all_result_sets.push(rs);
+                    }
                 }
-                total_rows += rs.row_count as u64;
-                result_sets.push(rs);
+
+                if let Some(db) = super::batch::detect_use_database(&batch.sql) {
+                    self.current_database = db;
+                }
             }
         }
 
-        let mut messages = Vec::new();
+        let elapsed = start.elapsed().as_millis() as u64;
 
         if has_truncated {
             let limit_num = max_rows.unwrap_or(0);
-            messages.push(QueryMessage {
+            all_messages.push(QueryMessage {
                 level: "warning".to_string(),
                 message: format!(
                     "查詢結果已達最大限制 {} 筆，其餘資料已自動截斷以保護系統效能。",
@@ -369,23 +389,34 @@ impl DatabaseConnection for SqlServerConnection {
             });
         }
 
-        let message = format!(
-            "Query completed successfully. {} result set(s), {} rows returned.",
-            result_sets.len(),
-            total_rows
-        );
+        if !stopped_due_to_error {
+            let message = if executed_batch_count > 1 {
+                format!(
+                    "Query completed successfully. Executed {} batch(es), {} result set(s), {} rows returned.",
+                    executed_batch_count,
+                    all_result_sets.len(),
+                    total_rows
+                )
+            } else {
+                format!(
+                    "Query completed successfully. {} result set(s), {} rows returned.",
+                    all_result_sets.len(),
+                    total_rows
+                )
+            };
 
-        messages.push(QueryMessage {
-            level: "info".to_string(),
-            message,
-            code: None,
-            line_number: None,
-            timestamp: Utc::now().to_rfc3339(),
-        });
+            all_messages.push(QueryMessage {
+                level: "info".to_string(),
+                message,
+                code: None,
+                line_number: None,
+                timestamp: Utc::now().to_rfc3339(),
+            });
+        }
 
         Ok(QueryResult {
-            result_sets,
-            messages,
+            result_sets: all_result_sets,
+            messages: all_messages,
             affected_rows: total_rows,
             execution_time_ms: elapsed,
         })
