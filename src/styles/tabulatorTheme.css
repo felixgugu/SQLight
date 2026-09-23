@@ -12,17 +12,31 @@
 html.dark .tabulator {
   --sq-grid-bg: #18181b;
   --sq-grid-header-bg: #202024;
+  --sq-grid-header-hover: #27272a;
   --sq-grid-header-text: #a1a1aa;
   --sq-grid-fg: #e4e4e7;
   --sq-grid-muted: #71717a;
+  /* `--sq-grid-border` frames the header and the frozen edge; `--sq-grid-line` draws the softer
+     row / cell separators. */
   --sq-grid-border: #2e2e33;
-  --sq-grid-row-alt: #27272a;
+  --sq-grid-line: #2e2e33;
+  --sq-grid-row-hover: #27272a;
+  /* Zebra striping stays off on dark; set a surface colour to switch it on. */
+  --sq-grid-row-stripe: transparent;
+  --sq-grid-sort-icon: #71717a;
+  --sq-grid-sort-icon-hover: #a1a1aa;
+  --sq-grid-sort-icon-active: #0284c7;
   --sq-grid-accent: #0284c7;
+  --sq-grid-pk-accent: #fbbf24;
+  --sq-grid-identity-accent: #22d3ee;
+  --sq-grid-type-accent: #7dd3fc;
+  --sq-grid-fulltype-accent: #6ee7b7;
   /* Selection palette (dark): tinted area, stronger focus cell, bright blue outline. */
-  --sq-grid-range: rgba(56, 125, 237, 0.25);
-  --sq-grid-range-strong: rgba(56, 125, 237, 0.45);
+  --sq-grid-range-fill: rgba(56, 125, 237, 0.25);
+  --sq-grid-range-active-fill: rgba(56, 125, 237, 0.45);
   --sq-grid-range-border: #3b82f6;
   --sq-grid-range-border-width: 1.5px;
+  --sq-grid-range-handle: #3b82f6;
   --sq-grid-range-text: #ffffff;
   --sq-grid-editor-bg: #0f0f12;
 }
@@ -30,16 +44,30 @@ html.dark .tabulator {
 html:not(.dark) .tabulator {
   --sq-grid-bg: #ffffff;
   --sq-grid-header-bg: #f8fafc;
+  --sq-grid-header-hover: #f1f5f9;
   --sq-grid-header-text: #475569;
-  --sq-grid-fg: #0f172a;
+  --sq-grid-fg: #1e293b;
   --sq-grid-muted: #64748b;
+  /* The header keeps the stronger line that anchors it; rows and cells stay softly separated. */
   --sq-grid-border: #e2e8f0;
-  --sq-grid-row-alt: #f1f5f9;
+  --sq-grid-line: #f1f5f9;
+  --sq-grid-row-hover: #f1f5f9;
+  --sq-grid-row-stripe: #f8fafc;
+  --sq-grid-sort-icon: #94a3b8;
+  --sq-grid-sort-icon-hover: #475569;
+  --sq-grid-sort-icon-active: #2563eb;
   --sq-grid-accent: #0284c7;
-  --sq-grid-range: rgba(59, 130, 246, 0.18);
-  --sq-grid-range-strong: rgba(59, 130, 246, 0.32);
+  /* Solid, contrast-safe accents: the dark theme's bright icons read as neon on white. */
+  --sq-grid-pk-accent: #b45309;
+  --sq-grid-identity-accent: #0e7490;
+  --sq-grid-type-accent: #0369a1;
+  --sq-grid-fulltype-accent: #047857;
+  /* Selection palette (light): a barely-there wash, with the focus border doing the work. */
+  --sq-grid-range-fill: rgba(59, 130, 246, 0.08);
+  --sq-grid-range-active-fill: var(--sq-grid-range-fill);
   --sq-grid-range-border: #2563eb;
   --sq-grid-range-border-width: 1.5px;
+  --sq-grid-range-handle: #2563eb;
   /* White would be unreadable on a light tint, so the light theme keeps the normal text colour. */
   --sq-grid-range-text: var(--sq-grid-fg);
   --sq-grid-editor-bg: #ffffff;
@@ -93,7 +121,7 @@ html:not(.dark) .tabulator {
 }
 
 .tabulator .tabulator-header .tabulator-col.tabulator-sortable:hover {
-  background-color: var(--sq-grid-row-alt);
+  background-color: var(--sq-grid-header-hover);
 }
 
 .tabulator .tabulator-tableholder .tabulator-table {
@@ -107,7 +135,7 @@ html:not(.dark) .tabulator {
 
 .tabulator .tabulator-header .tabulator-col .tabulator-col-sorter {
   min-width: 14px;
-  color: var(--sq-grid-muted);
+  color: var(--sq-grid-sort-icon);
 }
 
 .tabulator .tabulator-header .tabulator-col .tabulator-col-sorter .tabulator-arrow {
@@ -118,7 +146,7 @@ html:not(.dark) .tabulator {
 .tabulator .tabulator-header .tabulator-col.tabulator-sortable[aria-sort='none']
   .tabulator-col-content
   .tabulator-col-sorter {
-  color: var(--sq-grid-muted);
+  color: var(--sq-grid-sort-icon);
   opacity: 0.75;
 }
 
@@ -128,7 +156,7 @@ html:not(.dark) .tabulator {
 .tabulator .tabulator-header .tabulator-col.tabulator-sortable[aria-sort='none']
   .tabulator-col-content
   .tabulator-col-sorter .tabulator-arrow:hover {
-  color: var(--sq-grid-accent);
+  color: var(--sq-grid-sort-icon-hover);
   opacity: 1;
 }
 
@@ -138,7 +166,7 @@ html:not(.dark) .tabulator {
 .tabulator .tabulator-header .tabulator-col.tabulator-sortable[aria-sort='descending']
   .tabulator-col-content
   .tabulator-col-sorter {
-  color: var(--sq-grid-accent);
+  color: var(--sq-grid-sort-icon-active);
   opacity: 1;
 }
 
@@ -146,14 +174,14 @@ html:not(.dark) .tabulator {
   .tabulator-col-content
   .tabulator-col-sorter
   .tabulator-arrow {
-  border-bottom-color: var(--sq-grid-accent);
+  border-bottom-color: var(--sq-grid-sort-icon-active);
 }
 
 .tabulator .tabulator-header .tabulator-col.tabulator-sortable[aria-sort='descending']
   .tabulator-col-content
   .tabulator-col-sorter
   .tabulator-arrow {
-  border-top-color: var(--sq-grid-accent);
+  border-top-color: var(--sq-grid-sort-icon-active);
 }
 
 /* --------------------------------------------------------------------------
@@ -163,23 +191,28 @@ html:not(.dark) .tabulator {
 .tabulator-row {
   background-color: var(--sq-grid-bg);
   color: var(--sq-grid-fg);
-  border-bottom: 1px solid var(--sq-grid-border);
+  border-bottom: 1px solid var(--sq-grid-line);
 }
 
-/* Row hover highlighting is intentionally suppressed (matches the previous grid setup). */
-.tabulator-row.tabulator-selectable:hover,
+/* Optional zebra striping (`--sq-grid-row-stripe`; `transparent` disables it). */
+.tabulator-row.tabulator-row-even {
+  background-color: var(--sq-grid-row-stripe);
+}
+
+.tabulator-row:hover {
+  background-color: var(--sq-grid-row-hover);
+}
+
+/* Row selection is disabled, so Tabulator never adds `.tabulator-selectable`; keep the selected
+   state the base stylesheet would otherwise repaint. */
 .tabulator-row.tabulator-selected,
 .tabulator-row.tabulator-selected:hover {
   background-color: var(--sq-grid-bg);
 }
 
-.tabulator-row.tabulator-row-even {
-  background-color: var(--sq-grid-bg);
-}
-
 .tabulator-row .tabulator-cell {
   padding: 0 6px;
-  border-right: 1px solid var(--sq-grid-border);
+  border-right: 1px solid var(--sq-grid-line);
   color: inherit;
   /* Rows have a fixed 28px height (the `rowHeight` grid option), so matching the line box to
      that height is what keeps single-line cell content vertically centred. */
@@ -213,19 +246,25 @@ html:not(.dark) .tabulator {
   border-right: 1px solid var(--sq-grid-border);
 }
 
-.tabulator-row .tabulator-cell.sqlight-row-index-cell,
-.tabulator .tabulator-header .tabulator-col.sqlight-row-index-cell {
-  background-color: var(--sq-grid-bg);
-}
-
+/* The frozen # column must be opaque, so it mirrors every row background state itself. */
 .tabulator-row .tabulator-cell.sqlight-row-index-cell {
+  background-color: var(--sq-grid-bg);
   color: var(--sq-grid-muted);
   text-align: center;
   cursor: pointer;
   user-select: none;
 }
 
+.tabulator-row.tabulator-row-even .tabulator-cell.sqlight-row-index-cell {
+  background-color: var(--sq-grid-row-stripe);
+}
+
+.tabulator-row:hover .tabulator-cell.sqlight-row-index-cell {
+  background-color: var(--sq-grid-row-hover);
+}
+
 .tabulator .tabulator-header .tabulator-col.sqlight-row-index-cell {
+  background-color: var(--sq-grid-header-bg);
   cursor: pointer;
   user-select: none;
 }
@@ -268,6 +307,43 @@ html:not(.dark) .tabulator {
   color: #fde68a;
 }
 
+/* Boolean values render as pills (see `createDataCellFormatter`): a saturated glyph colour reads
+   as neon, especially on the light theme, where the pill also carries a contrast-safe text tone. */
+.sqlight-bool-badge {
+  display: inline-block;
+  vertical-align: middle;
+  padding: 0 6px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 16px;
+  letter-spacing: 0.02em;
+}
+
+html.dark .sqlight-bool-badge.sqlight-bool-true {
+  border: 1px solid rgba(16, 185, 129, 0.35);
+  background-color: rgba(16, 185, 129, 0.15);
+  color: #34d399;
+}
+
+html.dark .sqlight-bool-badge.sqlight-bool-false {
+  border: 1px solid rgba(244, 63, 94, 0.35);
+  background-color: rgba(244, 63, 94, 0.15);
+  color: #fb7185;
+}
+
+html:not(.dark) .sqlight-bool-badge.sqlight-bool-true {
+  border: 1px solid #a7f3d0;
+  background-color: #ecfdf5;
+  color: #059669;
+}
+
+html:not(.dark) .sqlight-bool-badge.sqlight-bool-false {
+  border: 1px solid #e2e8f0;
+  background-color: #f1f5f9;
+  color: #64748b;
+}
+
 /* --------------------------------------------------------------------------
    Range selection (Tabulator's own module paints the highlight)
    -------------------------------------------------------------------------- */
@@ -275,20 +351,20 @@ html:not(.dark) .tabulator {
 /* Cells covered by the selection. The class is set on the cell — the row only carries
    `tabulator-range-selected` in row-selection mode, which the grids do not use. */
 .tabulator-row .tabulator-cell.tabulator-range-selected {
-  background-color: var(--sq-grid-range);
+  background-color: var(--sq-grid-range-fill);
   color: var(--sq-grid-range-text);
 }
 
 /* Header of every column the selection touches. */
 .tabulator .tabulator-header .tabulator-col.tabulator-range-highlight {
-  background-color: var(--sq-grid-range);
+  background-color: var(--sq-grid-range-fill);
   color: var(--sq-grid-range-text);
   font-weight: 700;
 }
 
 /* Header of a fully selected column. */
 .tabulator .tabulator-header .tabulator-col.tabulator-range-selected {
-  background-color: var(--sq-grid-range-strong);
+  background-color: var(--sq-grid-range-active-fill);
   color: var(--sq-grid-range-text);
   font-weight: 700;
 }
@@ -302,14 +378,20 @@ html:not(.dark) .tabulator {
   .tabulator-tableholder
   .tabulator-range-overlay
   .tabulator-range.tabulator-range-active::after {
-  background-color: var(--sq-grid-range-border);
+  /* 4x4 square drag handle (the base stylesheet draws a 6px circle). */
+  right: -2px;
+  bottom: -2px;
+  width: 4px;
+  height: 4px;
+  border-radius: 0;
+  background-color: var(--sq-grid-range-handle);
 }
 
 /* Focused cell inside the selection.
    Its fill stacks on top of the selection tint, so the rendered colour is slightly stronger than
    the configured 45%; swap in an opaque value (≈ #26457A, or the requested #1E3A5F) to pin it. */
 .tabulator .tabulator-tableholder .tabulator-range-overlay .tabulator-range-cell-active {
-  background-color: var(--sq-grid-range-strong);
+  background-color: var(--sq-grid-range-active-fill);
   border: 2px solid var(--sq-grid-range-border);
 }
 
@@ -323,7 +405,7 @@ html:not(.dark) .tabulator {
   flex-shrink: 0;
   width: 12px;
   height: 12px;
-  background-color: #fbbf24;
+  background-color: var(--sq-grid-pk-accent);
   -webkit-mask-repeat: no-repeat;
   mask-repeat: no-repeat;
   -webkit-mask-position: center;
@@ -338,13 +420,9 @@ html:not(.dark) .tabulator {
 }
 
 .tabulator .tabulator-header .tabulator-col .sqlight-header-identity-icon {
-  background-color: #22d3ee;
+  background-color: var(--sq-grid-identity-accent);
   -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect width='18' height='11' x='3' y='11' rx='2' ry='2'/%3E%3Cpath d='M7 11V7a5 5 0 0 1 10 0v4'/%3E%3C/svg%3E");
   mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect width='18' height='11' x='3' y='11' rx='2' ry='2'/%3E%3Cpath d='M7 11V7a5 5 0 0 1 10 0v4'/%3E%3C/svg%3E");
-}
-
-.tabulator .tabulator-header .tabulator-col.sqlight-pk-header .tabulator-col-title {
-  color: #fbbf24;
 }
 
 /* --------------------------------------------------------------------------
@@ -411,21 +489,50 @@ html:not(.dark) .tabulator-tooltip {
   color: #52525b;
 }
 
+/* Light theme pills: solid slate/emerald surfaces instead of the dark theme's translucent chips. */
+html:not(.dark) .sqlight-badge-pk {
+  border-color: #fde68a;
+  background-color: #fffbeb;
+  color: #b45309;
+}
+
+html:not(.dark) .sqlight-badge-yes {
+  border-color: #a7f3d0;
+  background-color: #ecfdf5;
+  color: #059669;
+}
+
+html:not(.dark) .sqlight-badge-no {
+  border-color: #e2e8f0;
+  background-color: #f1f5f9;
+  color: #64748b;
+}
+
+html:not(.dark) .sqlight-badge-identity {
+  border-color: #a5f3fc;
+  background-color: #ecfeff;
+  color: #0e7490;
+}
+
+html:not(.dark) .sqlight-badge-muted {
+  color: #94a3b8;
+}
+
 /* --------------------------------------------------------------------------
    Table structure viewer cell styling
    -------------------------------------------------------------------------- */
 
 .tabulator-row .tabulator-cell.sqlight-cell-muted {
-  color: #71717a;
+  color: var(--sq-grid-muted);
 }
 
 .tabulator-row .tabulator-cell.sqlight-cell-datatype {
-  color: #7dd3fc;
+  color: var(--sq-grid-type-accent);
   font-size: 11px;
 }
 
 .tabulator-row .tabulator-cell.sqlight-cell-fulltype {
-  color: #6ee7b7;
+  color: var(--sq-grid-fulltype-accent);
   font-weight: 600;
   font-size: 11px;
 }
@@ -438,7 +545,7 @@ html:not(.dark) .tabulator-tooltip {
 }
 
 .sqlight-column-name-pk {
-  color: #fbbf24;
+  color: var(--sq-grid-pk-accent);
   font-weight: 700;
 }
 
@@ -448,13 +555,13 @@ html:not(.dark) .tabulator-tooltip {
 }
 
 .sqlight-default-empty {
-  color: #52525b;
+  color: var(--sq-grid-muted);
   font-size: 11px;
   font-style: italic;
 }
 
 .sqlight-collation-value {
-  color: #a1a1aa;
+  color: var(--sq-grid-muted);
   font-size: 11px;
 }
 

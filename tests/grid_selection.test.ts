@@ -224,21 +224,31 @@ test('clearGridRanges uses the module teardown and falls back to the public API'
   clearGridRanges(null);
 });
 
-test('dark theme selection palette matches the agreed colours', () => {
-  const css = readFileSync(
-    resolve(process.cwd(), 'src/styles/tabulatorTheme.css'),
-    'utf-8'
-  );
-  const darkBlock = /html\.dark \.tabulator \{([\s\S]*?)\n\}/.exec(css)?.[1] ?? '';
+function readTheme(): string {
+  return readFileSync(resolve(process.cwd(), 'src/styles/tabulatorTheme.css'), 'utf-8');
+}
 
-  assert.match(darkBlock, /--sq-grid-range: rgba\(56, 125, 237, 0\.25\)/, 'selection area tint');
-  assert.match(darkBlock, /--sq-grid-range-strong: rgba\(56, 125, 237, 0\.45\)/, 'active cell tint');
+function themeBlock(css: string, selector: string): string {
+  return new RegExp(`${selector} \\{([\\s\\S]*?)\\n\\}`).exec(css)?.[1] ?? '';
+}
+
+test('dark theme selection palette matches the agreed colours', () => {
+  const css = readTheme();
+  const darkBlock = themeBlock(css, 'html\\.dark \\.tabulator');
+
+  assert.match(darkBlock, /--sq-grid-range-fill: rgba\(56, 125, 237, 0\.25\)/, 'selection area tint');
+  assert.match(
+    darkBlock,
+    /--sq-grid-range-active-fill: rgba\(56, 125, 237, 0\.45\)/,
+    'active cell tint'
+  );
   assert.match(darkBlock, /--sq-grid-range-border: #3b82f6/, 'selection border colour');
+  assert.match(darkBlock, /--sq-grid-range-handle: #3b82f6/, 'drag handle colour');
   assert.match(darkBlock, /--sq-grid-range-text: #ffffff/, 'selection text colour');
 
   const cellRule =
     /\.tabulator-row \.tabulator-cell\.tabulator-range-selected \{([\s\S]*?)\n\}/.exec(css)?.[1] ?? '';
-  assert.match(cellRule, /background-color: var\(--sq-grid-range\)/);
+  assert.match(cellRule, /background-color: var\(--sq-grid-range-fill\)/);
   assert.match(cellRule, /color: var\(--sq-grid-range-text\)/);
 
   const outlineRule =
@@ -248,8 +258,79 @@ test('dark theme selection palette matches the agreed colours', () => {
     /border: var\(--sq-grid-range-border-width\) solid var\(--sq-grid-range-border\)/
   );
 
-  const activeRule =
-    /\.tabulator-range-cell-active \{([\s\S]*?)\n\}/.exec(css)?.[1] ?? '';
-  assert.match(activeRule, /background-color: var\(--sq-grid-range-strong\)/);
+  const activeRule = /\.tabulator-range-cell-active \{([\s\S]*?)\n\}/.exec(css)?.[1] ?? '';
+  assert.match(activeRule, /background-color: var\(--sq-grid-range-active-fill\)/);
   assert.match(activeRule, /border: 2px solid var\(--sq-grid-range-border\)/);
+
+  const handleRule =
+    /\.tabulator-range\.tabulator-range-active::after \{([\s\S]*?)\n\}/.exec(css)?.[1] ?? '';
+  assert.match(handleRule, /width: 4px;/, 'the drag handle is a 4x4 square');
+  assert.match(handleRule, /height: 4px;/);
+  assert.match(handleRule, /border-radius: 0;/);
+  assert.match(handleRule, /background-color: var\(--sq-grid-range-handle\)/);
+});
+
+test('light theme palette keeps the header anchored and the accents readable', () => {
+  const css = readTheme();
+  const lightBlock = themeBlock(css, 'html:not\\(\\.dark\\) \\.tabulator');
+
+  // Header: a distinct surface, slate text, muted sort arrows and a stronger bottom line.
+  assert.match(lightBlock, /--sq-grid-header-bg: #f8fafc/);
+  assert.match(lightBlock, /--sq-grid-header-text: #475569/);
+  assert.match(lightBlock, /--sq-grid-sort-icon: #94a3b8/);
+  assert.match(lightBlock, /--sq-grid-sort-icon-hover: #475569/);
+  assert.match(lightBlock, /--sq-grid-border: #e2e8f0/);
+  assert.match(
+    css,
+    /\.tabulator \.tabulator-header,\s*\n\.tabulator \.tabulator-footer \{\s*\n\s*border-color: var\(--sq-grid-border\)/,
+    'the header must keep the 1px structural line'
+  );
+
+  // Rows: white surface, soft separators, a hover tint and softer-than-black text.
+  assert.match(lightBlock, /--sq-grid-bg: #ffffff/);
+  assert.match(lightBlock, /--sq-grid-fg: #1e293b/);
+  assert.match(lightBlock, /--sq-grid-line: #f1f5f9/);
+  assert.match(lightBlock, /--sq-grid-row-hover: #f1f5f9/);
+  assert.match(css, /\.tabulator-row:hover \{\s*\n\s*background-color: var\(--sq-grid-row-hover\)/);
+
+  // Selection: a barely-there wash with a bright focus border and handle.
+  assert.match(lightBlock, /--sq-grid-range-fill: rgba\(59, 130, 246, 0\.08\)/);
+  assert.match(lightBlock, /--sq-grid-range-border: #2563eb/);
+  assert.match(lightBlock, /--sq-grid-range-handle: #2563eb/);
+
+  // Accents that read as neon on white get solid, contrast-safe replacements.
+  assert.match(lightBlock, /--sq-grid-pk-accent: #b45309/);
+  assert.match(lightBlock, /--sq-grid-identity-accent: #0e7490/);
+  assert.match(lightBlock, /--sq-grid-type-accent: #0369a1/);
+  assert.match(lightBlock, /--sq-grid-fulltype-accent: #047857/);
+});
+
+test('boolean values render as theme aware pills', () => {
+  const columns = readFileSync(
+    resolve(process.cwd(), 'src/utils/tabulatorColumns.ts'),
+    'utf-8'
+  );
+  assert.match(columns, /sqlight-bool-badge \$\{value \? 'sqlight-bool-true' : 'sqlight-bool-false'\}/);
+
+  const css = readTheme();
+  const truePill = /html:not\(\.dark\) \.sqlight-bool-badge\.sqlight-bool-true \{([\s\S]*?)\n\}/.exec(css)?.[1] ?? '';
+  assert.match(truePill, /border: 1px solid #a7f3d0/);
+  assert.match(truePill, /background-color: #ecfdf5/);
+  assert.match(truePill, /color: #059669/);
+
+  const falsePill = /html:not\(\.dark\) \.sqlight-bool-badge\.sqlight-bool-false \{([\s\S]*?)\n\}/.exec(css)?.[1] ?? '';
+  assert.match(falsePill, /background-color: #f1f5f9/);
+  assert.match(falsePill, /color: #64748b/);
+
+  // The structure viewer badges get the same treatment.
+  for (const [selector, background, text] of [
+    ['\\.sqlight-badge-pk', '#fffbeb', '#b45309'],
+    ['\\.sqlight-badge-yes', '#ecfdf5', '#059669'],
+    ['\\.sqlight-badge-no', '#f1f5f9', '#64748b'],
+    ['\\.sqlight-badge-identity', '#ecfeff', '#0e7490'],
+  ] as const) {
+    const rule = new RegExp(`html:not\\(\\.dark\\) ${selector} \\{([\\s\\S]*?)\\n\\}`, 'g').exec(css)?.[1] ?? '';
+    assert.match(rule, new RegExp(`background-color: ${background}`), `${selector} background`);
+    assert.match(rule, new RegExp(`color: ${text}`), `${selector} text colour`);
+  }
 });

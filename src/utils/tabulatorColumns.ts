@@ -83,7 +83,8 @@ export interface DataCellFormatterOptions {
 /**
  * Formatter for result/data cells: applies the value-dependent classes and renders the display
  * text. A `Text` node is returned instead of an HTML string so user data is never injected as
- * markup (Tabulator writes string formatter results with `innerHTML`).
+ * markup (Tabulator writes string formatter results with `innerHTML`). Boolean values render as a
+ * pill instead of saturated text, which keeps them legible on both themes.
  */
 export function createDataCellFormatter(
   options: DataCellFormatterOptions
@@ -96,6 +97,14 @@ export function createDataCellFormatter(
       value,
       options.isModified(rowData, options.columnIndex)
     );
+
+    if (typeof value === 'boolean') {
+      return buildBadge(
+        value ? 'TRUE' : 'FALSE',
+        `sqlight-bool-badge ${value ? 'sqlight-bool-true' : 'sqlight-bool-false'}`
+      );
+    }
+
     return document.createTextNode(formatValueForDisplay(value));
   };
 }
