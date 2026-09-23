@@ -141,6 +141,8 @@ Quick filter benchmark（`applyMs` = 單次套用阻塞主執行緒的時間）�
 8. **Schema/DDL**：來源名稱 escaping、相同表名跨 schema 的消歧；CREATE TABLE 目前仍簡化 Identity seed、PK 類型／順序、預設值與其他約束，需要明確界定腳本是否完整還原。
 9. **共用邏輯及文件**：兩個大型表格元件的選取、統計、匯出及 DML 重複邏輯；README 連線池、百萬列效能、PRINT、DDL、防誤刪等宣稱需對齊驗證後的實作。
 10. **完整驗證**：重跑前端測試、typecheck/build、Rust tests/check；增加真實 SQL Server 整合測試入口並驗證空集、多集、PRINT、DML、GO、取消／逾時、交易與型別。尚未使用任何使用者 SQL Server 或憑證，mock/unit tests 不能當作實機驗證。
+11. **Tabulator 寬表格水平虛擬化評估**：AG Grid 遷移至 Tabulator 6 時沿用全欄渲染。需以 100~150 欄以上寬結果集（如 `sqlight:perf-fixture`）進行水平捲動壓力測試，量測 DOM cell 膨脹狀況與掉幀現象，評估啟用 `renderHorizontal: "virtual"` 之相容性（釘選欄、CSS 樣式與選取框）。
+12. **ResultGridItem 與核心表格元件拆分重構**：`ResultGridItem.vue` 現已膨脹至 1675 行（違反 `AGENTS.md` 400 行原則），內部混雜 Tabulator 生命週期、右鍵 ContextMenu、DML Commit Modal、DataView Modal、內嵌編輯與匯出邏輯。需拆解出專屬子組件（如 `ResultGridContextMenu.vue`、`ResultGridCommitModal.vue`）與 Composables，降低維護成本與回歸風險。
 
 ## 驗證紀錄
 
