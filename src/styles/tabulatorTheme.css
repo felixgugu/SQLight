@@ -67,6 +67,8 @@ html:not(.dark) .tabulator {
   min-height: 30px;
   border-right: 1px solid var(--sq-grid-border);
   background-color: var(--sq-grid-header-bg);
+  /* Tabulator leaves the header title at the top of the column; centre it like the cells. */
+  justify-content: center;
 }
 
 .tabulator .tabulator-header .tabulator-col .tabulator-col-content {
@@ -171,6 +173,9 @@ html:not(.dark) .tabulator {
   padding: 0 6px;
   border-right: 1px solid var(--sq-grid-border);
   color: inherit;
+  /* Rows have a fixed 28px height (the `rowHeight` grid option), so matching the line box to
+     that height is what keeps single-line cell content vertically centred. */
+  line-height: 28px;
 }
 
 .tabulator-row .tabulator-cell:last-child {
@@ -338,6 +343,8 @@ html:not(.dark) .tabulator-tooltip {
 
 .sqlight-badge {
   display: inline-block;
+  /* The cell line box is 28px tall; middle aligns the badge with it instead of the baseline. */
+  vertical-align: middle;
   padding: 0 4px;
   border-radius: 3px;
   font-family: ui-monospace, Consolas, monospace;

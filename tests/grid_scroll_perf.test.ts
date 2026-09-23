@@ -118,6 +118,33 @@ test('the frozen # column keeps an opaque background', () => {
   );
 });
 
+test('grid cells keep their content vertically centred', () => {
+  const css = readSource('src/styles/tabulatorTheme.css');
+
+  const cellRule = /\.tabulator-row \.tabulator-cell \{([^}]*)\}/.exec(css);
+  assert.ok(cellRule, 'the cell rule must exist');
+  const cellLineHeight = /line-height:\s*(\d+)px/.exec(cellRule![1]!);
+  assert.ok(
+    cellLineHeight,
+    'cells are fixed height, so a matching line-height is what centres their content'
+  );
+
+  for (const path of GRID_VIEWS) {
+    const rowHeight = /rowHeight: (\d+)/.exec(readSource(path));
+    assert.ok(rowHeight, `${path} must define a fixed row height`);
+    assert.equal(
+      cellLineHeight![1],
+      rowHeight![1],
+      `the cell line-height must stay in sync with the ${path} row height`
+    );
+  }
+
+  const headerRule = /\.tabulator-header \.tabulator-col \{([^}]*)\}/.exec(css);
+  assert.ok(headerRule, 'the header column rule must exist');
+  assert.match(headerRule![1]!, /justify-content: center/, 'header titles must be centred too');
+  assert.match(css, /\.sqlight-badge \{[^}]*vertical-align: middle/);
+});
+
 test('perf fixture is dev-gated before the IPC layer', () => {
   const serviceSource = readSource('src/services/queryService.ts');
   assert.match(
