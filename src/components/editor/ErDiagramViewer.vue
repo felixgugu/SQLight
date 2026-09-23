@@ -18,7 +18,7 @@
           class="!font-mono !text-xs !px-2 !py-1"
         >
           <template #icon>
-            <i class="pi pi-database text-brand-500 mr-1 text-xs"></i>
+            <i class="pi pi-database text-accent mr-1 text-xs"></i>
           </template>
           <span>{{ tab.rootSchema }}.{{ tab.rootTable }}</span>
         </Tag>
@@ -41,7 +41,7 @@
         <!-- Auto Layout (Dagre) Button -->
         <Button
           type="button"
-          icon="pi pi-th-large text-brand-500"
+          icon="pi pi-th-large text-accent"
           label="自動排版"
           size="small"
           severity="secondary"
@@ -132,7 +132,7 @@
         <!-- Theme Toggle Button (Dark / Light) -->
         <Button
           type="button"
-          :icon="isLightTheme ? 'pi pi-sun text-amber-500' : 'pi pi-moon text-indigo-400'"
+          :icon="isLightTheme ? 'pi pi-sun text-warn' : 'pi pi-moon text-structure'"
           :label="isLightTheme ? '淺色' : '深色'"
           size="small"
           severity="secondary"
@@ -180,7 +180,7 @@
         v-if="isDragOver"
         class="absolute inset-0 bg-brand-500/10 border-2 border-dashed border-brand-400 z-30 pointer-events-none flex items-center justify-center backdrop-blur-xs"
       >
-        <div class="bg-dark-850/90 px-4 py-2 rounded-lg border border-brand-500/50 shadow-2xl flex items-center space-x-2 text-brand-300 text-sm font-medium">
+        <div class="bg-dark-850/90 px-4 py-2 rounded-lg border border-brand-500/50 shadow-2xl flex items-center space-x-2 text-accent text-sm font-medium">
           <PlusCircle class="w-4 h-4 animate-bounce" />
           <span>放開滑鼠以將資料表加入至此 ER 圖</span>
         </div>
@@ -192,7 +192,7 @@
         class="absolute inset-0 z-40 flex flex-col items-center justify-center space-y-2 backdrop-blur-xs"
         :class="isLightTheme ? 'bg-slate-100/70' : 'bg-dark-950/70'"
       >
-        <Loader2 class="w-8 h-8 animate-spin text-brand-500" />
+        <Loader2 class="w-8 h-8 animate-spin text-accent" />
         <span class="text-xs" :class="isLightTheme ? 'text-slate-600' : 'text-dark-300'">{{ loadingMessage }}</span>
       </div>
 
@@ -200,11 +200,11 @@
       <div
         v-if="!isLoading && nodeCount === 0"
         class="absolute inset-0 flex flex-col items-center justify-center text-xs space-y-2 pointer-events-none"
-        :class="isLightTheme ? 'text-slate-400' : 'text-dark-500'"
+        :class="isLightTheme ? 'text-slate-600' : 'text-dark-500'"
       >
-        <Layers class="w-10 h-10" :class="isLightTheme ? 'text-slate-300' : 'text-dark-600'" />
+        <Layers class="w-10 h-10" :class="isLightTheme ? 'text-slate-500' : 'text-dark-600'" />
         <span>畫布尚無資料表</span>
-        <span class="text-xxs" :class="isLightTheme ? 'text-slate-400' : 'text-dark-600'">可從左側資料庫清單拖拉資料表，或由右鍵選單加入</span>
+        <span class="text-xxs" :class="isLightTheme ? 'text-slate-600' : 'text-dark-600'">可從左側資料庫清單拖拉資料表，或由右鍵選單加入</span>
       </div>
 
       <!-- Floating Stats & Linking Tip (Bottom Left) -->
@@ -213,15 +213,15 @@
         :class="isLightTheme ? 'bg-white/90 border-slate-200 text-slate-600 shadow-slate-200/50' : 'bg-dark-900/90 border-dark-750 text-dark-300'"
       >
         <span>資料表：<strong :class="isLightTheme ? 'text-slate-900' : 'text-dark-100'">{{ nodeCount }}</strong></span>
-        <span :class="isLightTheme ? 'text-slate-300' : 'text-dark-600'">•</span>
+        <span :class="isLightTheme ? 'text-slate-500' : 'text-dark-600'">•</span>
         <span>關聯線：<strong :class="isLightTheme ? 'text-slate-900' : 'text-dark-100'">{{ edgeCount }}</strong></span>
-        <span :class="isLightTheme ? 'text-slate-300' : 'text-dark-600'">•</span>
-        <span v-if="isEditMode" class="flex items-center space-x-1" :class="isLightTheme ? 'text-amber-700 font-medium' : 'text-amber-300'">
-          <Edit3 class="w-3 h-3 text-amber-500" />
+        <span :class="isLightTheme ? 'text-slate-500' : 'text-dark-600'">•</span>
+        <span v-if="isEditMode" class="flex items-center space-x-1" :class="isLightTheme ? 'text-warn font-medium' : 'text-warn'">
+          <Edit3 class="w-3 h-3 text-warn" />
           <span>編輯模式：可勾選欄位隱藏/顯示，拖曳圓點自由連線，單擊徽章切換屬性</span>
         </span>
         <span v-else class="flex items-center space-x-1" :class="isLightTheme ? 'text-slate-500' : 'text-dark-400'">
-          <Eye class="w-3 h-3" :class="isLightTheme ? 'text-slate-400' : 'text-dark-400'" />
+          <Eye class="w-3 h-3" :class="isLightTheme ? 'text-slate-600' : 'text-dark-400'" />
           <span>檢視模式：僅可平移與移動資料表 (未勾選欄位已隱藏)。點擊上方「編輯模式」可開始連線與設定欄位</span>
         </span>
       </div>
@@ -236,17 +236,17 @@
       >
         <!-- Header Info -->
         <div class="px-3 py-1.5 border-b text-[11px]" :class="isLightTheme ? 'border-slate-100' : 'border-dark-750'">
-          <div class="flex items-center space-x-1.5 font-semibold mb-1 font-sans" :class="isLightTheme ? 'text-brand-600' : 'text-brand-400'">
+          <div class="flex items-center space-x-1.5 font-semibold mb-1 font-sans" :class="isLightTheme ? 'text-accent' : 'text-accent'">
             <Link2 class="w-3.5 h-3.5" />
             <span>關聯設定 (Relation Properties)</span>
           </div>
           <div class="truncate text-[10px] space-y-0.5" :class="isLightTheme ? 'text-slate-500' : 'text-dark-400'">
             <div class="flex items-center space-x-1">
-              <span class="w-10 flex-shrink-0 font-sans" :class="isLightTheme ? 'text-slate-400' : 'text-dark-500'">來源：</span>
+              <span class="w-10 flex-shrink-0 font-sans" :class="isLightTheme ? 'text-slate-600' : 'text-dark-500'">來源：</span>
               <span class="font-medium truncate" :class="isLightTheme ? 'text-slate-800' : 'text-dark-100'">{{ edgeMenu.sourceTable }}.{{ edgeMenu.sourceColumn }}</span>
             </div>
             <div class="flex items-center space-x-1">
-              <span class="w-10 flex-shrink-0 font-sans" :class="isLightTheme ? 'text-slate-400' : 'text-dark-500'">目標：</span>
+              <span class="w-10 flex-shrink-0 font-sans" :class="isLightTheme ? 'text-slate-600' : 'text-dark-500'">目標：</span>
               <span class="font-medium truncate" :class="isLightTheme ? 'text-slate-800' : 'text-dark-100'">{{ edgeMenu.targetTable }}.{{ edgeMenu.targetColumn }}</span>
             </div>
           </div>
@@ -256,7 +256,7 @@
         <div class="px-3 py-2 border-b" :class="isLightTheme ? 'border-slate-100' : 'border-dark-750'">
           <div class="text-[10px] mb-1.5 font-sans flex items-center justify-between" :class="isLightTheme ? 'text-slate-500' : 'text-dark-400'">
             <span>關聯屬性 (Cardinality)</span>
-            <span class="font-bold font-mono" :class="isLightTheme ? 'text-brand-600' : 'text-brand-300'">{{ edgeMenu.cardinality }}</span>
+            <span class="font-bold font-mono" :class="isLightTheme ? 'text-accent' : 'text-accent'">{{ edgeMenu.cardinality }}</span>
           </div>
           <div class="grid grid-cols-2 gap-1.5 text-xxs">
             <button
@@ -265,12 +265,12 @@
               :class="[
                 'px-2 py-1 rounded text-center border transition-colors flex items-center justify-between cursor-pointer',
                 edgeMenu.cardinality === '1:N'
-                  ? (isLightTheme ? 'bg-brand-50 text-brand-700 border-brand-300 font-semibold ring-1 ring-brand-200' : 'bg-brand-500/25 text-brand-200 border-brand-500/60 font-semibold ring-1 ring-brand-500/40')
+                  ? (isLightTheme ? 'bg-brand-50 text-accent border-brand-300 font-semibold ring-1 ring-brand-200' : 'bg-brand-500/25 text-accent border-brand-500/60 font-semibold ring-1 ring-brand-500/40')
                   : (isLightTheme ? 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100' : 'bg-dark-800 text-dark-300 border-dark-700 hover:bg-dark-750')
               ]"
             >
               <span>1 對多</span>
-              <span class="font-mono" :class="isLightTheme ? 'text-slate-400' : 'text-dark-400'">1:N</span>
+              <span class="font-mono" :class="isLightTheme ? 'text-slate-600' : 'text-dark-400'">1:N</span>
             </button>
             <button
               type="button"
@@ -278,12 +278,12 @@
               :class="[
                 'px-2 py-1 rounded text-center border transition-colors flex items-center justify-between cursor-pointer',
                 edgeMenu.cardinality === '1:1'
-                  ? (isLightTheme ? 'bg-brand-50 text-brand-700 border-brand-300 font-semibold ring-1 ring-brand-200' : 'bg-brand-500/25 text-brand-200 border-brand-500/60 font-semibold ring-1 ring-brand-500/40')
+                  ? (isLightTheme ? 'bg-brand-50 text-accent border-brand-300 font-semibold ring-1 ring-brand-200' : 'bg-brand-500/25 text-accent border-brand-500/60 font-semibold ring-1 ring-brand-500/40')
                   : (isLightTheme ? 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100' : 'bg-dark-800 text-dark-300 border-dark-700 hover:bg-dark-750')
             ]"
             >
               <span>1 對 1</span>
-              <span class="font-mono" :class="isLightTheme ? 'text-slate-400' : 'text-dark-400'">1:1</span>
+              <span class="font-mono" :class="isLightTheme ? 'text-slate-600' : 'text-dark-400'">1:1</span>
             </button>
             <button
               type="button"
@@ -291,12 +291,12 @@
               :class="[
                 'px-2 py-1 rounded text-center border transition-colors flex items-center justify-between cursor-pointer',
                 edgeMenu.cardinality === 'N:1'
-                  ? (isLightTheme ? 'bg-brand-50 text-brand-700 border-brand-300 font-semibold ring-1 ring-brand-200' : 'bg-brand-500/25 text-brand-200 border-brand-500/60 font-semibold ring-1 ring-brand-500/40')
+                  ? (isLightTheme ? 'bg-brand-50 text-accent border-brand-300 font-semibold ring-1 ring-brand-200' : 'bg-brand-500/25 text-accent border-brand-500/60 font-semibold ring-1 ring-brand-500/40')
                   : (isLightTheme ? 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100' : 'bg-dark-800 text-dark-300 border-dark-700 hover:bg-dark-750')
             ]"
             >
               <span>多對 1</span>
-              <span class="font-mono" :class="isLightTheme ? 'text-slate-400' : 'text-dark-400'">N:1</span>
+              <span class="font-mono" :class="isLightTheme ? 'text-slate-600' : 'text-dark-400'">N:1</span>
             </button>
             <button
               type="button"
@@ -304,12 +304,12 @@
               :class="[
                 'px-2 py-1 rounded text-center border transition-colors flex items-center justify-between cursor-pointer',
                 edgeMenu.cardinality === 'N:M'
-                  ? (isLightTheme ? 'bg-brand-50 text-brand-700 border-brand-300 font-semibold ring-1 ring-brand-200' : 'bg-brand-500/25 text-brand-200 border-brand-500/60 font-semibold ring-1 ring-brand-500/40')
+                  ? (isLightTheme ? 'bg-brand-50 text-accent border-brand-300 font-semibold ring-1 ring-brand-200' : 'bg-brand-500/25 text-accent border-brand-500/60 font-semibold ring-1 ring-brand-500/40')
                   : (isLightTheme ? 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100' : 'bg-dark-800 text-dark-300 border-dark-700 hover:bg-dark-750')
             ]"
             >
               <span>多對多</span>
-              <span class="font-mono" :class="isLightTheme ? 'text-slate-400' : 'text-dark-400'">N:M</span>
+              <span class="font-mono" :class="isLightTheme ? 'text-slate-600' : 'text-dark-400'">N:M</span>
             </button>
           </div>
         </div>
@@ -320,9 +320,9 @@
             type="button"
             @click="reverseMenuEdge"
             class="w-full text-left px-3 py-1.5 flex items-center space-x-2 transition-colors cursor-pointer"
-            :class="isLightTheme ? 'hover:bg-slate-100 text-sky-600' : 'hover:bg-dark-750 text-sky-300 hover:text-white'"
+            :class="isLightTheme ? 'hover:bg-slate-100 text-info' : 'hover:bg-dark-750 text-info hover:text-white'"
           >
-            <ArrowRightLeft class="w-3.5 h-3.5" :class="isLightTheme ? 'text-sky-600' : 'text-sky-400'" />
+            <ArrowRightLeft class="w-3.5 h-3.5" :class="isLightTheme ? 'text-info' : 'text-info'" />
             <span>反轉連線方向</span>
           </button>
 
@@ -331,16 +331,16 @@
             type="button"
             @click="generateForeignKeySql"
             class="w-full text-left px-3 py-1.5 flex items-center space-x-2 transition-colors cursor-pointer"
-            :class="isLightTheme ? 'hover:bg-slate-100 text-emerald-700' : 'hover:bg-dark-750 text-emerald-300 hover:text-white'"
+            :class="isLightTheme ? 'hover:bg-slate-100 text-ok' : 'hover:bg-dark-750 text-ok hover:text-white'"
           >
-            <FileCode class="w-3.5 h-3.5" :class="isLightTheme ? 'text-emerald-600' : 'text-emerald-400'" />
+            <FileCode class="w-3.5 h-3.5" :class="isLightTheme ? 'text-ok' : 'text-ok'" />
             <span>複製外鍵 SQL 腳本 (ALTER TABLE)</span>
           </button>
 
           <button
             type="button"
             @click="deleteMenuEdge"
-            class="w-full text-left px-3 py-1.5 flex items-center space-x-2 transition-colors cursor-pointer text-rose-500 hover:text-rose-600"
+            class="w-full text-left px-3 py-1.5 flex items-center space-x-2 transition-colors cursor-pointer text-danger hover:text-danger"
             :class="isLightTheme ? 'hover:bg-slate-100' : 'hover:bg-dark-750'"
           >
             <Trash2 class="w-3.5 h-3.5" />
@@ -430,9 +430,9 @@ function registerErTableNode() {
             circle: {
               r: 3.5,
               magnet: true,
-              stroke: '#818cf8',
+              stroke: isLightTheme.value ? '#4f46e5' : '#818cf8',
               strokeWidth: 1.5,
-              fill: '#0f111a',
+              fill: isLightTheme.value ? '#f8fafc' : '#0f111a',
               cursor: 'crosshair',
             },
           },
@@ -443,9 +443,9 @@ function registerErTableNode() {
             circle: {
               r: 3.5,
               magnet: true,
-              stroke: '#818cf8',
+              stroke: isLightTheme.value ? '#4f46e5' : '#818cf8',
               strokeWidth: 1.5,
-              fill: '#0f111a',
+              fill: isLightTheme.value ? '#f8fafc' : '#0f111a',
               cursor: 'crosshair',
             },
           },
@@ -713,7 +713,7 @@ function initGraph() {
   graph.on('edge:mouseenter', (args: { edge: any }) => {
     const edge = args.edge;
     if (edge) {
-      edge.attr('line/stroke', '#38bdf8');
+      edge.attr('line/stroke', isLightTheme.value ? '#0369a1' : '#38bdf8');
       edge.attr('line/strokeWidth', 2.5);
       edge.toFront();
 
@@ -724,13 +724,19 @@ function initGraph() {
           {
             name: 'source-arrowhead',
             args: {
-              attrs: { fill: '#818cf8', stroke: '#0f172a' },
+              attrs: {
+                fill: isLightTheme.value ? '#4f46e5' : '#818cf8',
+                stroke: isLightTheme.value ? '#ffffff' : '#0f172a',
+              },
             },
           },
           {
             name: 'target-arrowhead',
             args: {
-              attrs: { fill: '#818cf8', stroke: '#0f172a' },
+              attrs: {
+                fill: isLightTheme.value ? '#4f46e5' : '#818cf8',
+                stroke: isLightTheme.value ? '#ffffff' : '#0f172a',
+              },
             },
           }
         );
@@ -745,7 +751,7 @@ function initGraph() {
   graph.on('edge:mouseleave', (args: { edge: any }) => {
     const edge = args.edge;
     if (edge) {
-      edge.attr('line/stroke', '#818cf8');
+      edge.attr('line/stroke', isLightTheme.value ? '#4f46e5' : '#818cf8');
       edge.attr('line/strokeWidth', 1.5);
       edge.removeTools();
     }
@@ -1171,9 +1177,13 @@ function updateNodeLayoutAndPorts(node: any, isEdit: boolean) {
         circle: {
           r: isEdit ? 3.5 : 3,
           magnet: isMagnetActive,
-          stroke: isChecked ? '#818cf8' : '#475569',
+          stroke: isChecked
+            ? (isLightTheme.value ? '#4f46e5' : '#818cf8')
+            : (isLightTheme.value ? '#64748b' : '#475569'),
           strokeWidth: isChecked ? 1.5 : 1,
-          fill: isChecked ? '#0f111a' : '#1e293b',
+          fill: isChecked
+            ? (isLightTheme.value ? '#f8fafc' : '#0f111a')
+            : (isLightTheme.value ? '#e2e8f0' : '#1e293b'),
           opacity: isPortDisplayed ? (isEdit ? (isChecked ? 1 : 0.25) : 0) : 0,
           display: isPortDisplayed ? 'block' : 'none',
           cursor: isMagnetActive ? 'crosshair' : 'default',
@@ -1190,9 +1200,13 @@ function updateNodeLayoutAndPorts(node: any, isEdit: boolean) {
         circle: {
           r: isEdit ? 3.5 : 3,
           magnet: isMagnetActive,
-          stroke: isChecked ? '#818cf8' : '#475569',
+          stroke: isChecked
+            ? (isLightTheme.value ? '#4f46e5' : '#818cf8')
+            : (isLightTheme.value ? '#64748b' : '#475569'),
           strokeWidth: isChecked ? 1.5 : 1,
-          fill: isChecked ? '#0f111a' : '#1e293b',
+          fill: isChecked
+            ? (isLightTheme.value ? '#f8fafc' : '#0f111a')
+            : (isLightTheme.value ? '#e2e8f0' : '#1e293b'),
           opacity: isPortDisplayed ? (isEdit ? (isChecked ? 1 : 0.25) : 0) : 0,
           display: isPortDisplayed ? 'block' : 'none',
           cursor: isMagnetActive ? 'crosshair' : 'default',

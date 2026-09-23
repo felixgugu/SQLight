@@ -17,11 +17,11 @@
           <span class="text-dark-500">/</span>
           <span class="text-dark-200">{{ store.target?.database }}</span>
           <span class="text-dark-500">/</span>
-          <span class="text-emerald-300">
+          <span class="text-ok">
             {{ store.target?.schema }}.{{ store.target?.table }}
           </span>
         </div>
-        <div v-if="store.metadataError" class="mt-2 text-xxs text-rose-300 bg-rose-950/40 border border-rose-800/60 rounded px-2 py-1.5">
+        <div v-if="store.metadataError" class="mt-2 text-xxs text-danger bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800/60 rounded px-2 py-1.5">
           {{ store.metadataError }}
         </div>
       </section>
@@ -36,7 +36,7 @@
             class="px-3 py-1.5 rounded-md border text-xs transition-colors"
             :class="
               store.sourceMode === 'file'
-                ? 'border-emerald-500/60 bg-emerald-500/15 text-emerald-200'
+                ? 'border-emerald-500/60 bg-emerald-500/15 text-ok'
                 : 'border-dark-700 bg-dark-800 text-dark-300 hover:text-dark-100'
             "
             @click="store.setSourceMode('file')"
@@ -48,7 +48,7 @@
             class="px-3 py-1.5 rounded-md border text-xs transition-colors"
             :class="
               store.sourceMode === 'paste'
-                ? 'border-emerald-500/60 bg-emerald-500/15 text-emerald-200'
+                ? 'border-emerald-500/60 bg-emerald-500/15 text-ok'
                 : 'border-dark-700 bg-dark-800 text-dark-300 hover:text-dark-100'
             "
             @click="store.setSourceMode('paste')"
@@ -92,7 +92,7 @@
           目前大小：{{ formatBytes(sourceBytes) }} / 20 MB
         </div>
 
-        <div v-if="localError" class="text-xxs text-rose-300 bg-rose-950/40 border border-rose-800/60 rounded px-2 py-1.5">
+        <div v-if="localError" class="text-xxs text-danger bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800/60 rounded px-2 py-1.5">
           {{ localError }}
         </div>
       </section>
@@ -139,7 +139,7 @@
 
         <div
           v-if="store.identityInsertWarning"
-          class="text-xxs text-amber-800 dark:text-amber-300 bg-amber-500/15 border border-amber-500/30 rounded px-2 py-1.5"
+          class="text-xxs text-warn bg-amber-500/15 border border-amber-500/30 rounded px-2 py-1.5"
         >
           {{ store.identityInsertWarning }}
         </div>
@@ -173,13 +173,13 @@
                 <td class="px-3 py-1.5 text-dark-500">{{ idx + 1 }}</td>
                 <td class="px-3 py-1.5 text-dark-100">{{ column.name }}</td>
                 <td class="px-3 py-1.5 text-dark-300">{{ column.fullType }}</td>
-                <td class="px-3 py-1.5" :class="column.nullable ? 'text-dark-400' : 'text-amber-300'">
+                <td class="px-3 py-1.5" :class="column.nullable ? 'text-dark-400' : 'text-warn'">
                   {{ column.nullable ? '可為 NULL' : 'NOT NULL' }}
                 </td>
                 <td class="px-3 py-1.5 text-dark-400 font-sans">
-                  <span v-if="column.isPrimaryKey" class="text-sky-300">PK</span>
+                  <span v-if="column.isPrimaryKey" class="text-info">PK</span>
                   <span v-if="column.isPrimaryKey && column.isIdentity"> · </span>
-                  <span v-if="column.isIdentity" class="text-amber-300">
+                  <span v-if="column.isIdentity" class="text-warn">
                     Identity（未勾選允許手動指定時由資料庫回報錯誤）
                   </span>
                   <span v-if="!column.isPrimaryKey && !column.isIdentity">—</span>

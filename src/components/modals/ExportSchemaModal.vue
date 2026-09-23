@@ -9,7 +9,7 @@
   >
     <template #header>
       <div class="flex items-center space-x-2">
-        <div class="w-7 h-7 rounded-lg bg-brand-500/15 flex items-center justify-center text-brand-400">
+        <div class="w-7 h-7 rounded-lg bg-brand-500/15 flex items-center justify-center text-accent">
           <i class="pi pi-file-export text-sm" />
         </div>
         <div>
@@ -32,7 +32,7 @@
         <span class="text-dark-600">/</span>
         <div class="flex items-center space-x-1.5 text-dark-300">
           <span class="text-dark-500">資料庫:</span>
-          <span class="font-semibold text-brand-400">{{ database }}</span>
+          <span class="font-semibold text-accent">{{ database }}</span>
         </div>
       </div>
 
@@ -40,7 +40,7 @@
       <template v-if="step === 'confirm'">
         <div class="p-3 bg-dark-850/80 rounded-lg border border-dark-750 space-y-2.5">
           <p class="text-dark-200 leading-relaxed text-xs">
-            此功能將擷取資料庫「<strong class="text-brand-300 font-semibold">{{ database }}</strong>」之完整結構規格，以供輸出 CSV 進行版本控管或與其他環境資料庫進行結構比對。
+            此功能將擷取資料庫「<strong class="text-accent font-semibold">{{ database }}</strong>」之完整結構規格，以供輸出 CSV 進行版本控管或與其他環境資料庫進行結構比對。
           </p>
           <div class="text-xxs text-dark-400">
             即將執行下列 3 項標準系統目錄探勘查詢：
@@ -55,7 +55,7 @@
             >
               <div class="flex items-center justify-between">
                 <div class="flex items-center space-x-2">
-                  <span class="w-4 h-4 rounded-full bg-brand-500/20 text-brand-300 font-mono text-[10px] flex items-center justify-center font-bold">
+                  <span class="w-4 h-4 rounded-full bg-brand-500/20 text-accent font-mono text-[10px] flex items-center justify-center font-bold">
                     {{ idx + 1 }}
                   </span>
                   <span class="font-medium text-dark-200 text-xs">{{ item.title }}</span>
@@ -79,7 +79,7 @@
             class="w-full flex items-center justify-between px-3 py-2 text-xxs text-dark-400 hover:text-dark-200 hover:bg-dark-800/60 transition-colors"
           >
             <span class="flex items-center space-x-1.5">
-              <i class="pi pi-code text-xs text-brand-400" />
+              <i class="pi pi-code text-xs text-accent" />
               <span>檢視即將執行的 SQL 語句 (3 段查詢)</span>
             </span>
             <i :class="['pi text-xxs transition-transform duration-200', showSqlPreview ? 'pi-chevron-down' : 'pi-chevron-right']" />
@@ -98,7 +98,7 @@
       <template v-else-if="step === 'running'">
         <div class="space-y-3">
           <div class="flex items-center space-x-2 text-dark-300 text-xs py-1">
-            <i class="pi pi-spin pi-spinner text-brand-400" />
+            <i class="pi pi-spin pi-spinner text-accent" />
             <span>正在自資料庫查詢結構規格，請稍候...</span>
           </div>
 
@@ -124,15 +124,15 @@
                   <div class="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0">
                     <i
                       v-if="item.status === 'running'"
-                      class="pi pi-spin pi-spinner text-brand-400 text-xs"
+                      class="pi pi-spin pi-spinner text-accent text-xs"
                     />
                     <i
                       v-else-if="item.status === 'success'"
-                      class="pi pi-check text-emerald-400 text-xs font-bold"
+                      class="pi pi-check text-ok text-xs font-bold"
                     />
                     <i
                       v-else-if="item.status === 'error'"
-                      class="pi pi-times text-rose-400 text-xs font-bold"
+                      class="pi pi-times text-danger text-xs font-bold"
                     />
                     <span
                       v-else
@@ -147,7 +147,7 @@
                       <span>{{ item.title }}</span>
                       <span
                         v-if="item.status === 'running'"
-                        class="text-[10px] text-brand-400 animate-pulse"
+                        class="text-[10px] text-accent animate-pulse"
                       >
                         查詢中...
                       </span>
@@ -160,7 +160,7 @@
 
                 <!-- Right badge / summary -->
                 <div class="text-right">
-                  <div v-if="item.status === 'success'" class="text-emerald-400 font-semibold font-mono text-xs">
+                  <div v-if="item.status === 'success'" class="text-ok font-semibold font-mono text-xs">
                     {{ item.result?.rowCount ?? 0 }} 列
                   </div>
                   <div v-if="item.durationMs" class="text-xxs text-dark-500 font-mono">
@@ -172,7 +172,7 @@
               <!-- Error Message if failed -->
               <div
                 v-if="item.status === 'error'"
-                class="mt-2 text-xxs text-rose-400 bg-rose-950/40 p-2 rounded border border-rose-800/50 leading-normal"
+                class="mt-2 text-xxs text-danger bg-rose-50 dark:bg-rose-950/40 p-2 rounded border border-rose-200 dark:border-rose-800/50 leading-normal"
               >
                 {{ item.errorMessage || '查詢執行失敗' }}
               </div>
@@ -185,10 +185,10 @@
       <template v-else-if="step === 'save_prompt'">
         <div class="space-y-3.5">
           <div class="p-3 bg-emerald-500/10 border border-emerald-500/30 rounded-lg flex items-center space-x-2.5">
-            <i class="pi pi-check-circle text-emerald-400 text-lg flex-shrink-0" />
-            <div class="text-xs text-emerald-200">
+            <i class="pi pi-check-circle text-ok text-lg flex-shrink-0" />
+            <div class="text-xs text-ok">
               <span class="font-semibold">3 項結構查詢已成功擷取！</span>
-              <span class="text-xxs text-emerald-300/80 block mt-0.5">
+              <span class="text-xxs text-ok block mt-0.5">
                 請選擇儲存位置與存檔方式以匯出 CSV。
               </span>
             </div>
@@ -202,7 +202,7 @@
               class="p-2.5 bg-dark-900 rounded-lg border border-dark-750 flex items-center justify-between"
             >
               <div class="flex items-center space-x-2.5">
-                <span class="w-5 h-5 rounded bg-brand-500/15 text-brand-400 font-mono text-xxs flex items-center justify-center font-bold">
+                <span class="w-5 h-5 rounded bg-brand-500/15 text-accent font-mono text-xxs flex items-center justify-center font-bold">
                   {{ idx + 1 }}
                 </span>
                 <div>
@@ -240,7 +240,7 @@
           <!-- Save Options Box -->
           <div class="p-3 bg-dark-850 rounded-lg border border-dark-750 space-y-2.5">
             <div class="text-xs font-semibold text-dark-200 flex items-center space-x-1.5">
-              <i class="pi pi-folder-open text-brand-400" />
+              <i class="pi pi-folder-open text-accent" />
               <span>請選擇存檔方式：</span>
             </div>
 
@@ -252,8 +252,8 @@
                 :disabled="isSaving"
                 class="flex flex-col items-start p-3 rounded-lg border border-brand-500/40 bg-brand-500/10 hover:bg-brand-500/20 text-left transition-colors group cursor-pointer"
               >
-                <div class="flex items-center space-x-2 text-brand-300 font-semibold text-xs mb-1">
-                  <i class="pi pi-folder text-sm text-brand-400 group-hover:scale-110 transition-transform" />
+                <div class="flex items-center space-x-2 text-accent font-semibold text-xs mb-1">
+                  <i class="pi pi-folder text-sm text-accent group-hover:scale-110 transition-transform" />
                   <span>選擇資料夾儲存 (推薦)</span>
                 </div>
                 <div class="text-xxs text-dark-300 leading-normal">
@@ -289,7 +289,7 @@
       <!-- Step 4: Completed -->
       <template v-else-if="step === 'completed'">
         <div class="space-y-4 text-center py-2">
-          <div class="w-12 h-12 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center mx-auto ring-4 ring-emerald-500/10">
+          <div class="w-12 h-12 rounded-full bg-emerald-500/20 text-ok flex items-center justify-center mx-auto ring-4 ring-emerald-500/10">
             <i class="pi pi-check text-2xl font-bold" />
           </div>
 
@@ -308,7 +308,7 @@
               class="flex items-center justify-between text-xs font-mono py-1 px-1.5 rounded hover:bg-dark-800/60"
             >
               <div class="flex items-center space-x-2 text-dark-200 truncate">
-                <i class="pi pi-file-excel text-emerald-400 text-xs flex-shrink-0" />
+                <i class="pi pi-file-excel text-ok text-xs flex-shrink-0" />
                 <span class="truncate">{{ file.fileName }}</span>
               </div>
               <span class="text-xxs text-dark-400 flex-shrink-0 ml-2">
@@ -323,8 +323,8 @@
 
           <!-- Comparison Tip Box -->
           <div class="text-left bg-dark-850 p-2.5 rounded border border-dark-750 text-xxs text-dark-300 space-y-1 leading-relaxed">
-            <div class="font-semibold text-brand-300 flex items-center space-x-1">
-              <i class="pi pi-lightbulb text-amber-400" />
+            <div class="font-semibold text-accent flex items-center space-x-1">
+              <i class="pi pi-lightbulb text-warn" />
               <span>結構比對技巧：</span>
             </div>
             <div>

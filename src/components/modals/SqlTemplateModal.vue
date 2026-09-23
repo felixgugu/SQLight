@@ -7,13 +7,13 @@
     :closable="false"
     :dismissableMask="true"
     :showHeader="false"
-    class="w-full max-w-5xl h-[84vh] !bg-dark-850 !border !border-dark-650 !rounded-xl shadow-2xl overflow-hidden ring-1 ring-white/10"
+    class="w-full max-w-5xl h-[84vh] !bg-dark-850 !border !border-dark-700 !rounded-xl shadow-2xl overflow-hidden ring-1 ring-black/5 dark:ring-white/10"
     contentClass="!p-0 !bg-dark-850 h-full flex flex-col"
   >
     <!-- Top Header & Search Area -->
     <div class="p-3.5 border-b border-dark-700 bg-dark-900/80 flex flex-col space-y-2.5 flex-shrink-0">
       <div class="flex items-center space-x-2.5">
-        <i class="pi pi-book text-amber-400 text-base flex-shrink-0"></i>
+        <i class="pi pi-book text-warn text-base flex-shrink-0"></i>
         <span class="text-sm font-semibold text-dark-100 flex items-center space-x-2">
           <span>常用 SQL 範本庫</span>
           <Tag :value="templateStore.allTemplates.length" severity="secondary" class="!font-mono !text-xxs !px-1.5 !py-0.2" />
@@ -23,7 +23,7 @@
 
         <!-- Search Input with IconField -->
         <IconField class="flex-1">
-          <InputIcon class="pi pi-search text-brand-400" />
+          <InputIcon class="pi pi-search text-accent" />
           <InputText
             ref="searchInputRef"
             v-model="templateStore.searchQuery"
@@ -58,7 +58,7 @@
           severity="secondary"
           @click="closeModal"
           v-tooltip.top="'關閉 (Esc)'"
-          class="!w-7 !h-7 !p-0 !rounded-md !border-0 !shadow-none hover:!bg-rose-500/20 hover:!text-rose-400"
+          class="!w-7 !h-7 !p-0 !rounded-md !border-0 !shadow-none hover:!bg-rose-500/20 hover:!text-danger"
         />
       </div>
 
@@ -160,7 +160,7 @@
             </div>
 
             <!-- Template Title -->
-            <div class="font-medium text-xs text-dark-100 group-hover:text-brand-300 transition-colors line-clamp-1 mb-1">
+            <div class="font-medium text-xs text-dark-100 group-hover:text-accent transition-colors line-clamp-1 mb-1">
               {{ tpl.title }}
             </div>
 
@@ -301,7 +301,7 @@
           <div class="flex-1 overflow-y-auto p-4 space-y-3.5">
             <!-- Usage Notes / Description Card -->
             <div class="p-3 bg-dark-800/80 border border-dark-700/80 rounded-lg text-dark-300 text-xs leading-relaxed space-y-1.5">
-              <div class="flex items-center space-x-1.5 font-semibold text-amber-300 text-xxs uppercase tracking-wider">
+              <div class="flex items-center space-x-1.5 font-semibold text-warn text-xxs uppercase tracking-wider">
                 <i class="pi pi-info-circle text-xs"></i>
                 <span>說明與最佳實踐 (Usage Notes & Guidelines)</span>
               </div>
@@ -352,7 +352,7 @@
       <!-- Left: Co-located File Information -->
       <div class="flex items-center space-x-2 min-w-0 flex-1 mr-4">
         <span class="flex items-center space-x-1 text-dark-400 flex-shrink-0">
-          <i class="pi pi-file text-brand-400 text-xs"></i>
+          <i class="pi pi-file text-accent text-xs"></i>
           <span>自訂範本文件:</span>
         </span>
         <span
@@ -389,12 +389,12 @@
     v-model:visible="isCustomFormOpen"
     modal
     :header="editingTemplateId ? '編輯自訂 SQL 範本' : '新增自訂 SQL 範本'"
-    class="w-full max-w-xl !bg-dark-850 !border-dark-650"
+    class="w-full max-w-xl !bg-dark-850 !border-dark-700"
   >
     <form @submit.prevent="saveCustomTemplateForm" class="p-2 space-y-3 text-xs font-sans">
       <!-- Title Field -->
       <div class="space-y-1">
-        <label class="block text-dark-300 font-medium">範本標題 <span class="text-rose-400">*</span></label>
+        <label class="block text-dark-300 font-medium">範本標題 <span class="text-danger">*</span></label>
         <InputText
           v-model="formState.title"
           required
@@ -445,7 +445,7 @@
 
       <!-- SQL Code Field -->
       <div class="space-y-1">
-        <label class="block text-dark-300 font-medium">SQL 語法內容 <span class="text-rose-400">*</span></label>
+        <label class="block text-dark-300 font-medium">SQL 語法內容 <span class="text-danger">*</span></label>
         <Textarea
           v-model="formState.code"
           required

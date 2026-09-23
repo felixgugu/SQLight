@@ -16,8 +16,8 @@
       :class="isLightTheme ? 'bg-slate-100 border-slate-300' : 'bg-dark-800 border-dark-700/80'"
     >
       <div class="flex items-center space-x-1.5 min-w-0 flex-1">
-        <Table2 class="w-3.5 h-3.5 flex-shrink-0" :class="isLightTheme ? 'text-emerald-600' : 'text-emerald-400'" />
-        <span class="text-xxs font-mono truncate flex-shrink-0" :class="isLightTheme ? 'text-slate-400' : 'text-dark-400'">{{ nodeData.schema }}.</span>
+        <Table2 class="w-3.5 h-3.5 flex-shrink-0" :class="isLightTheme ? 'text-ok' : 'text-ok'" />
+        <span class="text-xxs font-mono truncate flex-shrink-0" :class="isLightTheme ? 'text-slate-600' : 'text-dark-400'">{{ nodeData.schema }}.</span>
         <span class="text-xs font-semibold truncate flex-1 font-mono" :class="isLightTheme ? 'text-slate-800' : 'text-dark-100'" :title="`${nodeData.schema}.${nodeData.table}`">
           {{ nodeData.table }}
         </span>
@@ -29,7 +29,7 @@
           type="button"
           @click.stop="removeTable"
           class="p-1 rounded transition-colors"
-          :class="isLightTheme ? 'text-slate-400 hover:text-rose-600 hover:bg-slate-200' : 'text-dark-400 hover:text-rose-400 hover:bg-dark-750'"
+          :class="isLightTheme ? 'text-slate-600 hover:text-danger hover:bg-slate-200' : 'text-dark-400 hover:text-danger hover:bg-dark-750'"
           title="從畫布移除此表"
         >
           <X class="w-3 h-3" />
@@ -66,7 +66,7 @@
             :disabled="isColumnConnected(col.name)"
             @click.stop="toggleColumn(col.name)"
             class="w-3 h-3 rounded cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed flex-shrink-0"
-            :class="isLightTheme ? 'bg-white border-slate-300 text-amber-600' : 'bg-dark-900 border-dark-600 text-amber-500'"
+            :class="isLightTheme ? 'bg-white border-slate-300 text-warn' : 'bg-dark-900 border-dark-600 text-warn'"
             :title="
               isColumnConnected(col.name)
                 ? '此欄位已有外鍵或關聯連線，不可隱藏'
@@ -77,8 +77,8 @@
           />
 
           <!-- PK / FK / Default Icon -->
-          <Key v-if="col.isPrimaryKey" class="w-2.5 h-2.5 flex-shrink-0" :class="isLightTheme ? 'text-amber-600' : 'text-amber-400'" />
-          <Link2 v-else-if="col.isForeignKey" class="w-2.5 h-2.5 flex-shrink-0" :class="isLightTheme ? 'text-sky-600' : 'text-sky-400'" />
+          <Key v-if="col.isPrimaryKey" class="w-2.5 h-2.5 flex-shrink-0" :class="isLightTheme ? 'text-warn' : 'text-warn'" />
+          <Link2 v-else-if="col.isForeignKey" class="w-2.5 h-2.5 flex-shrink-0" :class="isLightTheme ? 'text-info' : 'text-info'" />
           <div v-else class="w-2.5 h-2.5 flex items-center justify-center flex-shrink-0">
             <span class="w-1 h-1 rounded-full" :class="isLightTheme ? 'bg-slate-400' : 'bg-dark-500'"></span>
           </div>
@@ -87,11 +87,11 @@
             class="truncate"
             :class="[
               nodeData.isEditMode && !isColumnChecked(col.name)
-                ? (isLightTheme ? 'text-slate-400 line-through' : 'text-[#cccccc]')
+                ? (isLightTheme ? 'text-slate-600 line-through' : 'text-[#cccccc]')
                 : col.isPrimaryKey
-                ? (isLightTheme ? 'text-amber-700 font-semibold' : 'text-amber-200 font-semibold')
+                ? (isLightTheme ? 'text-warn font-semibold' : 'text-warn font-semibold')
                 : col.isForeignKey
-                ? (isLightTheme ? 'text-sky-700' : 'text-sky-200')
+                ? (isLightTheme ? 'text-info' : 'text-info')
                 : (isLightTheme ? 'text-slate-700' : 'text-dark-200')
             ]"
           >
@@ -103,8 +103,8 @@
         <div
           class="flex items-center space-x-1 flex-shrink-0 text-[10px]"
           :class="nodeData.isEditMode && !isColumnChecked(col.name)
-            ? (isLightTheme ? 'text-slate-400/70' : 'text-[#cccccc]/70')
-            : (isLightTheme ? 'text-slate-400' : 'text-dark-400')"
+            ? (isLightTheme ? 'text-slate-600/70' : 'text-[#cccccc]/70')
+            : (isLightTheme ? 'text-slate-600' : 'text-dark-400')"
         >
           <span class="truncate max-w-[80px]" :title="col.dataType">
             {{ formatDataType(col) }}
@@ -121,7 +121,7 @@
       :class="isLightTheme ? 'bg-slate-50 border-slate-300 text-slate-500' : 'bg-dark-900/90 border-dark-750 text-dark-400'"
     >
       <div class="flex items-center space-x-1">
-        <CheckSquare class="w-3 h-3 flex-shrink-0" :class="isLightTheme ? 'text-amber-600' : 'text-amber-400'" />
+        <CheckSquare class="w-3 h-3 flex-shrink-0" :class="isLightTheme ? 'text-warn' : 'text-warn'" />
         <span class="text-[10px]">欄位 ({{ checkedCount }}/{{ nodeData.columns.length }})</span>
       </div>
 
@@ -153,7 +153,7 @@
       @mousedown.stop="startResize"
       @dblclick.stop="resetHeight"
       class="absolute bottom-0 right-0 w-3.5 h-3.5 flex items-center justify-center cursor-ns-resize select-none opacity-40 hover:opacity-100 z-10 transition-opacity"
-      :class="isLightTheme ? 'text-slate-400 hover:text-slate-700' : 'text-dark-400 hover:text-dark-100'"
+      :class="isLightTheme ? 'text-slate-600 hover:text-slate-700' : 'text-dark-400 hover:text-dark-100'"
       title="拖曳以縮放長度 (高度)；雙擊重設為最適高度"
     >
       <svg class="w-2.5 h-2.5" viewBox="0 0 10 10" fill="currentColor">

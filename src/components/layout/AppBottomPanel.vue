@@ -27,10 +27,10 @@
       <!-- Right Summary & Panel Controls -->
       <div class="flex items-center space-x-3 text-xxs font-mono text-dark-400">
         <span v-if="queryStore.activeResultTab">
-          Duration: <strong class="text-brand-400">{{ queryStore.activeResultTab.durationMs }}ms</strong>
+          Duration: <strong class="text-accent">{{ queryStore.activeResultTab.durationMs }}ms</strong>
         </span>
         <span v-if="queryStore.activeResultTab">
-          Rows: <strong class="text-emerald-400">{{ queryStore.activeResultTab.rowCount }}</strong>
+          Rows: <strong class="text-ok">{{ queryStore.activeResultTab.rowCount }}</strong>
           <span
             v-if="queryStore.activeResultTab.result.resultSets.length > 1"
             class="text-dark-400 font-normal ml-1"
@@ -39,10 +39,10 @@
           </span>
         </span>
         <span v-else-if="queryStore.activeResult">
-          Duration: <strong class="text-brand-400">{{ queryStore.activeResult.executionTimeMs }}ms</strong>
+          Duration: <strong class="text-accent">{{ queryStore.activeResult.executionTimeMs }}ms</strong>
         </span>
         <span v-if="!queryStore.activeResultTab && queryStore.activeResult">
-          Affected: <strong class="text-emerald-400">{{ queryStore.activeResult.affectedRows }}</strong>
+          Affected: <strong class="text-ok">{{ queryStore.activeResult.affectedRows }}</strong>
         </span>
 
         <Button
@@ -93,7 +93,7 @@
               :class="[
                 'p-0.5 rounded transition-colors cursor-pointer',
                 rtab.isPinned
-                  ? 'text-amber-500 dark:text-amber-400'
+                  ? 'text-warn'
                   : (queryStore.activeResultTabId === rtab.id ? 'text-dark-400 hover:text-dark-100' : 'text-dark-500 hover:text-dark-300 opacity-60 group-hover:opacity-100')
               ]"
               :title="rtab.isPinned ? '已釘選（不會被自動清理，點擊解除釘選）' : '釘選此結果（保護不被自動移除）'"
@@ -128,7 +128,7 @@
               :class="[
                 'text-xxs px-1 py-0.2 rounded font-mono flex-shrink-0 pointer-events-none',
                 rtab.result.messages.some((m) => m.level === 'error')
-                  ? 'bg-rose-900/90 text-rose-200 border border-rose-700/50'
+                  ? 'bg-rose-100 dark:bg-rose-900/90 text-danger border border-rose-200 dark:border-rose-700/50'
                   : (queryStore.activeResultTabId === rtab.id ? 'bg-dark-750 text-dark-200' : 'bg-dark-700 text-dark-300')
               ]"
             >
@@ -145,7 +145,7 @@
                 'p-0.5 rounded transition-opacity flex-shrink-0',
                 queryStore.resultTabs.length <= 1
                   ? 'opacity-20 cursor-not-allowed text-dark-600'
-                  : (queryStore.activeResultTabId === rtab.id ? 'text-dark-400 hover:text-rose-400 hover:bg-rose-500/15' : 'text-dark-400 hover:text-rose-400 hover:bg-rose-500/15 opacity-0 group-hover:opacity-100 cursor-pointer')
+                  : (queryStore.activeResultTabId === rtab.id ? 'text-dark-400 hover:text-danger hover:bg-rose-500/15' : 'text-dark-400 hover:text-danger hover:bg-rose-500/15 opacity-0 group-hover:opacity-100 cursor-pointer')
               ]"
               :title="queryStore.resultTabs.length <= 1 ? '最後一個查詢結果不可刪除' : '關閉此結果'"
             >

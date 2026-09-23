@@ -16,7 +16,7 @@ export const DBA_QUERIES: DbaQueryItem[] = [
     id: 'locks_blocking',
     title: '即時鎖定與阻塞鏈 (Locks & Blocking)',
     badge: '鎖定/併發',
-    badgeColor: 'text-rose-400 bg-rose-950/60 border-rose-800/60',
+    badgeColor: 'text-danger bg-rose-100 dark:bg-rose-950/60 border-rose-200 dark:border-rose-800/60',
     description: '快速查出誰卡住了誰（Lead Blocker、SPID、等待類型與秒數）',
     sql: `-- ============================================================
 -- 診斷：即時鎖定與阻塞鏈 (Locks & Blocking Processes)
@@ -53,7 +53,7 @@ ORDER BY wt.wait_duration_ms DESC;
     id: 'slow_queries',
     title: 'Top 20 慢查詢 (Top Slow Queries by CPU)',
     badge: '效能分析',
-    badgeColor: 'text-amber-400 bg-amber-950/60 border-amber-800/60',
+    badgeColor: 'text-warn bg-amber-100 dark:bg-amber-950/60 border-amber-200 dark:border-amber-800/60',
     description: '依累計 CPU 與耗時排名分析伺服器最耗效能的查詢語句',
     sql: `-- ============================================================
 -- 診斷：Top 20 慢查詢 (Top 20 Slow Queries by CPU & Duration)
@@ -80,7 +80,7 @@ ORDER BY [平均CPU耗時 (ms)] DESC;
     id: 'table_sizes',
     title: '資料表空間與筆數排行 (Table Sizes & Rows)',
     badge: '容量規劃',
-    badgeColor: 'text-indigo-400 bg-indigo-950/60 border-indigo-800/60',
+    badgeColor: 'text-structure bg-indigo-100 dark:bg-indigo-950/60 border-indigo-200 dark:border-indigo-800/60',
     description: '秒級列出資料庫所有資料表的實際列數與 MB 佔用排名',
     sql: `-- ============================================================
 -- 診斷：資料表空間佔用與筆數排行 (Table Sizes & Row Counts)
@@ -107,7 +107,7 @@ ORDER BY [總空間 (MB)] DESC;
     id: 'index_fragmentation',
     title: '索引破碎度分析 (Index Fragmentation > 20%)',
     badge: '索引維護',
-    badgeColor: 'text-sky-400 bg-sky-950/60 border-sky-800/60',
+    badgeColor: 'text-info bg-sky-100 dark:bg-sky-950/60 border-sky-200 dark:border-sky-800/60',
     description: '找出破碎度過高的索引，並自動生成 REBUILD / REORGANIZE 語法',
     sql: `-- ============================================================
 -- 診斷：索引破碎度分析 (Index Fragmentation > 15%)
@@ -136,7 +136,7 @@ ORDER BY ps.avg_fragmentation_in_percent DESC;
     id: 'unused_indexes',
     title: '未使用的冗餘索引 (Unused Indexes)',
     badge: '磁碟清理',
-    badgeColor: 'text-purple-400 bg-purple-950/60 border-purple-800/60',
+    badgeColor: 'text-plan bg-purple-100 dark:bg-purple-950/60 border-purple-200 dark:border-purple-800/60',
     description: '找出從未被查詢使用卻佔用寫入開銷的非必要索引',
     sql: `-- ============================================================
 -- 診斷：未使用的冗餘索引 (Unused Indexes)
@@ -169,7 +169,7 @@ ORDER BY s.user_updates DESC, OBJECT_NAME(i.object_id);
     id: 'active_sessions',
     title: '目前活動連線與客戶端統計 (Active Sessions)',
     badge: '連線監控',
-    badgeColor: 'text-emerald-400 bg-emerald-950/60 border-emerald-800/60',
+    badgeColor: 'text-ok bg-emerald-100 dark:bg-emerald-950/60 border-emerald-200 dark:border-emerald-800/60',
     description: '即時檢視所有連線的主機、程式名稱、IP 與累積資源佔用',
     sql: `-- ============================================================
 -- 診斷：目前活動連線與客戶端統計 (Active Sessions & Client Summary)

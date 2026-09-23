@@ -4,7 +4,7 @@
     <div class="h-9 px-3 border-b border-dark-700 flex items-center justify-between text-xs font-semibold uppercase tracking-wider text-dark-400 bg-dark-850 flex-shrink-0 select-none">
       <!-- Left: Title -->
       <div class="flex items-center space-x-1.5">
-        <FolderGit2 class="w-3.5 h-3.5 text-brand-500" />
+        <FolderGit2 class="w-3.5 h-3.5 text-accent" />
         <span>SQL 檔案</span>
       </div>
 
@@ -18,7 +18,7 @@
           size="small"
           text
           rounded
-          class="!h-6 !w-6 !p-0 !text-amber-400"
+          class="!h-6 !w-6 !p-0 !text-warn"
           v-tooltip.bottom="`恢復已取消監控的項目 (${sqlFolderStore.excludedPaths.length})`"
           @click="sqlFolderStore.restoreExcludedPaths"
         />
@@ -118,7 +118,7 @@
             <!-- Folder Icon -->
             <component
               :is="sqlFolderStore.expandedNodes[folder.path] ? FolderOpen : Folder"
-              class="w-3.5 h-3.5 text-amber-400 flex-shrink-0"
+              class="w-3.5 h-3.5 text-warn flex-shrink-0"
             />
 
             <!-- Name & Path -->
@@ -135,14 +135,14 @@
                 class="p-0.5 hover:bg-dark-700 text-dark-400 hover:text-dark-200 rounded"
                 title="重新整理此資料夾"
               >
-                <RotateCw :class="['w-2.5 h-2.5', sqlFolderStore.refreshingPath === folder.path ? 'animate-spin text-brand-400' : '']" />
+                <RotateCw :class="['w-2.5 h-2.5', sqlFolderStore.refreshingPath === folder.path ? 'animate-spin text-accent' : '']" />
               </button>
 
               <!-- Remove from monitoring -->
               <button
                 type="button"
                 @click.stop="sqlFolderStore.unmonitorItem(folder.path, folder.name, true)"
-                class="p-0.5 hover:bg-dark-700 text-dark-400 hover:text-rose-400 rounded"
+                class="p-0.5 hover:bg-dark-700 text-dark-400 hover:text-danger rounded"
                 title="取消監控"
               >
                 <X class="w-2.5 h-2.5" />
@@ -160,7 +160,7 @@
               v-if="!sqlFolderStore.folderTrees[folder.path] && sqlFolderStore.isLoading"
               class="py-1 px-2 text-xxs text-dark-500 flex items-center space-x-1.5"
             >
-              <RotateCw class="w-2.5 h-2.5 animate-spin text-brand-400" />
+              <RotateCw class="w-2.5 h-2.5 animate-spin text-accent" />
               <span>掃描中...</span>
             </div>
 
@@ -209,7 +209,7 @@
             class="w-full font-mono text-xs"
             @keyup.enter="handleConfirmRename"
           />
-          <p v-if="renameError" class="text-rose-400 text-xxs mt-1.5">{{ renameError }}</p>
+          <p v-if="renameError" class="text-danger text-xxs mt-1.5">{{ renameError }}</p>
           <p v-else-if="!targetNode?.isDir" class="text-dark-400 text-xxs mt-1.5">
             若未輸入 .sql 副檔名，系統將會自動補齊。
           </p>
@@ -429,7 +429,7 @@ const contextMenuItems = computed(() => {
   const unmonitorMenuItem = {
     label: '取消監控',
     icon: 'pi pi-eye-slash',
-    class: '!text-rose-400',
+    class: '!text-danger',
     command: () => sqlFolderStore.unmonitorItem(target.path, target.name, target.isRoot),
   };
 

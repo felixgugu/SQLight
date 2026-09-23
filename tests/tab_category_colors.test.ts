@@ -76,6 +76,27 @@ test('getTabThemeStyle produces expected CSS variables for Active and Inactive s
   assert.equal(activeErStyle['--tab-border'], '#06b6d4');
 });
 
+test('getTabThemeStyle swaps to the light icon palette when isLight is set', () => {
+  for (const type of ALL_TAB_TYPES) {
+    const theme = TAB_CATEGORY_THEMES[type];
+    assert.ok(theme.iconColorLight, `Light icon colour for ${type} must exist`);
+    assert.notEqual(
+      theme.iconColorLight,
+      theme.iconColor,
+      `${type} must not reuse the dark icon colour in light mode`
+    );
+  }
+
+  const lightInactive = getTabThemeStyle('table_data', false, undefined, undefined, true);
+  assert.equal(lightInactive['--tab-icon-color'], '#047857');
+  assert.equal(lightInactive['--tab-top-accent'], '#047857');
+
+  // Dark mode keeps the original accents.
+  const darkInactive = getTabThemeStyle('table_data', false);
+  assert.equal(darkInactive['--tab-icon-color'], '#34d399');
+  assert.equal(darkInactive['--tab-top-accent'], '#10b981');
+});
+
 test('getTabThemeStyle allows custom SQL colors to override sql_editor active tab only', () => {
   const customBg = '#4338ca';
   const customText = '#fef08a';

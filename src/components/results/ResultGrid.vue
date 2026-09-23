@@ -52,12 +52,12 @@
           <!-- Notice when a grid is maximized in Stacked mode -->
           <div
             v-else-if="maximizedIndex !== null"
-            class="flex items-center space-x-1.5 text-xxs text-amber-800 dark:text-amber-300 bg-amber-500/15 border border-amber-500/30 px-2 py-0.5 rounded"
+            class="flex items-center space-x-1.5 text-xxs text-warn bg-amber-500/15 border border-amber-500/30 px-2 py-0.5 rounded"
           >
             <span>已最大化 Result #{{ maximizedIndex + 1 }}</span>
             <button
               @click="maximizedIndex = null"
-              class="text-amber-700 dark:text-amber-400 hover:text-amber-600 dark:hover:text-amber-200 underline cursor-pointer font-medium"
+              class="text-warn hover:text-warn underline cursor-pointer font-medium"
             >
               還原多網格
             </button>

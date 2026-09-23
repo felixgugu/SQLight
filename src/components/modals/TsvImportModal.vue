@@ -13,7 +13,7 @@
           class="h-11 px-4 bg-dark-800 border-b border-dark-750 flex items-center justify-between flex-shrink-0 select-none"
         >
           <div class="flex items-center space-x-2.5 min-w-0">
-            <div class="w-6 h-6 rounded-md bg-emerald-500/20 text-emerald-400 flex items-center justify-center flex-shrink-0">
+            <div class="w-6 h-6 rounded-md bg-emerald-500/20 text-ok flex items-center justify-center flex-shrink-0">
               <Upload class="w-3.5 h-3.5" />
             </div>
             <span class="text-xs font-semibold truncate">TSV 匯入</span>

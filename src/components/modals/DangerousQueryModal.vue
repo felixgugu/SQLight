@@ -11,9 +11,9 @@
       <div class="flex items-center space-x-2">
         <i
           v-if="step === 2"
-          class="pi pi-shield text-rose-400 text-lg animate-pulse"
+          class="pi pi-shield text-danger text-lg animate-pulse"
         />
-        <i v-else class="pi pi-exclamation-triangle text-amber-600 dark:text-amber-400 text-lg" />
+        <i v-else class="pi pi-exclamation-triangle text-warn text-lg" />
         <span class="font-semibold text-sm text-dark-100">
           {{ step === 2 ? '高危險變更確認 (第二次確認 2/2 — 最終確認)' : '修改提示 — 偵測到變更指令 (第一次確認 1/2)' }}
         </span>
@@ -73,14 +73,14 @@
       <!-- Step 2 Content -->
       <template v-else>
         <!-- Dangerous Alert Box -->
-        <div class="bg-rose-950/40 border border-rose-600/60 p-3.5 rounded-lg space-y-2 text-rose-200 leading-relaxed">
-          <div class="flex items-center space-x-2 text-rose-300 font-bold text-xs">
-            <i class="pi pi-ban text-rose-400 text-base flex-shrink-0" />
+        <div class="bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-600/60 p-3.5 rounded-lg space-y-2 text-danger leading-relaxed">
+          <div class="flex items-center space-x-2 text-danger font-bold text-xs">
+            <i class="pi pi-ban text-danger text-base flex-shrink-0" />
             <span>注意：此操作將直接更動目標資料庫！</span>
           </div>
-          <p class="text-xxs text-rose-200/90 leading-relaxed">
+          <p class="text-xxs text-danger/90 leading-relaxed">
             即將對目標伺服器 <strong>{{ connectionName }}</strong> 的 <strong>{{ databaseName }}</strong> 資料庫執行包含
-            <strong class="text-white">{{ detectedKeywords.join('、') }}</strong> 的變更操作。<br />
+            <strong class="text-danger">{{ detectedKeywords.join('、') }}</strong> 的變更操作。<br />
             資料修改或結構刪除後<strong>可能無法復原或復原成本極高</strong>。
           </p>
         </div>

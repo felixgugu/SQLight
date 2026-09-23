@@ -3,7 +3,7 @@
     <!-- Sidebar Header -->
     <div class="h-9 px-3 border-b border-dark-700 flex items-center justify-between text-xs font-semibold uppercase tracking-wider text-dark-400 bg-dark-850 flex-shrink-0">
       <div class="flex items-center space-x-1.5">
-        <Server class="w-3.5 h-3.5 text-brand-500" />
+        <Server class="w-3.5 h-3.5 text-accent" />
         <span>Explorer</span>
       </div>
       <div class="flex items-center space-x-1">
@@ -85,7 +85,7 @@
             @click.stop="toggleHistoryDropdown"
             :class="[
               'p-0.5 rounded transition-colors',
-              isHistoryDropdownOpen ? 'text-brand-400 bg-dark-750' : 'text-dark-400 hover:text-dark-200 hover:bg-dark-750'
+              isHistoryDropdownOpen ? 'text-accent bg-dark-750' : 'text-dark-400 hover:text-dark-200 hover:bg-dark-750'
             ]"
             title="過濾歷史紀錄 (Recent Filters)"
           >
@@ -102,7 +102,7 @@
         <!-- Dropdown Header -->
         <div class="px-2.5 py-1 text-xxs text-dark-400 border-b border-dark-750 flex items-center justify-between font-sans">
           <span class="flex items-center space-x-1">
-            <History class="w-3 h-3 text-brand-400" />
+            <History class="w-3 h-3 text-accent" />
             <span>搜尋歷史紀錄 (最多 30 筆)</span>
           </span>
           <span v-if="filterHistory.length > 0" class="text-xxs px-1 py-0.2 bg-dark-700 text-dark-300 rounded font-mono">
@@ -136,7 +136,7 @@
             <button
               type="button"
               @click.stop="handleRemoveHistoryItem(item)"
-              class="p-0.5 text-dark-500 hover:text-rose-400 rounded opacity-0 group-hover:opacity-100 transition-all flex-shrink-0"
+              class="p-0.5 text-dark-500 hover:text-danger rounded opacity-0 group-hover:opacity-100 transition-all flex-shrink-0"
               title="刪除此筆紀錄"
             >
               <X class="w-3 h-3" />
@@ -159,7 +159,7 @@
             type="button"
             @mousedown.prevent
             @click.stop="handleClearAllHistory"
-            class="text-xxs text-dark-400 hover:text-rose-400 transition-colors"
+            class="text-xxs text-dark-400 hover:text-danger transition-colors"
           >
             清除全部紀錄
           </button>
@@ -201,7 +201,7 @@
             :class="[
               'w-3.5 h-3.5 flex-shrink-0',
               connectionStore.activeConnectionId === conn.id && connectionStore.status === 'connected'
-                ? 'text-emerald-400'
+                ? 'text-ok'
                 : 'text-dark-500'
             ]"
           />
@@ -232,7 +232,7 @@
               class="p-1 hover:bg-dark-700 text-dark-400 hover:text-dark-200 rounded transition-colors"
               title="重新整理 (Refresh)"
             >
-              <RotateCw :class="['w-3 h-3', refreshingConnId === conn.id ? 'animate-spin text-brand-400' : '']" />
+              <RotateCw :class="['w-3 h-3', refreshingConnId === conn.id ? 'animate-spin text-accent' : '']" />
             </button>
 
             <!-- Edit Connection Settings -->
@@ -261,7 +261,7 @@
               :class="[
                 'flex items-center space-x-1 px-1.5 py-0.5 rounded cursor-pointer transition-colors group',
                 connectionStore.activeConnectionId === conn.id && connectionStore.activeDatabase === db
-                  ? 'bg-amber-500/15 text-amber-800 dark:text-amber-200 font-semibold'
+                  ? 'bg-amber-500/15 text-warn font-semibold'
                   : 'text-dark-300 hover:bg-dark-750 hover:text-dark-100'
               ]"
               :title="`${db} - 點擊展開/收合，右鍵開啟選單 (匯出結構 CSV 等)`"
@@ -278,12 +278,12 @@
                   class="w-2.5 h-2.5"
                 />
               </button>
-              <Database class="w-3 h-3 text-amber-600 dark:text-amber-400/80 flex-shrink-0" />
+              <Database class="w-3 h-3 text-warn flex-shrink-0" />
               <span class="truncate flex-1">{{ db }}</span>
               <!-- Active database indicator -->
               <span
                 v-if="connectionStore.activeConnectionId === conn.id && connectionStore.activeDatabase === db"
-                class="text-[9px] px-1 py-0.2 rounded bg-amber-500/15 text-amber-800 dark:text-amber-300 font-sans border border-amber-500/30 flex-shrink-0 mr-1"
+                class="text-[9px] px-1 py-0.2 rounded bg-amber-500/15 text-warn font-sans border border-amber-500/30 flex-shrink-0 mr-1"
                 title="目前工作區使用中資料庫"
               >
                 使用中
@@ -297,7 +297,7 @@
                 v-if="loadingTablesByDb[`${conn.id}:${db}`] || schemaStore.loadingRoutinesByDb[`${conn.id}:${db}`]"
                 class="py-1 px-1.5 text-xxs text-dark-400 flex items-center space-x-1.5"
               >
-                <RotateCw class="w-3 h-3 animate-spin text-brand-400" />
+                <RotateCw class="w-3 h-3 animate-spin text-accent" />
                 <span>載入物件中...</span>
               </div>
 
@@ -314,7 +314,7 @@
                     />
                     <component
                       :is="isFolderExpanded(conn.id, db, 'tables') ? FolderOpen : Folder"
-                      class="w-3 h-3 text-brand-400"
+                      class="w-3 h-3 text-accent"
                     />
                     <span class="font-sans font-medium text-dark-200">資料表</span>
                     <span class="text-xxs text-dark-500 font-mono">({{ getFilteredTables(conn.id, db).length }})</span>
@@ -348,7 +348,7 @@
                         :class="[
                           'flex items-center space-x-1 px-1.5 py-0.5 rounded cursor-pointer select-none group transition-all duration-150',
                           activeLocatedKey === tableKey(conn.id, db, table.schema, table.name)
-                            ? 'bg-brand-500/25 ring-1 ring-brand-400 text-brand-100 font-semibold shadow-md shadow-brand-500/10'
+                            ? 'bg-brand-500/25 ring-1 ring-brand-400 text-accent font-semibold shadow-md shadow-brand-500/10'
                             : 'hover:bg-dark-750 text-dark-300 hover:text-dark-100'
                         ]"
                         :title="`${table.schema}.${table.name} (Table) - 右鍵開啟選單 (Open Data / DDL)`"
@@ -357,12 +357,12 @@
                           :is="isTableExpanded(conn.id, db, table.schema, table.name) ? ChevronDown : ChevronRight"
                           class="w-2.5 h-2.5 text-dark-500 group-hover:text-dark-300 flex-shrink-0"
                         />
-                        <Table2 class="w-3 h-3 text-brand-400 flex-shrink-0" />
+                        <Table2 class="w-3 h-3 text-accent flex-shrink-0" />
                         <span class="text-dark-400 text-xxs flex-shrink-0">{{ table.schema }}.</span>
                         <span class="truncate flex-1 font-medium">{{ table.name }}</span>
                         <span
                           v-if="activeLocatedKey === tableKey(conn.id, db, table.schema, table.name)"
-                          class="text-[9px] px-1 py-0.2 bg-brand-500 text-white rounded font-sans flex-shrink-0 animate-pulse ml-1"
+                          class="text-[9px] px-1 py-0.2 bg-brand-600 text-white rounded font-sans flex-shrink-0 animate-pulse ml-1"
                         >
                           已定位
                         </span>
@@ -377,7 +377,7 @@
                           v-if="loadingColumns[tableKey(conn.id, db, table.schema, table.name)]"
                           class="py-0.5 px-1 text-xxs text-dark-400 flex items-center space-x-1.5"
                         >
-                          <RotateCw class="w-2.5 h-2.5 animate-spin text-brand-400" />
+                          <RotateCw class="w-2.5 h-2.5 animate-spin text-accent" />
                           <span>載入欄位中...</span>
                         </div>
 
@@ -396,14 +396,14 @@
                           class="flex items-center space-x-1.5 px-1.5 py-0.5 text-xxs rounded cursor-pointer select-none transition-colors group"
                           :class="[
                             isPendingColumn(col.name)
-                              ? 'bg-brand-500/25 text-brand-200 border border-brand-500/40 shadow-xs'
+                              ? 'bg-brand-500/25 text-accent border border-brand-500/40 shadow-xs'
                               : 'text-dark-400 hover:text-dark-100 hover:bg-dark-750/70'
                           ]"
                           :title="`雙擊記住此欄位 (${col.name})，點擊編輯區游標處即可貼上`"
                         >
-                          <Key v-if="col.isPrimaryKey" class="w-2.5 h-2.5 text-amber-600 dark:text-amber-400 flex-shrink-0" />
+                          <Key v-if="col.isPrimaryKey" class="w-2.5 h-2.5 text-warn flex-shrink-0" />
                           <Columns v-else class="w-2.5 h-2.5 text-dark-500 group-hover:text-dark-300 flex-shrink-0" />
-                          <span :class="[col.isPrimaryKey ? 'text-amber-800 dark:text-amber-300 font-semibold' : 'text-dark-300 group-hover:text-dark-100']" class="truncate flex-1">
+                          <span :class="[col.isPrimaryKey ? 'text-warn font-semibold' : 'text-dark-300 group-hover:text-dark-100']" class="truncate flex-1">
                             {{ col.name }}
                           </span>
                           <span class="text-dark-500 lowercase font-sans text-xxs flex-shrink-0">
@@ -411,7 +411,7 @@
                           </span>
                           <span
                             v-if="isPendingColumn(col.name)"
-                            class="text-xxs px-1 py-0.2 bg-brand-500/30 text-brand-300 font-medium rounded text-[9px] border border-brand-400/40 flex-shrink-0 animate-pulse"
+                            class="text-xxs px-1 py-0.2 bg-brand-500/30 text-accent font-medium rounded text-[9px] border border-brand-400/40 flex-shrink-0 animate-pulse"
                           >
                             待貼上
                           </span>
@@ -433,7 +433,7 @@
                     />
                     <component
                       :is="isFolderExpanded(conn.id, db, 'views') ? FolderOpen : Folder"
-                      class="w-3 h-3 text-purple-400"
+                      class="w-3 h-3 text-plan"
                     />
                     <span class="font-sans font-medium text-dark-200">檢視表</span>
                     <span class="text-xxs text-dark-500 font-mono">({{ getFilteredViews(conn.id, db).length }})</span>
@@ -467,7 +467,7 @@
                         :class="[
                           'flex items-center space-x-1 px-1.5 py-0.5 rounded cursor-pointer select-none group transition-all duration-150',
                           activeLocatedKey === tableKey(conn.id, db, view.schema, view.name)
-                            ? 'bg-purple-500/25 ring-1 ring-purple-400 text-purple-100 font-semibold shadow-md shadow-purple-500/10'
+                            ? 'bg-purple-500/25 ring-1 ring-purple-400 text-plan font-semibold shadow-md shadow-purple-500/10'
                             : 'hover:bg-dark-750 text-dark-300 hover:text-dark-100'
                         ]"
                         :title="`${view.schema}.${view.name} (View) - 右鍵檢視定義或查詢`"
@@ -476,12 +476,12 @@
                           :is="isTableExpanded(conn.id, db, view.schema, view.name) ? ChevronDown : ChevronRight"
                           class="w-2.5 h-2.5 text-dark-500 group-hover:text-dark-300 flex-shrink-0"
                         />
-                        <FileText class="w-3 h-3 text-purple-400 flex-shrink-0" />
+                        <FileText class="w-3 h-3 text-plan flex-shrink-0" />
                         <span class="text-dark-400 text-xxs flex-shrink-0">{{ view.schema }}.</span>
                         <span class="truncate flex-1 font-medium">{{ view.name }}</span>
                         <span
                           v-if="activeLocatedKey === tableKey(conn.id, db, view.schema, view.name)"
-                          class="text-[9px] px-1 py-0.2 bg-purple-500 text-white rounded font-sans flex-shrink-0 animate-pulse ml-1"
+                          class="text-[9px] px-1 py-0.2 bg-purple-600 text-white rounded font-sans flex-shrink-0 animate-pulse ml-1"
                         >
                           已定位
                         </span>
@@ -496,7 +496,7 @@
                           v-if="loadingColumns[tableKey(conn.id, db, view.schema, view.name)]"
                           class="py-0.5 px-1 text-xxs text-dark-400 flex items-center space-x-1.5"
                         >
-                          <RotateCw class="w-2.5 h-2.5 animate-spin text-brand-400" />
+                          <RotateCw class="w-2.5 h-2.5 animate-spin text-accent" />
                           <span>載入欄位中...</span>
                         </div>
 
@@ -515,7 +515,7 @@
                           class="flex items-center space-x-1.5 px-1.5 py-0.5 text-xxs rounded cursor-pointer select-none transition-colors group"
                           :class="[
                             isPendingColumn(col.name)
-                              ? 'bg-brand-500/25 text-brand-200 border border-brand-500/40 shadow-xs'
+                              ? 'bg-brand-500/25 text-accent border border-brand-500/40 shadow-xs'
                               : 'text-dark-400 hover:text-dark-100 hover:bg-dark-750/70'
                           ]"
                           :title="`雙擊記住此欄位 (${col.name})，點擊編輯區游標處即可貼上`"
@@ -545,7 +545,7 @@
                     />
                     <component
                       :is="isFolderExpanded(conn.id, db, 'procs') ? FolderOpen : Folder"
-                      class="w-3 h-3 text-amber-400"
+                      class="w-3 h-3 text-warn"
                     />
                     <span class="font-sans font-medium text-dark-200">預存程序</span>
                     <span class="text-xxs text-dark-500 font-mono">({{ getFilteredProcedures(conn.id, db).length }})</span>
@@ -573,17 +573,17 @@
                       :class="[
                         'flex items-center space-x-1 px-1.5 py-0.5 rounded cursor-pointer group transition-all duration-150',
                         activeLocatedKey === tableKey(conn.id, db, proc.schema, proc.name)
-                          ? 'bg-amber-500/25 ring-1 ring-amber-400 text-amber-100 font-semibold shadow-md shadow-amber-500/10'
+                          ? 'bg-amber-500/25 ring-1 ring-amber-400 text-warn font-semibold shadow-md shadow-amber-500/10'
                           : 'hover:bg-dark-750 text-dark-300 hover:text-dark-100'
                       ]"
                       :title="`${proc.schema}.${proc.name} (Stored Procedure) - 雙擊檢視定義，右鍵開啟選單`"
                     >
-                      <Cog class="w-3 h-3 text-amber-400 flex-shrink-0" />
+                      <Cog class="w-3 h-3 text-warn flex-shrink-0" />
                       <span class="text-dark-400 text-xxs flex-shrink-0">{{ proc.schema }}.</span>
                       <span class="truncate flex-1 font-medium">{{ proc.name }}</span>
                       <span
                         v-if="activeLocatedKey === tableKey(conn.id, db, proc.schema, proc.name)"
-                        class="text-[9px] px-1 py-0.2 bg-amber-500 text-white rounded font-sans flex-shrink-0 animate-pulse ml-1"
+                        class="text-[9px] px-1 py-0.2 bg-amber-700 text-white rounded font-sans flex-shrink-0 animate-pulse ml-1"
                       >
                         已定位
                       </span>
@@ -603,7 +603,7 @@
                     />
                     <component
                       :is="isFolderExpanded(conn.id, db, 'funcs') ? FolderOpen : Folder"
-                      class="w-3 h-3 text-sky-400"
+                      class="w-3 h-3 text-info"
                     />
                     <span class="font-sans font-medium text-dark-200">函數</span>
                     <span class="text-xxs text-dark-500 font-mono">({{ getFilteredFunctions(conn.id, db).length }})</span>
@@ -631,17 +631,17 @@
                       :class="[
                         'flex items-center space-x-1 px-1.5 py-0.5 rounded cursor-pointer group transition-all duration-150',
                         activeLocatedKey === tableKey(conn.id, db, func.schema, func.name)
-                          ? 'bg-sky-500/25 ring-1 ring-sky-400 text-sky-100 font-semibold shadow-md shadow-sky-500/10'
+                          ? 'bg-sky-500/25 ring-1 ring-sky-400 text-info font-semibold shadow-md shadow-sky-500/10'
                           : 'hover:bg-dark-750 text-dark-300 hover:text-dark-100'
                       ]"
                       :title="`${func.schema}.${func.name} (Function) - 雙擊檢視定義，右鍵開啟選單`"
                     >
-                      <Code2 class="w-3 h-3 text-sky-400 flex-shrink-0" />
+                      <Code2 class="w-3 h-3 text-info flex-shrink-0" />
                       <span class="text-dark-400 text-xxs flex-shrink-0">{{ func.schema }}.</span>
                       <span class="truncate flex-1 font-medium">{{ func.name }}</span>
                       <span
                         v-if="activeLocatedKey === tableKey(conn.id, db, func.schema, func.name)"
-                        class="text-[9px] px-1 py-0.2 bg-sky-500 text-white rounded font-sans flex-shrink-0 animate-pulse ml-1"
+                        class="text-[9px] px-1 py-0.2 bg-sky-700 text-white rounded font-sans flex-shrink-0 animate-pulse ml-1"
                       >
                         已定位
                       </span>
@@ -735,6 +735,7 @@ import { useTsvImportStore } from '@/stores/tsvImportStore';
 import { schemaService } from '@/services/schemaService';
 import { connectionService } from '@/services/connectionService';
 import { wrapIdentifierIfNeeded } from '@/utils/sqlParser';
+import { resolveConnectionLabelColor } from '@/utils/connectionColor';
 import { generateCreateTableDdl } from '@/utils/ddlGenerator';
 import { collapseAllTreeNodes } from '@/utils/explorerTreeState';
 import {
@@ -800,7 +801,7 @@ function resetFolderSplitter() {
 
 /** 連線名稱套用「標籤色彩」設定；未設定時沿用節點原本的文字樣式。 */
 function getConnectionNameStyle(conn: ConnectionProfile): Record<string, string> {
-  const color = conn.color?.trim();
+  const color = resolveConnectionLabelColor(conn.color?.trim(), settingsStore.colorMode);
   if (!color) return {};
   return { color };
 }
@@ -1424,7 +1425,7 @@ const connMenuItems = computed(() => {
   items.push({
     label: '刪除連線 (Delete)',
     icon: 'pi pi-trash',
-    class: '!text-rose-400',
+    class: '!text-danger',
     command: () => handlePromptDelete(conn),
   });
 

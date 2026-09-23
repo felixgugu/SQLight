@@ -37,7 +37,7 @@
       <!-- Identity warning (non blocking: the database reports the error) -->
       <div
         v-if="store.identityInsertWarning"
-        class="rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xxs text-amber-800 dark:text-amber-300"
+        class="rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xxs text-warn"
       >
         {{ store.identityInsertWarning }}
       </div>
@@ -45,21 +45,21 @@
       <!-- Validation failures -->
       <section
         v-if="store.validation && store.validation.errors.length > 0"
-        class="rounded-lg border border-rose-800/60 bg-rose-950/25 p-3 space-y-2"
+        class="rounded-lg border border-rose-200 dark:border-rose-800/60 bg-rose-50 dark:bg-rose-950/25 p-3 space-y-2"
       >
         <div class="flex items-center justify-between">
-          <div class="text-xxs font-semibold text-rose-200">
+          <div class="text-xxs font-semibold text-danger">
             驗證失敗，請修正後重新驗證
           </div>
-          <div class="text-xxs text-rose-200/80 font-mono">
+          <div class="text-xxs text-danger font-mono">
             總筆數 {{ store.validation.totalRows.toLocaleString() }} · 有效
             {{ store.validation.validRows.toLocaleString() }} · 異常
             {{ store.validation.invalidRows.toLocaleString() }}
           </div>
         </div>
-        <div class="overflow-x-auto max-h-72 rounded border border-rose-900/50">
+        <div class="overflow-x-auto max-h-72 rounded border border-rose-200 dark:border-rose-900/50">
           <table class="w-full text-xxs">
-            <thead class="bg-rose-950/60 text-rose-100 sticky top-0">
+            <thead class="bg-rose-100 dark:bg-rose-950/60 text-danger sticky top-0">
               <tr>
                 <th class="text-left px-3 py-1.5 font-medium w-20">行數</th>
                 <th class="text-left px-3 py-1.5 font-medium w-24">欄位位置</th>
@@ -69,23 +69,23 @@
               </tr>
             </thead>
             <tbody class="font-mono">
-              <tr v-for="(error, idx) in displayedErrors" :key="idx" class="border-t border-rose-900/30">
-                <td class="px-3 py-1.5 text-rose-200">{{ error.line }}</td>
-                <td class="px-3 py-1.5 text-rose-200/80">
+              <tr v-for="(error, idx) in displayedErrors" :key="idx" class="border-t border-rose-200 dark:border-rose-900/30">
+                <td class="px-3 py-1.5 text-danger">{{ error.line }}</td>
+                <td class="px-3 py-1.5 text-danger">
                   {{ error.columnPosition || '-' }}
                 </td>
-                <td class="px-3 py-1.5 text-rose-100 truncate">{{ error.column }}</td>
-                <td class="px-3 py-1.5 text-rose-100/90 truncate max-w-[280px]">
+                <td class="px-3 py-1.5 text-danger truncate">{{ error.column }}</td>
+                <td class="px-3 py-1.5 text-danger/90 truncate max-w-[280px]">
                   {{ error.rawValue === NULL_SENTINEL ? 'NULL' : error.rawValue }}
                 </td>
-                <td class="px-3 py-1.5 font-sans text-rose-200">
+                <td class="px-3 py-1.5 font-sans text-danger">
                   {{ error.reason }}：{{ error.detail }}
                 </td>
               </tr>
             </tbody>
           </table>
         </div>
-        <div v-if="hiddenErrorCount > 0" class="text-xxs text-rose-200/80">
+        <div v-if="hiddenErrorCount > 0" class="text-xxs text-danger">
           僅顯示前 {{ MAX_DISPLAYED_ERRORS }} 筆，其餘 {{ hiddenErrorCount.toLocaleString() }} 筆異常未列出
         </div>
       </section>
@@ -137,9 +137,9 @@
       <!-- Import progress -->
       <section
         v-if="store.isImporting"
-        class="rounded-lg border border-emerald-800/60 bg-emerald-950/20 p-3 space-y-2"
+        class="rounded-lg border border-emerald-200 dark:border-emerald-800/60 bg-emerald-50 dark:bg-emerald-950/20 p-3 space-y-2"
       >
-        <div class="flex items-center justify-between text-xxs text-emerald-200">
+        <div class="flex items-center justify-between text-xxs text-ok">
           <span class="flex items-center space-x-1.5">
             <i class="pi pi-spin pi-spinner text-[10px]"></i>
             <span>匯入中，請勿關閉視窗（單一交易，失敗將全部回滾）</span>
@@ -163,25 +163,25 @@
         class="rounded-lg border p-3 space-y-2"
         :class="
           store.importResult.rolledBack
-            ? 'border-rose-800/60 bg-rose-950/25'
-            : 'border-emerald-800/60 bg-emerald-950/20'
+            ? 'border-rose-200 dark:border-rose-800/60 bg-rose-50 dark:bg-rose-950/25'
+            : 'border-emerald-200 dark:border-emerald-800/60 bg-emerald-50 dark:bg-emerald-950/20'
         "
       >
         <template v-if="!store.importResult.rolledBack">
-          <div class="text-xs text-emerald-200">
+          <div class="text-xs text-ok">
             已成功新增
             <strong class="font-mono">{{ store.importResult.insertedCount.toLocaleString() }}</strong>
             筆資料（耗時 {{ store.importResult.executionTimeMs }} ms），表格資料已重新載入。
           </div>
         </template>
         <template v-else>
-          <div class="text-xs text-rose-200">
+          <div class="text-xs text-danger">
             匯入失敗：本次未寫入任何資料（已全部回滾）。資料庫回報
             {{ store.importResult.errors.length.toLocaleString() }} 筆錯誤。
           </div>
-          <div class="overflow-x-auto max-h-56 rounded border border-rose-900/50">
+          <div class="overflow-x-auto max-h-56 rounded border border-rose-200 dark:border-rose-900/50">
             <table class="w-full text-xxs">
-              <thead class="bg-rose-950/60 text-rose-100 sticky top-0">
+              <thead class="bg-rose-100 dark:bg-rose-950/60 text-danger sticky top-0">
                 <tr>
                   <th class="text-left px-3 py-1.5 font-medium w-20">行數</th>
                   <th class="text-left px-3 py-1.5 font-medium w-40">欄位</th>
@@ -192,11 +192,11 @@
                 <tr
                   v-for="(error, idx) in store.importResult.errors.slice(0, MAX_DISPLAYED_ERRORS)"
                   :key="idx"
-                  class="border-t border-rose-900/30"
+                  class="border-t border-rose-200 dark:border-rose-900/30"
                 >
-                  <td class="px-3 py-1.5 text-rose-200">{{ error.line || '-' }}</td>
-                  <td class="px-3 py-1.5 text-rose-100">{{ error.column || '-' }}</td>
-                  <td class="px-3 py-1.5 text-rose-100/90">{{ error.message }}</td>
+                  <td class="px-3 py-1.5 text-danger">{{ error.line || '-' }}</td>
+                  <td class="px-3 py-1.5 text-danger">{{ error.column || '-' }}</td>
+                  <td class="px-3 py-1.5 text-danger/90">{{ error.message }}</td>
                 </tr>
               </tbody>
             </table>
@@ -206,7 +206,7 @@
 
       <div
         v-if="store.importError"
-        class="rounded-lg border border-rose-800/60 bg-rose-950/25 p-3 text-xxs text-rose-200 font-mono break-all"
+        class="rounded-lg border border-rose-200 dark:border-rose-800/60 bg-rose-50 dark:bg-rose-950/25 p-3 text-xxs text-danger font-mono break-all"
       >
         {{ store.importError }}
       </div>

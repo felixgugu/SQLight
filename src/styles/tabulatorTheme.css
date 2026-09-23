@@ -15,7 +15,8 @@ html.dark .tabulator {
   --sq-grid-header-hover: #27272a;
   --sq-grid-header-text: #a1a1aa;
   --sq-grid-fg: #e4e4e7;
-  --sq-grid-muted: #71717a;
+  /* Muted grid text must clear 4.5:1 on the 18181b/202024 surfaces. */
+  --sq-grid-muted: #a1a1aa;
   /* `--sq-grid-border` frames the header and the frozen edge; `--sq-grid-line` draws the softer
      row / cell separators. */
   --sq-grid-border: #2e2e33;
@@ -23,9 +24,14 @@ html.dark .tabulator {
   --sq-grid-row-hover: #27272a;
   /* Zebra striping stays off on dark; set a surface colour to switch it on. */
   --sq-grid-row-stripe: transparent;
-  --sq-grid-sort-icon: #71717a;
-  --sq-grid-sort-icon-hover: #a1a1aa;
+  --sq-grid-sort-icon: #a1a1aa;
+  --sq-grid-sort-icon-hover: #e4e4e7;
   --sq-grid-sort-icon-active: #0284c7;
+  --sq-grid-binary-accent: #93c5fd;
+  --sq-grid-bool-true-accent: #34d399;
+  --sq-grid-bool-false-accent: #fb7185;
+  --sq-grid-modified-bg: rgba(245, 158, 11, 0.15);
+  --sq-grid-modified-text: #fde68a;
   --sq-grid-accent: #0284c7;
   --sq-grid-pk-accent: #fbbf24;
   --sq-grid-identity-accent: #22d3ee;
@@ -53,9 +59,14 @@ html:not(.dark) .tabulator {
   --sq-grid-line: #f1f5f9;
   --sq-grid-row-hover: #f1f5f9;
   --sq-grid-row-stripe: #f8fafc;
-  --sq-grid-sort-icon: #94a3b8;
-  --sq-grid-sort-icon-hover: #475569;
+  --sq-grid-sort-icon: #64748b;
+  --sq-grid-sort-icon-hover: #1e293b;
   --sq-grid-sort-icon-active: #2563eb;
+  --sq-grid-binary-accent: #0369a1;
+  --sq-grid-bool-true-accent: #047857;
+  --sq-grid-bool-false-accent: #be123c;
+  --sq-grid-modified-bg: rgba(245, 158, 11, 0.15);
+  --sq-grid-modified-text: #92400e;
   --sq-grid-accent: #0284c7;
   /* Solid, contrast-safe accents: the dark theme's bright icons read as neon on white. */
   --sq-grid-pk-accent: #b45309;
@@ -147,7 +158,6 @@ html:not(.dark) .tabulator {
   .tabulator-col-content
   .tabulator-col-sorter {
   color: var(--sq-grid-sort-icon);
-  opacity: 0.75;
 }
 
 .tabulator .tabulator-header .tabulator-col.tabulator-sortable[aria-sort='none']
@@ -278,33 +288,33 @@ html:not(.dark) .tabulator {
    -------------------------------------------------------------------------- */
 
 .tabulator-row .tabulator-cell.sqlight-cell-null {
-  color: #71717a;
+  color: var(--sq-grid-muted);
   font-style: italic;
   font-size: 0.6875rem;
 }
 
 .tabulator-row .tabulator-cell.sqlight-cell-bool-true {
-  color: #34d399;
+  color: var(--sq-grid-bool-true-accent);
   font-weight: 600;
   font-size: 0.6875rem;
 }
 
 .tabulator-row .tabulator-cell.sqlight-cell-bool-false {
-  color: #fb7185;
+  color: var(--sq-grid-bool-false-accent);
   font-weight: 600;
   font-size: 0.6875rem;
 }
 
 .tabulator-row .tabulator-cell.sqlight-cell-binary {
-  color: #93c5fd;
+  color: var(--sq-grid-binary-accent);
   font-weight: 500;
   font-size: 0.6875rem;
 }
 
 .tabulator-row .tabulator-cell.sqlight-cell-modified {
-  background-color: rgba(245, 158, 11, 0.15);
+  background-color: var(--sq-grid-modified-bg);
   box-shadow: inset 3px 0 0 0 #f59e0b;
-  color: #fde68a;
+  color: var(--sq-grid-modified-text);
 }
 
 /* Boolean values render as pills (see `createDataCellFormatter`): a saturated glyph colour reads

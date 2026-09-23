@@ -34,7 +34,7 @@
             <div v-if="slotProps.value && connectionStore.activeConnection" class="flex items-center space-x-1.5 min-w-0">
               <i
                 class="pi pi-server text-xs flex-shrink-0"
-                :class="connectionStore.status === 'connected' ? 'text-emerald-400' : 'text-dark-400'"
+                :class="connectionStore.status === 'connected' ? 'text-ok' : 'text-dark-400'"
                 :title="connectionStore.status === 'connected' ? '已連線 (Connected)' : '未連線 (Disconnected)'"
               />
               <span
@@ -57,7 +57,7 @@
             <div class="flex items-center space-x-2 w-full py-0.5">
               <i
                 class="pi pi-server text-xs flex-shrink-0"
-                :class="isOptionConnected(slotProps.option) ? 'text-emerald-400' : 'text-dark-400'"
+                :class="isOptionConnected(slotProps.option) ? 'text-ok' : 'text-dark-400'"
                 :title="isOptionConnected(slotProps.option) ? '已連線 (Connected)' : '未連線 (Disconnected)'"
               />
               <div class="flex-1 min-w-0 flex flex-col">
@@ -79,7 +79,7 @@
               </div>
               <i
                 v-if="connectionStore.activeConnectionId === slotProps.option.id"
-                class="pi pi-check text-brand-400 text-xs ml-auto flex-shrink-0"
+                class="pi pi-check text-accent text-xs ml-auto flex-shrink-0"
               />
             </div>
           </template>
@@ -109,8 +109,8 @@
         >
           <template #value="slotProps">
             <div class="flex items-center space-x-1.5 min-w-0">
-              <i class="pi pi-database text-amber-600 dark:text-amber-400 text-xs flex-shrink-0" />
-              <span class="font-mono text-xs truncate text-amber-800 dark:text-amber-200 font-semibold">
+              <i class="pi pi-database text-warn text-xs flex-shrink-0" />
+              <span class="font-mono text-xs truncate text-warn font-semibold">
                 {{ slotProps.value || '選擇資料庫...' }}
               </span>
             </div>
@@ -118,7 +118,7 @@
 
           <template #option="slotProps">
             <div class="flex items-center space-x-1.5 font-mono text-xs py-0.5">
-              <i class="pi pi-database text-amber-600 dark:text-amber-400 text-xs flex-shrink-0" />
+              <i class="pi pi-database text-warn text-xs flex-shrink-0" />
               <span class="truncate text-dark-200">{{ slotProps.option }}</span>
             </div>
           </template>
@@ -187,7 +187,7 @@
           severity="secondary"
           size="small"
           text
-          class="!h-7 !w-7 !p-0 !text-sky-400"
+          class="!h-7 !w-7 !p-0 !text-info"
           v-tooltip.bottom="'開啟本機 SQL 檔案 (Ctrl + O)'"
           @click="$emit('open-sql-file')"
         />
@@ -198,7 +198,7 @@
           severity="secondary"
           size="small"
           text
-          class="!h-7 !w-7 !p-0 !text-amber-400"
+          class="!h-7 !w-7 !p-0 !text-warn"
           v-tooltip.bottom="'另存當前 SQL 至檔案 (Ctrl + S)'"
           @click="$emit('save-sql-file')"
         />
@@ -209,7 +209,7 @@
           severity="secondary"
           size="small"
           text
-          class="!h-7 !w-7 !p-0 !text-brand-400"
+          class="!h-7 !w-7 !p-0 !text-accent"
           v-tooltip.bottom="'開啟新查詢分頁 (Ctrl + N)'"
           @click="workspaceStore.addSqlTab()"
         />
@@ -220,7 +220,7 @@
           severity="secondary"
           size="small"
           text
-          class="!h-7 !w-7 !p-0 !text-cyan-400"
+          class="!h-7 !w-7 !p-0 !text-er"
           v-tooltip.bottom="'快速物件檢索器 (Ctrl + P)'"
           @click="$emit('open-quick-finder')"
         />
@@ -231,7 +231,7 @@
           severity="secondary"
           size="small"
           text
-          class="!h-7 !w-7 !p-0 !text-amber-300"
+          class="!h-7 !w-7 !p-0 !text-warn"
           v-tooltip.bottom="'常用 SQL 範本庫 (語法、CTE、維護樣板)'"
           @click="$emit('open-sql-templates')"
         />
@@ -242,7 +242,7 @@
           severity="secondary"
           size="small"
           text
-          class="!h-7 !w-7 !p-0 !text-purple-400 hover:!text-purple-300"
+          class="!h-7 !w-7 !p-0 !text-plan hover:!text-plan"
           v-tooltip.bottom="'AI SQL 智能助手 (Ctrl + I)'"
           @click="$emit('open-ai-chat')"
         />
@@ -253,7 +253,7 @@
           severity="secondary"
           size="small"
           text
-          class="!h-7 !w-7 !p-0 !text-rose-400"
+          class="!h-7 !w-7 !p-0 !text-danger"
           v-tooltip.bottom="'DBA 常用診斷維護工具箱'"
           @click="toggleDbaPopover"
         />
@@ -262,7 +262,7 @@
           <div class="w-72 font-sans text-xs select-none">
             <div class="px-2 py-1.5 text-xxs font-semibold uppercase tracking-wider text-dark-400 flex items-center justify-between border-b border-dark-750 mb-1">
               <div class="flex items-center space-x-1.5">
-                <i class="pi pi-chart-line text-rose-400 text-xs" />
+                <i class="pi pi-chart-line text-danger text-xs" />
                 <span>DBA 診斷與維護指令庫</span>
               </div>
               <span class="text-dark-500 font-mono">{{ DBA_QUERIES.length }} 項</span>
@@ -275,7 +275,7 @@
                 @click="openDbaQuery(query)"
               >
                 <div class="flex items-center justify-between w-full">
-                  <span class="font-medium text-dark-100 group-hover:text-rose-300 transition-colors">
+                  <span class="font-medium text-dark-100 group-hover:text-danger transition-colors">
                     {{ query.title }}
                   </span>
                   <span :class="['text-[9px] px-1 py-0.2 rounded border font-mono', query.badgeColor]">
@@ -409,6 +409,7 @@ import { useWorkspaceStore } from '@/stores/workspaceStore';
 import { useConnectionStore } from '@/stores/connectionStore';
 import { useQueryStore } from '@/stores/queryStore';
 import { useSettingsStore } from '@/stores/settingsStore';
+import { resolveConnectionLabelColor } from '@/utils/connectionColor';
 import { windowService } from '@/services/windowService';
 import { DBA_QUERIES, type DbaQueryItem } from '@/utils/dbaQueries';
 import type { ConnectionProfile } from '@/types/connection';
@@ -442,7 +443,7 @@ const activeConnStyle = computed(() => {
 
 /** 連線名稱套用「標籤色彩」設定；未設定時沿用原本文字樣式。 */
 function getConnectionLabelStyle(conn: ConnectionProfile | null | undefined): Record<string, string> {
-  const color = conn?.color?.trim();
+  const color = resolveConnectionLabelColor(conn?.color?.trim(), settingsStore.colorMode);
   if (!color) return {};
   return { color };
 }

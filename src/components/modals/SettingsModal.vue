@@ -10,7 +10,7 @@
   >
     <template #header>
       <div class="flex items-center space-x-2">
-        <i class="pi pi-cog text-brand-400 text-base" />
+        <i class="pi pi-cog text-accent text-base" />
         <span class="text-sm font-semibold text-dark-100">設定 (Settings)</span>
       </div>
     </template>
@@ -93,7 +93,7 @@
               <label class="font-medium text-dark-100 block">PrimeVue 佈景風格 (Theme Preset)</label>
               <span class="text-xxs text-dark-400">切換 PrimeVue 官方預設主題架構風格</span>
             </div>
-            <span class="text-xxs font-mono text-brand-400 font-semibold">{{ settingsStore.themePreset }}</span>
+            <span class="text-xxs font-mono text-accent font-semibold">{{ settingsStore.themePreset }}</span>
           </div>
           <div class="grid grid-cols-4 gap-2.5">
             <button
@@ -108,7 +108,7 @@
             >
               <div class="flex items-center justify-between w-full mb-1">
                 <span class="font-semibold text-xs text-dark-100">{{ preset.label }}</span>
-                <i v-if="settingsStore.themePreset === preset.id" class="pi pi-check-circle text-brand-400 text-xs" />
+                <i v-if="settingsStore.themePreset === preset.id" class="pi pi-check-circle text-accent text-xs" />
               </div>
               <span class="text-[11px] text-dark-400 leading-snug">{{ preset.desc }}</span>
             </button>
@@ -140,7 +140,11 @@
                 class="w-4.5 h-4.5 rounded-full flex-shrink-0 flex items-center justify-center text-white text-[9px] shadow-xs"
                 :style="{ backgroundColor: color.color }"
               >
-                <i v-if="settingsStore.primaryColor === color.name" class="pi pi-check" />
+                <i
+                  v-if="settingsStore.primaryColor === color.name"
+                  class="pi pi-check"
+                  :style="{ color: pickReadableTextColor(color.color) }"
+                />
               </div>
               <span class="text-xxs truncate">{{ color.label.split(' ')[0] }}</span>
             </button>
@@ -170,7 +174,7 @@
             >
               <div class="flex items-center justify-between w-full">
                 <span class="text-xxs font-semibold truncate">{{ surface.label.split(' ')[0] }}</span>
-                <i v-if="settingsStore.surfaceColor === surface.name" class="pi pi-check-circle text-brand-400 text-xxs" />
+                <i v-if="settingsStore.surfaceColor === surface.name" class="pi pi-check-circle text-accent text-xxs" />
               </div>
               <div class="flex items-center space-x-1">
                 <div
@@ -205,7 +209,7 @@
         <div class="space-y-2 p-3.5 rounded-lg border border-dark-750 bg-dark-900/80">
           <div class="flex items-center justify-between">
             <span class="text-xs font-semibold text-dark-200 flex items-center space-x-1.5">
-              <i class="pi pi-eye text-brand-400" />
+              <i class="pi pi-eye text-accent" />
               <span>主題即時預覽 (Theme Live Preview)</span>
             </span>
             <span class="text-xxs text-dark-400">當前風格即時反映</span>
@@ -391,9 +395,13 @@
                   color: settingsStore.activeSqlTabTextColor,
                 }"
               >
-                <i class="pi pi-file-code text-white text-xs" />
+                <i class="pi pi-file-code text-xs" :style="{ color: settingsStore.activeSqlTabTextColor }" />
                 <span>Query 1.sql</span>
-                <span class="text-[9px] font-mono px-1 rounded bg-black/25 text-white/90">master</span>
+                <span
+                  class="text-[9px] font-mono px-1 rounded bg-black/20"
+                  :style="{ color: settingsStore.activeSqlTabTextColor }"
+                  >master</span
+                >
               </div>
             </div>
           </div>
@@ -477,7 +485,7 @@
       <div v-else-if="activeTab === 'about'" class="space-y-4">
         <div class="bg-dark-900 border border-dark-750 p-3.5 rounded space-y-2">
           <div class="flex items-center space-x-2">
-            <div class="w-5 h-5 rounded bg-brand-500/20 text-brand-400 flex items-center justify-center font-mono text-xs font-black">
+            <div class="w-5 h-5 rounded bg-brand-500/20 text-accent flex items-center justify-center font-mono text-xs font-black">
               SQL
             </div>
             <span class="font-semibold text-dark-100 text-sm">SQLight</span>
@@ -499,61 +507,61 @@
           <div class="grid grid-cols-2 gap-2.5 text-xxs font-mono">
             <!-- Group 1: 查詢執行與中斷 -->
             <div class="bg-dark-900 p-2.5 rounded border border-dark-800 space-y-2">
-              <div class="text-[11px] font-semibold text-emerald-400 flex items-center space-x-1.5 pb-1 border-b border-dark-800">
+              <div class="text-[11px] font-semibold text-ok flex items-center space-x-1.5 pb-1 border-b border-dark-800">
                 <i class="pi pi-play text-xs"></i>
                 <span>查詢執行與中斷</span>
               </div>
               <div class="flex justify-between items-center py-0.5">
                 <span class="text-dark-300">執行當前語句 (或選取)</span>
-                <kbd class="bg-dark-800 px-1.5 py-0.5 rounded text-emerald-400 border border-dark-700">Ctrl + Enter</kbd>
+                <kbd class="bg-dark-800 px-1.5 py-0.5 rounded text-ok border border-dark-700">Ctrl + Enter</kbd>
               </div>
               <div class="flex justify-between items-center py-0.5">
                 <span class="text-dark-300">執行整頁所有 SQL</span>
-                <kbd class="bg-dark-800 px-1.5 py-0.5 rounded text-emerald-400 border border-dark-700">Ctrl+Shift+Enter</kbd>
+                <kbd class="bg-dark-800 px-1.5 py-0.5 rounded text-ok border border-dark-700">Ctrl+Shift+Enter</kbd>
               </div>
               <div class="flex justify-between items-center py-0.5">
                 <span class="text-dark-300">中斷並取消執行中查詢</span>
-                <kbd class="bg-dark-800 px-1.5 py-0.5 rounded text-rose-400 border border-dark-700">Esc / Alt+Pause</kbd>
+                <kbd class="bg-dark-800 px-1.5 py-0.5 rounded text-danger border border-dark-700">Esc / Alt+Pause</kbd>
               </div>
             </div>
 
             <!-- Group 2: 分頁與檔案操作 -->
             <div class="bg-dark-900 p-2.5 rounded border border-dark-800 space-y-2">
-              <div class="text-[11px] font-semibold text-sky-400 flex items-center space-x-1.5 pb-1 border-b border-dark-800">
+              <div class="text-[11px] font-semibold text-info flex items-center space-x-1.5 pb-1 border-b border-dark-800">
                 <i class="pi pi-folder text-xs"></i>
                 <span>分頁與檔案操作</span>
               </div>
               <div class="flex justify-between items-center py-0.5">
                 <span class="text-dark-300">新增 SQL 查詢分頁</span>
-                <kbd class="bg-dark-800 px-1.5 py-0.5 rounded text-sky-300 border border-dark-700">Ctrl + N</kbd>
+                <kbd class="bg-dark-800 px-1.5 py-0.5 rounded text-info border border-dark-700">Ctrl + N</kbd>
               </div>
               <div class="flex justify-between items-center py-0.5">
                 <span class="text-dark-300">另存 / 儲存 SQL 檔案</span>
-                <kbd class="bg-dark-800 px-1.5 py-0.5 rounded text-sky-300 border border-dark-700">Ctrl + S</kbd>
+                <kbd class="bg-dark-800 px-1.5 py-0.5 rounded text-info border border-dark-700">Ctrl + S</kbd>
               </div>
               <div class="flex justify-between items-center py-0.5">
                 <span class="text-dark-300">開啟本機 SQL 檔案</span>
-                <kbd class="bg-dark-800 px-1.5 py-0.5 rounded text-sky-300 border border-dark-700">Ctrl + O</kbd>
+                <kbd class="bg-dark-800 px-1.5 py-0.5 rounded text-info border border-dark-700">Ctrl + O</kbd>
               </div>
             </div>
 
             <!-- Group 3: 編輯器輔助與格式化 -->
             <div class="bg-dark-900 p-2.5 rounded border border-dark-800 space-y-2">
-              <div class="text-[11px] font-semibold text-amber-400 flex items-center space-x-1.5 pb-1 border-b border-dark-800">
+              <div class="text-[11px] font-semibold text-warn flex items-center space-x-1.5 pb-1 border-b border-dark-800">
                 <i class="pi pi-code text-xs"></i>
                 <span>編輯器與格式化</span>
               </div>
               <div class="flex justify-between items-center py-0.5">
                 <span class="text-dark-300">程式碼智慧自動補全</span>
-                <kbd class="bg-dark-800 px-1.5 py-0.5 rounded text-amber-300 border border-dark-700">Ctrl + Space</kbd>
+                <kbd class="bg-dark-800 px-1.5 py-0.5 rounded text-warn border border-dark-700">Ctrl + Space</kbd>
               </div>
               <div class="flex justify-between items-center py-0.5">
                 <span class="text-dark-300">格式化 SQL (選取/當前語句)</span>
-                <kbd class="bg-dark-800 px-1.5 py-0.5 rounded text-amber-300 border border-dark-700">Shift+Alt+F</kbd>
+                <kbd class="bg-dark-800 px-1.5 py-0.5 rounded text-warn border border-dark-700">Shift+Alt+F</kbd>
               </div>
               <div class="flex justify-between items-center py-0.5">
                 <span class="text-dark-300">AI SQL 助手 (分析/最佳化)</span>
-                <kbd class="bg-dark-800 px-1.5 py-0.5 rounded text-amber-300 border border-dark-700">Ctrl + I</kbd>
+                <kbd class="bg-dark-800 px-1.5 py-0.5 rounded text-warn border border-dark-700">Ctrl + I</kbd>
               </div>
               <div class="flex justify-between items-center py-0.5">
                 <span class="text-dark-300">向下快速複製 (行/選取塊)</span>
@@ -567,21 +575,21 @@
 
             <!-- Group 4: 檢索、結果與圖表 -->
             <div class="bg-dark-900 p-2.5 rounded border border-dark-800 space-y-2">
-              <div class="text-[11px] font-semibold text-cyan-400 flex items-center space-x-1.5 pb-1 border-b border-dark-800">
+              <div class="text-[11px] font-semibold text-er flex items-center space-x-1.5 pb-1 border-b border-dark-800">
                 <i class="pi pi-search text-xs"></i>
                 <span>檢索、結果與圖表</span>
               </div>
               <div class="flex justify-between items-center py-0.5">
                 <span class="text-dark-300">快速物件檢索器 (Spotlight)</span>
-                <kbd class="bg-dark-800 px-1.5 py-0.5 rounded text-cyan-300 border border-dark-700">Ctrl + P</kbd>
+                <kbd class="bg-dark-800 px-1.5 py-0.5 rounded text-er border border-dark-700">Ctrl + P</kbd>
               </div>
               <div class="flex justify-between items-center py-0.5">
                 <span class="text-dark-300">查詢結果 - 複製選取儲存格</span>
-                <kbd class="bg-dark-800 px-1.5 py-0.5 rounded text-indigo-300 border border-dark-700">Ctrl + C</kbd>
+                <kbd class="bg-dark-800 px-1.5 py-0.5 rounded text-structure border border-dark-700">Ctrl + C</kbd>
               </div>
               <div class="flex justify-between items-center py-0.5">
                 <span class="text-dark-300">查詢結果 - 全選所有資料列</span>
-                <kbd class="bg-dark-800 px-1.5 py-0.5 rounded text-indigo-300 border border-dark-700">Ctrl + A</kbd>
+                <kbd class="bg-dark-800 px-1.5 py-0.5 rounded text-structure border border-dark-700">Ctrl + A</kbd>
               </div>
               <div class="flex justify-between items-center py-0.5">
                 <span class="text-dark-300">ER 關聯圖 - 刪除所選元素</span>
@@ -646,6 +654,7 @@ import {
 import FontFamilyPicker from '@/components/common/FontFamilyPicker.vue';
 import TableFilterTab from './TableFilterTab.vue';
 import AiSettingsTab from './settings/AiSettingsTab.vue';
+import { pickReadableTextColor } from '@/utils/connectionColor';
 
 defineProps<{
   isOpen: boolean;

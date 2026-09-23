@@ -120,7 +120,7 @@
         <!-- Copy to TSV (Excel friendly) -->
         <Button
           type="button"
-          :icon="copiedTsv ? 'pi pi-check text-emerald-400' : 'pi pi-file-excel text-emerald-400'"
+          :icon="copiedTsv ? 'pi pi-check text-ok' : 'pi pi-file-excel text-ok'"
           :label="copiedTsv ? 'Copied!' : 'Copy TSV'"
           size="small"
           severity="secondary"
@@ -133,7 +133,7 @@
         <!-- Copy to CSV -->
         <Button
           type="button"
-          :icon="copiedCsv ? 'pi pi-check text-brand-400' : 'pi pi-file text-brand-400'"
+          :icon="copiedCsv ? 'pi pi-check text-accent' : 'pi pi-file text-accent'"
           :label="copiedCsv ? 'Copied!' : 'CSV'"
           size="small"
           severity="secondary"
@@ -146,7 +146,7 @@
         <!-- Copy as JSON -->
         <Button
           type="button"
-          icon="pi pi-code text-cyan-400"
+          icon="pi pi-code text-er"
           label="JSON"
           size="small"
           severity="secondary"
@@ -159,7 +159,7 @@
         <!-- Copy as Markdown -->
         <Button
           type="button"
-          icon="pi pi-table text-pink-400"
+          icon="pi pi-table text-danger"
           label="MD"
           size="small"
           severity="secondary"
@@ -219,9 +219,9 @@
       <!-- Left: Statistics or Default Summary -->
       <div class="flex items-center space-x-2.5 overflow-x-auto min-w-0">
         <template v-if="selectionStats">
-          <div class="flex items-center space-x-1 font-semibold text-brand-300 flex-shrink-0">
+          <div class="flex items-center space-x-1 font-semibold text-accent flex-shrink-0">
             <span>選取:</span>
-            <span v-if="selectedColumnsCount > 1" class="text-amber-800 dark:text-amber-300 font-mono">
+            <span v-if="selectedColumnsCount > 1" class="text-warn font-mono">
               {{ selectedColumnsCount }} 欄
             </span>
             <span class="font-mono text-dark-100">
@@ -235,19 +235,19 @@
           <template v-if="selectionStats.numericCount > 0">
             <span class="text-dark-600 flex-shrink-0">|</span>
             <div class="flex-shrink-0">
-              總和 (Sum): <strong class="font-mono text-emerald-400">{{ formatAggregateNumber(selectionStats.sum) }}</strong>
+              總和 (Sum): <strong class="font-mono text-ok">{{ formatAggregateNumber(selectionStats.sum) }}</strong>
             </div>
             <span class="text-dark-600 flex-shrink-0">|</span>
             <div class="flex-shrink-0">
-              平均 (Avg): <strong class="font-mono text-sky-400">{{ formatAggregateNumber(selectionStats.avg) }}</strong>
+              平均 (Avg): <strong class="font-mono text-info">{{ formatAggregateNumber(selectionStats.avg) }}</strong>
             </div>
             <span class="text-dark-600 flex-shrink-0">|</span>
             <div class="flex-shrink-0">
-              最小值 (Min): <strong class="font-mono text-amber-700 dark:text-amber-400">{{ formatAggregateNumber(selectionStats.min) }}</strong>
+              最小值 (Min): <strong class="font-mono text-warn">{{ formatAggregateNumber(selectionStats.min) }}</strong>
             </div>
             <span class="text-dark-600 flex-shrink-0">|</span>
             <div class="flex-shrink-0">
-              最大值 (Max): <strong class="font-mono text-purple-400">{{ formatAggregateNumber(selectionStats.max) }}</strong>
+              最大值 (Max): <strong class="font-mono text-plan">{{ formatAggregateNumber(selectionStats.max) }}</strong>
             </div>
           </template>
 
@@ -296,7 +296,7 @@
         @click="copyCellValue"
         class="w-full text-left px-2.5 py-1.5 hover:bg-dark-750 hover:text-dark-100 flex items-center space-x-2 transition-colors"
       >
-        <Copy class="w-3.5 h-3.5 text-brand-400" />
+        <Copy class="w-3.5 h-3.5 text-accent" />
         <span>複製儲存格值 (Copy Cell)</span>
       </button>
 
@@ -304,7 +304,7 @@
         @click="copyColumnName"
         class="w-full text-left px-2.5 py-1.5 hover:bg-dark-750 hover:text-dark-100 flex items-center space-x-2 transition-colors"
       >
-        <Heading class="w-3.5 h-3.5 text-violet-400" />
+        <Heading class="w-3.5 h-3.5 text-plan" />
         <span>複製欄位名稱 (Column Name)</span>
       </button>
 
@@ -312,7 +312,7 @@
         @click="copyCurrentRow"
         class="w-full text-left px-2.5 py-1.5 hover:bg-dark-750 hover:text-dark-100 flex items-center space-x-2 transition-colors"
       >
-        <FileText class="w-3.5 h-3.5 text-emerald-400" />
+        <FileText class="w-3.5 h-3.5 text-ok" />
         <span>複製整列資料 (Copy Row)</span>
       </button>
 
@@ -320,7 +320,7 @@
         @click="copyCurrentRowAsJson"
         class="w-full text-left px-2.5 py-1.5 hover:bg-dark-750 hover:text-dark-100 flex items-center space-x-2 transition-colors"
       >
-        <Braces class="w-3.5 h-3.5 text-teal-400" />
+        <Braces class="w-3.5 h-3.5 text-ok" />
         <span>複製整列為 JSON (Row JSON)</span>
       </button>
 
@@ -328,7 +328,7 @@
         @click="openDataView"
         class="w-full text-left px-2.5 py-1.5 hover:bg-dark-750 hover:text-dark-100 flex items-center space-x-2 transition-colors"
       >
-        <Eye class="w-3.5 h-3.5 text-sky-400" />
+        <Eye class="w-3.5 h-3.5 text-info" />
         <span>資料檢視 (Data View)</span>
       </button>
 
@@ -338,7 +338,7 @@
         <button
           v-if="isCurrentCellNullable && contextMenu.cellValue !== null"
           @click="setCellNull"
-          class="w-full text-left px-2.5 py-1.5 hover:bg-dark-750 hover:text-amber-800 dark:hover:text-amber-300 flex items-center space-x-2 transition-colors text-amber-700 dark:text-amber-400"
+          class="w-full text-left px-2.5 py-1.5 hover:bg-dark-750 hover:text-warn flex items-center space-x-2 transition-colors text-warn"
         >
           <Slash class="w-3.5 h-3.5" />
           <span>設為 NULL (Set NULL)</span>
@@ -346,7 +346,7 @@
         <button
           v-if="isCurrentCellModified"
           @click="revertSingleCell"
-          class="w-full text-left px-2.5 py-1.5 hover:bg-dark-750 hover:text-amber-800 dark:hover:text-amber-300 flex items-center space-x-2 transition-colors text-amber-700 dark:text-amber-400"
+          class="w-full text-left px-2.5 py-1.5 hover:bg-dark-750 hover:text-warn flex items-center space-x-2 transition-colors text-warn"
         >
           <Undo2 class="w-3.5 h-3.5" />
           <span>退回此儲存格修改 (Revert Cell)</span>
@@ -361,7 +361,7 @@
         @click="copySelectedCells"
         class="w-full text-left px-2.5 py-1.5 hover:bg-dark-750 hover:text-dark-100 flex items-center space-x-2 transition-colors"
       >
-        <Copy class="w-3.5 h-3.5 text-brand-300" />
+        <Copy class="w-3.5 h-3.5 text-accent" />
         <span>複製選取內容 ({{ selectionStats?.totalCells }} 格)</span>
       </button>
 
@@ -370,7 +370,7 @@
         @click="copySelectedAsJson"
         class="w-full text-left px-2.5 py-1.5 hover:bg-dark-750 hover:text-dark-100 flex items-center space-x-2 transition-colors"
       >
-        <Braces class="w-3.5 h-3.5 text-cyan-400" />
+        <Braces class="w-3.5 h-3.5 text-er" />
         <span>複製選取為 JSON 物件陣列</span>
       </button>
 
@@ -379,7 +379,7 @@
         @click="handleGenerateDml('INSERT')"
         class="w-full text-left px-2.5 py-1.5 hover:bg-dark-750 hover:text-dark-100 flex items-center space-x-2 transition-colors"
       >
-        <PlusCircle class="w-3.5 h-3.5 text-sky-400" />
+        <PlusCircle class="w-3.5 h-3.5 text-info" />
         <span>建立 INSERT 語法</span>
       </button>
 
@@ -387,7 +387,7 @@
         @click="handleGenerateDml('UPDATE')"
         class="w-full text-left px-2.5 py-1.5 hover:bg-dark-750 hover:text-dark-100 flex items-center space-x-2 transition-colors"
       >
-        <Edit3 class="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
+        <Edit3 class="w-3.5 h-3.5 text-warn" />
         <span>建立 UPDATE 語法</span>
       </button>
 
@@ -395,7 +395,7 @@
         @click="handleGenerateDml('DELETE')"
         class="w-full text-left px-2.5 py-1.5 hover:bg-dark-750 hover:text-dark-100 flex items-center space-x-2 transition-colors"
       >
-        <Trash2 class="w-3.5 h-3.5 text-rose-400" />
+        <Trash2 class="w-3.5 h-3.5 text-danger" />
         <span>建立 DELETE 語法</span>
       </button>
     </div>
@@ -415,16 +415,16 @@
       <!-- Modal Header -->
       <div
         class="px-5 py-3.5 border-b flex items-center justify-between flex-shrink-0"
-        :class="requiresModificationPrompt && commitModal.confirmStep === 2 ? 'bg-rose-950/30 border-rose-900/50' : 'bg-dark-800 border-dark-750'"
+        :class="requiresModificationPrompt && commitModal.confirmStep === 2 ? 'bg-rose-50 dark:bg-rose-950/30 border-rose-200 dark:border-rose-900/50' : 'bg-dark-800 border-dark-750'"
       >
         <div class="flex items-center space-x-2.5">
           <div
             class="w-7 h-7 rounded-md flex items-center justify-center"
-            :class="requiresModificationPrompt ? (commitModal.confirmStep === 2 ? 'bg-rose-950/80 border border-rose-700/60' : 'bg-amber-500/20 border border-amber-500/40') : 'bg-emerald-950/80 border border-emerald-700/60'"
+            :class="requiresModificationPrompt ? (commitModal.confirmStep === 2 ? 'bg-rose-100 dark:bg-rose-950/80 border border-rose-200 dark:border-rose-700/60' : 'bg-amber-500/20 border border-amber-500/40') : 'bg-emerald-100 dark:bg-emerald-950/80 border border-emerald-200 dark:border-emerald-700/60'"
           >
-            <i v-if="requiresModificationPrompt && commitModal.confirmStep === 2" class="pi pi-exclamation-triangle text-rose-400 animate-pulse text-sm"></i>
-            <i v-else-if="requiresModificationPrompt" class="pi pi-exclamation-triangle text-amber-600 dark:text-amber-400 text-sm"></i>
-            <i v-else class="pi pi-check text-emerald-400 text-sm"></i>
+            <i v-if="requiresModificationPrompt && commitModal.confirmStep === 2" class="pi pi-exclamation-triangle text-danger animate-pulse text-sm"></i>
+            <i v-else-if="requiresModificationPrompt" class="pi pi-exclamation-triangle text-warn text-sm"></i>
+            <i v-else class="pi pi-check text-ok text-sm"></i>
           </div>
           <div>
             <h3 class="font-semibold text-sm text-dark-100 leading-tight">
@@ -443,7 +443,7 @@
           severity="secondary"
           @click="closeCommitModal"
           v-tooltip.top="'關閉 (Esc)'"
-          class="!w-7 !h-7 !p-0 !rounded-md !border-0 !shadow-none hover:!bg-rose-500/20 hover:!text-rose-400"
+          class="!w-7 !h-7 !p-0 !rounded-md !border-0 !shadow-none hover:!bg-rose-500/20 hover:!text-danger"
         />
       </div>
 
@@ -453,18 +453,18 @@
         <div class="bg-dark-850 border border-dark-750 rounded-md px-4 py-2.5 flex items-center justify-between font-mono flex-shrink-0">
           <div class="flex items-center space-x-2">
             <span class="text-dark-400 text-xxs">目標資料表: </span>
-            <strong class="text-brand-300 font-semibold text-xs">[{{ editability.targetTable?.schema }}].[{{ editability.targetTable?.tableName }}]</strong>
+            <strong class="text-accent font-semibold text-xs">[{{ editability.targetTable?.schema }}].[{{ editability.targetTable?.tableName }}]</strong>
           </div>
           <div class="flex items-center space-x-3 text-dark-300 text-xxs">
-            <span>異動列數: <strong class="text-emerald-400 font-semibold text-xs">{{ commitModal.rowCount }}</strong> 列</span>
+            <span>異動列數: <strong class="text-ok font-semibold text-xs">{{ commitModal.rowCount }}</strong> 列</span>
             <span class="text-dark-600">|</span>
-            <span>異動格數: <strong class="text-amber-700 dark:text-amber-400 font-semibold text-xs">{{ commitModal.cellCount }}</strong> 格</span>
+            <span>異動格數: <strong class="text-warn font-semibold text-xs">{{ commitModal.cellCount }}</strong> 格</span>
           </div>
         </div>
 
         <!-- Error Alert if any -->
-        <div v-if="commitModal.error" class="bg-rose-950/50 border border-rose-800 text-rose-300 p-3 rounded-md text-xs flex items-start space-x-2 flex-shrink-0">
-          <i class="pi pi-exclamation-triangle text-rose-400 flex-shrink-0 mt-0.5 text-sm"></i>
+        <div v-if="commitModal.error" class="bg-rose-100 dark:bg-rose-950/50 border border-rose-200 dark:border-rose-800 text-danger p-3 rounded-md text-xs flex items-start space-x-2 flex-shrink-0">
+          <i class="pi pi-exclamation-triangle text-danger flex-shrink-0 mt-0.5 text-sm"></i>
           <div class="flex-1 font-mono break-all whitespace-pre-wrap">{{ commitModal.error }}</div>
         </div>
 
@@ -501,20 +501,20 @@
         <div v-if="requiresModificationPrompt" class="flex-1 min-w-0 mr-4">
           <div
             v-if="commitModal.confirmStep === 1"
-            class="flex items-center space-x-2 px-3 py-1.5 rounded bg-amber-500/15 border border-amber-500/30 text-amber-800 dark:text-amber-300 text-xxs leading-normal"
+            class="flex items-center space-x-2 px-3 py-1.5 rounded bg-amber-500/15 border border-amber-500/30 text-warn text-xxs leading-normal"
           >
-            <i class="pi pi-exclamation-triangle text-amber-600 dark:text-amber-400 shrink-0 text-sm"></i>
+            <i class="pi pi-exclamation-triangle text-warn shrink-0 text-sm"></i>
             <span>
               <strong>高危提醒 (1/2)：</strong>連線「{{ currentConnection?.name }}」已啟用修改提示防護。此操作將直接更動資料庫，需進行 <strong>2 次重複確認</strong> 才可提交！
             </span>
           </div>
           <div
             v-else
-            class="flex items-center space-x-2 px-3 py-1.5 rounded bg-rose-950/60 border border-rose-700/80 text-rose-200 text-xxs leading-normal animate-pulse"
+            class="flex items-center space-x-2 px-3 py-1.5 rounded bg-rose-100 dark:bg-rose-950/60 border border-rose-200 dark:border-rose-700/80 text-danger text-xxs leading-normal animate-pulse"
           >
-            <i class="pi pi-exclamation-circle text-rose-400 shrink-0 text-sm"></i>
+            <i class="pi pi-exclamation-circle text-danger shrink-0 text-sm"></i>
             <span>
-              <strong class="text-white">高危提醒 (2/2 最終確認)：</strong>即將對目標資料表實施實體資料更動！資料修改後可能無法復原，請再次核實無誤後點擊執行。
+              <strong class="text-danger">高危提醒 (2/2 最終確認)：</strong>即將對目標資料表實施實體資料更動！資料修改後可能無法復原，請再次核實無誤後點擊執行。
             </span>
           </div>
         </div>

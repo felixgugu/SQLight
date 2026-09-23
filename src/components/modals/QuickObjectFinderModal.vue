@@ -6,14 +6,14 @@
     :closable="false"
     :dismissableMask="true"
     :showHeader="false"
-    class="w-full max-w-2xl !bg-dark-850 !border !border-dark-650 !rounded-xl shadow-2xl overflow-hidden ring-1 ring-white/10"
+    class="w-full max-w-2xl !bg-dark-850 !border !border-dark-700 !rounded-xl shadow-2xl overflow-hidden ring-1 ring-black/5 dark:ring-white/10"
     contentClass="!p-0 !bg-dark-850"
   >
     <!-- Search Header Bar -->
     <div class="p-3 border-b border-dark-700 bg-dark-900/60 flex flex-col space-y-2.5">
       <div class="flex items-center space-x-2">
         <IconField class="flex-1">
-          <InputIcon class="pi pi-search text-brand-400" />
+          <InputIcon class="pi pi-search text-accent" />
           <InputText
             ref="searchInputRef"
             v-model="searchQuery"
@@ -63,7 +63,7 @@
           severity="secondary"
           @click="closeModal"
           v-tooltip.top="'關閉 (Esc)'"
-          class="!w-7 !h-7 !p-0 !rounded-md !border-0 !shadow-none hover:!bg-rose-500/20 hover:!text-rose-400"
+          class="!w-7 !h-7 !p-0 !rounded-md !border-0 !shadow-none hover:!bg-rose-500/20 hover:!text-danger"
         />
       </div>
 
@@ -72,14 +72,14 @@
         <!-- Left: Target Connection & Database Switcher -->
         <div class="flex items-center space-x-2">
           <span class="flex items-center space-x-1">
-            <i class="pi pi-server text-emerald-400 text-xs"></i>
+            <i class="pi pi-server text-ok text-xs"></i>
             <span class="text-dark-300 font-medium truncate max-w-[120px]">
               {{ connectionStore.activeConnection?.name || '未連線' }}
             </span>
           </span>
           <span>/</span>
           <div class="flex items-center space-x-1">
-            <i class="pi pi-database text-amber-600 dark:text-amber-400 text-xs"></i>
+            <i class="pi pi-database text-warn text-xs"></i>
             <Select
               v-if="availableDatabases.length > 0"
               v-model="currentDatabase"
@@ -89,13 +89,13 @@
               class="!text-xs !h-6 !py-0 font-mono"
             >
               <template #value="slotProps">
-                <span class="text-xs font-mono text-amber-800 dark:text-amber-200 font-medium">{{ slotProps.value || 'master' }}</span>
+                <span class="text-xs font-mono text-warn font-medium">{{ slotProps.value || 'master' }}</span>
               </template>
               <template #option="slotProps">
                 <span class="text-xs font-mono py-0.5 text-dark-200">{{ slotProps.option }}</span>
               </template>
             </Select>
-            <span v-else class="text-amber-800 dark:text-amber-200 font-medium font-mono">{{ currentDatabase || 'master' }}</span>
+            <span v-else class="text-warn font-medium font-mono">{{ currentDatabase || 'master' }}</span>
           </div>
         </div>
 
@@ -123,7 +123,7 @@
       v-if="isLoading"
       class="px-4 py-8 flex flex-col items-center justify-center space-y-2 text-dark-400"
     >
-      <i class="pi pi-spin pi-spinner text-2xl text-brand-400"></i>
+      <i class="pi pi-spin pi-spinner text-2xl text-accent"></i>
       <span class="text-xs">正在載入資料庫物件...</span>
     </div>
 
@@ -194,13 +194,13 @@
               <span
                 v-for="(chunk, cIdx) in getHighlightedSchemaChunks(res)"
                 :key="`sch-${cIdx}`"
-                :class="chunk.highlight ? 'text-amber-300 font-bold underline decoration-amber-400/80' : ''"
+                :class="chunk.highlight ? 'text-warn font-bold underline decoration-amber-400/80' : ''"
               >{{ chunk.text }}</span>.</span>
             <span class="font-medium text-dark-100">
               <span
                 v-for="(chunk, cIdx) in getHighlightedNameChunks(res)"
                 :key="`nm-${cIdx}`"
-                :class="chunk.highlight ? 'text-amber-300 font-bold underline decoration-amber-400/80' : ''"
+                :class="chunk.highlight ? 'text-warn font-bold underline decoration-amber-400/80' : ''"
               >{{ chunk.text }}</span>
             </span>
           </div>

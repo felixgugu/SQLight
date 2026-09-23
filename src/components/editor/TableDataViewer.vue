@@ -3,11 +3,11 @@
     <!-- Subheader toolbar for Table Data -->
     <div class="h-8 bg-dark-850 border-b border-dark-700 flex items-center justify-between px-2 text-xs flex-shrink-0 space-x-2">
       <div class="flex items-center space-x-2 min-w-0">
-        <i class="pi pi-table text-emerald-400 text-xs flex-shrink-0"></i>
+        <i class="pi pi-table text-ok text-xs flex-shrink-0"></i>
         <span class="font-semibold text-dark-100 truncate">{{ schema }}.{{ tableName }}</span>
         <span class="text-dark-600">|</span>
         <span class="text-dark-400 text-xxs flex-shrink-0">
-          <strong class="text-emerald-400">{{ rows.length.toLocaleString() }}</strong> rows
+          <strong class="text-ok">{{ rows.length.toLocaleString() }}</strong> rows
         </span>
 
         <!-- Quick Filter Input -->
@@ -27,7 +27,7 @@
         <!-- Copy TSV -->
         <Button
           type="button"
-          :icon="copiedTsv ? 'pi pi-check text-emerald-400' : 'pi pi-file-excel text-emerald-400'"
+          :icon="copiedTsv ? 'pi pi-check text-ok' : 'pi pi-file-excel text-ok'"
           :label="copiedTsv ? 'Copied!' : 'Copy TSV'"
           size="small"
           severity="secondary"
@@ -40,7 +40,7 @@
         <!-- Copy JSON -->
         <Button
           type="button"
-          icon="pi pi-code text-cyan-400"
+          icon="pi pi-code text-er"
           label="JSON"
           size="small"
           severity="secondary"
@@ -53,7 +53,7 @@
         <!-- Copy Markdown -->
         <Button
           type="button"
-          icon="pi pi-table text-pink-400"
+          icon="pi pi-table text-danger"
           label="MD"
           size="small"
           severity="secondary"
@@ -80,14 +80,14 @@
 
     <!-- Loading State -->
     <div v-if="isLoading" class="flex-1 flex items-center justify-center text-dark-400 space-x-2">
-      <RotateCw class="w-4 h-4 animate-spin text-brand-400" />
+      <RotateCw class="w-4 h-4 animate-spin text-accent" />
       <span>Loading table data...</span>
     </div>
 
     <!-- Error State -->
-    <div v-else-if="error" class="flex-1 p-4 text-rose-400">
+    <div v-else-if="error" class="flex-1 p-4 text-danger">
       <div class="font-semibold mb-1">Error querying table:</div>
-      <div class="font-mono text-xs bg-rose-950/30 p-3 rounded border border-rose-900/50">{{ error }}</div>
+      <div class="font-mono text-xs bg-rose-50 dark:bg-rose-950/30 p-3 rounded border border-rose-200 dark:border-rose-900/50">{{ error }}</div>
     </div>
 
     <!-- Tabulator grid -->
@@ -108,9 +108,9 @@
       <!-- Left: Statistics or Default Summary -->
       <div class="flex items-center space-x-2.5 overflow-x-auto min-w-0">
         <template v-if="selectionStats">
-          <div class="flex items-center space-x-1 font-semibold text-brand-300 flex-shrink-0">
+          <div class="flex items-center space-x-1 font-semibold text-accent flex-shrink-0">
             <span>選取:</span>
-            <span v-if="selectedColumnsCount > 1" class="text-amber-800 dark:text-amber-300 font-mono">
+            <span v-if="selectedColumnsCount > 1" class="text-warn font-mono">
               {{ selectedColumnsCount }} 欄
             </span>
             <span class="font-mono text-dark-100">
@@ -124,19 +124,19 @@
           <template v-if="selectionStats.numericCount > 0">
             <span class="text-dark-600 flex-shrink-0">|</span>
             <div class="flex-shrink-0">
-              總和 (Sum): <strong class="font-mono text-emerald-400">{{ formatAggregateNumber(selectionStats.sum) }}</strong>
+              總和 (Sum): <strong class="font-mono text-ok">{{ formatAggregateNumber(selectionStats.sum) }}</strong>
             </div>
             <span class="text-dark-600 flex-shrink-0">|</span>
             <div class="flex-shrink-0">
-              平均 (Avg): <strong class="font-mono text-sky-400">{{ formatAggregateNumber(selectionStats.avg) }}</strong>
+              平均 (Avg): <strong class="font-mono text-info">{{ formatAggregateNumber(selectionStats.avg) }}</strong>
             </div>
             <span class="text-dark-600 flex-shrink-0">|</span>
             <div class="flex-shrink-0">
-              最小值 (Min): <strong class="font-mono text-amber-700 dark:text-amber-400">{{ formatAggregateNumber(selectionStats.min) }}</strong>
+              最小值 (Min): <strong class="font-mono text-warn">{{ formatAggregateNumber(selectionStats.min) }}</strong>
             </div>
             <span class="text-dark-600 flex-shrink-0">|</span>
             <div class="flex-shrink-0">
-              最大值 (Max): <strong class="font-mono text-purple-400">{{ formatAggregateNumber(selectionStats.max) }}</strong>
+              最大值 (Max): <strong class="font-mono text-plan">{{ formatAggregateNumber(selectionStats.max) }}</strong>
             </div>
           </template>
 
@@ -185,7 +185,7 @@
         @click="copyCellValue"
         class="w-full text-left px-2.5 py-1.5 hover:bg-dark-750 hover:text-dark-100 flex items-center space-x-2 transition-colors"
       >
-        <Copy class="w-3.5 h-3.5 text-brand-400" />
+        <Copy class="w-3.5 h-3.5 text-accent" />
         <span>複製儲存格值 (Copy Cell)</span>
       </button>
 
@@ -193,7 +193,7 @@
         @click="copyCurrentRow"
         class="w-full text-left px-2.5 py-1.5 hover:bg-dark-750 hover:text-dark-100 flex items-center space-x-2 transition-colors"
       >
-        <FileText class="w-3.5 h-3.5 text-emerald-400" />
+        <FileText class="w-3.5 h-3.5 text-ok" />
         <span>複製整列資料 (Copy Row)</span>
       </button>
 
@@ -201,7 +201,7 @@
         @click="copyCurrentRowAsJson"
         class="w-full text-left px-2.5 py-1.5 hover:bg-dark-750 hover:text-dark-100 flex items-center space-x-2 transition-colors"
       >
-        <Braces class="w-3.5 h-3.5 text-teal-400" />
+        <Braces class="w-3.5 h-3.5 text-ok" />
         <span>複製整列為 JSON (Row JSON)</span>
       </button>
 
@@ -213,7 +213,7 @@
         @click="copySelectedCells"
         class="w-full text-left px-2.5 py-1.5 hover:bg-dark-750 hover:text-dark-100 flex items-center space-x-2 transition-colors"
       >
-        <Copy class="w-3.5 h-3.5 text-brand-300" />
+        <Copy class="w-3.5 h-3.5 text-accent" />
         <span>複製選取內容 ({{ selectionStats?.totalCells }} 格)</span>
       </button>
 
@@ -222,7 +222,7 @@
         @click="copySelectedAsJson"
         class="w-full text-left px-2.5 py-1.5 hover:bg-dark-750 hover:text-dark-100 flex items-center space-x-2 transition-colors"
       >
-        <Braces class="w-3.5 h-3.5 text-cyan-400" />
+        <Braces class="w-3.5 h-3.5 text-er" />
         <span>複製選取為 JSON 物件陣列</span>
       </button>
 
@@ -231,7 +231,7 @@
         @click="handleGenerateDml('INSERT')"
         class="w-full text-left px-2.5 py-1.5 hover:bg-dark-750 hover:text-dark-100 flex items-center space-x-2 transition-colors"
       >
-        <PlusCircle class="w-3.5 h-3.5 text-sky-400" />
+        <PlusCircle class="w-3.5 h-3.5 text-info" />
         <span>建立 INSERT 語法</span>
       </button>
 
@@ -239,7 +239,7 @@
         @click="handleGenerateDml('UPDATE')"
         class="w-full text-left px-2.5 py-1.5 hover:bg-dark-750 hover:text-dark-100 flex items-center space-x-2 transition-colors"
       >
-        <Edit3 class="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
+        <Edit3 class="w-3.5 h-3.5 text-warn" />
         <span>建立 UPDATE 語法</span>
       </button>
 
@@ -247,7 +247,7 @@
         @click="handleGenerateDml('DELETE')"
         class="w-full text-left px-2.5 py-1.5 hover:bg-dark-750 hover:text-dark-100 flex items-center space-x-2 transition-colors"
       >
-        <Trash2 class="w-3.5 h-3.5 text-rose-400" />
+        <Trash2 class="w-3.5 h-3.5 text-danger" />
         <span>建立 DELETE 語法</span>
       </button>
     </div>

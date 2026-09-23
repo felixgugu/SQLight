@@ -8,7 +8,7 @@
         borderColor: 'var(--p-surface-border)',
       }"
     >
-      <i class="pi pi-sparkles text-base mt-0.5 text-purple-400" />
+      <i class="pi pi-sparkles text-base mt-0.5 text-plan" />
       <div class="space-y-1">
         <div class="font-semibold text-dark-100">AI SQL 助手自訂請求設定 (通用 cURL 範本)</div>
         <p class="text-surface-400 leading-relaxed text-xxs">
@@ -57,9 +57,9 @@
       <div
         v-if="testResult"
         class="mt-2 p-2.5 rounded text-xs flex items-center space-x-2"
-        :class="testResult.success ? 'bg-emerald-500/10 text-emerald-300 border border-emerald-500/30' : 'bg-rose-500/10 text-rose-300 border border-rose-500/30'"
+        :class="testResult.success ? 'bg-emerald-500/10 text-ok border border-emerald-500/30' : 'bg-rose-500/10 text-danger border border-rose-500/30'"
       >
-        <i :class="testResult.success ? 'pi pi-check-circle text-emerald-400' : 'pi pi-exclamation-triangle text-rose-400'" />
+        <i :class="testResult.success ? 'pi pi-check-circle text-ok' : 'pi pi-exclamation-triangle text-danger'" />
         <span class="flex-1 font-mono text-[11px]">{{ testResult.message }}</span>
       </div>
     </div>
@@ -141,7 +141,7 @@
           class="p-2.5 rounded-lg border border-dark-750 bg-dark-850/60 hover:border-dark-700 transition-colors flex items-start justify-between space-x-3"
         >
           <div class="flex-1 min-w-0 space-y-1">
-            <div class="text-xs font-semibold text-purple-300 font-sans">
+            <div class="text-xs font-semibold text-plan font-sans">
               {{ item.label }}
             </div>
             <p class="text-[11px] text-dark-300 leading-relaxed break-words font-sans m-0">
@@ -166,7 +166,7 @@
               rounded
               size="small"
               v-tooltip.top="'刪除此選項'"
-              class="!w-6 !h-6 !p-0 hover:text-rose-400"
+              class="!w-6 !h-6 !p-0 hover:text-danger"
               @click="handleDeletePrompt(item.id)"
             />
           </div>

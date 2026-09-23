@@ -137,40 +137,40 @@ const themeClasses = computed(() => {
     switch (c) {
       case 'blue':
         return {
-          container: 'bg-sky-50 border-sky-300/80 hover:border-sky-400 text-sky-950 shadow-md shadow-sky-900/5',
-          header: 'bg-sky-100/80 border-sky-200 text-sky-800',
-          textarea: 'text-sky-950 placeholder:text-sky-700/40',
+          container: 'bg-sky-50 border-sky-300/80 hover:border-sky-400 text-info shadow-md shadow-sky-900/5',
+          header: 'bg-sky-100/80 border-sky-200 text-info',
+          textarea: 'text-info placeholder:text-info',
         };
       case 'emerald':
         return {
-          container: 'bg-emerald-50 border-emerald-300/80 hover:border-emerald-400 text-emerald-950 shadow-md shadow-emerald-900/5',
-          header: 'bg-emerald-100/80 border-emerald-200 text-emerald-800',
-          textarea: 'text-emerald-950 placeholder:text-emerald-700/40',
+          container: 'bg-emerald-50 border-emerald-300/80 hover:border-emerald-400 text-ok shadow-md shadow-emerald-900/5',
+          header: 'bg-emerald-100/80 border-emerald-200 text-ok',
+          textarea: 'text-ok placeholder:text-ok',
         };
       case 'purple':
         return {
-          container: 'bg-purple-50 border-purple-300/80 hover:border-purple-400 text-purple-950 shadow-md shadow-purple-900/5',
-          header: 'bg-purple-100/80 border-purple-200 text-purple-800',
-          textarea: 'text-purple-950 placeholder:text-purple-700/40',
+          container: 'bg-purple-50 border-purple-300/80 hover:border-purple-400 text-plan shadow-md shadow-purple-900/5',
+          header: 'bg-purple-100/80 border-purple-200 text-plan',
+          textarea: 'text-plan placeholder:text-plan',
         };
       case 'rose':
         return {
-          container: 'bg-rose-50 border-rose-300/80 hover:border-rose-400 text-rose-950 shadow-md shadow-rose-900/5',
-          header: 'bg-rose-100/80 border-rose-200 text-rose-800',
-          textarea: 'text-rose-950 placeholder:text-rose-700/40',
+          container: 'bg-rose-50 border-rose-300/80 hover:border-rose-400 text-danger shadow-md shadow-rose-900/5',
+          header: 'bg-rose-100/80 border-rose-200 text-danger',
+          textarea: 'text-danger placeholder:text-danger',
         };
       case 'amber':
         return {
-          container: 'bg-amber-50 border-amber-300/80 hover:border-amber-400 text-amber-950 shadow-md shadow-amber-900/5',
-          header: 'bg-amber-100/80 border-amber-200 text-amber-800',
-          textarea: 'text-amber-950 placeholder:text-amber-700/40',
+          container: 'bg-amber-50 border-amber-300/80 hover:border-amber-400 text-warn shadow-md shadow-amber-900/5',
+          header: 'bg-amber-100/80 border-amber-200 text-warn',
+          textarea: 'text-warn placeholder:text-warn',
         };
       case 'dark':
       default:
         return {
           container: 'bg-slate-100 border-slate-400 hover:border-slate-500 text-slate-800 shadow-md shadow-slate-900/5',
           header: 'bg-slate-200/90 border-slate-300 text-slate-700',
-          textarea: 'text-slate-900 placeholder:text-slate-500',
+          textarea: 'text-slate-900 placeholder:text-slate-600',
         };
     }
   }
@@ -178,33 +178,33 @@ const themeClasses = computed(() => {
   switch (c) {
     case 'blue':
       return {
-        container: 'bg-sky-950/40 border-sky-500/50 hover:border-sky-400 text-sky-100 shadow-sky-950/40 backdrop-blur-md',
-        header: 'bg-sky-900/40 border-sky-500/30 text-sky-200',
-        textarea: 'text-sky-100 placeholder:text-sky-300/40',
+        container: 'bg-sky-950/40 border-sky-500/50 hover:border-sky-400 text-info shadow-sky-950/40 backdrop-blur-md',
+        header: 'bg-sky-900/40 border-sky-500/30 text-info',
+        textarea: 'text-info placeholder:text-info',
       };
     case 'emerald':
       return {
-        container: 'bg-emerald-950/40 border-emerald-500/50 hover:border-emerald-400 text-emerald-100 shadow-emerald-950/40 backdrop-blur-md',
-        header: 'bg-emerald-900/40 border-emerald-500/30 text-emerald-200',
-        textarea: 'text-emerald-100 placeholder:text-emerald-300/40',
+        container: 'bg-emerald-950/40 border-emerald-500/50 hover:border-emerald-400 text-ok shadow-emerald-950/40 backdrop-blur-md',
+        header: 'bg-emerald-900/40 border-emerald-500/30 text-ok',
+        textarea: 'text-ok placeholder:text-ok',
       };
     case 'purple':
       return {
-        container: 'bg-purple-950/40 border-purple-500/50 hover:border-purple-400 text-purple-100 shadow-purple-950/40 backdrop-blur-md',
-        header: 'bg-purple-900/40 border-purple-500/30 text-purple-200',
-        textarea: 'text-purple-100 placeholder:text-purple-300/40',
+        container: 'bg-purple-950/40 border-purple-500/50 hover:border-purple-400 text-plan shadow-purple-950/40 backdrop-blur-md',
+        header: 'bg-purple-900/40 border-purple-500/30 text-plan',
+        textarea: 'text-plan placeholder:text-plan',
       };
     case 'rose':
       return {
-        container: 'bg-rose-950/40 border-rose-500/50 hover:border-rose-400 text-rose-100 shadow-rose-950/40 backdrop-blur-md',
-        header: 'bg-rose-900/40 border-rose-500/30 text-rose-200',
-        textarea: 'text-rose-100 placeholder:text-rose-300/40',
+        container: 'bg-rose-950/40 border-rose-500/50 hover:border-rose-400 text-danger shadow-rose-950/40 backdrop-blur-md',
+        header: 'bg-rose-900/40 border-rose-500/30 text-danger',
+        textarea: 'text-danger placeholder:text-danger',
       };
     case 'amber':
       return {
-        container: 'bg-amber-950/40 border-amber-500/50 hover:border-amber-400 text-amber-100 shadow-amber-950/40 backdrop-blur-md',
-        header: 'bg-amber-900/40 border-amber-500/30 text-amber-200',
-        textarea: 'text-amber-100 placeholder:text-amber-300/40',
+        container: 'bg-amber-950/40 border-amber-500/50 hover:border-amber-400 text-warn shadow-amber-950/40 backdrop-blur-md',
+        header: 'bg-amber-900/40 border-amber-500/30 text-warn',
+        textarea: 'text-warn placeholder:text-warn',
       };
     case 'dark':
     default:

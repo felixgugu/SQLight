@@ -54,18 +54,18 @@
         :class="[
           'p-2.5 rounded-md border flex flex-col space-y-1.5 transition-colors cursor-pointer group',
           item.status === 'error'
-            ? 'bg-rose-950/20 border-rose-900/60 text-rose-300 hover:border-rose-700/80'
+            ? 'bg-rose-50 dark:bg-rose-950/20 border-rose-200 dark:border-rose-900/60 text-danger hover:border-rose-700/80'
             : item.status === 'cancelled'
-            ? 'bg-amber-500/15 border-amber-500/30 text-amber-800 dark:text-amber-300 hover:border-amber-600/50'
+            ? 'bg-amber-500/15 border-amber-500/30 text-warn hover:border-amber-600/50'
             : 'bg-dark-850/60 border-dark-750 text-dark-200 hover:border-dark-600 hover:bg-dark-850/90'
         ]"
       >
         <!-- Line 1: [序號][時間] 資訊與右上角操作按鈕 -->
         <div class="flex items-center justify-between text-xxs font-mono flex-shrink-0 gap-2">
           <div class="flex items-center space-x-2 flex-wrap min-w-0">
-            <span class="text-brand-400 font-bold font-mono">[{{ '#' + (item.seq ?? (history.length - idx)) }}]</span>
+            <span class="text-accent font-bold font-mono">[{{ '#' + (item.seq ?? (history.length - idx)) }}]</span>
             <span class="text-dark-400 font-mono">[{{ item.executedAt }}]</span>
-            <span class="text-brand-400 font-medium">{{ item.executionTimeMs }}ms</span>
+            <span class="text-accent font-medium">{{ item.executionTimeMs }}ms</span>
             <Tag
               v-if="item.status === 'cancelled'"
               severity="warn"
@@ -78,7 +78,7 @@
               value="Error"
               class="!text-xxs !px-1.5 !py-0.2 uppercase"
             />
-            <span v-else-if="item.affectedRows !== undefined" class="text-emerald-400 font-mono">
+            <span v-else-if="item.affectedRows !== undefined" class="text-ok font-mono">
               {{ item.affectedRows }} row(s)
             </span>
             <span v-if="item.database" class="text-dark-500 text-xxs truncate max-w-[140px]" :title="item.database">
@@ -102,7 +102,7 @@
 
             <Button
               type="button"
-              :icon="copiedKey === (item.id ?? idx) ? 'pi pi-check text-emerald-400' : 'pi pi-copy'"
+              :icon="copiedKey === (item.id ?? idx) ? 'pi pi-check text-ok' : 'pi pi-copy'"
               text
               rounded
               size="small"
@@ -117,7 +117,7 @@
         <!-- Line 2: SQL 語法 (收合時為單行截斷二行高度，展開時為多行換行完整呈現) -->
         <div
           :class="[
-            'font-mono select-text text-dark-200 group-hover:text-brand-300 text-xs transition-all',
+            'font-mono select-text text-dark-200 group-hover:text-accent text-xs transition-all',
             isExpanded(item.id ?? idx)
               ? 'whitespace-pre-wrap leading-relaxed break-words'
               : 'truncate leading-normal'
@@ -130,7 +130,7 @@
         <!-- 展開時顯示完整錯誤訊息 -->
         <div
           v-if="isExpanded(item.id ?? idx) && item.errorMessage && item.status !== 'cancelled'"
-          class="text-xxs text-rose-400/90 whitespace-pre-wrap font-mono mt-0.5 pt-1 border-t border-rose-900/40 break-words"
+          class="text-xxs text-danger/90 whitespace-pre-wrap font-mono mt-0.5 pt-1 border-t border-rose-200 dark:border-rose-900/40 break-words"
         >
           {{ item.errorMessage }}
         </div>

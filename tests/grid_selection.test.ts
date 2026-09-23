@@ -274,11 +274,12 @@ test('light theme palette keeps the header anchored and the accents readable', (
   const css = readTheme();
   const lightBlock = themeBlock(css, 'html:not\\(\\.dark\\) \\.tabulator');
 
-  // Header: a distinct surface, slate text, muted sort arrows and a stronger bottom line.
+  // Header: a distinct surface, slate text, readable sort arrows and a stronger bottom line.
   assert.match(lightBlock, /--sq-grid-header-bg: #f8fafc/);
   assert.match(lightBlock, /--sq-grid-header-text: #475569/);
-  assert.match(lightBlock, /--sq-grid-sort-icon: #94a3b8/);
-  assert.match(lightBlock, /--sq-grid-sort-icon-hover: #475569/);
+  // The sort arrow is the only sort affordance, so it must clear 3:1 on the light header.
+  assert.match(lightBlock, /--sq-grid-sort-icon: #64748b/);
+  assert.match(lightBlock, /--sq-grid-sort-icon-hover: #1e293b/);
   assert.match(lightBlock, /--sq-grid-border: #e2e8f0/);
   assert.match(
     css,

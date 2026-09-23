@@ -3,7 +3,7 @@
     <!-- Subheader toolbar for Table Structure -->
     <div class="h-8 bg-dark-850 border-b border-dark-700 flex items-center justify-between px-2 text-xs flex-shrink-0 space-x-2">
       <div class="flex items-center space-x-2 min-w-0">
-        <i class="pi pi-list text-indigo-400 text-xs flex-shrink-0"></i>
+        <i class="pi pi-list text-structure text-xs flex-shrink-0"></i>
         <span class="font-semibold text-dark-100 truncate">{{ schema }}.{{ tableName }}</span>
         <span class="text-dark-600">|</span>
         <Tag :value="`${columns.length} 欄位`" severity="info" class="!font-mono !text-xxs !px-1.5 !py-0.2" />
@@ -27,7 +27,7 @@
         <!-- Copy TSV -->
         <Button
           type="button"
-          :icon="copiedTsv ? 'pi pi-check text-emerald-400' : 'pi pi-file-excel text-emerald-400'"
+          :icon="copiedTsv ? 'pi pi-check text-ok' : 'pi pi-file-excel text-ok'"
           :label="copiedTsv ? '已複製' : 'Copy TSV'"
           size="small"
           severity="secondary"
@@ -40,7 +40,7 @@
         <!-- Copy JSON -->
         <Button
           type="button"
-          icon="pi pi-code text-cyan-400"
+          icon="pi pi-code text-er"
           label="JSON"
           size="small"
           severity="secondary"
@@ -53,7 +53,7 @@
         <!-- Copy Markdown -->
         <Button
           type="button"
-          icon="pi pi-table text-pink-400"
+          icon="pi pi-table text-danger"
           label="MD"
           size="small"
           severity="secondary"
@@ -80,14 +80,14 @@
 
     <!-- Loading State -->
     <div v-if="isLoading" class="flex-1 flex items-center justify-center text-dark-400 space-x-2">
-      <RotateCw class="w-4 h-4 animate-spin text-indigo-400" />
+      <RotateCw class="w-4 h-4 animate-spin text-structure" />
       <span>載入資料表結構中...</span>
     </div>
 
     <!-- Error State -->
-    <div v-else-if="error" class="flex-1 p-4 text-rose-400">
+    <div v-else-if="error" class="flex-1 p-4 text-danger">
       <div class="font-semibold mb-1">載入結構失敗:</div>
-      <div class="font-mono text-xs bg-rose-950/30 p-3 rounded border border-rose-900/50">{{ error }}</div>
+      <div class="font-mono text-xs bg-rose-50 dark:bg-rose-950/30 p-3 rounded border border-rose-200 dark:border-rose-900/50">{{ error }}</div>
     </div>
 
     <!-- Tabulator grid -->
@@ -108,9 +108,9 @@
       <!-- Left: Statistics or Default Summary -->
       <div class="flex items-center space-x-2.5 overflow-x-auto min-w-0">
         <template v-if="selectionStats">
-          <div class="flex items-center space-x-1 font-semibold text-brand-300 flex-shrink-0">
+          <div class="flex items-center space-x-1 font-semibold text-accent flex-shrink-0">
             <span>選取:</span>
-            <span v-if="selectedColumnsCount > 1" class="text-amber-800 dark:text-amber-300 font-mono">
+            <span v-if="selectedColumnsCount > 1" class="text-warn font-mono">
               {{ selectedColumnsCount }} 欄
             </span>
             <span class="font-mono text-dark-100">
@@ -124,11 +124,11 @@
           <template v-if="selectionStats.numericCount > 0">
             <span class="text-dark-600 flex-shrink-0">|</span>
             <div class="flex-shrink-0">
-              總和 (Sum): <strong class="font-mono text-emerald-400">{{ formatAggregateNumber(selectionStats.sum) }}</strong>
+              總和 (Sum): <strong class="font-mono text-ok">{{ formatAggregateNumber(selectionStats.sum) }}</strong>
             </div>
             <span class="text-dark-600 flex-shrink-0">|</span>
             <div class="flex-shrink-0">
-              平均 (Avg): <strong class="font-mono text-sky-400">{{ formatAggregateNumber(selectionStats.avg) }}</strong>
+              平均 (Avg): <strong class="font-mono text-info">{{ formatAggregateNumber(selectionStats.avg) }}</strong>
             </div>
           </template>
 
@@ -151,11 +151,11 @@
 
         <template v-else>
           <div class="flex items-center space-x-2 text-dark-400">
-            <span>共 <strong class="font-mono text-indigo-300">{{ columns.length }}</strong> 個欄位</span>
+            <span>共 <strong class="font-mono text-structure">{{ columns.length }}</strong> 個欄位</span>
             <span class="text-dark-600">|</span>
-            <span><strong class="font-mono text-amber-800 dark:text-amber-300">{{ pkCount }}</strong> 個主鍵欄位</span>
+            <span><strong class="font-mono text-warn">{{ pkCount }}</strong> 個主鍵欄位</span>
             <span class="text-dark-600">|</span>
-            <span><strong class="font-mono text-sky-300">{{ identityCount }}</strong> 個自動識別欄位</span>
+            <span><strong class="font-mono text-info">{{ identityCount }}</strong> 個自動識別欄位</span>
             <span class="text-dark-600">|</span>
             <span class="text-dark-500 italic text-[10px]">提示：支援標題列拖曳多欄選取、Shift 連續多欄、Ctrl 多選、儲存格框選與 Ctrl+A 全選</span>
           </div>
@@ -179,7 +179,7 @@
         @click="copyCellValue"
         class="w-full text-left px-2.5 py-1.5 hover:bg-dark-750 hover:text-dark-100 flex items-center space-x-2 transition-colors"
       >
-        <Copy class="w-3.5 h-3.5 text-brand-400" />
+        <Copy class="w-3.5 h-3.5 text-accent" />
         <span>複製儲存格值 (Copy Cell)</span>
       </button>
 
@@ -187,7 +187,7 @@
         @click="copyCurrentRow"
         class="w-full text-left px-2.5 py-1.5 hover:bg-dark-750 hover:text-dark-100 flex items-center space-x-2 transition-colors"
       >
-        <FileText class="w-3.5 h-3.5 text-emerald-400" />
+        <FileText class="w-3.5 h-3.5 text-ok" />
         <span>複製整列欄位資訊 (Copy Row)</span>
       </button>
 
@@ -195,14 +195,14 @@
         @click="copyCurrentRowAsJson"
         class="w-full text-left px-2.5 py-1.5 hover:bg-dark-750 hover:text-dark-100 flex items-center space-x-2 transition-colors"
       >
-        <Braces class="w-3.5 h-3.5 text-teal-400" />
+        <Braces class="w-3.5 h-3.5 text-ok" />
         <span>複製整列為 JSON (Row JSON)</span>
       </button>
 
       <div class="my-1 border-t border-dark-750"></div>
 
       <!-- ALTER TABLE Section Header -->
-      <div class="px-2.5 py-1 text-xxs text-indigo-400 font-semibold uppercase tracking-wider flex items-center justify-between">
+      <div class="px-2.5 py-1 text-xxs text-structure font-semibold uppercase tracking-wider flex items-center justify-between">
         <span>產生 ALTER TABLE 語法</span>
         <span v-if="targetColumnName" class="text-dark-500 font-mono text-[10px] truncate max-w-[110px]">
           {{ targetColumnName }}
@@ -217,13 +217,13 @@
           class="flex-1 text-left px-2.5 py-1.5 hover:text-dark-100 flex items-center space-x-2 transition-colors min-w-0"
           title="在新查詢分頁開啟 ALTER COLUMN 語法"
         >
-          <Pencil class="w-3.5 h-3.5 text-amber-600 dark:text-amber-400 flex-shrink-0" />
+          <Pencil class="w-3.5 h-3.5 text-warn flex-shrink-0" />
           <span class="truncate">修改欄位 (ALTER COLUMN...)</span>
         </button>
         <button
           type="button"
           @click.stop="handleCopyAlterColumnScript('alter')"
-          class="p-1.5 text-dark-400 hover:text-brand-300 rounded hover:bg-dark-700 mr-1.5 transition-colors flex-shrink-0"
+          class="p-1.5 text-dark-400 hover:text-accent rounded hover:bg-dark-700 mr-1.5 transition-colors flex-shrink-0"
           title="複製 ALTER COLUMN 語法至剪貼簿"
         >
           <Copy class="w-3 h-3" />
@@ -238,13 +238,13 @@
           class="flex-1 text-left px-2.5 py-1.5 hover:text-dark-100 flex items-center space-x-2 transition-colors min-w-0"
           title="在新查詢分頁開啟 ADD COLUMN 語法"
         >
-          <Plus class="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" />
+          <Plus class="w-3.5 h-3.5 text-ok flex-shrink-0" />
           <span class="truncate">新增欄位 (ADD COLUMN...)</span>
         </button>
         <button
           type="button"
           @click.stop="handleCopyAlterColumnScript('add')"
-          class="p-1.5 text-dark-400 hover:text-brand-300 rounded hover:bg-dark-700 mr-1.5 transition-colors flex-shrink-0"
+          class="p-1.5 text-dark-400 hover:text-accent rounded hover:bg-dark-700 mr-1.5 transition-colors flex-shrink-0"
           title="複製 ADD COLUMN 語法至剪貼簿"
         >
           <Copy class="w-3 h-3" />
@@ -256,16 +256,16 @@
         <button
           type="button"
           @click="handleAlterColumnScript('drop')"
-          class="flex-1 text-left px-2.5 py-1.5 hover:text-rose-300 text-rose-400/90 flex items-center space-x-2 transition-colors min-w-0"
+          class="flex-1 text-left px-2.5 py-1.5 hover:text-danger text-danger/90 flex items-center space-x-2 transition-colors min-w-0"
           title="在新查詢分頁開啟 DROP COLUMN 語法"
         >
-          <Trash2 class="w-3.5 h-3.5 text-rose-400 flex-shrink-0" />
+          <Trash2 class="w-3.5 h-3.5 text-danger flex-shrink-0" />
           <span class="truncate">刪除欄位 (DROP COLUMN...)</span>
         </button>
         <button
           type="button"
           @click.stop="handleCopyAlterColumnScript('drop')"
-          class="p-1.5 text-dark-400 hover:text-rose-300 rounded hover:bg-dark-700 mr-1.5 transition-colors flex-shrink-0"
+          class="p-1.5 text-dark-400 hover:text-danger rounded hover:bg-dark-700 mr-1.5 transition-colors flex-shrink-0"
           title="複製 DROP COLUMN 語法至剪貼簿"
         >
           <Copy class="w-3 h-3" />
@@ -277,16 +277,16 @@
         <button
           type="button"
           @click="handleAlterColumnScript('all')"
-          class="flex-1 text-left px-2.5 py-1.5 hover:text-dark-100 flex items-center space-x-2 transition-colors min-w-0 text-indigo-300"
+          class="flex-1 text-left px-2.5 py-1.5 hover:text-dark-100 flex items-center space-x-2 transition-colors min-w-0 text-structure"
           title="在新查詢分頁產生完整 ALTER TABLE 語法樣板"
         >
-          <FileCode class="w-3.5 h-3.5 text-indigo-400 flex-shrink-0" />
+          <FileCode class="w-3.5 h-3.5 text-structure flex-shrink-0" />
           <span class="truncate">完整 ALTER 樣板 (All-in-One)</span>
         </button>
         <button
           type="button"
           @click.stop="handleCopyAlterColumnScript('all')"
-          class="p-1.5 text-dark-400 hover:text-indigo-300 rounded hover:bg-dark-700 mr-1.5 transition-colors flex-shrink-0"
+          class="p-1.5 text-dark-400 hover:text-structure rounded hover:bg-dark-700 mr-1.5 transition-colors flex-shrink-0"
           title="複製完整樣板至剪貼簿"
         >
           <Copy class="w-3 h-3" />
@@ -301,7 +301,7 @@
         @click="copySelectedCells"
         class="w-full text-left px-2.5 py-1.5 hover:bg-dark-750 hover:text-dark-100 flex items-center space-x-2 transition-colors"
       >
-        <Copy class="w-3.5 h-3.5 text-brand-300" />
+        <Copy class="w-3.5 h-3.5 text-accent" />
         <span>複製選取內容 ({{ selectionStats?.totalCells }} 格)</span>
       </button>
 
@@ -310,7 +310,7 @@
         @click="copySelectedAsJson"
         class="w-full text-left px-2.5 py-1.5 hover:bg-dark-750 hover:text-dark-100 flex items-center space-x-2 transition-colors"
       >
-        <Braces class="w-3.5 h-3.5 text-cyan-400" />
+        <Braces class="w-3.5 h-3.5 text-er" />
         <span>複製選取為 JSON 物件陣列</span>
       </button>
     </div>

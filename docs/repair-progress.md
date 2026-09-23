@@ -93,6 +93,20 @@ Quick filter benchmark（`applyMs` = 單次套用阻塞主執行緒的時間）�
 - 移除 `suppressColumnVirtualisation` 後若出現可重現的渲染缺陷（捲動空白欄、釘選欄錯位、右鍵選單對錯儲存格）：先把 `columnBuffer` 由 4 提高到 8 再測；仍存在才改為條件式啟用（computed 初值 false，僅在重現出的確切條件下為 true，並註記症狀）。
 - 尚未人工確認移除該行後的互動正確性：捲動時無空白欄、釘選 `#` 欄對齊、欄位拖曳排序、釘選切換、右鍵選單與 DML 產生、框選高亮、匯出。
 
+## 已實作（2026-09-23）：深色／淺色佈景配色全面檢查
+
+依 WCAG 2.1 對比準則檢查 5 種 surface × 深淺 2 種模式，完整報告見 `docs/theme-color-audit.md`。
+
+量測到的問題（修正前）：深色 muted 文字 3.07–3.78:1、分隔線文字 2.29–2.36:1、淺色 muted 文字 4.34–4.40:1、淺色模式約 325 處沿用深色底用的亮 accent（1.5–4.0:1）、狀態色塊上的文字最低 1.12:1、分頁圖示 1.54–2.54:1、Tabulator 淺色 binary／modified 1.80／1.12:1、Monaco 淺色行號 2.56:1、連線標籤色最低 1.9:1。
+
+已實作：
+
+1. 文字色階整體位移一格（`buildThemeTokens()` 純函式 + `main.css` 靜態初值），muted 文字在深淺模式皆 ≥ 4.5:1，且 5 種 surface 全部通過。
+2. 新增 8 個語意角色色（`accent/ok/danger/warn/info/plan/er/structure`）並全面替換 36 個檔案、456 處 accent 文字；淺色值以「白底、面板底、15–25% 同色系底色」三者最差情況選定。
+3. 63 處深色專用色塊補上淺色版本（`bg-<hue>-50|100 dark:bg-<hue>-950/…`），錯誤／成功提示在淺色模式恢復可讀。
+4. Tabulator（muted／binary／bool／modified／排序箭頭）、Monaco（抽出 `utils/editorThemeTokens.ts`）、分頁圖示（`iconColorLight`）、執行計畫 tooltip、連線標籤色（新增 `utils/connectionColor.ts`）等元件層修正。
+5. 一致性：AI／資料檢視 modal 固定色碼改回 surface token、`border-dark-650`（Tailwind 未定義）改為 `border-dark-700`、對話框 ring 改為深淺分流、`index.html` 於首次繪製前套用已儲存的色彩模式並宣告 `color-scheme`。
+
 ## 待完成與待審核
 
 1. **DML 來源可靠性**：目前仍由 SQL 文字猜測來源；JOIN、別名／運算式、跨庫、跨 server、多結果集的來源應以可驗證 metadata 解析，不能僅依第一個表名。表格與結果面板應共用來源／DML 邏輯。確認 computed、rowversion 等不可寫欄位。
@@ -108,6 +122,8 @@ Quick filter benchmark（`applyMs` = 單次套用阻塞主執行緒的時間）�
 
 ## 驗證紀錄
 
+- （2026-09-23）`npm test`：370 個通過（新增 `tests/theme_contrast.test.ts`：5 surface × 深淺色階對比、角色色在純色與 15–25% 色塊底的對比、分頁圖示、Monaco 主題、連線標籤色、Tabulator CSS token 對比、啟動前套用色彩模式；並擴充 `tab_category_colors` 的淺色圖示斷言、更新 `grid_selection` 的排序箭頭期望值）。
+- （2026-09-23）`npm run typecheck`、`npm run build`：通過。
 - （2026-09-22）`npm test`：311 個通過（新增合成 fixture 的 spec 解析／維度／決定性／NULL 分佈／型別，以及「結果網格不得無條件停用欄虛擬化」「fixture 必須 dev-gated」「filter benchmark 必須還原 quickFilterText」「quick filter 必須 debounce 並清除 timer」四項回歸）。
 - （2026-09-22）`npm run typecheck`、`npm run build`：通過；已確認 `dist/` 無 `sqlight:perf-fixture` 任何痕跡。
 - （2026-09-22）Tauri 實機量測（150 欄 × 1,000 / 50,000 列）已完成，數據與判讀見上一節；欄虛擬化驗收關閉（`virtualisation ok`、dom/visible/total = 22/150/151）。`cacheQuickFilter` 決策為不採用（理由見上）。移除該行後的互動人工確認仍待補。

@@ -3,7 +3,7 @@
     <!-- Header & Notice -->
     <div class="bg-dark-900 border border-dark-750 p-3.5 rounded space-y-1">
       <div class="flex items-center space-x-2">
-        <i class="pi pi-eye-slash text-brand-400 text-sm"></i>
+        <i class="pi pi-eye-slash text-accent text-sm"></i>
         <span class="font-semibold text-dark-100 text-xs">物件過濾規則 (Database & Table Filter Rules)</span>
       </div>
       <p class="text-xxs text-dark-400 leading-relaxed">
@@ -66,7 +66,7 @@
           />
         </div>
       </div>
-      <div v-if="patternError" class="text-rose-400 text-xxs flex items-center space-x-1">
+      <div v-if="patternError" class="text-danger text-xxs flex items-center space-x-1">
         <i class="pi pi-exclamation-triangle text-xs flex-shrink-0"></i>
         <span>{{ patternError }}</span>
       </div>
@@ -157,7 +157,7 @@
                 />
               </div>
             </div>
-            <div v-if="editPatternError" class="text-rose-400 text-xxs flex items-center space-x-1">
+            <div v-if="editPatternError" class="text-danger text-xxs flex items-center space-x-1">
               <i class="pi pi-exclamation-triangle text-xs flex-shrink-0"></i>
               <span>{{ editPatternError }}</span>
             </div>
@@ -188,7 +188,7 @@
                 :class="[
                   'font-mono text-xs px-1.5 py-0.5 rounded border transition-colors',
                   rule.enabled
-                    ? 'bg-brand-500/10 text-brand-300 border-brand-500/20'
+                    ? 'bg-brand-500/10 text-accent border-brand-500/20'
                     : 'bg-dark-800 text-dark-500 border-dark-750 line-through'
                 ]"
               >
@@ -237,7 +237,7 @@
     <div class="bg-dark-900 border border-dark-800 rounded p-3 space-y-2">
       <div class="flex items-center justify-between">
         <span class="text-xxs font-medium text-dark-300 flex items-center space-x-1.5">
-          <i class="pi pi-filter text-amber-400 text-xs"></i>
+          <i class="pi pi-filter text-warn text-xs"></i>
           <span>即時比對測試器 (Live Tester)</span>
         </span>
         <span class="text-xxs text-dark-500">測試特定資料庫或資料表是否會被隱藏</span>

@@ -9,9 +9,12 @@
 
   :root {
     --app-font-sans: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft JhengHei UI", "Noto Sans TC", sans-serif;
+    color-scheme: light;
 
     /* ==========================================================================
        Light Mode Semantic Palette (Channels for rgb(var(...) / <alpha>))
+       Text steps (100-600) are shifted one step darker than the surface steps so the
+       muted step keeps >= 4.5:1 on the panel surfaces (#f1f5f9).
        ========================================================================== */
     --color-dark-950: 241 245 249;   /* Slate 100 - Inner canvas / backdrop */
     --color-dark-900: 255 255 255;   /* Pure White - Main app background */
@@ -19,18 +22,33 @@
     --color-dark-800: 241 245 249;   /* Slate 100 - Panel background, secondary surface */
     --color-dark-750: 226 232 240;   /* Slate 200 - Surface background, active rows */
     --color-dark-700: 203 213 225;   /* Slate 300 - Border color / divider */
-    --color-dark-600: 148 163 184;   /* Slate 400 - Hover border */
-    --color-dark-500: 100 116 139;   /* Slate 500 - Muted text / icon */
-    --color-dark-400: 71 85 105;     /* Slate 600 - Secondary text */
-    --color-dark-300: 51 65 85;      /* Slate 700 - Body text */
-    --color-dark-200: 30 41 59;      /* Slate 800 - High contrast text */
-    --color-dark-100: 15 23 42;      /* Slate 900 - Brightest / prominent text */
+    --color-dark-600: 100 116 139;   /* Slate 500 - Separator / hover border (non-text only) */
+    --color-dark-500: 71 85 105;     /* Slate 600 - Muted text / placeholder */
+    --color-dark-400: 51 65 85;      /* Slate 700 - Secondary text */
+    --color-dark-300: 30 41 59;      /* Slate 800 - Body text */
+    --color-dark-200: 15 23 42;      /* Slate 900 - High contrast text */
+    --color-dark-100: 2 6 23;        /* Slate 950 - Brightest / prominent text */
+
+    /* Theme-aware accent roles: light values clear 4.5:1 on #ffffff, on the panel surface and
+       on the 15-25% self-hue tints used by the status chips. */
+    --color-accent: 29 78 216;       /* Blue 700 */
+    --color-ok: 6 95 70;             /* Emerald 800 */
+    --color-danger: 159 18 57;       /* Rose 800 */
+    --color-warn: 146 64 14;         /* Amber 800 */
+    --color-info: 7 89 133;          /* Sky 800 */
+    --color-plan: 109 40 217;        /* Violet 700 */
+    --color-er: 21 94 117;           /* Cyan 800 */
+    --color-structure: 67 56 202;    /* Indigo 700 */
   }
 
   html.dark,
   .dark {
+    color-scheme: dark;
+
     /* ==========================================================================
-       Dark Mode Semantic Palette (Original SQLight Deep Charcoal Theme)
+       Dark Mode Semantic Palette (SQLight Deep Charcoal Theme, slate surface default)
+       Text steps (100-600) are shifted one step brighter so the muted step keeps
+       >= 4.5:1 on the panel and raised surfaces.
        ========================================================================== */
     --color-dark-950: 12 13 18;      /* Deepest dark */
     --color-dark-900: 20 20 24;      /* #141418 Deepest background (e.g. status bar, title bar) */
@@ -38,12 +56,22 @@
     --color-dark-800: 30 30 38;      /* #1e1e26 Panel background (sidebar, bottom panel) */
     --color-dark-750: 37 37 48;      /* #252530 Surface background (active tab, header) */
     --color-dark-700: 45 45 58;      /* #2d2d3a Border color / divider */
-    --color-dark-600: 60 60 78;      /* #3c3c4e Hover border */
-    --color-dark-500: 82 82 102;     /* #525266 Muted text / icon */
-    --color-dark-400: 139 139 158;   /* #8b8b9e Secondary text */
-    --color-dark-300: 180 180 196;   /* #b4b4c4 Body text */
-    --color-dark-200: 209 213 219;   /* #d1d5db High contrast text */
-    --color-dark-100: 240 240 245;   /* #f0f0f5 Brightest text */
+    --color-dark-600: 100 116 139;   /* Slate 500 - Separator / hover border (non-text only) */
+    --color-dark-500: 148 163 184;   /* Slate 400 - Muted text / placeholder */
+    --color-dark-400: 203 213 225;   /* Slate 300 - Secondary text */
+    --color-dark-300: 226 232 240;   /* Slate 200 - Body text */
+    --color-dark-200: 241 245 249;   /* Slate 100 - High contrast text */
+    --color-dark-100: 248 250 252;   /* Slate 50 - Brightest / prominent text */
+
+    /* Theme-aware accent roles (dark values: >= 4.5:1 on #0f172a and the raised surface) */
+    --color-accent: 96 165 250;      /* Blue 400 */
+    --color-ok: 52 211 153;          /* Emerald 400 */
+    --color-danger: 251 113 133;     /* Rose 400 */
+    --color-warn: 251 191 36;        /* Amber 400 */
+    --color-info: 56 189 248;        /* Sky 400 */
+    --color-plan: 192 132 252;       /* Purple 400 */
+    --color-er: 34 211 238;          /* Cyan 400 */
+    --color-structure: 165 180 252;  /* Indigo 300 (kept >= 4.5:1 on the raised dark surface) */
   }
 
   html, body {
@@ -158,14 +186,14 @@
 
 html.dark .p-select-overlay,
 .dark .p-select-overlay {
-  background-color: #1a1a24 !important;
-  border: 1px solid #3c3c4e !important;
+  background-color: rgb(var(--color-dark-800)) !important;
+  border: 1px solid rgb(var(--color-dark-700)) !important;
   box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.6), 0 8px 10px -6px rgba(0, 0, 0, 0.6) !important;
 }
 
 html:not(.dark) .p-select-overlay {
   background-color: #ffffff !important;
-  border: 1px solid #e2e8f0 !important;
+  border: 1px solid rgb(var(--color-dark-700)) !important;
   box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1) !important;
 }
 
@@ -184,11 +212,11 @@ html:not(.dark) .p-select-overlay {
 
 html.dark .p-select-overlay .p-select-option,
 .dark .p-select-overlay .p-select-option {
-  color: #d1d5db !important;
+  color: rgb(var(--color-dark-200)) !important;
 }
 
 html:not(.dark) .p-select-overlay .p-select-option {
-  color: #334155 !important;
+  color: rgb(var(--color-dark-300)) !important;
 }
 
 .p-select-overlay .p-select-option .p-select-option-label {
@@ -199,51 +227,51 @@ html.dark .p-select-overlay .p-select-option:not(.p-select-option-selected):not(
 html.dark .p-select-overlay .p-select-option:not(.p-select-option-selected):not(.p-disabled).p-focus,
 .dark .p-select-overlay .p-select-option:not(.p-select-option-selected):not(.p-disabled):hover,
 .dark .p-select-overlay .p-select-option:not(.p-select-option-selected):not(.p-disabled).p-focus {
-  background-color: #2a2a3a !important;
-  color: #ffffff !important;
+  background-color: rgb(var(--color-dark-750)) !important;
+  color: rgb(var(--color-dark-100)) !important;
 }
 
 html:not(.dark) .p-select-overlay .p-select-option:not(.p-select-option-selected):not(.p-disabled):hover,
 html:not(.dark) .p-select-overlay .p-select-option:not(.p-select-option-selected):not(.p-disabled).p-focus {
-  background-color: #f1f5f9 !important;
-  color: #0f172a !important;
+  background-color: rgb(var(--color-dark-750)) !important;
+  color: rgb(var(--color-dark-100)) !important;
 }
 
 html.dark .p-select-overlay .p-select-option.p-select-option-selected,
 .dark .p-select-overlay .p-select-option.p-select-option-selected {
-  background-color: #3b82f633 !important;
-  color: #60a5fa !important;
+  background-color: rgb(var(--color-accent) / 0.2) !important;
+  color: rgb(var(--color-accent)) !important;
   font-weight: 500 !important;
 }
 
 html:not(.dark) .p-select-overlay .p-select-option.p-select-option-selected {
-  background-color: #3b82f620 !important;
-  color: #2563eb !important;
+  background-color: rgb(var(--color-accent) / 0.12) !important;
+  color: rgb(var(--color-accent)) !important;
   font-weight: 500 !important;
 }
 
 html.dark .p-select-overlay .p-select-option.p-select-option-selected.p-focus,
 .dark .p-select-overlay .p-select-option.p-select-option-selected.p-focus {
-  background-color: #3b82f64d !important;
-  color: #93c5fd !important;
+  background-color: rgb(var(--color-accent) / 0.3) !important;
+  color: rgb(var(--color-dark-100)) !important;
 }
 
 html:not(.dark) .p-select-overlay .p-select-option.p-select-option-selected.p-focus {
-  background-color: #3b82f633 !important;
-  color: #1d4ed8 !important;
+  background-color: rgb(var(--color-accent) / 0.2) !important;
+  color: rgb(var(--color-dark-100)) !important;
 }
 
 html.dark .p-select-overlay .p-select-empty-message,
 .dark .p-select-overlay .p-select-empty-message {
   font-size: 0.75rem !important;
   padding: 0.375rem 0.5rem !important;
-  color: #6b7280 !important;
+  color: rgb(var(--color-dark-500)) !important;
 }
 
 html:not(.dark) .p-select-overlay .p-select-empty-message {
   font-size: 0.75rem !important;
   padding: 0.375rem 0.5rem !important;
-  color: #94a3b8 !important;
+  color: rgb(var(--color-dark-500)) !important;
 }
 
 /* Context Menu & Popup Menus Density */
@@ -257,15 +285,15 @@ html.dark .p-contextmenu,
 html.dark .p-menu,
 .dark .p-contextmenu,
 .dark .p-menu {
-  background-color: #1a1a24 !important;
-  border: 1px solid #3c3c4e !important;
+  background-color: rgb(var(--color-dark-800)) !important;
+  border: 1px solid rgb(var(--color-dark-700)) !important;
   box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.6), 0 8px 10px -6px rgba(0, 0, 0, 0.6) !important;
 }
 
 html:not(.dark) .p-contextmenu,
 html:not(.dark) .p-menu {
   background-color: #ffffff !important;
-  border: 1px solid #e2e8f0 !important;
+  border: 1px solid rgb(var(--color-dark-700)) !important;
   box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1) !important;
 }
 
@@ -287,12 +315,12 @@ html.dark .p-contextmenu-item-link,
 html.dark .p-menu-item-link,
 .dark .p-contextmenu-item-link,
 .dark .p-menu-item-link {
-  color: #d1d5db !important;
+  color: rgb(var(--color-dark-200)) !important;
 }
 
 html:not(.dark) .p-contextmenu-item-link,
 html:not(.dark) .p-menu-item-link {
-  color: #334155 !important;
+  color: rgb(var(--color-dark-300)) !important;
 }
 
 html.dark .p-contextmenu-item-link:hover,
@@ -303,16 +331,16 @@ html.dark .p-menu-item.p-focus .p-menu-item-content,
 .dark .p-menu-item-link:hover,
 .dark .p-contextmenu-item.p-focus > .p-contextmenu-item-content,
 .dark .p-menu-item.p-focus .p-menu-item-content {
-  background-color: #2a2a3a !important;
-  color: #ffffff !important;
+  background-color: rgb(var(--color-dark-750)) !important;
+  color: rgb(var(--color-dark-100)) !important;
 }
 
 html:not(.dark) .p-contextmenu-item-link:hover,
 html:not(.dark) .p-menu-item-link:hover,
 html:not(.dark) .p-contextmenu-item.p-focus > .p-contextmenu-item-content,
 html:not(.dark) .p-menu-item.p-focus .p-menu-item-content {
-  background-color: #f1f5f9 !important;
-  color: #0f172a !important;
+  background-color: rgb(var(--color-dark-750)) !important;
+  color: rgb(var(--color-dark-100)) !important;
 }
 
 .p-contextmenu-item-icon,
@@ -335,14 +363,14 @@ html:not(.dark) .p-menu-item.p-focus .p-menu-item-content {
   height: 1.75rem !important;
   padding: 0 !important;
   background: transparent !important;
-  color: #9ca3af !important;
+  color: rgb(var(--color-dark-500)) !important;
   transition: background-color 0.15s ease, color 0.15s ease !important;
 }
 
 .p-dialog .p-dialog-header .p-dialog-header-actions .p-dialog-close-button:hover,
 .p-dialog .p-dialog-close-button:hover {
   background-color: rgba(239, 68, 68, 0.18) !important;
-  color: #f87171 !important;
+  color: rgb(var(--color-danger)) !important;
   border-radius: 0.375rem !important;
   border: none !important;
   box-shadow: none !important;
@@ -359,8 +387,8 @@ html:not(.dark) .p-menu-item.p-focus .p-menu-item-content {
 }
 
 .p-dialog .p-dialog-header .p-dialog-header-actions .p-dialog-maximize-button:hover {
-  background-color: #2a2a3a !important;
-  color: #ffffff !important;
+  background-color: rgb(var(--color-dark-750)) !important;
+  color: rgb(var(--color-dark-100)) !important;
   border-radius: 0.375rem !important;
   border: none !important;
   box-shadow: none !important;
@@ -388,16 +416,16 @@ html:not(.dark) .p-menu-item.p-focus .p-menu-item-content {
 
 html.dark .p-tooltip .p-tooltip-text,
 .dark .p-tooltip .p-tooltip-text {
-  background-color: #1e1e28 !important;
-  color: #f0f0f5 !important;
-  border: 1px solid #3c3c4e !important;
+  background-color: rgb(var(--color-dark-800)) !important;
+  color: rgb(var(--color-dark-100)) !important;
+  border: 1px solid rgb(var(--color-dark-700)) !important;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5) !important;
 }
 
 html:not(.dark) .p-tooltip .p-tooltip-text {
   background-color: #ffffff !important;
-  color: #1e293b !important;
-  border: 1px solid #cbd5e1 !important;
+  color: rgb(var(--color-dark-300)) !important;
+  border: 1px solid rgb(var(--color-dark-700)) !important;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12) !important;
 }
 
@@ -408,7 +436,7 @@ html:not(.dark) .p-tooltip .p-tooltip-text {
 
 html.dark .p-tooltip-right .p-tooltip-arrow,
 .dark .p-tooltip-right .p-tooltip-arrow {
-  border-right-color: #1e1e28 !important;
+  border-right-color: rgb(var(--color-dark-800)) !important;
 }
 html:not(.dark) .p-tooltip-right .p-tooltip-arrow {
   border-right-color: #ffffff !important;
@@ -416,7 +444,7 @@ html:not(.dark) .p-tooltip-right .p-tooltip-arrow {
 
 html.dark .p-tooltip-left .p-tooltip-arrow,
 .dark .p-tooltip-left .p-tooltip-arrow {
-  border-left-color: #1e1e28 !important;
+  border-left-color: rgb(var(--color-dark-800)) !important;
 }
 html:not(.dark) .p-tooltip-left .p-tooltip-arrow {
   border-left-color: #ffffff !important;
@@ -424,7 +452,7 @@ html:not(.dark) .p-tooltip-left .p-tooltip-arrow {
 
 html.dark .p-tooltip-top .p-tooltip-arrow,
 .dark .p-tooltip-top .p-tooltip-arrow {
-  border-top-color: #1e1e28 !important;
+  border-top-color: rgb(var(--color-dark-800)) !important;
 }
 html:not(.dark) .p-tooltip-top .p-tooltip-arrow {
   border-top-color: #ffffff !important;
@@ -432,7 +460,7 @@ html:not(.dark) .p-tooltip-top .p-tooltip-arrow {
 
 html.dark .p-tooltip-bottom .p-tooltip-arrow,
 .dark .p-tooltip-bottom .p-tooltip-arrow {
-  border-bottom-color: #1e1e28 !important;
+  border-bottom-color: rgb(var(--color-dark-800)) !important;
 }
 html:not(.dark) .p-tooltip-bottom .p-tooltip-arrow {
   border-bottom-color: #ffffff !important;

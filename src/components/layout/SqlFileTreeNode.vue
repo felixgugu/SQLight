@@ -27,7 +27,7 @@
         <!-- Folder Icon -->
         <component
           :is="isExpanded ? FolderOpen : Folder"
-          class="w-3.5 h-3.5 text-amber-500/90 dark:text-amber-400/80 flex-shrink-0"
+          class="w-3.5 h-3.5 text-warn/90 flex-shrink-0"
         />
 
         <!-- Folder Name -->
@@ -63,13 +63,13 @@
         :class="[
           'flex items-center space-x-1.5 px-1.5 py-1 rounded cursor-pointer transition-colors group relative',
           isActiveFile
-            ? 'bg-brand-500/20 text-brand-200 font-semibold border-l-2 border-brand-400'
+            ? 'bg-brand-500/20 text-accent font-semibold border-l-2 border-brand-400'
             : 'text-dark-300 hover:bg-dark-750 hover:text-dark-100'
         ]"
         :style="{ paddingLeft: `${depth * 14 + 20}px` }"
         :title="`${node.path} (點擊在編輯區開啟，右鍵開啟選單)`"
       >
-        <FileCode class="w-3.5 h-3.5 text-brand-400 flex-shrink-0" />
+        <FileCode class="w-3.5 h-3.5 text-accent flex-shrink-0" />
 
         <!-- File Name -->
         <span class="truncate flex-1 font-mono text-[11px] group-hover:text-dark-100">

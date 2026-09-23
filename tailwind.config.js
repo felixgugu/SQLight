@@ -36,6 +36,17 @@ export default {
           600: '#2563eb', // Primary button hover
           700: '#1d4ed8',
         },
+        // Theme-aware accent roles. Unlike the fixed `brand` scale above (which is used for
+        // solid backgrounds whose text is white), these resolve per colour mode so accent text
+        // and icons stay >= 4.5:1 in light and dark mode. See services/themeManager.ts.
+        accent: withOpacity('--color-accent'),
+        ok: withOpacity('--color-ok'),
+        danger: withOpacity('--color-danger'),
+        warn: withOpacity('--color-warn'),
+        info: withOpacity('--color-info'),
+        plan: withOpacity('--color-plan'),
+        er: withOpacity('--color-er'),
+        structure: withOpacity('--color-structure'),
         primary: {
           DEFAULT: 'var(--p-primary-color)',
           contrast: 'var(--p-primary-contrast-color)',

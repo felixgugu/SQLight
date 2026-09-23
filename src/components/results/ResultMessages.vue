@@ -14,7 +14,7 @@
           severity="help"
           @click="handleDiagnoseLatestError"
           v-tooltip.top="'呼叫 AI 智能助手深度診斷最新發生的錯誤'"
-          class="!text-xxs !p-0 text-purple-400 hover:text-purple-300"
+          class="!text-xxs !p-0 text-plan hover:text-plan"
         />
         <span v-if="hasErrorMessages" class="text-dark-600">|</span>
         <Button
@@ -66,16 +66,16 @@
         :class="[
           'p-2.5 rounded-md border flex flex-col space-y-1.5 transition-colors group',
           msg.level === 'error'
-            ? 'bg-rose-950/20 border-rose-900/60 text-rose-300'
+            ? 'bg-rose-50 dark:bg-rose-950/20 border-rose-200 dark:border-rose-900/60 text-danger'
             : msg.level === 'warning'
-            ? 'bg-amber-500/15 border-amber-500/30 text-amber-800 dark:text-amber-300'
+            ? 'bg-amber-500/15 border-amber-500/30 text-warn'
             : 'bg-dark-850/60 border-dark-750 text-dark-200'
         ]"
       >
         <!-- Line 1: [序號][時間] 資訊與右上角操作按鈕 -->
         <div class="flex items-center justify-between text-xxs font-mono flex-shrink-0 gap-2">
           <div class="flex items-center space-x-2 flex-wrap min-w-0">
-            <span class="text-brand-400 font-bold font-mono">[{{ '#' + (msg.seq ?? (messages.length - idx)) }}]</span>
+            <span class="text-accent font-bold font-mono">[{{ '#' + (msg.seq ?? (messages.length - idx)) }}]</span>
             <span class="text-dark-400 font-mono">[{{ formatTime(msg.timestamp) }}]</span>
             <Tag
               :severity="msg.level === 'error' ? 'danger' : msg.level === 'warning' ? 'warn' : 'secondary'"
@@ -102,7 +102,7 @@
               text
               @click.stop="handleDiagnoseWithAi(msg)"
               v-tooltip.top="'使用 AI 智能診斷此錯誤並取得修復建議'"
-              class="!text-xxs !py-0.5 !px-1.5 !h-5 text-purple-400 hover:text-purple-300 hover:bg-purple-950/40 font-sans font-medium"
+              class="!text-xxs !py-0.5 !px-1.5 !h-5 text-plan hover:text-plan hover:bg-purple-950/40 font-sans font-medium"
             />
 
             <Button
@@ -119,7 +119,7 @@
 
             <Button
               type="button"
-              :icon="copiedKey === (msg.seq ?? idx) ? 'pi pi-check text-emerald-400' : 'pi pi-copy'"
+              :icon="copiedKey === (msg.seq ?? idx) ? 'pi pi-check text-ok' : 'pi pi-copy'"
               text
               rounded
               size="small"

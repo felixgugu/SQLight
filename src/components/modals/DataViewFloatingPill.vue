@@ -5,11 +5,11 @@
       class="fixed bottom-6 right-6 z-[9998] animate-fade-in select-none"
     >
       <div
-        class="flex items-center space-x-2.5 px-3.5 py-2 rounded-full shadow-2xl border border-sky-500/40 bg-dark-850 dark:bg-[#18181f] text-dark-100 hover:border-sky-400 transition-all duration-200 cursor-pointer backdrop-blur-md group"
+        class="flex items-center space-x-2.5 px-3.5 py-2 rounded-full shadow-2xl border border-sky-500/40 bg-dark-850 text-dark-100 hover:border-sky-400 transition-all duration-200 cursor-pointer backdrop-blur-md group"
         @click="dataViewStore.restore()"
       >
         <!-- Icon -->
-        <div class="w-6 h-6 rounded-full bg-sky-500/20 text-sky-400 flex items-center justify-center flex-shrink-0">
+        <div class="w-6 h-6 rounded-full bg-sky-500/20 text-info flex items-center justify-center flex-shrink-0">
           <Eye class="w-3.5 h-3.5" />
         </div>
 
@@ -37,7 +37,7 @@
             rounded
             size="small"
             v-tooltip.top="'還原檢視視窗'"
-            class="!w-6 !h-6 !p-0 hover:text-sky-300"
+            class="!w-6 !h-6 !p-0 hover:text-info"
             @click="dataViewStore.restore()"
           />
           <Button
@@ -48,7 +48,7 @@
             rounded
             size="small"
             v-tooltip.top="'關閉'"
-            class="!w-6 !h-6 !p-0 hover:text-rose-400"
+            class="!w-6 !h-6 !p-0 hover:text-danger"
             @click="dataViewStore.closeDataView()"
           />
         </div>

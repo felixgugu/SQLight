@@ -8,7 +8,7 @@
       :class="[
         isMaximized
           ? 'inset-0 w-screen h-screen rounded-none border-0 shadow-none'
-          : 'rounded-xl border border-dark-700 shadow-2xl bg-dark-850 dark:bg-[#18181f]'
+          : 'rounded-xl border border-dark-700 shadow-2xl bg-dark-850'
       ]"
       :style="isMaximized ? { top: 0, left: 0, width: '100vw', height: '100vh' } : {
         top: `${pos.top}px`,
@@ -19,7 +19,7 @@
     >
       <!-- Top Header / Drag Titlebar -->
       <div
-        class="h-10 px-3 bg-dark-850 dark:bg-[#141418] border-b border-dark-750 dark:border-dark-700 flex items-center justify-between flex-shrink-0"
+        class="h-10 px-3 bg-dark-850 dark:bg-dark-900 border-b border-dark-750 dark:border-dark-700 flex items-center justify-between flex-shrink-0"
         :class="isMaximized ? 'cursor-default' : 'cursor-move'"
         @pointerdown="handleTitlePointerDown"
         @dblclick="toggleMaximize"
@@ -27,7 +27,7 @@
         <div class="flex items-center space-x-2">
           <i
             class="pi pi-sparkles text-sm"
-            :class="aiChatStore.isGenerating ? 'animate-spin text-purple-400' : 'text-purple-400'"
+            :class="aiChatStore.isGenerating ? 'animate-spin text-plan' : 'text-plan'"
           />
           <span class="text-xs font-semibold text-dark-100">AI SQL 智能助理</span>
         </div>
@@ -41,7 +41,7 @@
             rounded
             size="small"
             v-tooltip.top="'開啟 AI 請求記錄檔 (ai.log)'"
-            class="!w-7 !h-7 !p-0 hover:text-purple-300"
+            class="!w-7 !h-7 !p-0 hover:text-plan"
             @click="handleOpenAiLog"
           />
           <Button
@@ -81,18 +81,18 @@
             rounded
             size="small"
             v-tooltip.top="'關閉視窗'"
-            class="!w-7 !h-7 !p-0 hover:text-rose-400"
+            class="!w-7 !h-7 !p-0 hover:text-danger"
             @click="aiChatStore.closeChat()"
           />
         </div>
       </div>
 
       <!-- Main Chat Body -->
-      <div class="flex-1 flex flex-col overflow-hidden bg-dark-900 dark:bg-[#141418]">
+      <div class="flex-1 flex flex-col overflow-hidden bg-dark-900">
         <!-- 附帶 SQL 標籤欄 -->
         <div
           v-if="aiChatStore.currentSql"
-          class="flex items-center justify-between px-3 py-1.5 border-b border-dark-750 dark:border-dark-800 bg-dark-850/60 dark:bg-[#18181f]/80 text-xs flex-shrink-0 relative"
+          class="flex items-center justify-between px-3 py-1.5 border-b border-dark-750 dark:border-dark-800 bg-dark-850/60 dark:bg-dark-850/80 text-xs flex-shrink-0 relative"
         >
           <!-- 懸浮觸發區 (mouseover 浮動顯示完整 SQL) -->
           <div
@@ -105,29 +105,29 @@
               severity="info"
               class="!text-[10px] !py-0.5 !px-1.5 flex-shrink-0"
             />
-            <span class="text-dark-300 group-hover:text-purple-300 truncate max-w-[360px] font-mono transition-colors flex items-center gap-1">
+            <span class="text-dark-300 group-hover:text-plan truncate max-w-[360px] font-mono transition-colors flex items-center gap-1">
               {{ sqlPreviewText }}
-              <i class="pi pi-eye text-[10px] text-dark-400 group-hover:text-purple-300 ml-0.5" />
+              <i class="pi pi-eye text-[10px] text-dark-400 group-hover:text-plan ml-0.5" />
             </span>
 
             <!-- Mouseover 浮動完整 SQL 預覽視窗 -->
             <Transition name="fade">
               <div
                 v-if="isSqlHovered"
-                class="absolute left-0 top-full mt-1.5 z-[9999] w-[520px] max-h-80 flex flex-col rounded-lg border border-dark-600 bg-dark-900/95 dark:bg-[#121216]/95 backdrop-blur shadow-2xl overflow-hidden pointer-events-auto select-text"
+                class="absolute left-0 top-full mt-1.5 z-[9999] w-[520px] max-h-80 flex flex-col rounded-lg border border-dark-600 bg-dark-900/95 dark:bg-dark-950/95 backdrop-blur shadow-2xl overflow-hidden pointer-events-auto select-text"
                 @mouseenter="isSqlHovered = true"
                 @mouseleave="isSqlHovered = false"
               >
                 <!-- 浮動卡片標題列 -->
-                <div class="px-3 py-1.5 bg-dark-800 dark:bg-[#1c1c22] border-b border-dark-700 flex items-center justify-between text-xxs text-dark-300 select-none">
-                  <span class="font-semibold text-purple-300 flex items-center gap-1.5">
-                    <i class="pi pi-code text-xs text-purple-400" />
+                <div class="px-3 py-1.5 bg-dark-800 border-b border-dark-700 flex items-center justify-between text-xxs text-dark-300 select-none">
+                  <span class="font-semibold text-plan flex items-center gap-1.5">
+                    <i class="pi pi-code text-xs text-plan" />
                     完整附帶 SQL (共 {{ sqlLineCount }} 行)
                   </span>
                   <div class="flex items-center space-x-2">
                     <button
                       type="button"
-                      class="text-dark-300 hover:text-emerald-400 transition-colors flex items-center gap-1 cursor-pointer"
+                      class="text-dark-300 hover:text-ok transition-colors flex items-center gap-1 cursor-pointer"
                       @click.stop="copySql(aiChatStore.currentSql)"
                     >
                       <i class="pi pi-copy text-[10px]" />複製
@@ -135,7 +135,7 @@
                   </div>
                 </div>
                 <!-- 浮動卡片程式碼區 -->
-                <pre class="p-3 overflow-y-auto max-h-72 m-0 text-[11px] font-mono leading-relaxed bg-black/40 text-emerald-300 whitespace-pre-wrap break-all select-text font-medium"><code>{{ aiChatStore.currentSql }}</code></pre>
+                <pre class="p-3 overflow-y-auto max-h-72 m-0 text-[11px] font-mono leading-relaxed bg-black/40 text-ok whitespace-pre-wrap break-all select-text font-medium"><code>{{ aiChatStore.currentSql }}</code></pre>
               </div>
             </Transition>
           </div>
@@ -159,7 +159,7 @@
             v-if="aiChatStore.messages.length === 0"
             class="flex flex-col items-center justify-center h-full text-center p-6 space-y-3 opacity-80 select-none"
           >
-            <div class="w-12 h-12 rounded-full flex items-center justify-center bg-dark-800 text-purple-400">
+            <div class="w-12 h-12 rounded-full flex items-center justify-center bg-dark-800 text-plan">
               <i class="pi pi-sparkles text-xl" />
             </div>
             <div>
@@ -193,7 +193,7 @@
 
             <!-- AI 助手訊息 -->
             <div v-else-if="msg.role === 'assistant'" class="flex flex-col items-start space-y-1">
-              <div class="max-w-[95%] rounded-lg px-3.5 py-2.5 shadow-sm text-xs leading-relaxed border border-dark-750 bg-dark-850 dark:bg-[#1e1e26] text-dark-200 select-text">
+              <div class="max-w-[95%] rounded-lg px-3.5 py-2.5 shadow-sm text-xs leading-relaxed border border-dark-750 bg-dark-850 dark:bg-dark-800 text-dark-200 select-text">
                 <div class="prose prose-invert max-w-none">
                   <template v-for="(segment, sIdx) in parseMessageSegments(msg.content)" :key="sIdx">
                     <div
@@ -204,8 +204,8 @@
 
                     <!-- SQL Code Block -->
                     <div v-else-if="segment.type === 'sql'" class="my-2.5 rounded border border-dark-700 bg-dark-900 overflow-hidden select-none">
-                      <div class="flex items-center justify-between px-3 py-1 text-[11px] border-b border-dark-750 bg-dark-800 text-black dark:text-purple-300">
-                        <span class="font-mono font-semibold text-black dark:text-purple-300">T-SQL 語法建議</span>
+                      <div class="flex items-center justify-between px-3 py-1 text-[11px] border-b border-dark-750 bg-dark-800 text-black dark:text-plan">
+                        <span class="font-mono font-semibold text-black dark:text-plan">T-SQL 語法建議</span>
                         <div class="flex items-center space-x-1.5">
                           <Button
                             label="複製"
@@ -271,7 +271,7 @@
             size="small"
             severity="secondary"
             outlined
-            class="!text-[11px] !py-0.5 !px-2 !rounded-full flex-shrink-0 hover:border-purple-400 hover:text-purple-300 transition-colors"
+            class="!text-[11px] !py-0.5 !px-2 !rounded-full flex-shrink-0 hover:border-purple-400 hover:text-plan transition-colors"
             :disabled="aiChatStore.isGenerating"
             @click="handleSelectQuickPrompt(chip.prompt)"
           />

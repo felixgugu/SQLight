@@ -103,6 +103,26 @@ export const DEFAULT_GLOBAL_FONT_FAMILY = GLOBAL_FONT_OPTIONS[0]!.value;
 export type SurfaceShade = '50' | '100' | '200' | '300' | '400' | '500' | '600' | '700' | '800' | '900' | '950';
 export type SurfacePalette = Record<SurfaceShade, string>;
 
+/**
+ * Theme-aware semantic accent colours.
+ *
+ * Every hue used for text/icons must resolve per colour mode: the light values are the
+ * 600/700 steps (>= 4.5:1 on white) and the dark values are the 300/400 steps
+ * (>= 4.5:1 on the darkest and on the raised surface). Components must use the
+ * `text-accent` / `text-ok` / ... Tailwind aliases instead of raw `text-ok`
+ * so both themes keep the same perceived intent.
+ */
+export const THEME_ROLE_COLORS: Record<string, { dark: string; light: string }> = {
+  accent: { dark: '#60a5fa', light: '#1d4ed8' },
+  ok: { dark: '#34d399', light: '#065f46' },
+  danger: { dark: '#fb7185', light: '#9f1239' },
+  warn: { dark: '#fbbf24', light: '#92400e' },
+  info: { dark: '#38bdf8', light: '#075985' },
+  plan: { dark: '#c084fc', light: '#6d28d9' },
+  er: { dark: '#22d3ee', light: '#155e75' },
+  structure: { dark: '#a5b4fc', light: '#4338ca' },
+};
+
 export const SURFACE_PALETTES: Record<string, SurfacePalette> = {
   slate: {
     '50': '#f8fafc',
@@ -195,6 +215,30 @@ export function applyGlobalSurfaceVariables(surfaceName: string, mode: 'dark' | 
   if (typeof document === 'undefined') return;
   const root = document.documentElement;
   const pal = (SURFACE_PALETTES[surfaceName] ?? SURFACE_PALETTES['slate'])!;
+  const vars = buildThemeTokens(surfaceName, mode);
+
+  for (const [key, val] of Object.entries(vars)) {
+    root.style.setProperty(key, val);
+  }
+
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(
+      new CustomEvent('sqlight:surface-changed', {
+        detail: { surface: surfaceName, mode, palette: pal },
+      })
+    );
+  }
+}
+
+/**
+ * Builds every `--color-*` custom property for one surface palette + colour mode.
+ *
+ * Kept as a pure function (no DOM access) so the contrast regression test can assert the
+ * same values the runtime applies. The surface steps (750-950) keep their original mapping;
+ * the text steps (100-600) are shifted by one so the muted step stays >= 4.5:1 in both modes.
+ */
+export function buildThemeTokens(surfaceName: string, mode: 'dark' | 'light'): Record<string, string> {
+  const pal = (SURFACE_PALETTES[surfaceName] ?? SURFACE_PALETTES['slate'])!;
   const isDark = mode === 'dark';
 
   const p50 = hexToRgb(pal['50']);
@@ -209,51 +253,41 @@ export function applyGlobalSurfaceVariables(surfaceName: string, mode: 'dark' | 
   const p900 = hexToRgb(pal['900']);
   const p950 = hexToRgb(pal['950']);
 
-  let vars: Record<string, string>;
+  const vars: Record<string, string> = isDark
+    ? {
+        '--color-dark-950': rgbStr(p950),
+        '--color-dark-900': rgbStr(p900),
+        '--color-dark-850': rgbStr(blendRgb(p900, p800, 0.4)),
+        '--color-dark-800': rgbStr(p800),
+        '--color-dark-750': rgbStr(blendRgb(p800, p700, 0.4)),
+        '--color-dark-700': rgbStr(p700),
+        '--color-dark-600': rgbStr(p500),
+        '--color-dark-500': rgbStr(p400),
+        '--color-dark-400': rgbStr(p300),
+        '--color-dark-300': rgbStr(p200),
+        '--color-dark-200': rgbStr(p100),
+        '--color-dark-100': rgbStr(p50),
+      }
+    : {
+        '--color-dark-950': rgbStr(p100),
+        '--color-dark-900': '255 255 255',
+        '--color-dark-850': rgbStr(p50),
+        '--color-dark-800': rgbStr(p100),
+        '--color-dark-750': rgbStr(p200),
+        '--color-dark-700': rgbStr(p300),
+        '--color-dark-600': rgbStr(p500),
+        '--color-dark-500': rgbStr(p600),
+        '--color-dark-400': rgbStr(p700),
+        '--color-dark-300': rgbStr(p800),
+        '--color-dark-200': rgbStr(p900),
+        '--color-dark-100': rgbStr(p950),
+      };
 
-  if (isDark) {
-    vars = {
-      '--color-dark-950': rgbStr(p950),
-      '--color-dark-900': rgbStr(p900),
-      '--color-dark-850': rgbStr(blendRgb(p900, p800, 0.4)),
-      '--color-dark-800': rgbStr(p800),
-      '--color-dark-750': rgbStr(blendRgb(p800, p700, 0.4)),
-      '--color-dark-700': rgbStr(p700),
-      '--color-dark-600': rgbStr(p600),
-      '--color-dark-500': rgbStr(p500),
-      '--color-dark-400': rgbStr(p400),
-      '--color-dark-300': rgbStr(p300),
-      '--color-dark-200': rgbStr(p200),
-      '--color-dark-100': rgbStr(p100),
-    };
-  } else {
-    vars = {
-      '--color-dark-950': rgbStr(p100),
-      '--color-dark-900': '255 255 255',
-      '--color-dark-850': rgbStr(p50),
-      '--color-dark-800': rgbStr(p100),
-      '--color-dark-750': rgbStr(p200),
-      '--color-dark-700': rgbStr(p300),
-      '--color-dark-600': rgbStr(p400),
-      '--color-dark-500': rgbStr(p500),
-      '--color-dark-400': rgbStr(p600),
-      '--color-dark-300': rgbStr(p700),
-      '--color-dark-200': rgbStr(p800),
-      '--color-dark-100': rgbStr(p900),
-    };
+  for (const [role, colors] of Object.entries(THEME_ROLE_COLORS)) {
+    vars[`--color-${role}`] = rgbStr(hexToRgb(isDark ? colors.dark : colors.light));
   }
 
-  for (const [key, val] of Object.entries(vars)) {
-    root.style.setProperty(key, val);
-  }
-
-  if (typeof window !== 'undefined') {
-    window.dispatchEvent(
-      new CustomEvent('sqlight:surface-changed', {
-        detail: { surface: surfaceName, mode, palette: pal },
-      })
-    );
-  }
+  return vars;
 }
 
 let currentMode: 'dark' | 'light' = 'dark';

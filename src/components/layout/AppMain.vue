@@ -15,7 +15,7 @@
         size="small"
         text
         rounded
-        class="!h-7 !w-7 !p-0 !text-brand-400"
+        class="!h-7 !w-7 !p-0 !text-accent"
         v-tooltip.bottom="'新增查詢分頁 (Ctrl+N)'"
         @click="handleAddNewTab"
       />
@@ -50,10 +50,10 @@
           :title="getTabTooltip(tab)"
         >
           <FileCode v-if="tab.type === 'sql_editor'" class="w-3.5 h-3.5 flex-shrink-0 transition-colors" :class="workspaceStore.activeTabId === tab.id ? 'text-primary' : 'text-primary/70'" />
-          <Table2 v-else-if="tab.type === 'table_data'" class="w-3.5 h-3.5 flex-shrink-0 transition-colors" :class="workspaceStore.activeTabId === tab.id ? 'text-emerald-500 dark:text-emerald-400' : 'text-emerald-500/70'" />
-          <TableProperties v-else-if="tab.type === 'table_structure'" class="w-3.5 h-3.5 flex-shrink-0 transition-colors" :class="workspaceStore.activeTabId === tab.id ? 'text-indigo-500 dark:text-indigo-400' : 'text-indigo-500/70'" />
-          <Network v-else-if="tab.type === 'execution_plan'" class="w-3.5 h-3.5 flex-shrink-0 transition-colors" :class="workspaceStore.activeTabId === tab.id ? 'text-purple-500 dark:text-purple-400' : 'text-purple-500/70'" />
-          <Workflow v-else-if="tab.type === 'er_diagram'" class="w-3.5 h-3.5 flex-shrink-0 transition-colors" :class="workspaceStore.activeTabId === tab.id ? 'text-cyan-500 dark:text-cyan-400' : 'text-cyan-500/70'" />
+          <Table2 v-else-if="tab.type === 'table_data'" class="w-3.5 h-3.5 flex-shrink-0 transition-colors" :class="workspaceStore.activeTabId === tab.id ? 'text-ok' : 'text-ok'" />
+          <TableProperties v-else-if="tab.type === 'table_structure'" class="w-3.5 h-3.5 flex-shrink-0 transition-colors" :class="workspaceStore.activeTabId === tab.id ? 'text-structure' : 'text-structure'" />
+          <Network v-else-if="tab.type === 'execution_plan'" class="w-3.5 h-3.5 flex-shrink-0 transition-colors" :class="workspaceStore.activeTabId === tab.id ? 'text-plan' : 'text-plan'" />
+          <Workflow v-else-if="tab.type === 'er_diagram'" class="w-3.5 h-3.5 flex-shrink-0 transition-colors" :class="workspaceStore.activeTabId === tab.id ? 'text-er' : 'text-er'" />
 
           <!-- Title Display OR Inline Rename Input -->
           <input
@@ -101,7 +101,7 @@
             v-if="editingTabId !== tab.id"
             type="button"
             @click.stop="workspaceStore.closeTab(tab.id)"
-            class="p-0.5 rounded transition-opacity flex-shrink-0 opacity-0 group-hover:opacity-100 text-dark-400 hover:text-rose-400 hover:bg-rose-500/15 cursor-pointer"
+            class="p-0.5 rounded transition-opacity flex-shrink-0 opacity-0 group-hover:opacity-100 text-dark-400 hover:text-danger hover:bg-rose-500/15 cursor-pointer"
             title="關閉分頁 (Close tab)"
           >
             <X class="w-2.5 h-2.5" />
@@ -1009,12 +1009,12 @@ defineExpose({
 }
 
 .query-tabs-scroll::-webkit-scrollbar-thumb {
-  background: #3c3c4e;
+  background: rgb(var(--color-dark-600));
   border-radius: 2px;
 }
 
 .query-tabs-scroll::-webkit-scrollbar-thumb:hover {
-  background: #525266;
+  background: rgb(var(--color-dark-500));
 }
 
 .workspace-tab-bar {

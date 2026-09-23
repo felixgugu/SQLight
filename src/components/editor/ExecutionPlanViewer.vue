@@ -4,7 +4,7 @@
     <div class="h-10 bg-dark-850 border-b border-dark-700 px-3 flex items-center justify-between flex-shrink-0">
       <!-- Left: Title & Info -->
       <div class="flex items-center space-x-2 min-w-0">
-        <div class="p-1 rounded bg-purple-500/15 text-purple-400 border border-purple-500/30 flex-shrink-0">
+        <div class="p-1 rounded bg-purple-500/15 text-plan border border-purple-500/30 flex-shrink-0">
           <Network class="w-3.5 h-3.5" />
         </div>
         <span class="font-medium text-xs text-dark-100 truncate">
@@ -105,7 +105,7 @@
         <Button
           v-if="viewMode === 'diagram'"
           type="button"
-          :icon="planTheme === 'dark' ? 'pi pi-moon text-purple-400' : 'pi pi-sun text-amber-400'"
+          :icon="planTheme === 'dark' ? 'pi pi-moon text-plan' : 'pi pi-sun text-warn'"
           :label="planTheme === 'dark' ? '深色' : '淺色'"
           size="small"
           severity="secondary"
@@ -127,13 +127,13 @@
           outlined
           @click="requestAiPlanTuning"
           v-tooltip.top="'使用 AI 智能分析執行計畫瓶頸、缺失索引並提供 SQL 重構建言'"
-          class="!text-xs !py-1 !px-2.5 text-purple-400 border-purple-500/40 hover:bg-purple-950/30"
+          class="!text-xs !py-1 !px-2.5 text-plan border-purple-500/40 hover:bg-purple-950/30"
         />
 
         <!-- Copy Raw XML Button -->
         <Button
           type="button"
-          :icon="copied ? 'pi pi-check text-emerald-400' : 'pi pi-copy'"
+          :icon="copied ? 'pi pi-check text-ok' : 'pi pi-copy'"
           :label="copied ? '已複製！' : '複製原始 XML'"
           size="small"
           severity="secondary"
@@ -190,7 +190,7 @@
           v-if="isRendering"
           class="absolute inset-0 z-20 flex flex-col items-center justify-center bg-dark-900/80 backdrop-blur-xs space-y-2 text-dark-400 text-xs font-sans"
         >
-          <RotateCw class="w-5 h-5 animate-spin text-purple-400" />
+          <RotateCw class="w-5 h-5 animate-spin text-plan" />
           <span>正在渲染執行計畫圖形...</span>
         </div>
 
@@ -199,7 +199,7 @@
           v-if="renderError"
           class="absolute inset-0 z-20 flex flex-col items-center justify-center p-6 text-center space-y-3 bg-dark-900 text-dark-300 text-xs font-sans"
         >
-          <div class="p-2 rounded-full bg-rose-500/20 text-rose-400">
+          <div class="p-2 rounded-full bg-rose-500/20 text-danger">
             <AlertTriangle class="w-6 h-6" />
           </div>
           <div class="max-w-md">
@@ -742,9 +742,10 @@ body > .qp-tt,
   z-index: 9999 !important;
   box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.4), 0 8px 10px -6px rgba(0, 0, 0, 0.3) !important;
   border-radius: 6px !important;
-  border: 1px solid #475569 !important;
-  background-color: #1e293b !important;
-  color: #f1f5f9 !important;
+  /* Semantic tokens keep the floating tooltip in sync with both colour modes and surface palette. */
+  border: 1px solid rgb(var(--color-dark-600)) !important;
+  background-color: rgb(var(--color-dark-800)) !important;
+  color: rgb(var(--color-dark-100)) !important;
   padding: 10px 14px !important;
   min-width: 340px !important;
   max-width: min(600px, 85vw) !important;
@@ -755,7 +756,7 @@ body > .qp-tt,
   word-break: break-word !important;
   overflow-wrap: anywhere !important;
   scrollbar-width: thin;
-  scrollbar-color: #475569 transparent;
+  scrollbar-color: rgb(var(--color-dark-600)) transparent;
 }
 
 /* Enable mouse text selection inside tooltip (overrides body user-select: none) */
@@ -777,8 +778,8 @@ body > .qp-tt div {
 /* Tooltip text selection highlight styling */
 body > .qp-tt ::selection,
 .qp-tt ::selection {
-  background-color: #2563eb !important;
-  color: #ffffff !important;
+  background-color: rgb(var(--color-dark-600)) !important;
+  color: rgb(var(--color-dark-100)) !important;
 }
 
 /* Tooltip custom scrollbar */
@@ -789,11 +790,11 @@ body > .qp-tt ::selection,
   background: transparent;
 }
 .qp-tt::-webkit-scrollbar-thumb {
-  background: #475569;
+  background: rgb(var(--color-dark-600));
   border-radius: 3px;
 }
 .qp-tt::-webkit-scrollbar-thumb:hover {
-  background: #64748b;
+  background: rgb(var(--color-dark-500));
 }
 
 /* Tooltip internal text and elements wrap properly */
@@ -807,8 +808,8 @@ body > .qp-tt ::selection,
   display: flex !important;
   align-items: center !important;
   justify-content: space-between !important;
-  color: #f8fafc !important;
-  border-bottom: 2px solid #64748b !important;
+  color: rgb(var(--color-dark-100)) !important;
+  border-bottom: 2px solid rgb(var(--color-dark-600)) !important;
   padding-bottom: 6px !important;
   margin-bottom: 6px !important;
   font-size: 13px !important;
@@ -825,9 +826,9 @@ body > .qp-tt ::selection,
 }
 
 .qp-tt-copy-btn {
-  background: #334155 !important;
-  border: 1px solid #475569 !important;
-  color: #cbd5e1 !important;
+  background: rgb(var(--color-dark-700)) !important;
+  border: 1px solid rgb(var(--color-dark-600)) !important;
+  color: rgb(var(--color-dark-200)) !important;
   font-size: 11px !important;
   line-height: 1 !important;
   padding: 3px 6px !important;
@@ -839,8 +840,8 @@ body > .qp-tt ::selection,
 }
 
 .qp-tt-copy-btn:hover {
-  background: #475569 !important;
-  color: #f8fafc !important;
+  background: rgb(var(--color-dark-600)) !important;
+  color: rgb(var(--color-dark-100)) !important;
 }
 
 .qp-tt-copy-btn.copied {
@@ -852,7 +853,7 @@ body > .qp-tt ::selection,
 .qp-tt-close-btn {
   background: transparent !important;
   border: none !important;
-  color: #94a3b8 !important;
+  color: rgb(var(--color-dark-500)) !important;
   cursor: pointer !important;
   font-size: 16px !important;
   line-height: 1 !important;
@@ -864,8 +865,8 @@ body > .qp-tt ::selection,
 }
 
 .qp-tt-close-btn:hover {
-  background: #334155 !important;
-  color: #f8fafc !important;
+  background: rgb(var(--color-dark-700)) !important;
+  color: rgb(var(--color-dark-100)) !important;
 }
 
 
@@ -880,8 +881,8 @@ body > .qp-tt ::selection,
 
 .qp-tt th,
 .qp-tt td {
-  border-bottom: 1px solid #334155 !important;
-  color: #e2e8f0 !important;
+  border-bottom: 1px solid rgb(var(--color-dark-700)) !important;
+  color: rgb(var(--color-dark-200)) !important;
   padding: 4px 6px !important;
   font-size: 11px !important;
   vertical-align: top !important;
@@ -889,7 +890,7 @@ body > .qp-tt ::selection,
 
 .qp-tt th {
   width: 55% !important;
-  color: #94a3b8 !important;
+  color: rgb(var(--color-dark-500)) !important;
   text-align: left !important;
   word-break: break-word !important;
   overflow-wrap: anywhere !important;

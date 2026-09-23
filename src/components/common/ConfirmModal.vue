@@ -9,8 +9,8 @@
   >
     <template #header>
       <div class="flex items-center space-x-2">
-        <i v-if="isDanger" class="pi pi-exclamation-triangle text-rose-400 text-base" />
-        <i v-else class="pi pi-info-circle text-brand-400 text-base" />
+        <i v-if="isDanger" class="pi pi-exclamation-triangle text-danger text-base" />
+        <i v-else class="pi pi-info-circle text-accent text-base" />
         <span class="font-semibold text-sm text-dark-100">{{ title }}</span>
       </div>
     </template>

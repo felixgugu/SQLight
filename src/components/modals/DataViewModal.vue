@@ -9,7 +9,7 @@
       <!-- Dialog Window -->
       <div
         ref="dialogWindowRef"
-        class="bg-dark-850 dark:bg-[#16161d] border border-dark-700 shadow-2xl flex flex-col overflow-hidden text-dark-100 transition-all duration-150"
+        class="bg-dark-850 border border-dark-700 shadow-2xl flex flex-col overflow-hidden text-dark-100 transition-all duration-150"
         :class="[
           dataViewStore.isMaximized
             ? 'fixed inset-0 w-screen h-screen rounded-none z-[9991]'
@@ -18,12 +18,12 @@
       >
         <!-- Header -->
         <div
-          class="h-11 px-4 bg-dark-800 dark:bg-[#131319] border-b border-dark-750 dark:border-dark-700 flex items-center justify-between flex-shrink-0 select-none cursor-default"
+          class="h-11 px-4 bg-dark-800 border-b border-dark-750 dark:border-dark-700 flex items-center justify-between flex-shrink-0 select-none cursor-default"
           @dblclick="dataViewStore.toggleMaximize()"
         >
           <!-- Left: Title & Row Indicator -->
           <div class="flex items-center space-x-2.5 min-w-0">
-            <div class="w-6 h-6 rounded-md bg-sky-500/20 text-sky-400 flex items-center justify-center flex-shrink-0">
+            <div class="w-6 h-6 rounded-md bg-sky-500/20 text-info flex items-center justify-center flex-shrink-0">
               <Table2 class="w-3.5 h-3.5" />
             </div>
             <span class="text-xs font-semibold text-dark-100 truncate">
@@ -105,14 +105,14 @@
               size="small"
               title="關閉 (Esc)"
               v-tooltip.top="'關閉 (Esc)'"
-              class="!w-7 !h-7 !p-0 hover:text-rose-400"
+              class="!w-7 !h-7 !p-0 hover:text-danger"
               @click="dataViewStore.closeDataView()"
             />
           </div>
         </div>
 
         <!-- Toolbar (Sticky Header) -->
-        <div class="px-4 py-2.5 bg-dark-850 dark:bg-[#16161d] border-b border-dark-750 flex items-center justify-between gap-3 flex-shrink-0">
+        <div class="px-4 py-2.5 bg-dark-850 border-b border-dark-750 flex items-center justify-between gap-3 flex-shrink-0">
           <!-- Filter Search Box -->
           <div class="flex-1 max-w-sm relative">
             <Search class="w-3.5 h-3.5 text-dark-400 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
@@ -122,7 +122,7 @@
               @input="onFilterInput"
               type="text"
               placeholder="搜尋欄位名稱或值 (即時過濾)..."
-              class="w-full pl-8 pr-7 py-1 text-xs bg-dark-900 dark:bg-[#101015] border border-dark-700 rounded-md text-dark-100 placeholder-dark-500 focus:outline-none focus:border-sky-500 transition-colors"
+              class="w-full pl-8 pr-7 py-1 text-xs bg-dark-900 border border-dark-700 rounded-md text-dark-100 placeholder-dark-500 focus:outline-none focus:border-sky-500 transition-colors"
             />
             <button
               v-if="dataViewStore.filterText"
@@ -136,14 +136,14 @@
 
           <!-- Counter Indicator -->
           <div class="text-xxs text-dark-400 font-mono whitespace-nowrap">
-            顯示 <span class="text-sky-400 font-medium">{{ dataViewStore.filteredFields.length }}</span> / {{ dataViewStore.allFields.length }} 欄
+            顯示 <span class="text-info font-medium">{{ dataViewStore.filteredFields.length }}</span> / {{ dataViewStore.allFields.length }} 欄
           </div>
 
           <!-- Copy Buttons Group -->
           <div class="flex items-center space-x-1.5 flex-shrink-0">
             <Button
               type="button"
-              icon="pi pi-code text-teal-400"
+              icon="pi pi-code text-ok"
               label="JSON"
               size="small"
               severity="secondary"
@@ -154,7 +154,7 @@
             />
             <Button
               type="button"
-              icon="pi pi-file-excel text-emerald-400"
+              icon="pi pi-file-excel text-ok"
               label="TSV"
               size="small"
               severity="secondary"
@@ -165,7 +165,7 @@
             />
             <Button
               type="button"
-              icon="pi pi-table text-pink-400"
+              icon="pi pi-table text-danger"
               label="Markdown"
               size="small"
               severity="secondary"
@@ -180,7 +180,7 @@
         <!-- Table Container (Vertical Scrolling) -->
         <div
           ref="tableContainerRef"
-          class="flex-1 overflow-y-auto overflow-x-hidden bg-dark-900/60 dark:bg-[#121217]"
+          class="flex-1 overflow-y-auto overflow-x-hidden bg-dark-900/60 dark:bg-dark-900"
           @scroll="onTableScroll"
         >
           <!-- Empty State when filter matches nothing -->
@@ -204,7 +204,7 @@
           <!-- Vertical Two-Column Table -->
           <table v-else class="w-full border-collapse text-left text-xs font-sans">
             <!-- Table Header -->
-            <thead class="sticky top-0 z-10 bg-dark-800 dark:bg-[#181820] text-dark-300 font-medium text-xxs uppercase tracking-wider border-b border-dark-750 shadow-xs select-none">
+            <thead class="sticky top-0 z-10 bg-dark-800 text-dark-300 font-medium text-xxs uppercase tracking-wider border-b border-dark-750 shadow-xs select-none">
               <tr>
                 <th class="w-56 sm:w-64 py-2 px-3.5 border-r border-dark-750">
                   欄位名稱 (Column)
@@ -231,14 +231,14 @@
                       </span>
                       <span
                         v-if="field.isPrimaryKey"
-                        class="text-[10px] bg-amber-500/20 text-amber-300 border border-amber-500/30 px-1 py-0.2 rounded font-sans font-semibold"
+                        class="text-[10px] bg-amber-500/20 text-warn border border-amber-500/30 px-1 py-0.2 rounded font-sans font-semibold"
                         title="主鍵 (Primary Key)"
                       >
                         PK
                       </span>
                       <span
                         v-if="field.isIdentity"
-                        class="text-[10px] bg-sky-500/20 text-sky-300 border border-sky-500/30 px-1 py-0.2 rounded font-sans font-semibold"
+                        class="text-[10px] bg-sky-500/20 text-info border border-sky-500/30 px-1 py-0.2 rounded font-sans font-semibold"
                         title="識別欄位 (Identity)"
                       >
                         ID
@@ -278,7 +278,7 @@
                       <span
                         v-else-if="field.specialType === 'boolean'"
                         class="inline-flex items-center px-1.5 py-0.5 rounded text-xxs font-semibold font-mono"
-                        :class="field.value ? 'bg-emerald-950/70 text-emerald-400 border border-emerald-800/60' : 'bg-rose-950/70 text-rose-400 border border-rose-800/60'"
+                        :class="field.value ? 'bg-emerald-100 dark:bg-emerald-950/70 text-ok border border-emerald-200 dark:border-emerald-800/60' : 'bg-rose-100 dark:bg-rose-950/70 text-danger border border-rose-200 dark:border-rose-800/60'"
                       >
                         {{ field.displayValue }}
                       </span>
@@ -286,7 +286,7 @@
                       <!-- Binary -->
                       <span
                         v-else-if="field.specialType === 'binary'"
-                        class="bg-indigo-950/70 text-indigo-300 px-1.5 py-0.5 rounded text-xs border border-indigo-800/50 font-mono inline-block"
+                        class="bg-indigo-100 dark:bg-indigo-950/70 text-structure px-1.5 py-0.5 rounded text-xs border border-indigo-200 dark:border-indigo-800/50 font-mono inline-block"
                       >
                         {{ field.displayValue }}
                       </span>
@@ -294,7 +294,7 @@
                       <!-- JSON Object or String -->
                       <pre
                         v-else-if="field.specialType === 'json'"
-                        class="font-mono text-xs text-sky-200 bg-dark-800/70 dark:bg-[#141419] p-2 rounded border border-dark-700 overflow-x-auto max-h-64 whitespace-pre-wrap break-words select-text"
+                        class="font-mono text-xs text-info bg-dark-800/70 dark:bg-dark-800 p-2 rounded border border-dark-700 overflow-x-auto max-h-64 whitespace-pre-wrap break-words select-text"
                       >{{ field.formattedJson || field.displayValue }}</pre>
 
                       <!-- Normal Text / Numbers / Dates -->
@@ -307,7 +307,7 @@
                     <!-- Single Cell Copy Button (Hover display) -->
                     <button
                       type="button"
-                      class="opacity-0 group-hover/val:opacity-100 transition-opacity p-1 text-dark-400 hover:text-sky-300 rounded hover:bg-dark-750"
+                      class="opacity-0 group-hover/val:opacity-100 transition-opacity p-1 text-dark-400 hover:text-info rounded hover:bg-dark-750"
                       title="複製此欄位值"
                       @click="copySingleValue(field)"
                     >

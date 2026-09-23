@@ -6,6 +6,24 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>SQLight</title>
     <script>
+      // Apply the persisted colour mode before first paint so a light-mode user never sees a
+      // dark flash while the Vue app boots and calls themeManager.initTheme().
+      (function () {
+        var mode = 'dark';
+        try {
+          var raw = localStorage.getItem('sqlight_app_settings');
+          if (raw) {
+            var parsed = JSON.parse(raw);
+            if (parsed && parsed.colorMode === 'light') mode = 'light';
+          }
+        } catch (e) {
+          /* ignore unreadable settings and keep the dark default */
+        }
+        var root = document.documentElement;
+        root.classList.toggle('dark', mode === 'dark');
+        root.style.colorScheme = mode;
+      })();
+
       // Early guard to suppress system/browser context menu
       window.addEventListener('contextmenu', (e) => e.preventDefault());
     </script>

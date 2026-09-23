@@ -9,7 +9,7 @@
   >
     <template #header>
       <div class="flex items-center space-x-2">
-        <i class="pi pi-database text-brand-400 text-base" />
+        <i class="pi pi-database text-accent text-base" />
         <span class="font-semibold text-sm text-dark-100">
           {{ editProfile ? 'Edit SQL Server Connection' : (initialProfile ? 'Duplicate SQL Server Connection' : 'New SQL Server Connection') }}
         </span>
@@ -25,7 +25,7 @@
             <div class="col-span-2">
               <div class="flex items-center justify-between mb-1">
                 <label class="block text-dark-300 font-medium">連線名稱 (Name) *</label>
-                <span v-if="isDuplicateName" class="text-rose-400 text-xxs font-medium">
+                <span v-if="isDuplicateName" class="text-danger text-xxs font-medium">
                   * 名稱已存在
                 </span>
               </div>
@@ -119,11 +119,11 @@
             <ToggleSwitch v-model="form.modificationPrompt" class="mt-0.5 flex-shrink-0" />
             <div class="flex-1 min-w-0">
               <div class="flex items-center space-x-1.5">
-                <span class="font-semibold text-amber-800 dark:text-amber-300 text-xs">修改提示 (危險指令二次確認保護)</span>
+                <span class="font-semibold text-warn text-xs">修改提示 (危險指令二次確認保護)</span>
                 <Tag severity="warn" value="SAFE GUARD" class="!text-[9px] !px-1 !py-0 font-mono" />
               </div>
               <p class="text-xxs text-dark-400 mt-0.5 leading-relaxed">
-                勾選後，在此連線執行 <code class="text-amber-800 dark:text-amber-300 font-mono">UPDATE</code>、<code class="text-amber-800 dark:text-amber-300 font-mono">DELETE</code>、<code class="text-amber-800 dark:text-amber-300 font-mono">DROP</code> 等修改指令時，強制要求連續確認 2 次，防範意外誤更動。
+                勾選後，在此連線執行 <code class="text-warn font-mono">UPDATE</code>、<code class="text-warn font-mono">DELETE</code>、<code class="text-warn font-mono">DROP</code> 等修改指令時，強制要求連續確認 2 次，防範意外誤更動。
               </p>
             </div>
           </div>
@@ -153,7 +153,7 @@
                 :class="[
                   'w-4 h-4 rounded-full border transition-all cursor-pointer',
                   form.color.toLowerCase() === preset.toLowerCase()
-                    ? 'border-white scale-125 ring-2 ring-white/30'
+                    ? 'border-white scale-125 ring-2 ring-black/25 dark:ring-white/30'
                     : 'border-dark-600 hover:scale-115 opacity-80 hover:opacity-100'
                 ]"
                 :title="preset"
@@ -187,7 +187,7 @@
                 class="w-2 h-2 rounded-full shrink-0"
                 :style="{ backgroundColor: form.color || '#64748b' }"
               />
-              <span class="font-medium truncate max-w-[90px]" :style="{ color: form.color || undefined }">
+              <span class="font-medium truncate max-w-[90px]" :style="{ color: connectionLabelColor || undefined }">
                 {{ form.name.trim() || 'Query' }}
               </span>
               <Tag
@@ -265,7 +265,9 @@ import Tag from 'primevue/tag';
 import Message from 'primevue/message';
 import type { ConnectionProfile } from '@/types/connection';
 import { useConnectionStore } from '@/stores/connectionStore';
+import { useSettingsStore } from '@/stores/settingsStore';
 import { generateDuplicateConnectionName } from '@/utils/connectionNameHelper';
+import { resolveConnectionLabelColor } from '@/utils/connectionColor';
 
 const props = defineProps<{
   isOpen: boolean;
@@ -279,6 +281,7 @@ const emit = defineEmits<{
 }>();
 
 const connectionStore = useConnectionStore();
+const settingsStore = useSettingsStore();
 
 const PRESET_COLORS = [
   '#ef4444', // Red
@@ -308,6 +311,11 @@ const form = reactive({
 const isTesting = ref(false);
 const isSaving = ref(false);
 const testResult = ref<{ success: boolean; message?: string } | null>(null);
+
+/** Connection labels use the user-picked colour but must stay readable on the current surface. */
+const connectionLabelColor = computed(() =>
+  resolveConnectionLabelColor(form.color?.trim(), settingsStore.colorMode)
+);
 
 const isDuplicateName = computed(() => {
   return connectionStore.isNameDuplicate(form.name, props.editProfile?.id);

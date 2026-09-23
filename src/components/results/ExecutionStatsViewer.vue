@@ -5,13 +5,13 @@
       v-if="!stats"
       class="flex-1 flex flex-col items-center justify-center p-6 text-center text-dark-400 space-y-3"
     >
-      <div class="w-12 h-12 rounded-full bg-dark-800 border border-dark-700 flex items-center justify-center text-amber-600 dark:text-amber-400/80">
+      <div class="w-12 h-12 rounded-full bg-dark-800 border border-dark-700 flex items-center justify-center text-warn">
         <i class="pi pi-chart-bar text-xl"></i>
       </div>
       <div class="space-y-1 max-w-md">
         <div class="text-sm font-medium text-dark-200">尚無執行統計與 IO 分析資料</div>
         <div class="text-xs text-dark-500 leading-relaxed">
-          請於頂部工具列勾選「<span class="text-amber-700 dark:text-amber-400 font-semibold">效能分析</span>」後執行查詢，系統將自動擷取 CPU 耗時、各資料表邏輯/實體讀取量及伺服器等候事件。
+          請於頂部工具列勾選「<span class="text-warn font-semibold">效能分析</span>」後執行查詢，系統將自動擷取 CPU 耗時、各資料表邏輯/實體讀取量及伺服器等候事件。
         </div>
       </div>
     </div>
@@ -21,7 +21,7 @@
       <!-- Top Bar: Timestamp, SQL info, Actions -->
       <div class="flex items-center justify-between border-b border-dark-750 pb-2 flex-shrink-0 text-xs">
         <div class="flex items-center space-x-2 truncate">
-          <span class="flex items-center space-x-1.5 text-amber-700 dark:text-amber-400 font-medium">
+          <span class="flex items-center space-x-1.5 text-warn font-medium">
             <i class="pi pi-chart-bar text-xs"></i>
             <span>執行效能分析報告</span>
           </span>
@@ -43,7 +43,7 @@
             outlined
             @click="requestAiStatsTuning"
             v-tooltip.top="'使用 AI 智能分析 IO 讀取瓶頸、等候事件與調校建言'"
-            class="!text-xxs !py-1 !px-2 text-purple-400 border-purple-500/40 hover:bg-purple-950/30"
+            class="!text-xxs !py-1 !px-2 text-plan border-purple-500/40 hover:bg-purple-950/30"
           />
 
           <Button
@@ -79,7 +79,7 @@
           <template #content>
             <div class="flex items-center justify-between text-dark-400 text-xxs">
               <span>CPU 耗時</span>
-              <i class="pi pi-microchip text-amber-600 dark:text-amber-400 text-xs"></i>
+              <i class="pi pi-microchip text-warn text-xs"></i>
             </div>
             <div class="mt-1 flex items-baseline space-x-1 font-mono">
               <span class="text-lg font-bold text-dark-100">{{ stats.cpuTimeMs }}</span>
@@ -96,7 +96,7 @@
           <template #content>
             <div class="flex items-center justify-between text-dark-400 text-xxs">
               <span>總執行耗時</span>
-              <i class="pi pi-clock text-sky-400 text-xs"></i>
+              <i class="pi pi-clock text-info text-xs"></i>
             </div>
             <div class="mt-1 flex items-baseline space-x-1 font-mono">
               <span class="text-lg font-bold text-dark-100">{{ stats.elapsedTimeMs }}</span>
@@ -113,13 +113,13 @@
           <template #content>
             <div class="flex items-center justify-between text-dark-400 text-xxs">
               <span>邏輯讀取 (Logical)</span>
-              <i class="pi pi-book text-emerald-400 text-xs"></i>
+              <i class="pi pi-book text-ok text-xs"></i>
             </div>
             <div class="mt-1 flex items-baseline space-x-1 font-mono">
-              <span class="text-lg font-bold text-emerald-300">{{ stats.totalLogicalReads.toLocaleString() }}</span>
+              <span class="text-lg font-bold text-ok">{{ stats.totalLogicalReads.toLocaleString() }}</span>
               <span class="text-dark-400 text-xxs">頁</span>
             </div>
-            <div class="text-[10px] text-emerald-400/80 font-mono mt-0.5 truncate">
+            <div class="text-[10px] text-ok font-mono mt-0.5 truncate">
               容量: {{ extractByteSize(stats.logicalReadsFormatted) }}
             </div>
           </template>
@@ -130,7 +130,7 @@
           <template #content>
             <div class="flex items-center justify-between text-dark-400 text-xxs">
               <span>實體讀取 (Physical)</span>
-              <i class="pi pi-server text-purple-400 text-xs"></i>
+              <i class="pi pi-server text-plan text-xs"></i>
             </div>
             <div class="mt-1 flex items-baseline space-x-1 font-mono">
               <span class="text-lg font-bold text-dark-100">{{ stats.totalPhysicalReads.toLocaleString() }}</span>
@@ -147,7 +147,7 @@
           <template #content>
             <div class="flex items-center justify-between text-dark-400 text-xxs">
               <span>寫入與 LOB 讀取</span>
-              <i class="pi pi-database text-indigo-400 text-xs"></i>
+              <i class="pi pi-database text-structure text-xs"></i>
             </div>
             <div class="mt-1 flex items-baseline space-x-1 font-mono">
               <span class="text-lg font-bold text-dark-100">{{ stats.totalPhysicalWrites.toLocaleString() }}</span>
@@ -183,7 +183,7 @@
         <!-- Table Header -->
         <div class="h-8 px-3 bg-dark-800/80 border-b border-dark-750 flex items-center justify-between text-xs flex-shrink-0">
           <div class="flex items-center space-x-1.5 font-medium text-dark-200">
-            <i class="pi pi-table text-brand-400 text-xs"></i>
+            <i class="pi pi-table text-accent text-xs"></i>
             <span>各資料表 IO 讀取明細 (Per-Table IO Breakdown)</span>
             <Tag :value="stats.tableStats.length" severity="secondary" class="!font-mono !text-xxs !px-1.5 !py-0" />
           </div>
@@ -216,7 +216,7 @@
             <Column field="tableName" header="資料表名稱" sortable class="!py-1.5 !px-3 font-sans font-medium text-dark-200" />
             <Column field="scanCount" header="掃描次數" sortable class="!py-1.5 !px-2 text-right">
               <template #body="{ data }">
-                <span :class="data.scanCount > 1 ? 'text-amber-700 dark:text-amber-400 font-bold' : 'text-dark-300'">
+                <span :class="data.scanCount > 1 ? 'text-warn font-bold' : 'text-dark-300'">
                   {{ data.scanCount }}
                 </span>
               </template>
@@ -231,7 +231,7 @@
                       :style="{ width: `${getLogicalPercent(data.logicalReads)}%` }"
                     />
                   </div>
-                  <span :class="data.isHighIo ? 'text-rose-300 font-bold' : 'text-dark-200'">
+                  <span :class="data.isHighIo ? 'text-danger font-bold' : 'text-dark-200'">
                     {{ data.logicalReads.toLocaleString() }}
                   </span>
                 </div>
@@ -269,7 +269,7 @@
       <!-- 4. Session Wait Stats (If any wait events captured) -->
       <div v-if="stats.waitStats.length > 0" class="bg-dark-850 border border-dark-750 rounded-lg p-2.5 flex flex-col space-y-2 flex-shrink-0">
         <div class="flex items-center space-x-1.5 text-xs font-medium text-dark-200">
-          <i class="pi pi-bolt text-amber-600 dark:text-amber-400 text-xs"></i>
+          <i class="pi pi-bolt text-warn text-xs"></i>
           <span>工作階段等候事件分析 (Session Wait Statistics)</span>
         </div>
 
@@ -281,7 +281,7 @@
         >
           <Column field="waitType" header="等候類型 (Wait Type)" class="!py-1 !px-2 text-dark-300 font-semibold" />
           <Column field="waitingTasksCount" header="等候次數" class="!py-1 !px-2 text-right text-dark-400" />
-          <Column field="waitTimeMs" header="總等候時間 (ms)" class="!py-1 !px-2 text-right text-amber-700 dark:text-amber-400 font-bold">
+          <Column field="waitTimeMs" header="總等候時間 (ms)" class="!py-1 !px-2 text-right text-warn font-bold">
             <template #body="{ data }">
               {{ data.waitTimeMs }} ms
             </template>

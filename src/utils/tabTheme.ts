@@ -17,6 +17,11 @@ export interface TabCategoryTheme {
   active: TabCategoryColors;
   inactive: Required<TabCategoryColors>;
   iconColor: string;
+  /**
+   * Light-mode icon/accent colour. The dark palette's 300/400 steps only reach 1.5-2.8:1 on
+   * the light tab strip, so the light theme uses the 600/700 steps of the same hue.
+   */
+  iconColorLight: string;
 }
 
 export const TAB_CATEGORY_THEMES: Record<TabType, TabCategoryTheme> = {
@@ -41,6 +46,7 @@ export const TAB_CATEGORY_THEMES: Record<TabType, TabCategoryTheme> = {
       badgeBg: 'rgba(15, 23, 42, 0.65)',
     },
     iconColor: '#60a5fa',
+    iconColorLight: '#2563eb',
   },
   table_data: {
     type: 'table_data',
@@ -63,6 +69,7 @@ export const TAB_CATEGORY_THEMES: Record<TabType, TabCategoryTheme> = {
       badgeBg: 'rgba(15, 23, 42, 0.65)',
     },
     iconColor: '#34d399',
+    iconColorLight: '#047857',
   },
   table_structure: {
     type: 'table_structure',
@@ -85,6 +92,7 @@ export const TAB_CATEGORY_THEMES: Record<TabType, TabCategoryTheme> = {
       badgeBg: 'rgba(15, 23, 42, 0.65)',
     },
     iconColor: '#818cf8',
+    iconColorLight: '#4f46e5',
   },
   execution_plan: {
     type: 'execution_plan',
@@ -107,6 +115,7 @@ export const TAB_CATEGORY_THEMES: Record<TabType, TabCategoryTheme> = {
       badgeBg: 'rgba(15, 23, 42, 0.65)',
     },
     iconColor: '#c084fc',
+    iconColorLight: '#7c3aed',
   },
   er_diagram: {
     type: 'er_diagram',
@@ -129,6 +138,7 @@ export const TAB_CATEGORY_THEMES: Record<TabType, TabCategoryTheme> = {
       badgeBg: 'rgba(15, 23, 42, 0.65)',
     },
     iconColor: '#22d3ee',
+    iconColorLight: '#0e7490',
   },
 };
 
@@ -171,10 +181,10 @@ export function getTabThemeStyle(
     '--tab-hover-bg': isLight ? 'rgba(203, 213, 225, 0.7)' : theme.inactive.hoverBg,
     '--tab-border': isLight ? 'rgba(203, 213, 225, 0.8)' : theme.inactive.border,
     '--tab-hover-border': isLight ? 'rgba(148, 163, 184, 0.9)' : theme.inactive.hoverBorder,
-    '--tab-top-accent': theme.inactive.topAccent,
+    '--tab-top-accent': isLight ? theme.iconColorLight : theme.inactive.topAccent,
     '--tab-text': isLight ? '#475569' : theme.inactive.text,
     '--tab-hover-text': isLight ? '#0f172a' : theme.inactive.hoverText,
     '--tab-badge-bg': isLight ? 'rgba(203, 213, 225, 0.8)' : theme.inactive.badgeBg,
-    '--tab-icon-color': theme.iconColor,
+    '--tab-icon-color': isLight ? theme.iconColorLight : theme.iconColor,
   };
 }

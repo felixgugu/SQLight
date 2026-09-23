@@ -55,7 +55,7 @@
           rounded
           size="small"
           v-tooltip.top="'中斷 AI 分析'"
-          class="!w-6 !h-6 !p-0 text-rose-400 hover:text-rose-300"
+          class="!w-6 !h-6 !p-0 text-danger hover:text-danger"
           @click="aiChatStore.cancelGeneration()"
         />
         <Button
@@ -75,7 +75,7 @@
           rounded
           size="small"
           v-tooltip.top="'關閉'"
-          class="!w-6 !h-6 !p-0 hover:text-rose-400"
+          class="!w-6 !h-6 !p-0 hover:text-danger"
           @click="aiChatStore.closeChat()"
         />
       </div>
