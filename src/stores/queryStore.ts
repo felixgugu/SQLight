@@ -4,6 +4,7 @@ import type { QueryResult, QueryHistoryItem, QueryResultTab, QueryMessage, Resul
 import { queryService } from '@/services/queryService';
 import { useSettingsStore } from './settingsStore';
 import { useWorkspaceStore } from './workspaceStore';
+import { useGridLayoutStore } from './gridLayoutStore';
 import { parseTargetTableFromSql } from '@/utils/sqlGenerator';
 import { splitSqlBatches, splitSqlStatements } from '@/utils/sqlStatementExtractor';
 import {
@@ -179,7 +180,8 @@ export const useQueryStore = defineStore('query', () => {
       }
 
       if (targetIndex !== -1) {
-        resultTabs.value.splice(targetIndex, 1);
+        const [removed] = resultTabs.value.splice(targetIndex, 1);
+        if (removed) useGridLayoutStore().clearTab(removed.id);
       } else {
         // If all tabs are pinned, respect the pins and stop evicting
         break;
@@ -710,6 +712,7 @@ export const useQueryStore = defineStore('query', () => {
     if (index !== -1) {
       const isCurrentlyActive = activeResultTabId.value === id;
       resultTabs.value.splice(index, 1);
+      useGridLayoutStore().clearTab(id);
 
       if (isCurrentlyActive) {
         // Fallback to the adjacent tab or first tab
@@ -730,6 +733,10 @@ export const useQueryStore = defineStore('query', () => {
 
   function clearResults() {
     // Retain pinned tabs if any, or clear all
+    const gridLayoutStore = useGridLayoutStore();
+    for (const tab of resultTabs.value) {
+      if (!tab.isPinned) gridLayoutStore.clearTab(tab.id);
+    }
     resultTabs.value = resultTabs.value.filter((t) => t.isPinned);
     if (resultTabs.value.length > 0) {
       activeResultTabId.value = resultTabs.value[0]?.id ?? null;

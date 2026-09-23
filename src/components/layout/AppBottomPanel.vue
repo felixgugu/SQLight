@@ -161,6 +161,7 @@
         <div class="flex-1 min-h-0 overflow-hidden">
           <ResultGrid
             :result-sets="queryStore.activeResult?.resultSets ?? []"
+            :tab-id="queryStore.activeResultTabId"
           />
         </div>
       </div>

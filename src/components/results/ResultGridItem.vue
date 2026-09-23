@@ -234,8 +234,12 @@
         @cell-context-menu="onCellContextMenu"
         @cell-double-clicked="onCellDoubleClicked"
         @body-scroll="handleBodyScroll"
-        @column-moved="onColumnMoved"
+        @column-moved="handleColumnMoved"
         @column-pinned="handleColumnLayoutChanged"
+        @column-visible="handleColumnLayoutChanged"
+        @column-resized="onColumnResized"
+        @sort-changed="handleGridStateChanged"
+        @filter-changed="handleGridStateChanged"
       />
     </div>
 
@@ -689,6 +693,8 @@ import {
   type CellContextMenuEvent,
   type CellDoubleClickedEvent,
   type BodyScrollEvent,
+  type ColumnMovedEvent,
+  type ColumnResizedEvent,
 } from 'ag-grid-community';
 import { sqlightDarkGridTheme, sqlightLightGridTheme } from '@/styles/gridTheme';
 import { useSettingsStore } from '@/stores/settingsStore';
@@ -697,6 +703,7 @@ import { useWorkspaceStore } from '@/stores/workspaceStore';
 import { useConnectionStore } from '@/stores/connectionStore';
 import { useSchemaStore } from '@/stores/schemaStore';
 import { useDataViewStore } from '@/stores/dataViewStore';
+import { useGridLayoutStore } from '@/stores/gridLayoutStore';
 import { queryService } from '@/services/queryService';
 import { checkTableEditability } from '@/utils/tableEditability';
 import { generateBatchUpdateScript, type RowModification } from '@/utils/batchUpdateGenerator';
@@ -727,6 +734,7 @@ const props = defineProps<{
   totalSets: number;
   queryTab?: QueryResultTab | null;
   isMaximized?: boolean;
+  tabId?: string | null;
 }>();
 
 defineEmits<{
@@ -739,6 +747,7 @@ const workspaceStore = useWorkspaceStore();
 const connectionStore = useConnectionStore();
 const schemaStore = useSchemaStore();
 const dataViewStore = useDataViewStore();
+const gridLayoutStore = useGridLayoutStore();
 
 const activeGridTheme = computed(() => {
   return settingsStore.colorMode === 'light' ? sqlightLightGridTheme : sqlightDarkGridTheme;
@@ -810,6 +819,31 @@ function handleBodyScroll(event?: BodyScrollEvent) {
 }
 
 const currentTab = computed(() => props.queryTab ?? queryStore.activeResultTab);
+
+// Stable key identifying this result set's remembered column layout (session only).
+const layoutKey = computed(() =>
+  gridLayoutStore.layoutKey(props.tabId ?? currentTab.value?.id ?? null, props.setIndex)
+);
+
+// Layout snapshots are debounced: a resize drag fires many events and every capture copies
+// the whole column state array.
+let captureTimer: ReturnType<typeof setTimeout> | null = null;
+
+function captureLayoutNow() {
+  if (captureTimer) {
+    clearTimeout(captureTimer);
+    captureTimer = null;
+  }
+  gridLayoutStore.capture(layoutKey.value, gridApi.value);
+}
+
+function scheduleLayoutCapture() {
+  if (captureTimer) clearTimeout(captureTimer);
+  captureTimer = setTimeout(() => {
+    captureTimer = null;
+    gridLayoutStore.capture(layoutKey.value, gridApi.value);
+  }, 200);
+}
 
 const currentConnection = computed(() => {
   const connId = currentTab.value?.connectionId || connectionStore.activeConnectionId;
@@ -1209,6 +1243,21 @@ const {
 function handleColumnLayoutChanged() {
   invalidateVisualColIndices();
   updateSelectionHighlight();
+  scheduleLayoutCapture();
+}
+
+// Column move/resize/sort/filter changes are captured so switching result tabs restores them.
+function handleColumnMoved(event: ColumnMovedEvent) {
+  onColumnMoved(event);
+  scheduleLayoutCapture();
+}
+
+function onColumnResized(event: ColumnResizedEvent) {
+  if (event.finished) scheduleLayoutCapture();
+}
+
+function handleGridStateChanged() {
+  scheduleLayoutCapture();
 }
 
 // Double-click copies the cell value on read-only cells (read-only result sets, PK/Identity
@@ -1339,6 +1388,8 @@ function onGridReady(params: GridReadyEvent) {
       label: currentTab.value?.title,
     });
   }
+  // Restore the remembered layout when returning to a previously viewed result set.
+  gridLayoutStore.restore(layoutKey.value, params.api);
 }
 
 let disposeGridPerfDiag: (() => void) | null = null;
@@ -1371,6 +1422,7 @@ function ensureColumnVirtualisation(api: GridApi, container: HTMLElement) {
 }
 
 onBeforeUnmount(() => {
+  captureLayoutNow();
   disposeGridPerfDiag?.();
   disposeGridPerfDiag = null;
   if (horizontalScrollTimer) {

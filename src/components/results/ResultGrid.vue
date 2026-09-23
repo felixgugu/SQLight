@@ -12,6 +12,8 @@
     <!-- Single Result Set (100% Height, No Splitters) -->
     <ResultGridItem
       v-else-if="resultSets.length === 1 && resultSets[0]"
+      :key="itemKey(0)"
+      :tab-id="tabId"
       :result-set="resultSets[0]"
       :set-index="0"
       :total-sets="1"
@@ -100,6 +102,8 @@
           class="flex-1 w-full overflow-hidden"
         >
           <ResultGridItem
+            :key="itemKey(maximizedIndex)"
+            :tab-id="tabId"
             :result-set="resultSets[maximizedIndex]!"
             :set-index="maximizedIndex"
             :total-sets="resultSets.length"
@@ -116,6 +120,8 @@
               class="w-full min-h-[60px] flex-shrink-0 overflow-hidden"
             >
               <ResultGridItem
+                :key="itemKey(idx)"
+                :tab-id="tabId"
                 :result-set="set"
                 :set-index="idx"
                 :total-sets="resultSets.length"
@@ -142,6 +148,8 @@
         class="flex-1 w-full overflow-hidden"
       >
         <ResultGridItem
+          :key="itemKey(activeTabIndex)"
+          :tab-id="tabId"
           :result-set="resultSets[activeTabIndex]!"
           :set-index="activeTabIndex"
           :total-sets="resultSets.length"
@@ -164,16 +172,25 @@ import {
 } from 'lucide-vue-next';
 import ResizableSplitter from '@/components/common/ResizableSplitter.vue';
 import ResultGridItem from '@/components/results/ResultGridItem.vue';
+import { useGridLayoutStore } from '@/stores/gridLayoutStore';
 import type { ResultSet } from '@/types/query';
 
 const props = defineProps<{
   resultSets: ResultSet[];
+  tabId?: string | null;
 }>();
 
 const containerRef = ref<HTMLDivElement | null>(null);
 const viewMode = ref<'stacked' | 'tabbed'>('stacked');
 const activeTabIndex = ref(0);
 const maximizedIndex = ref<number | null>(null);
+
+const gridLayoutStore = useGridLayoutStore();
+
+/** Component key doubles as the persistent layout key for the result set it renders. */
+function itemKey(setIndex: number | null | undefined): string {
+  return gridLayoutStore.layoutKey(props.tabId ?? null, setIndex ?? 0);
+}
 
 // Pixel heights for each stacked pane
 const paneHeights = ref<number[]>([]);
@@ -252,11 +269,13 @@ function recalculateHeights() {
   });
 }
 
-// Watch for resultSets changes to re-init heights
+// Watch for resultSets changes to re-init heights; remember which Result #N was selected per tab.
 watch(
   () => props.resultSets,
-  () => {
-    activeTabIndex.value = 0;
+  (sets) => {
+    const remembered = gridLayoutStore.getActiveSetIndex(props.tabId ?? null);
+    const maxIndex = Math.max(0, sets.length - 1);
+    activeTabIndex.value = remembered == null ? 0 : Math.min(Math.max(remembered, 0), maxIndex);
     maximizedIndex.value = null;
     nextTick(() => {
       resetEqualHeights();
@@ -264,6 +283,10 @@ watch(
   },
   { deep: false }
 );
+
+watch(activeTabIndex, (index) => {
+  gridLayoutStore.setActiveSetIndex(props.tabId ?? null, index);
+});
 
 // Splitter Dragging Logic
 let startDragY = 0;
