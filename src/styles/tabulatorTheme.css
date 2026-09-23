@@ -1,0 +1,433 @@
+/**
+ * SQLight theme for Tabulator grids.
+ *
+ * Loaded after `tabulator-tables/dist/css/tabulator.css` so these rules win. Both colour schemes
+ * are keyed off the global `html.dark` class set by `services/themeManager.ts`, which keeps the
+ * grid in sync with the rest of the app without any per-component theme object.
+ *
+ * The configurable grid font arrives through the `--sqlight-grid-font` custom property that the
+ * three grid components bind from `settingsStore.gridFontFamily`.
+ */
+
+html.dark .tabulator {
+  --sq-grid-bg: #18181b;
+  --sq-grid-header-bg: #202024;
+  --sq-grid-header-text: #a1a1aa;
+  --sq-grid-fg: #e4e4e7;
+  --sq-grid-muted: #71717a;
+  --sq-grid-border: #2e2e33;
+  --sq-grid-row-alt: #27272a;
+  --sq-grid-accent: #0284c7;
+  --sq-grid-range: rgba(59, 130, 246, 0.22);
+  --sq-grid-range-strong: rgba(59, 130, 246, 0.38);
+  --sq-grid-editor-bg: #0f0f12;
+}
+
+html:not(.dark) .tabulator {
+  --sq-grid-bg: #ffffff;
+  --sq-grid-header-bg: #f8fafc;
+  --sq-grid-header-text: #475569;
+  --sq-grid-fg: #0f172a;
+  --sq-grid-muted: #64748b;
+  --sq-grid-border: #e2e8f0;
+  --sq-grid-row-alt: #f1f5f9;
+  --sq-grid-accent: #0284c7;
+  --sq-grid-range: rgba(59, 130, 246, 0.18);
+  --sq-grid-range-strong: rgba(59, 130, 246, 0.32);
+  --sq-grid-editor-bg: #ffffff;
+}
+
+/* --------------------------------------------------------------------------
+   Base surface & typography
+   -------------------------------------------------------------------------- */
+
+.tabulator {
+  border: none;
+  background-color: var(--sq-grid-bg);
+  color: var(--sq-grid-fg);
+  font-family: var(--sqlight-grid-font, ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace);
+  font-size: 12px;
+  line-height: 1.35;
+  -webkit-font-smoothing: antialiased;
+}
+
+.tabulator .tabulator-header,
+.tabulator .tabulator-footer {
+  border-color: var(--sq-grid-border);
+}
+
+.tabulator .tabulator-header {
+  background-color: var(--sq-grid-header-bg);
+  color: var(--sq-grid-header-text);
+  font-weight: 600;
+  font-size: 11px;
+}
+
+.tabulator .tabulator-header .tabulator-col {
+  min-height: 30px;
+  border-right: 1px solid var(--sq-grid-border);
+  background-color: var(--sq-grid-header-bg);
+}
+
+.tabulator .tabulator-header .tabulator-col .tabulator-col-content {
+  padding: 4px 6px;
+}
+
+.tabulator .tabulator-header .tabulator-col .tabulator-col-title {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tabulator .tabulator-header .tabulator-col.tabulator-sortable:hover {
+  background-color: var(--sq-grid-row-alt);
+}
+
+.tabulator .tabulator-tableholder .tabulator-table {
+  background-color: var(--sq-grid-bg);
+  color: var(--sq-grid-fg);
+}
+
+/* --------------------------------------------------------------------------
+   Sort affordance: sorting happens through the arrow only, so it has to be obvious
+   -------------------------------------------------------------------------- */
+
+.tabulator .tabulator-header .tabulator-col .tabulator-col-sorter {
+  min-width: 14px;
+  color: var(--sq-grid-muted);
+}
+
+.tabulator .tabulator-header .tabulator-col .tabulator-col-sorter .tabulator-arrow {
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+}
+
+.tabulator .tabulator-header .tabulator-col.tabulator-sortable[aria-sort='none']
+  .tabulator-col-content
+  .tabulator-col-sorter {
+  color: var(--sq-grid-muted);
+  opacity: 0.75;
+}
+
+.tabulator .tabulator-header .tabulator-col.tabulator-sortable[aria-sort='none']
+  .tabulator-col-content
+  .tabulator-col-sorter:hover,
+.tabulator .tabulator-header .tabulator-col.tabulator-sortable[aria-sort='none']
+  .tabulator-col-content
+  .tabulator-col-sorter .tabulator-arrow:hover {
+  color: var(--sq-grid-accent);
+  opacity: 1;
+}
+
+.tabulator .tabulator-header .tabulator-col.tabulator-sortable[aria-sort='ascending']
+  .tabulator-col-content
+  .tabulator-col-sorter,
+.tabulator .tabulator-header .tabulator-col.tabulator-sortable[aria-sort='descending']
+  .tabulator-col-content
+  .tabulator-col-sorter {
+  color: var(--sq-grid-accent);
+  opacity: 1;
+}
+
+.tabulator .tabulator-header .tabulator-col.tabulator-sortable[aria-sort='ascending']
+  .tabulator-col-content
+  .tabulator-col-sorter
+  .tabulator-arrow {
+  border-bottom-color: var(--sq-grid-accent);
+}
+
+.tabulator .tabulator-header .tabulator-col.tabulator-sortable[aria-sort='descending']
+  .tabulator-col-content
+  .tabulator-col-sorter
+  .tabulator-arrow {
+  border-top-color: var(--sq-grid-accent);
+}
+
+/* --------------------------------------------------------------------------
+   Rows & cells
+   -------------------------------------------------------------------------- */
+
+.tabulator-row {
+  background-color: var(--sq-grid-bg);
+  color: var(--sq-grid-fg);
+  border-bottom: 1px solid var(--sq-grid-border);
+}
+
+/* Row hover highlighting is intentionally suppressed (matches the previous grid setup). */
+.tabulator-row.tabulator-selectable:hover,
+.tabulator-row.tabulator-selected,
+.tabulator-row.tabulator-selected:hover {
+  background-color: var(--sq-grid-bg);
+}
+
+.tabulator-row.tabulator-row-even {
+  background-color: var(--sq-grid-bg);
+}
+
+.tabulator-row .tabulator-cell {
+  padding: 0 6px;
+  border-right: 1px solid var(--sq-grid-border);
+  color: inherit;
+}
+
+.tabulator-row .tabulator-cell:last-child {
+  border-right: none;
+}
+
+.tabulator-row .tabulator-cell.tabulator-editing {
+  border: 1px solid var(--sq-grid-accent);
+  padding: 0;
+}
+
+.tabulator-row .tabulator-cell.tabulator-editing input.sqlight-cell-editor {
+  width: 100%;
+  height: 100%;
+  padding: 0 5px;
+  border: none;
+  outline: none;
+  background-color: var(--sq-grid-editor-bg);
+  color: var(--sq-grid-fg);
+  font: inherit;
+}
+
+/* Frozen (#) column keeps an opaque background: the pinned cells must not blend with the
+   horizontally scrolled content underneath them. */
+.tabulator-row .tabulator-cell.tabulator-frozen.tabulator-frozen-left,
+.tabulator .tabulator-header .tabulator-col.tabulator-frozen.tabulator-frozen-left {
+  border-right: 1px solid var(--sq-grid-border);
+}
+
+.tabulator-row .tabulator-cell.sqlight-row-index-cell,
+.tabulator .tabulator-header .tabulator-col.sqlight-row-index-cell {
+  background-color: var(--sq-grid-bg);
+}
+
+.tabulator-row .tabulator-cell.sqlight-row-index-cell {
+  color: var(--sq-grid-muted);
+  text-align: center;
+  cursor: pointer;
+  user-select: none;
+}
+
+.tabulator .tabulator-header .tabulator-col.sqlight-row-index-cell {
+  cursor: pointer;
+  user-select: none;
+}
+
+.tabulator-row .tabulator-cell.sqlight-stmt-text {
+  white-space: pre;
+}
+
+/* --------------------------------------------------------------------------
+   Value-dependent cell styling (classes are toggled by the column formatter)
+   -------------------------------------------------------------------------- */
+
+.tabulator-row .tabulator-cell.sqlight-cell-null {
+  color: #71717a;
+  font-style: italic;
+  font-size: 0.6875rem;
+}
+
+.tabulator-row .tabulator-cell.sqlight-cell-bool-true {
+  color: #34d399;
+  font-weight: 600;
+  font-size: 0.6875rem;
+}
+
+.tabulator-row .tabulator-cell.sqlight-cell-bool-false {
+  color: #fb7185;
+  font-weight: 600;
+  font-size: 0.6875rem;
+}
+
+.tabulator-row .tabulator-cell.sqlight-cell-binary {
+  color: #93c5fd;
+  font-weight: 500;
+  font-size: 0.6875rem;
+}
+
+.tabulator-row .tabulator-cell.sqlight-cell-modified {
+  background-color: rgba(245, 158, 11, 0.15);
+  box-shadow: inset 3px 0 0 0 #f59e0b;
+  color: #fde68a;
+}
+
+/* --------------------------------------------------------------------------
+   Range selection (Tabulator's own module paints the highlight)
+   -------------------------------------------------------------------------- */
+
+.tabulator .tabulator-header .tabulator-col.tabulator-range-selected,
+.tabulator .tabulator-header .tabulator-col.tabulator-range-highlight {
+  background-color: var(--sq-grid-range-strong);
+  color: var(--sq-grid-fg);
+  font-weight: 700;
+}
+
+.tabulator-row.tabulator-range-selected .tabulator-cell {
+  background-color: var(--sq-grid-range);
+}
+
+.tabulator .tabulator-tableholder .tabulator-range-overlay .tabulator-range {
+  border: 1px solid var(--sq-grid-accent);
+}
+
+.tabulator .tabulator-tableholder .tabulator-range-overlay .tabulator-range-cell-active {
+  box-shadow: inset 0 0 0 1px var(--sq-grid-accent);
+}
+
+/* --------------------------------------------------------------------------
+   Header badges for primary key / identity columns
+   -------------------------------------------------------------------------- */
+
+.tabulator .tabulator-header .tabulator-col .sqlight-header-pk-icon,
+.tabulator .tabulator-header .tabulator-col .sqlight-header-identity-icon {
+  display: inline-block;
+  flex-shrink: 0;
+  width: 12px;
+  height: 12px;
+  background-color: #fbbf24;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  mask-position: center;
+  -webkit-mask-size: contain;
+  mask-size: contain;
+}
+
+.tabulator .tabulator-header .tabulator-col .sqlight-header-pk-icon {
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='7.5' cy='15.5' r='5.5'/%3E%3Cpath d='m21 2-9.6 9.6'/%3E%3Cpath d='m15.5 7.5 3 3L22 7l-3-3'/%3E%3C/svg%3E");
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='7.5' cy='15.5' r='5.5'/%3E%3Cpath d='m21 2-9.6 9.6'/%3E%3Cpath d='m15.5 7.5 3 3L22 7l-3-3'/%3E%3C/svg%3E");
+}
+
+.tabulator .tabulator-header .tabulator-col .sqlight-header-identity-icon {
+  background-color: #22d3ee;
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect width='18' height='11' x='3' y='11' rx='2' ry='2'/%3E%3Cpath d='M7 11V7a5 5 0 0 1 10 0v4'/%3E%3C/svg%3E");
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect width='18' height='11' x='3' y='11' rx='2' ry='2'/%3E%3Cpath d='M7 11V7a5 5 0 0 1 10 0v4'/%3E%3C/svg%3E");
+}
+
+.tabulator .tabulator-header .tabulator-col.sqlight-pk-header .tabulator-col-title {
+  color: #fbbf24;
+}
+
+/* --------------------------------------------------------------------------
+   Tooltips & structure viewer badges
+   -------------------------------------------------------------------------- */
+
+.tabulator-tooltip {
+  padding: 4px 8px;
+  border: 1px solid #3c3c4e;
+  border-radius: 4px;
+  background: rgba(15, 15, 20, 0.96);
+  color: #e4e4e7;
+  font-family: ui-monospace, Consolas, monospace;
+  font-size: 0.6875rem;
+  line-height: 1rem;
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-width: 26rem;
+}
+
+html:not(.dark) .tabulator-tooltip {
+  border-color: #cbd5e1;
+  background: #ffffff;
+  color: #1e293b;
+}
+
+.sqlight-badge {
+  display: inline-block;
+  padding: 0 4px;
+  border-radius: 3px;
+  font-family: ui-monospace, Consolas, monospace;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 15px;
+}
+
+.sqlight-badge-pk {
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  background: rgba(245, 158, 11, 0.2);
+  color: #fbbf24;
+}
+
+.sqlight-badge-yes {
+  border: 1px solid rgba(16, 185, 129, 0.5);
+  background: rgba(6, 78, 59, 0.6);
+  color: #34d399;
+}
+
+.sqlight-badge-no {
+  border: 1px solid rgba(244, 63, 94, 0.5);
+  background: rgba(76, 5, 25, 0.6);
+  color: #fb7185;
+}
+
+.sqlight-badge-identity {
+  border: 1px solid rgba(6, 182, 212, 0.5);
+  background: rgba(8, 51, 68, 0.6);
+  color: #22d3ee;
+}
+
+.sqlight-badge-muted {
+  color: #52525b;
+}
+
+/* --------------------------------------------------------------------------
+   Table structure viewer cell styling
+   -------------------------------------------------------------------------- */
+
+.tabulator-row .tabulator-cell.sqlight-cell-muted {
+  color: #71717a;
+}
+
+.tabulator-row .tabulator-cell.sqlight-cell-datatype {
+  color: #7dd3fc;
+  font-size: 11px;
+}
+
+.tabulator-row .tabulator-cell.sqlight-cell-fulltype {
+  color: #6ee7b7;
+  font-weight: 600;
+  font-size: 11px;
+}
+
+.sqlight-column-name {
+  color: var(--sq-grid-fg);
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.sqlight-column-name-pk {
+  color: #fbbf24;
+  font-weight: 700;
+}
+
+.sqlight-default-value {
+  color: var(--sq-grid-fg);
+  font-size: 11px;
+}
+
+.sqlight-default-empty {
+  color: #52525b;
+  font-size: 11px;
+  font-style: italic;
+}
+
+.sqlight-collation-value {
+  color: #a1a1aa;
+  font-size: 11px;
+}
+
+/* --------------------------------------------------------------------------
+   Horizontal scroll mode: decorative transitions off while the scrollbar is dragged
+   -------------------------------------------------------------------------- */
+
+.sqlight-grid.is-h-scrolling *,
+.sqlight-grid.is-h-scrolling *::before,
+.sqlight-grid.is-h-scrolling *::after {
+  transition: none !important;
+  animation: none !important;
+}

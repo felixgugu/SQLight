@@ -4,7 +4,7 @@
 - **用途**：極致輕量、現代高效的 Microsoft SQL Server (T-SQL) 跨平台桌面客戶端。
 - **核心架構**：Tauri v2 雙層解耦架構（Rust 原生後端核心 + WebView2 前端 UI）。
 - **前端技術棧**：Vue 3 (Composition API / `<script setup>`)、TypeScript 5、Vite 6、Tailwind CSS。
-- **前端核心庫**：Pinia 3 (狀態管理)、Monaco Editor (SQL 編輯補全)、AG Grid Community (百萬列資料表格)、AntV X6 (ER 關聯圖視覺化)。
+- **前端核心庫**：Pinia 3 (狀態管理)、Monaco Editor (SQL 編輯補全)、Tabulator 6 (百萬列資料表格)、AntV X6 (ER 關聯圖視覺化)。
 - **後端技術棧**：Rust 2021、Tokio (非同步執行期)、Tiberius (純 Rust TDS 協定驅動)、Keyring (系統級憑證安全儲存)。
 
 ## 2. 目錄結構與職責
@@ -17,12 +17,12 @@ SQLight/
 │   │   ├── editor/               # 編輯器與圖形檢視器（Monaco、ER 圖、執行計畫、結構與資料檢視）
 │   │   ├── layout/               # 視窗版面框架（標頭列、側邊導覽欄、主工作區、底部面板、狀態列）
 │   │   ├── modals/               # 互動對話框（連線管理、物件快搜、系統設定、SQL 範本庫）
-│   │   └── results/              # 查詢輸出介面（AG Grid 網格、執行訊息、歷史記錄、IO 統計分析）
+│   │   └── results/              # 查詢輸出介面（Tabulator 網格、執行訊息、歷史記錄、IO 統計分析）
 │   ├── composables/              # 跨組件可複用邏輯（網格選取、資料匯出、分割拖曳、欄寬自適應）
 │   ├── data/                     # 內建靜態預設資料（預設 SQL 程式碼範本）
 │   ├── services/                 # 前端業務服務層，封裝 Tauri IPC 通訊與瀏覽器 Mock 降級
 │   ├── stores/                   # Pinia 集中狀態管理（連線池、查詢分頁、工作區、結構快取、設定）
-│   ├── styles/                   # 樣式定義檔（AG Grid 深色主題覆寫）
+│   ├── styles/                   # 樣式定義檔（Tabulator 深色／淺色主題覆寫）
 │   ├── types/                    # 全域 TypeScript 型別定義契約（Connection, Query, Schema 等）
 │   └── utils/                    # 純函數工具函式庫（SQL 解析、DDL 產生、統計解析、模糊搜尋）
 ├── src-tauri/                    # 後端桌面宿主核心（Rust）

@@ -20,6 +20,6 @@ export const EDITOR_FONT_FAMILY_OPTIONS: FontFamilyOption[] = [
 export const DEFAULT_EDITOR_FONT_FAMILY = EDITOR_FONT_FAMILY_OPTIONS[0]!.value;
 
 export const GRID_FONT_FAMILY_OPTIONS: FontFamilyOption[] = [
-  { label: 'AG Grid 系統等寬（預設）', value: DEFAULT_GRID_FONT_FAMILY },
+  { label: '系統等寬（預設）', value: DEFAULT_GRID_FONT_FAMILY },
   ...EDITOR_FONT_FAMILY_OPTIONS,
 ];

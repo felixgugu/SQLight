@@ -1,17 +1,29 @@
 import { defineStore } from 'pinia';
-import type { ColumnState, GridApi } from 'ag-grid-community';
+import type { Tabulator, TabulatorLayoutColumn, TabulatorSorter } from 'tabulator-tables';
 
 /**
- * Per-result-tab AG Grid layout cache (session only, never persisted).
+ * Per-result-tab grid layout cache (session only, never persisted).
  *
- * AG Grid does not retain column state when a grid is destroyed (multi result set tabs) or
- * when its column definitions are replaced (single reused grid across query result tabs).
- * This store remembers the layout keyed by `tabId:setIndex` so switching back restores it.
+ * Tabulator loses column state when a table is destroyed (the multi result set tabs recycle grid
+ * instances) and when its column definitions are replaced (a new query in the same tab rebuilds the
+ * grid). This store remembers column widths/visibility/order plus the sorters keyed by
+ * `tabId:setIndex`, so switching back restores what the user set up.
  */
 
+export interface GridLayoutColumnEntry {
+  field: string;
+  width: number;
+  visible: boolean;
+}
+
+export interface GridLayoutSortEntry {
+  field: string;
+  dir: 'asc' | 'desc';
+}
+
 export interface GridLayoutEntry {
-  columnState: ColumnState[];
-  filterModel: Record<string, unknown>;
+  columns: GridLayoutColumnEntry[];
+  sorters: GridLayoutSortEntry[];
 }
 
 /** Builds the stable layout key for one result set. Kept pure for unit testing. */
@@ -20,8 +32,8 @@ export function buildLayoutKey(tabId: string | null | undefined, setIndex: numbe
 }
 
 export const useGridLayoutStore = defineStore('gridLayout', () => {
-  // Plain (non-reactive) maps: nothing renders from them and column state arrays can be
-  // large, so keeping them outside Vue's reactivity avoids proxy overhead on every capture.
+  // Plain (non-reactive) maps: nothing renders from them and column entries can grow with the
+  // result width, so keeping them outside Vue's reactivity avoids proxy overhead on every capture.
   const layouts = new Map<string, GridLayoutEntry>();
   const activeSetIndexByTab = new Map<string, number>();
 
@@ -29,29 +41,42 @@ export const useGridLayoutStore = defineStore('gridLayout', () => {
     return buildLayoutKey(tabId, setIndex);
   }
 
-  /** Snapshots the current column layout / filter model of one grid. */
-  function capture(key: string, api: GridApi | null | undefined): void {
-    if (!api) return;
+  /** Snapshots the current column widths/visibility/order and sorters of one grid. */
+  function capture(key: string, table: Tabulator | null | undefined): void {
+    if (!table) return;
     try {
-      const columnState = api.getColumnState?.() ?? [];
-      const filterModel = (api.getFilterModel?.() ?? {}) as Record<string, unknown>;
-      layouts.set(key, { columnState, filterModel });
+      const columns = table.getColumns().map((column) => ({
+        field: column.getField(),
+        width: column.getWidth(),
+        visible: column.isVisible(),
+      }));
+      const sorters: GridLayoutSortEntry[] = [];
+      for (const sorter of table.getSorters() ?? []) {
+        if (!sorter.field) continue;
+        if (sorter.dir !== 'asc' && sorter.dir !== 'desc') continue;
+        sorters.push({ field: sorter.field, dir: sorter.dir });
+      }
+      layouts.set(key, { columns, sorters });
     } catch {
       // A grid torn down mid-capture must not break unmount: skip this snapshot.
     }
   }
 
   /** Re-applies a stored layout. Returns false when nothing was stored for the key. */
-  function restore(key: string, api: GridApi | null | undefined): boolean {
-    if (!api) return false;
+  function restore(key: string, table: Tabulator | null | undefined): boolean {
+    if (!table) return false;
     const entry = layouts.get(key);
     if (!entry) return false;
     try {
-      if (entry.columnState.length > 0) {
-        api.applyColumnState({ state: entry.columnState, applyOrder: true });
+      if (entry.columns.length > 0) {
+        table.setColumnLayout(entry.columns as TabulatorLayoutColumn[]);
       }
-      if (entry.filterModel && Object.keys(entry.filterModel).length > 0) {
-        api.setFilterModel(entry.filterModel);
+      if (entry.sorters.length > 0) {
+        // Tabulator's `setSort` resolves columns by field name, not by the `field` key of the
+        // sorter object it hands back from `getSorters()`.
+        table.setSort(
+          entry.sorters.map((sorter) => ({ column: sorter.field, dir: sorter.dir })) as TabulatorSorter[]
+        );
       }
       return true;
     } catch {

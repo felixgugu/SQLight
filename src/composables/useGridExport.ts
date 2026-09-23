@@ -3,6 +3,7 @@ import type { ColumnDef, CellValue } from '@/types/query';
 import { exportRowAsJson, exportRowsAsJson, exportRowsAsMarkdown } from '@/utils/exportFormatters';
 import { formatCellForExport } from '@/composables/useColumnAutoWidth';
 import type { UseGridSelectionReturn } from '@/composables/useGridSelection';
+import { readCellValue } from '@/composables/useGridSelection';
 
 export interface UseGridExportOptions {
   getRows: () => CellValue[][];
@@ -78,72 +79,51 @@ export function useGridExport(options: UseGridExportOptions): UseGridExportRetur
   }
 
   function copySelectedCells() {
-    const rows = options.getRows();
-    const columns = options.getColumns();
-    const { hasSelection, selectedColSet, selectionRange, getVisualDataColIndices, selectionStats } = options.selection;
-
-    if (!rows.length || !hasSelection.value) return;
+    const blocks = options.selection.getSelectionBlocks();
+    if (blocks.length === 0) return;
 
     const lines: string[] = [];
-    const visualIndices = getVisualDataColIndices();
+    let copiedCells = 0;
 
-    if (selectedColSet.value.size > 0) {
-      const activeIndices = visualIndices.filter((cIdx) => selectedColSet.value.has(cIdx));
-      lines.push(activeIndices.map((cIdx) => columns[cIdx]?.name || '').join('\t'));
-      for (let r = 0; r < rows.length; r++) {
-        const row = rows[r];
-        if (!row) continue;
-        lines.push(activeIndices.map((cIdx) => formatCellForExport(row[cIdx])).join('\t'));
+    blocks.forEach((block, blockIndex) => {
+      if (blockIndex > 0) lines.push('');
+      if (block.coversAllRows) {
+        lines.push(block.columns.map((column) => column.title).join('\t'));
       }
-    } else if (selectionRange.value) {
-      const { minRow, maxRow, minCol, maxCol } = selectionRange.value;
-      const rangeIndices = visualIndices.filter((_, vIdx) => vIdx >= minCol && vIdx <= maxCol);
-      if (minRow === 0 && maxRow === rows.length - 1) {
-        lines.push(rangeIndices.map((cIdx) => columns[cIdx]?.name || '').join('\t'));
+      for (const row of block.rows) {
+        const values = block.columns.map((column) =>
+          formatCellForExport(readCellValue(row, column.field))
+        );
+        copiedCells += values.length;
+        lines.push(values.join('\t'));
       }
-      for (let r = minRow; r <= maxRow; r++) {
-        const row = rows[r];
-        if (!row) continue;
-        const rowCells: string[] = [];
-        for (const cIdx of rangeIndices) {
-          rowCells.push(formatCellForExport(row[cIdx]));
-        }
-        lines.push(rowCells.join('\t'));
-      }
-    }
+    });
 
     navigator.clipboard.writeText(lines.join('\n'));
-    options.showToast(`已複製選取內容 (${selectionStats.value?.totalCells ?? 0} 格) 至剪貼簿`, 'success', 2000);
+    options.showToast(`已複製選取內容 (${copiedCells.toLocaleString()} 格) 至剪貼簿`, 'success', 2000);
     options.onMenuClose?.();
   }
 
   function copySelectedAsJson() {
-    const rows = options.getRows();
-    const columns = options.getColumns();
-    const { hasSelection, selectedColSet, selectionRange, getVisualDataColIndices } = options.selection;
+    const blocks = options.selection.getSelectionBlocks();
+    if (blocks.length === 0) return;
 
-    if (!rows.length || !hasSelection.value) return;
+    const parts: string[] = [];
+    let rowTotal = 0;
+    let columnTotal = 0;
 
-    let cols: { name: string }[] = [];
-    let rowsData: unknown[][] = [];
-    const visualIndices = getVisualDataColIndices();
-
-    if (selectedColSet.value.size > 0) {
-      const activeIndices = visualIndices.filter((cIdx) => selectedColSet.value.has(cIdx));
-      cols = activeIndices.map((cIdx) => ({ name: columns[cIdx]?.name || '' }));
-      rowsData = rows.map((r) => activeIndices.map((cIdx) => r[cIdx]));
-    } else if (selectionRange.value) {
-      const { minRow, maxRow, minCol, maxCol } = selectionRange.value;
-      const rangeIndices = visualIndices.filter((_, vIdx) => vIdx >= minCol && vIdx <= maxCol);
-      cols = rangeIndices.map((cIdx) => ({ name: columns[cIdx]?.name || '' }));
-      rowsData = rows
-        .slice(minRow, maxRow + 1)
-        .map((r) => rangeIndices.map((cIdx) => r[cIdx]));
+    for (const block of blocks) {
+      const cols = block.columns.map((column) => ({ name: column.title }));
+      const rowsData = block.rows.map((row) =>
+        block.columns.map((column) => readCellValue(row, column.field))
+      );
+      parts.push(exportRowsAsJson(cols, rowsData));
+      rowTotal += rowsData.length;
+      columnTotal = Math.max(columnTotal, cols.length);
     }
 
-    const jsonStr = exportRowsAsJson(cols, rowsData);
-    navigator.clipboard.writeText(jsonStr);
-    options.showToast(`已複製選取為 JSON (${rowsData.length} 列 x ${cols.length} 欄)`, 'success', 2000);
+    navigator.clipboard.writeText(parts.join('\n'));
+    options.showToast(`已複製選取為 JSON (${rowTotal} 列 x ${columnTotal} 欄)`, 'success', 2000);
     options.onMenuClose?.();
   }
 

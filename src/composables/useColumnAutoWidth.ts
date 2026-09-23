@@ -1,5 +1,9 @@
 /**
- * Utilities and sizing helpers for AG Grid column auto-width calculation and value formatting.
+ * Utilities and sizing helpers for grid column auto-width calculation and value formatting.
+ *
+ * Shared by the Tabulator result / data / structure grids: the columns are sized from the header
+ * text plus the first row value before the table is built, and the same display formatting drives
+ * cell rendering, tooltips and exports.
  */
 
 const HTML_CHARS_REGEX = /[&<>"']/;

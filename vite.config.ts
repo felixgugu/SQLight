@@ -88,7 +88,7 @@ export default defineConfig({
           if (id.includes('node_modules/monaco-editor')) {
             return 'vendor-monaco';
           }
-          if (id.includes('node_modules/ag-grid-community') || id.includes('node_modules/ag-grid-vue3')) {
+          if (id.includes('node_modules/tabulator-tables')) {
             return 'vendor-grid';
           }
           if (id.includes('node_modules/sql-formatter')) {

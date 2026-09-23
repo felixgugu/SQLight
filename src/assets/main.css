@@ -438,16 +438,7 @@ html:not(.dark) .p-tooltip-bottom .p-tooltip-arrow {
   border-bottom-color: #ffffff !important;
 }
 
-/* External specialized tooltips (AG Grid & HTML Query Plan) */
-.ag-theme-quartz .ag-tooltip,
-.ag-theme-quartz-dark .ag-tooltip,
-.ag-tooltip {
-  font-size: 0.6875rem !important; /* 11px */
-  padding: 0.25rem 0.5rem !important;
-  border-radius: 0.25rem !important;
-  line-height: 1rem !important;
-}
-
+/* External specialized tooltips (HTML Query Plan) */
 .qp-tooltip {
   font-size: 0.6875rem !important; /* 11px */
   padding: 0.375rem 0.625rem !important;
@@ -733,13 +724,4 @@ html:not(.dark) .ai-markdown-body a:hover {
 html:not(.dark) .ai-markdown-table th {
   color: #000000;
   font-weight: 700;
-}
-
-/* ==========================================================================
-   AG Grid Typography
-   ========================================================================== */
-
-/* Keep explicit Tailwind mono cells aligned with the configured AG Grid font. */
-.ag-styled-root .font-mono {
-  font-family: var(--ag-font-family) !important;
 }

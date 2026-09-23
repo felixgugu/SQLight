@@ -1,16 +1,16 @@
-import type { GridApi } from 'ag-grid-community';
+import type { Tabulator } from 'tabulator-tables';
 
 /**
- * Dev-only diagnostics for wide result grids.
+ * Dev-only diagnostics for the result grids.
  *
- * Enable with `localStorage.setItem('sqlight.perfHud', '1')` in a dev build, then reload.
- * It renders a small overlay with live frame timings and rendered-column counts, plus a
- * scripted horizontal scroll benchmark and a quick-filter settle benchmark, so the real
- * (WebView2) render path can be measured without relying on a manual scrollbar drag or on
- * typing fast enough to catch the filter cost.
+ * Enable with `localStorage.setItem('sqlight.perfHud', '1')` in a dev build, then reload. It
+ * renders a small overlay with live frame timings and rendered cell/column counts, plus a scripted
+ * horizontal scroll benchmark and a quick-filter settle benchmark, so the real (WebView2) render
+ * path can be measured without relying on a manual scrollbar drag or on typing fast enough to catch
+ * the filter cost.
  *
- * Pair it with the synthetic result set from `src/utils/perfGridFixture.ts` so both the layout
- * and the data stay identical between the before/after runs.
+ * Pair it with the synthetic result set from `src/utils/perfGridFixture.ts` so both the layout and
+ * the data stay identical between before/after runs.
  *
  * Production builds never register anything.
  */
@@ -28,19 +28,24 @@ export interface FrameStats {
 
 export interface GridPerfSnapshot {
   totalColumns: number;
-  displayedColumns: number;
+  visibleColumns: number;
   domCells: number;
   domColumns: number;
-  columnVirtualisationSuspected: boolean;
+  /** True when fewer columns are in the DOM than visible, i.e. column windowing is active. */
+  columnVirtualisation: boolean;
   viewportClientWidth: number;
   viewportScrollWidth: number;
   devicePixelRatio: number;
 }
 
 export interface GridPerfDiagOptions {
-  api: GridApi;
+  table: Tabulator;
   container: HTMLElement;
   label?: string;
+  /** Applies the grid's quick filter; used by the scripted filter benchmark. */
+  applyFilter?: (term: string) => void;
+  /** Returns the quick filter value the grid is currently showing. */
+  getFilter?: () => string;
 }
 
 const FRAME_BUDGET_MS = 32;
@@ -93,24 +98,32 @@ function nextFrame(): Promise<number> {
   });
 }
 
-export function collectGridPerfSnapshot(api: GridApi, container: HTMLElement): GridPerfSnapshot {
-  const viewport = container.querySelector<HTMLElement>('.ag-grid-viewport');
-  const colIds = new Set<string>();
-  container.querySelectorAll('.ag-cell[col-id]').forEach((cell) => {
-    const colId = cell.getAttribute('col-id');
-    if (colId) colIds.add(colId);
+/** Tabulator scrolls inside `.tabulator-tableholder`; that is the element the benchmark drives. */
+function scrollerOf(container: HTMLElement): HTMLElement | null {
+  return container.querySelector<HTMLElement>('.tabulator-tableholder');
+}
+
+export function collectGridPerfSnapshot(
+  table: Tabulator,
+  container: HTMLElement
+): GridPerfSnapshot {
+  const scroller = scrollerOf(container);
+  const fields = new Set<string>();
+  container.querySelectorAll('.tabulator-cell[tabulator-field]').forEach((cell) => {
+    const field = cell.getAttribute('tabulator-field');
+    if (field) fields.add(field);
   });
-  const totalColumns = api.getAllGridColumns().length;
-  const displayedColumns = api.getDisplayedCenterColumns().length;
-  const domColumns = colIds.size;
+  const columns = table.getColumns();
+  const visibleColumns = columns.filter((column) => column.isVisible()).length;
+  const domColumns = fields.size;
   return {
-    totalColumns,
-    displayedColumns,
-    domCells: container.querySelectorAll('.ag-cell').length,
+    totalColumns: columns.length,
+    visibleColumns,
+    domCells: container.querySelectorAll('.tabulator-cell').length,
     domColumns,
-    columnVirtualisationSuspected: displayedColumns > 30 && domColumns > displayedColumns * 2,
-    viewportClientWidth: viewport?.clientWidth ?? 0,
-    viewportScrollWidth: viewport?.scrollWidth ?? 0,
+    columnVirtualisation: visibleColumns > 30 && domColumns < visibleColumns,
+    viewportClientWidth: scroller?.clientWidth ?? 0,
+    viewportScrollWidth: scroller?.scrollWidth ?? 0,
     devicePixelRatio: typeof window !== 'undefined' ? window.devicePixelRatio : 1,
   };
 }
@@ -123,22 +136,22 @@ export async function runHorizontalScrollBenchmark(
   container: HTMLElement,
   frames = BENCHMARK_FRAMES
 ): Promise<FrameStats & { maxScrollPx: number }> {
-  const viewport = container.querySelector<HTMLElement>('.ag-grid-viewport');
-  if (!viewport) {
+  const scroller = scrollerOf(container);
+  if (!scroller) {
     return { ...computeFrameStats([]), maxScrollPx: 0 };
   }
-  const maxScrollPx = Math.max(0, viewport.scrollWidth - viewport.clientWidth);
-  const originalLeft = viewport.scrollLeft;
+  const maxScrollPx = Math.max(0, scroller.scrollWidth - scroller.clientWidth);
+  const originalLeft = scroller.scrollLeft;
   const samples: number[] = [];
 
   let previous = await nextFrame();
   for (let i = 1; i <= frames; i++) {
-    viewport.scrollLeft = Math.round((maxScrollPx * i) / frames);
+    scroller.scrollLeft = Math.round((maxScrollPx * i) / frames);
     const now = await nextFrame();
     samples.push(now - previous);
     previous = now;
   }
-  viewport.scrollLeft = originalLeft;
+  scroller.scrollLeft = originalLeft;
   return { ...computeFrameStats(samples), maxScrollPx };
 }
 
@@ -159,6 +172,13 @@ export interface FilterSettleReport {
   p95SettleMs: number;
 }
 
+export interface FilterBenchmarkOptions {
+  /** Applies a quick-filter term the same way the toolbar input does. */
+  apply: (term: string) => void;
+  /** Reads the term the grid is currently showing, so it can be restored afterwards. */
+  current: () => string;
+}
+
 function percentile(values: number[], fraction: number): number {
   if (values.length === 0) return 0;
   const sorted = [...values].sort((a, b) => a - b);
@@ -166,23 +186,23 @@ function percentile(values: number[], fraction: number): number {
 }
 
 /**
- * Applies each quick-filter term through the grid API and reports both the blocking cost of the
- * call itself and the time until the next paint. This is what decides whether the result grid
- * needs a debounced quick-filter input: the meaningful number is the p95 of `applyMs`.
+ * Applies each quick-filter term and reports both the blocking cost of the call itself and the
+ * time until the next paint. This is what decides whether the result grid needs a debounced
+ * quick-filter input: the meaningful number is the p95 of `applyMs`.
  */
 export async function runFilterSettleBenchmark(
-  api: GridApi,
+  options: FilterBenchmarkOptions,
   terms: string[] = FILTER_BENCHMARK_TERMS,
   windowFrames = FILTER_SETTLE_WINDOW_FRAMES
 ): Promise<FilterSettleReport> {
-  const original = (api.getGridOption('quickFilterText') ?? '') as string;
+  const original = options.current();
   const samples: FilterSettleSample[] = [];
 
   try {
     for (const term of terms) {
       const before = await nextFrame();
       const applyStart = performance.now();
-      api.setGridOption('quickFilterText', term);
+      options.apply(term);
       const applyMs = performance.now() - applyStart;
       const settled = await nextFrame();
 
@@ -202,9 +222,8 @@ export async function runFilterSettleBenchmark(
       });
     }
   } finally {
-    // The API call bypasses the Vue-bound prop, so put the grid back the way the component
-    // believes it is before returning.
-    api.setGridOption('quickFilterText', original);
+    // Put the grid back the way the component believes it is before returning.
+    options.apply(original);
   }
 
   const applyTimes = samples.map((sample) => sample.applyMs);
@@ -222,7 +241,7 @@ export function startGridPerfDiag(options: GridPerfDiagOptions): () => void {
     return () => {};
   }
 
-  const { api, container, label } = options;
+  const { table, container, label } = options;
   const hud = document.createElement('div');
   hud.style.cssText = [
     'position:fixed',
@@ -259,6 +278,7 @@ export function startGridPerfDiag(options: GridPerfDiagOptions): () => void {
   filterButton.textContent = 'Run filter benchmark';
   filterButton.style.cssText = buttonStyle;
   filterButton.style.marginLeft = '4px';
+  filterButton.disabled = !options.applyFilter;
 
   hud.append(title, body, button, filterButton);
   document.body.appendChild(hud);
@@ -273,12 +293,12 @@ export function startGridPerfDiag(options: GridPerfDiagOptions): () => void {
 
   const renderHud = () => {
     const live = computeFrameStats(samples);
-    const snapshot = collectGridPerfSnapshot(api, container);
+    const snapshot = collectGridPerfSnapshot(table, container);
     body.textContent = [
       `fps ${live.fps.toFixed(1)}  p95 ${live.p95Ms.toFixed(1)}ms  max ${live.maxMs.toFixed(1)}ms`,
-      `cells ${snapshot.domCells}  cols dom/visible/total ${snapshot.domColumns}/${snapshot.displayedColumns}/${snapshot.totalColumns}`,
+      `cells ${snapshot.domCells}  cols dom/visible/total ${snapshot.domColumns}/${snapshot.visibleColumns}/${snapshot.totalColumns}`,
       `viewport ${snapshot.viewportClientWidth}/${snapshot.viewportScrollWidth}px  dpr ${snapshot.devicePixelRatio}`,
-      snapshot.columnVirtualisationSuspected ? 'WARN: column virtualisation looks suppressed' : 'virtualisation ok',
+      snapshot.columnVirtualisation ? 'horizontal virtualisation active' : 'all visible columns rendered',
       benchmarkResult,
       filterResult,
     ]
@@ -307,7 +327,7 @@ export function startGridPerfDiag(options: GridPerfDiagOptions): () => void {
     runHorizontalScrollBenchmark(container)
       .then((stats) => {
         benchmarkResult = `benchmark avg ${stats.avgMs}ms p95 ${stats.p95Ms}ms max ${stats.maxMs}ms over32 ${stats.overBudgetFrames}/${stats.frames}`;
-        console.info('[SQLight][grid-perf]', label ?? '', stats, collectGridPerfSnapshot(api, container));
+        console.info('[SQLight][grid-perf]', label ?? '', stats, collectGridPerfSnapshot(table, container));
         renderHud();
       })
       .catch((err) => {
@@ -321,9 +341,11 @@ export function startGridPerfDiag(options: GridPerfDiagOptions): () => void {
   });
 
   filterButton.addEventListener('click', () => {
+    const apply = options.applyFilter;
+    if (!apply) return;
     filterButton.disabled = true;
     filterButton.textContent = 'Running...';
-    runFilterSettleBenchmark(api)
+    runFilterSettleBenchmark({ apply, current: options.getFilter ?? (() => '') })
       .then((report) => {
         filterResult =
           `filter p95 apply ${report.p95ApplyMs}ms max ${report.maxApplyMs}ms ` +

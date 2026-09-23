@@ -10,30 +10,30 @@ function readSource(relativePath: string): string {
 }
 
 describe('Result grid: double-click copies a read-only cell value', () => {
-  test('ResultGridItem binds the grid cellDoubleClicked event', () => {
+  test('ResultGridItem binds the Tabulator cellDblClick event', () => {
     const source = readSource('src/components/results/ResultGridItem.vue');
 
     assert.match(
       source,
-      /@cell-double-clicked="onCellDoubleClicked"/,
-      'AgGridVue should bind @cell-double-clicked'
+      /table\.on\('cellDblClick', handleCellDoubleClick\)/,
+      'the grid must subscribe to cellDblClick'
     );
     assert.match(
       source,
-      /function onCellDoubleClicked\(event: CellDoubleClickedEvent\)/,
-      'ResultGridItem should implement onCellDoubleClicked'
+      /function handleCellDoubleClick\(_event: MouseEvent, cell: TabulatorCellComponent\)/,
+      'ResultGridItem should implement handleCellDoubleClick'
     );
     assert.match(
       source,
-      /type CellDoubleClickedEvent,/,
-      'CellDoubleClickedEvent should be imported from ag-grid-community'
+      /import type \{\s*TabulatorCellComponent,/,
+      'TabulatorCellComponent should be imported from tabulator-tables'
     );
   });
 
   test('double-click copy leaves editable cells to the editor', () => {
     const source = readSource('src/components/results/ResultGridItem.vue');
 
-    const guardIdx = source.indexOf('if (event.column.isCellEditable(event.node)) return;');
+    const guardIdx = source.indexOf('if (isColumnEditable(colIdx)) return;');
     const writeIdx = source.indexOf('navigator.clipboard.writeText(text)', guardIdx);
 
     assert.ok(guardIdx !== -1, 'the handler should bail out when the cell is editable');
@@ -48,12 +48,12 @@ describe('Result grid: double-click copies a read-only cell value', () => {
 
     assert.match(
       source,
-      /const colIdx = getColIndex\(event\.column\.getColId\(\)\);/,
+      /const colIdx = getColIndex\(cell\.getField\(\)\);/,
       'the handler should resolve the data column index via getColIndex'
     );
     assert.match(
       source,
-      /const text = formatCellForExport\(event\.value\);/,
+      /const text = formatCellForExport\(cell\.getValue\(\) as CellValue\);/,
       'the handler should reuse formatCellForExport'
     );
   });

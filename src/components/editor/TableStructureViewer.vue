@@ -90,37 +90,17 @@
       <div class="font-mono text-xs bg-rose-950/30 p-3 rounded border border-rose-900/50">{{ error }}</div>
     </div>
 
-    <!-- AG Grid Content -->
+    <!-- Tabulator grid -->
     <div
       v-else
       ref="gridContainerRef"
-      class="flex-1 w-full overflow-hidden relative"
+      class="sqlight-grid flex-1 w-full overflow-hidden relative"
+      :class="{ 'is-h-scrolling': isHorizontalScrolling }"
+      :style="{ '--sqlight-grid-font': settingsStore.gridFontFamily }"
       @contextmenu.prevent
-      @mousedown="onGridMouseDown"
-      @click="onGridClick"
+      @scroll.capture.passive="handleGridScroll"
     >
-      <AgGridVue
-        class="w-full h-full"
-        :style="{ '--ag-font-family': settingsStore.gridFontFamily }"
-        :theme="activeGridTheme"
-        :row-data="columns"
-        :column-defs="columnDefs"
-        :quick-filter-text="quickFilter"
-        :enable-cell-text-selection="false"
-        :ensure-dom-order="false"
-        :column-buffer="4"
-        :animate-rows="false"
-        :suppress-move-when-column-dragging="true"
-        :suppress-row-hover-highlight="true"
-        :prevent-default-on-context-menu="true"
-        :tooltip-show-mode="'whenTruncated'"
-        :tooltip-show-delay="150"
-        :tooltip-hide-delay="6000"
-        @grid-ready="onGridReady"
-        @cell-context-menu="onCellContextMenu"
-        @body-scroll="onBodyScroll"
-        @column-moved="onColumnMoved"
-      />
+      <div ref="gridTableRef" class="w-full h-full"></div>
     </div>
 
     <!-- Excel-Grade Live Aggregate Bar -->
@@ -378,7 +358,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, reactive, onMounted, watch } from 'vue';
+import { ref, computed, reactive, onMounted, onBeforeUnmount, nextTick, watch } from 'vue';
 import Button from 'primevue/button';
 import InputText from 'primevue/inputtext';
 import IconField from 'primevue/iconfield';
@@ -402,28 +382,22 @@ import {
   generateAllAlterTableTemplateSql,
   type AlterTableColumnOptions,
 } from '@/utils/alterTableGenerator';
-import { AgGridVue } from 'ag-grid-vue3';
-import {
-  AllCommunityModule,
-  ModuleRegistry,
-  type GridApi,
-  type GridReadyEvent,
-  type ColDef,
-  type CellContextMenuEvent,
-  type ICellRendererParams,
-} from 'ag-grid-community';
-import { sqlightDarkGridTheme, sqlightLightGridTheme } from '@/styles/gridTheme';
+import type {
+  TabulatorCellComponent,
+  TabulatorColumnDefinition,
+  TabulatorFormatter,
+  TabulatorRowData,
+} from 'tabulator-tables';
 import { queryService } from '@/services/queryService';
 import { useConnectionStore } from '@/stores/connectionStore';
 import { useWorkspaceStore } from '@/stores/workspaceStore';
 import { useSettingsStore } from '@/stores/settingsStore';
-import { escapeHtml } from '@/composables/useColumnAutoWidth';
+import { formatValueForDisplay } from '@/composables/useColumnAutoWidth';
+import { useTabulatorTable } from '@/composables/useTabulatorTable';
 import { useGridSelection } from '@/composables/useGridSelection';
 import { useGridExport } from '@/composables/useGridExport';
+import { buildBadge } from '@/utils/tabulatorColumns';
 import type { ColumnDef, CellValue } from '@/types/query';
-
-// Register AG Grid Community Modules
-ModuleRegistry.registerModules([AllCommunityModule]);
 
 const props = defineProps<{
   schema: string;
@@ -434,10 +408,6 @@ const settingsStore = useSettingsStore();
 const connectionStore = useConnectionStore();
 const workspaceStore = useWorkspaceStore();
 
-const activeGridTheme = computed(() => {
-  return settingsStore.colorMode === 'light' ? sqlightLightGridTheme : sqlightDarkGridTheme;
-});
-
 export interface ColumnStructureRow {
   ordinal: number;
   columnName: string;
@@ -447,8 +417,10 @@ export interface ColumnStructureRow {
   numericPrecision: number | null;
   numericScale: number | null;
   isNullable: string;
-  isPrimaryKey: number;
-  isIdentity: number;
+  /** `PK` when the column belongs to the primary key, otherwise an empty string. */
+  isPrimaryKey: string;
+  /** `YES` when the column is an identity column, otherwise an empty string. */
+  isIdentity: string;
   defaultValue: string | null;
   collation: string | null;
   [key: string]: unknown;
@@ -458,11 +430,13 @@ const isLoading = ref(false);
 const error = ref<string | null>(null);
 const columns = ref<ColumnStructureRow[]>([]);
 const quickFilter = ref('');
-const gridApi = ref<GridApi | null>(null);
 const gridContainerRef = ref<HTMLDivElement | null>(null);
+const isHorizontalScrolling = ref(false);
+let horizontalScrollTimer: ReturnType<typeof setTimeout> | null = null;
+let lastScrollLeft = 0;
 
-const pkCount = computed(() => columns.value.filter((c) => c.isPrimaryKey === 1).length);
-const identityCount = computed(() => columns.value.filter((c) => c.isIdentity === 1).length);
+const pkCount = computed(() => columns.value.filter((c) => c.isPrimaryKey === 'PK').length);
+const identityCount = computed(() => columns.value.filter((c) => c.isIdentity === 'YES').length);
 
 // Cell Context Menu State
 const contextMenu = reactive<{
@@ -503,30 +477,31 @@ const exportColumns = computed<ColumnDef[]>(() => [
   { name: 'collation', dataType: 'nvarchar', nullable: true, ordinal: 12 },
 ]);
 
-// Adapter rows for export & selection (array of arrays)
-const exportRows = computed<CellValue[][]>(() => {
-  return columns.value.map((col) => [
+// Adapter row for the array based export helpers (array of arrays, display values only).
+function exportRowFor(col: ColumnStructureRow): CellValue[] {
+  return [
     col.ordinal,
-    col.isPrimaryKey ? 'PK' : '',
+    col.isPrimaryKey,
     col.columnName,
     col.dataType,
     col.fullType,
     col.isNullable,
-    col.isIdentity ? 'YES' : 'NO',
+    col.isIdentity,
     col.defaultValue,
     col.maxLength,
     col.numericPrecision,
     col.numericScale,
     col.collation,
-  ]);
-});
+  ];
+}
 
-// Selection composable
+const exportRows = computed<CellValue[][]>(() => columns.value.map(exportRowFor));
+
+// Selection composable (Tabulator range based)
 const selection = useGridSelection({
-  getRows: () => exportRows.value,
+  getTable: () => grid.table.value,
+  getContainer: () => gridContainerRef.value,
   getColumns: () => exportColumns.value,
-  getGridApi: () => gridApi.value,
-  getGridContainer: () => gridContainerRef.value,
   onCopySelected: () => gridExport.copySelectedCells(),
 });
 
@@ -536,10 +511,6 @@ const {
   selectedColumnsCount,
   formatAggregateNumber,
   clearCellSelection,
-  onGridMouseDown,
-  onGridClick,
-  onColumnMoved,
-  onBodyScroll,
 } = selection;
 
 // Export composable
@@ -566,145 +537,282 @@ const {
   copyAsMarkdown,
 } = gridExport;
 
-// AG Grid Column Definitions
-const columnDefs = computed<ColDef[]>(() => {
+/** Text node helper: formatters return DOM nodes so values are never injected as markup. */
+function textNode(text: string, className?: string): Node {
+  if (!className) return document.createTextNode(text);
+  const span = document.createElement('span');
+  span.className = className;
+  span.textContent = text;
+  return span;
+}
+
+function dashForEmpty(value: unknown): string {
+  if (value === null || value === undefined || String(value).trim() === '') return '-';
+  return String(value);
+}
+
+const pkBadgeFormatter: TabulatorFormatter = (cell) =>
+  cell.getValue() === 'PK' ? buildBadge('PK', 'sqlight-badge sqlight-badge-pk') : textNode('');
+
+const columnNameFormatter: TabulatorFormatter = (cell) => {
+  const row = cell.getRow().getData() as unknown as ColumnStructureRow;
+  const isPk = row?.isPrimaryKey === 'PK';
+  return textNode(
+    String(cell.getValue() ?? ''),
+    isPk ? 'sqlight-column-name sqlight-column-name-pk' : 'sqlight-column-name'
+  );
+};
+
+const nullableFormatter: TabulatorFormatter = (cell) =>
+  cell.getValue() === 'YES'
+    ? buildBadge('YES', 'sqlight-badge sqlight-badge-yes')
+    : buildBadge('NO', 'sqlight-badge sqlight-badge-no');
+
+const identityFormatter: TabulatorFormatter = (cell) =>
+  cell.getValue() === 'YES'
+    ? buildBadge('YES', 'sqlight-badge sqlight-badge-identity')
+    : textNode('-', 'sqlight-badge-muted');
+
+const defaultFormatter: TabulatorFormatter = (cell) => {
+  const raw = cell.getValue();
+  if (raw === null || raw === undefined || String(raw).trim() === '') {
+    return textNode('NULL', 'sqlight-default-empty');
+  }
+  return textNode(String(raw), 'sqlight-default-value');
+};
+
+const maxLengthFormatter: TabulatorFormatter = (cell) => {
+  const value = cell.getValue();
+  if (value === -1) return textNode('MAX (-1)');
+  return textNode(value === null || value === undefined ? '-' : String(value));
+};
+
+const dashFormatter: TabulatorFormatter = (cell) => textNode(dashForEmpty(cell.getValue()));
+
+function buildColumnDefinitions(): TabulatorColumnDefinition[] {
   return [
     {
       field: 'ordinal',
-      headerName: '#',
+      title: '#',
       width: 55,
-      pinned: 'left',
-      sortable: true,
-      filter: 'agNumberColumnFilter',
-      cellClass: 'text-center font-mono text-dark-400 text-xxs',
+      frozen: true,
+      headerSort: true,
+      hozAlign: 'center',
+      cssClass: 'sqlight-cell-muted',
+      formatter: (cell) => textNode(String(cell.getValue() ?? '')),
     },
     {
       field: 'isPrimaryKey',
-      headerName: 'PK',
+      title: 'PK',
       width: 60,
-      pinned: 'left',
-      sortable: true,
-      cellClass: 'text-center flex items-center justify-center',
-      cellRenderer: (params: ICellRendererParams) => {
-        if (params.value === 1) {
-          return `<span class="px-1 py-0.2 rounded font-bold font-mono text-[10px] bg-amber-500/20 text-amber-800 dark:text-amber-300 border border-amber-500/30">PK</span>`;
-        }
-        return '';
-      },
+      headerSort: true,
+      hozAlign: 'center',
+      formatter: pkBadgeFormatter,
     },
     {
       field: 'columnName',
-      headerName: '欄位名稱 (Column Name)',
+      title: '欄位名稱 (Column Name)',
       width: 180,
-      pinned: 'left',
-      sortable: true,
-      filter: 'agTextColumnFilter',
-      cellRenderer: (params: ICellRendererParams) => {
-        const isPk = params.data?.isPrimaryKey === 1;
-        const colorClass = isPk ? 'text-amber-800 dark:text-amber-300 font-bold' : 'text-dark-100 font-medium';
-        return `<span class="font-mono text-xs ${colorClass}">${escapeHtml(String(params.value ?? ''))}</span>`;
-      },
+      headerSort: true,
+      formatter: columnNameFormatter,
     },
     {
       field: 'dataType',
-      headerName: '基礎型別 (Data Type)',
+      title: '基礎型別 (Data Type)',
       width: 125,
-      sortable: true,
-      filter: 'agTextColumnFilter',
-      cellClass: 'font-mono text-sky-300 text-xs',
+      headerSort: true,
+      cssClass: 'sqlight-cell-datatype',
+      formatter: (cell) => textNode(String(cell.getValue() ?? '')),
     },
     {
       field: 'fullType',
-      headerName: '完整型別與長度 (Full Type)',
+      title: '完整型別與長度 (Full Type)',
       width: 160,
-      sortable: true,
-      filter: 'agTextColumnFilter',
-      cellClass: 'font-mono text-emerald-300 font-semibold text-xs',
+      headerSort: true,
+      cssClass: 'sqlight-cell-fulltype',
+      formatter: (cell) => textNode(String(cell.getValue() ?? '')),
     },
     {
       field: 'isNullable',
-      headerName: '可為 NULL',
+      title: '可為 NULL',
       width: 95,
-      sortable: true,
-      cellClass: 'text-center flex items-center justify-center',
-      cellRenderer: (params: ICellRendererParams) => {
-        if (params.value === 'YES') {
-          return `<span class="px-1.5 py-0.2 rounded font-mono text-[10px] bg-emerald-950/60 text-emerald-400 border border-emerald-800/50">YES</span>`;
-        }
-        return `<span class="px-1.5 py-0.2 rounded font-mono text-[10px] bg-rose-950/60 text-rose-400 border border-rose-800/50">NO</span>`;
-      },
+      headerSort: true,
+      hozAlign: 'center',
+      formatter: nullableFormatter,
     },
     {
       field: 'isIdentity',
-      headerName: '自動識別 (Identity)',
+      title: '自動識別 (Identity)',
       width: 120,
-      sortable: true,
-      cellClass: 'text-center flex items-center justify-center',
-      cellRenderer: (params: ICellRendererParams) => {
-        if (params.value === 1) {
-          return `<span class="px-1.5 py-0.2 rounded font-mono text-[10px] bg-cyan-950/60 text-cyan-300 border border-cyan-800/50">YES</span>`;
-        }
-        return `<span class="text-dark-600 font-mono text-xxs">-</span>`;
-      },
+      headerSort: true,
+      hozAlign: 'center',
+      formatter: identityFormatter,
     },
     {
       field: 'defaultValue',
-      headerName: '預設值 (Default)',
+      title: '預設值 (Default)',
       width: 160,
-      sortable: true,
-      filter: 'agTextColumnFilter',
-      cellRenderer: (params: ICellRendererParams) => {
-        if (params.value != null && String(params.value).trim()) {
-          return `<span class="font-mono text-dark-200 text-xxs">${escapeHtml(String(params.value))}</span>`;
-        }
-        return `<span class="text-dark-600 font-mono text-xxs italic">NULL</span>`;
-      },
+      headerSort: true,
+      formatter: defaultFormatter,
     },
     {
       field: 'maxLength',
-      headerName: '最大長度 (Bytes)',
+      title: '最大長度 (Bytes)',
       width: 115,
-      sortable: true,
-      cellClass: 'font-mono text-dark-400 text-right text-xs',
-      valueFormatter: (params) => {
-        if (params.value === -1) return 'MAX (-1)';
-        return params.value != null ? String(params.value) : '-';
-      },
+      headerSort: true,
+      hozAlign: 'right',
+      cssClass: 'sqlight-cell-muted',
+      formatter: maxLengthFormatter,
     },
     {
       field: 'numericPrecision',
-      headerName: '精確度 (Precision)',
+      title: '精確度 (Precision)',
       width: 110,
-      sortable: true,
-      cellClass: 'font-mono text-dark-400 text-right text-xs',
-      valueFormatter: (params) => (params.value != null ? String(params.value) : '-'),
+      headerSort: true,
+      hozAlign: 'right',
+      cssClass: 'sqlight-cell-muted',
+      formatter: dashFormatter,
     },
     {
       field: 'numericScale',
-      headerName: '小數位數 (Scale)',
+      title: '小數位數 (Scale)',
       width: 100,
-      sortable: true,
-      cellClass: 'font-mono text-dark-400 text-right text-xs',
-      valueFormatter: (params) => (params.value != null ? String(params.value) : '-'),
+      headerSort: true,
+      hozAlign: 'right',
+      cssClass: 'sqlight-cell-muted',
+      formatter: dashFormatter,
     },
     {
       field: 'collation',
-      headerName: '定序 (Collation)',
+      title: '定序 (Collation)',
       width: 180,
-      sortable: true,
-      filter: 'agTextColumnFilter',
-      cellRenderer: (params: ICellRendererParams) => {
-        if (params.value != null && String(params.value).trim()) {
-          return `<span class="font-mono text-dark-400 text-xxs truncate">${escapeHtml(String(params.value))}</span>`;
+      headerSort: true,
+      cssClass: 'sqlight-cell-muted',
+      formatter: (cell) => {
+        const value = cell.getValue();
+        if (value === null || value === undefined || String(value).trim() === '') {
+          return textNode('-', 'sqlight-badge-muted');
         }
-        return `<span class="text-dark-600 font-mono text-xxs">-</span>`;
+        return textNode(String(value), 'sqlight-collation-value');
       },
     },
   ];
+}
+
+// --------------------------------------------------------------------------
+// Tabulator grid
+// --------------------------------------------------------------------------
+
+function buildQuickFilter(term: string): (data: TabulatorRowData) => boolean {
+  const terms = term
+    .trim()
+    .toLowerCase()
+    .split(/\s+/)
+    .filter(Boolean);
+  return (data) => {
+    for (const needle of terms) {
+      let matched = false;
+      for (const value of Object.values(data)) {
+        if (value === null || value === undefined) continue;
+        if (formatValueForDisplay(value).toLowerCase().includes(needle)) {
+          matched = true;
+          break;
+        }
+      }
+      if (!matched) return false;
+    }
+    return true;
+  };
+}
+
+function applyQuickFilterTerm(term: string) {
+  const table = grid.table.value;
+  if (!table) return;
+  if (!term.trim()) {
+    table.clearFilter();
+    return;
+  }
+  table.setFilter(buildQuickFilter(term));
+}
+
+const grid = useTabulatorTable({
+  isActive: () => !isLoading.value && !error.value && columns.value.length > 0,
+  getRows: () => columns.value,
+  getColumnSignature: () => 'table-structure',
+  buildOptions: () => ({
+    height: '100%',
+    layout: 'fitData',
+    renderHorizontal: 'basic',
+    movableColumns: true,
+    selectableRows: false,
+    selectableRange: true,
+    selectableRangeColumns: true,
+    selectableRangeRows: false,
+    selectableRangeInitializeDefault: false,
+    selectableRangeAutoFocus: false,
+    headerSortClickElement: 'icon',
+    tooltipDelay: 150,
+    index: '__sqlightRowId',
+    rowHeight: 28,
+    columns: buildColumnDefinitions(),
+  }),
+  onReady: (table) => {
+    selection.attach(table);
+    table.on('cellContext', handleCellContext);
+    if (quickFilter.value) applyQuickFilterTerm(quickFilter.value);
+  },
 });
 
-function onGridReady(params: GridReadyEvent) {
-  gridApi.value = params.api;
+watch(
+  () => [isLoading.value, error.value] as const,
+  async () => {
+    await nextTick();
+    await grid.sync();
+  }
+);
+
+// `useTabulatorTable` builds the table into its own container element.
+const gridTableRef = grid.containerRef;
+
+onMounted(async () => {
+  await nextTick();
+  await grid.sync();
+});
+
+watch(
+  () => columns.value,
+  async () => {
+    await nextTick();
+    await grid.sync();
+  }
+);
+
+watch(quickFilter, (value) => {
+  applyQuickFilterTerm(value);
+});
+
+// While the horizontal scrollbar is dragged the grid repaints every frame, so decorative
+// transitions are switched off until the scroll settles.
+function markHorizontalScrolling() {
+  if (!isHorizontalScrolling.value) {
+    isHorizontalScrolling.value = true;
+  }
+  if (horizontalScrollTimer) {
+    clearTimeout(horizontalScrollTimer);
+  }
+  horizontalScrollTimer = setTimeout(() => {
+    horizontalScrollTimer = null;
+    isHorizontalScrolling.value = false;
+  }, 150);
+}
+
+function handleGridScroll(event: Event) {
+  const target = event.target as HTMLElement | null;
+  if (!target || typeof target.scrollLeft !== 'number') return;
+  if (target.scrollLeft !== lastScrollLeft) {
+    lastScrollLeft = target.scrollLeft;
+    markHorizontalScrolling();
+  }
 }
 
 async function loadStructure() {
@@ -786,8 +894,8 @@ ORDER BY c.ORDINAL_POSITION;
       numericPrecision: row[colIndexMap.get('numericprecision') ?? 5] != null ? Number(row[colIndexMap.get('numericprecision') ?? 5]) : null,
       numericScale: row[colIndexMap.get('numericscale') ?? 6] != null ? Number(row[colIndexMap.get('numericscale') ?? 6]) : null,
       isNullable: String(row[colIndexMap.get('isnullable') ?? 7] ?? 'NO'),
-      isPrimaryKey: Number(row[colIndexMap.get('isprimarykey') ?? 8] ?? 0),
-      isIdentity: Number(row[colIndexMap.get('isidentity') ?? 9] ?? 0),
+      isPrimaryKey: Number(row[colIndexMap.get('isprimarykey') ?? 8] ?? 0) === 1 ? 'PK' : '',
+      isIdentity: Number(row[colIndexMap.get('isidentity') ?? 9] ?? 0) === 1 ? 'YES' : '',
       defaultValue: row[colIndexMap.get('defaultvalue') ?? 10] != null ? String(row[colIndexMap.get('defaultvalue') ?? 10]) : null,
       collation: row[colIndexMap.get('collation') ?? 11] != null ? String(row[colIndexMap.get('collation') ?? 11]) : null,
     }));
@@ -799,20 +907,16 @@ ORDER BY c.ORDINAL_POSITION;
   }
 }
 
-function onCellContextMenu(event: CellContextMenuEvent) {
-  const mouseEvent = event.event as MouseEvent;
-  if (!mouseEvent) return;
+function handleCellContext(event: MouseEvent, cell: TabulatorCellComponent) {
+  event.preventDefault();
+  event.stopPropagation();
 
-  const colId = event.column.getColId();
-  contextMenu.x = Math.min(mouseEvent.clientX, window.innerWidth - 275);
-  contextMenu.y = Math.min(mouseEvent.clientY, window.innerHeight - 440);
-  contextMenu.colName = colId;
-  contextMenu.cellValue = event.value;
-  contextMenu.rowIndex = event.rowIndex ?? -1;
-  contextMenu.selectedRow =
-    (event.data as ColumnStructureRow) ||
-    (event.rowIndex != null && columns.value[event.rowIndex]) ||
-    null;
+  contextMenu.x = Math.min(event.clientX, window.innerWidth - 275);
+  contextMenu.y = Math.min(event.clientY, window.innerHeight - 440);
+  contextMenu.colName = cell.getField();
+  contextMenu.cellValue = cell.getValue();
+  contextMenu.rowIndex = cell.getRow().getPosition() - 1;
+  contextMenu.selectedRow = (cell.getRow().getData() as unknown as ColumnStructureRow) ?? null;
   contextMenu.visible = true;
 
   function closeMenu() {
@@ -916,21 +1020,24 @@ function copyCellValue() {
 }
 
 function copyCurrentRow() {
-  const row = contextMenu.rowIndex >= 0 && exportRows.value ? exportRows.value[contextMenu.rowIndex] : null;
-  if (row) {
-    exportCopyCurrentRow(row);
-  }
+  if (!contextMenu.selectedRow) return;
+  exportCopyCurrentRow(exportRowFor(contextMenu.selectedRow));
 }
 
 function copyCurrentRowAsJson() {
-  const row = contextMenu.rowIndex >= 0 && exportRows.value ? exportRows.value[contextMenu.rowIndex] : null;
-  if (row) {
-    exportCopyCurrentRowAsJson(exportColumns.value, row);
-  }
+  if (!contextMenu.selectedRow) return;
+  exportCopyCurrentRowAsJson(exportColumns.value, exportRowFor(contextMenu.selectedRow));
 }
 
 onMounted(() => {
   loadStructure();
+});
+
+onBeforeUnmount(() => {
+  if (horizontalScrollTimer) {
+    clearTimeout(horizontalScrollTimer);
+    horizontalScrollTimer = null;
+  }
 });
 
 watch(

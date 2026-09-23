@@ -12,7 +12,7 @@ export const queryService = {
     timeoutSeconds?: number
   ): Promise<QueryResult> {
     // Dev-only shortcut that lets a synthetic result set stand in for a server round trip so
-    // AG Grid scroll/render baselines can be reproduced on demand. `import.meta.env.DEV` is
+    // Grid scroll/render baselines can be reproduced on demand. `import.meta.env.DEV` is
     // statically replaced, so this branch and the fixture module are dropped from prod builds.
     const fixture = import.meta.env?.DEV ? parsePerfFixtureSpec(sql) : null;
     if (fixture) {

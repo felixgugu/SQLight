@@ -2,7 +2,7 @@
 
 > **版本**：v0.3.0-draft  
 > **更新時間**：2026-09-20  
-> **適用架構**：Tauri v2 + Rust (Tiberius TDS) + Vue 3 + TypeScript 5 + PrimeVue 4 + Monaco Editor + AG Grid Community + AntV X6  
+> **適用架構**：Tauri v2 + Rust (Tiberius TDS) + Vue 3 + TypeScript 5 + PrimeVue 4 + Monaco Editor + Tabulator 6 + AntV X6  
 
 ---
 

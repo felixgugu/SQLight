@@ -2,7 +2,7 @@
 
 **極致輕量的 Microsoft SQL Server (T-SQL) 跨平台桌面客戶端**
 
-Tauri v2 + Rust + Vue 3 + TypeScript + PrimeVue 4 + Monaco Editor + AG Grid Community
+Tauri v2 + Rust + Vue 3 + TypeScript + PrimeVue 4 + Monaco Editor + Tabulator
 
 ---
 
@@ -13,7 +13,7 @@ SQLight 是為日常 T-SQL 查詢與簡單資料庫操作設計的桌面客戶�
 - ⚡ **原生輕量後端**：Tauri v2 搭配純 Rust 的 TDS 驅動 (Tiberius)，安裝檔與記憶體佔用遠低於 Electron 方案。
 - 💻 **Monaco SQL 編輯器**：語法高亮、IntelliSense 物件補全、Snippet 範本、SQL 格式化與獨立語句執行。
 - 🗂️ **物件總管**：資料表 / 檢視表 / 預存程序 / 函數樹狀瀏覽，支援正則過濾與 `Ctrl + P` 模糊檢索。
-- 📊 **AG Grid 結果表格**：虛擬捲動承載大量資料，框選即時統計，複製為 TSV / JSON / Markdown。
+- 📊 **Tabulator 結果表格**：虛擬捲動承載大量資料，框選即時統計，複製為 TSV / JSON / Markdown。
 - 🛑 **查詢取消**：後端以獨立連線發送 `KILL <spid>`，實體中斷長時間執行的查詢。
 - 🧭 **執行計畫與統計**：預估 / 實際執行計畫圖形化檢視（可匯出 `.sqlplan`），並解析 `STATISTICS IO, TIME`。
 - 🕸️ **ER 關聯圖**：以 AntV X6 依外鍵遞迴展開關聯圖，可匯出 PNG / JSON。
@@ -29,7 +29,7 @@ SQLight 是為日常 T-SQL 查詢與簡單資料庫操作設計的桌面客戶�
 | 後端核心 | Rust 2021、Tokio、Tiberius（純 Rust TDS 協定）、Keyring |
 | 前端 | Vue 3 Composition API、TypeScript 5、Vite 6、Tailwind CSS |
 | 狀態與 UI | Pinia 3、PrimeVue 4、Lucide Vue Next |
-| 編輯器與圖表 | Monaco Editor、AG Grid Community、AntV X6、html-query-plan |
+| 編輯器與圖表 | Monaco Editor、Tabulator 6、AntV X6、html-query-plan |
 
 架構為前後端雙層解耦：Vue 前端經 Tauri IPC 呼叫 Rust 後端，後端以 Tiberius 連線 SQL Server（2012 ~ 2022 / Azure SQL）。
 
@@ -57,7 +57,7 @@ SQLight 是為日常 T-SQL 查詢與簡單資料庫操作設計的桌面客戶�
 **個人化與安全**
 
 - 深色 / 亮色模式、PrimeVue 佈景預設、12 色主色調與 5 色表面色調即時切換。
-- 編輯器字型 / 大小 / 縮排 / 自動換行、AG Grid 字型與分頁啟用色彩皆可自訂。
+- 編輯器字型 / 大小 / 縮排 / 自動換行、結果表格字型與分頁啟用色彩皆可自訂。
 - 記憶上次連線與資料庫、開啟即自動復原；連線可設定別名與環境代表色。
 - AI 助理 API Key、cURL 請求範本與測試連線設定。
 

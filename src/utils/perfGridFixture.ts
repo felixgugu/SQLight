@@ -1,5 +1,5 @@
 /**
- * Dev-only synthetic result-set generator used to build repeatable AG Grid performance
+ * Dev-only synthetic result-set generator used to build repeatable grid performance
  * baselines. Everything here is a pure function with no IPC or Vue dependency, so the shape,
  * determinism and spec parsing can be covered by the plain Node test suite.
  *

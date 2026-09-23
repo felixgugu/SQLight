@@ -402,10 +402,10 @@
 
       <!-- Tab 2: Query & Results Settings -->
       <div v-else-if="activeTab === 'results'" class="space-y-5">
-        <!-- AG Grid Font -->
+        <!-- Result grid font -->
         <div class="flex items-center justify-between pb-4 border-b border-dark-800">
           <div class="pr-4">
-            <label class="font-medium text-dark-100 block">AG Grid 表格字型 (Grid Font)</label>
+            <label class="font-medium text-dark-100 block">結果表格字型 (Grid Font)</label>
             <span class="text-xxs text-dark-400">
               套用至查詢結果、檢視資料與資料表結構中的所有欄位、列號與表頭。
             </span>
@@ -485,7 +485,7 @@
           </div>
           <p class="text-xxs text-dark-400 leading-relaxed">
             極致輕量、現代高效的 Microsoft SQL Server 桌面客戶端。<br />
-            架構基於 Tauri v2 + Rust + Vue 3 + TypeScript + PrimeVue v4 + Monaco Editor + AG Grid Community。
+            架構基於 Tauri v2 + Rust + Vue 3 + TypeScript + PrimeVue v4 + Monaco Editor + Tabulator。
           </p>
         </div>
 

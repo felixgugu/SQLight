@@ -201,46 +201,17 @@
       <span>No rows returned</span>
     </div>
 
-    <!-- AG Grid Area -->
+    <!-- Tabulator grid -->
     <div
       v-else
       ref="gridContainerRef"
-      class="flex-1 w-full overflow-hidden relative"
+      class="sqlight-grid flex-1 w-full overflow-hidden relative"
       :class="{ 'is-h-scrolling': isHorizontalScrolling }"
+      :style="{ '--sqlight-grid-font': settingsStore.gridFontFamily }"
       @contextmenu.prevent
-      @mousedown="onGridMouseDown"
-      @click="onGridClick"
+      @scroll.capture.passive="handleGridScroll"
     >
-      <AgGridVue
-        class="w-full h-full"
-        :style="{ '--ag-font-family': settingsStore.gridFontFamily }"
-        :theme="activeGridTheme"
-        :row-data="gridRowData"
-        :column-defs="columnDefs"
-        :quick-filter-text="quickFilter"
-        :enable-cell-text-selection="false"
-        :ensure-dom-order="false"
-        :column-buffer="4"
-        :animate-rows="false"
-        :suppress-move-when-column-dragging="true"
-        :suppress-row-hover-highlight="true"
-        :prevent-default-on-context-menu="true"
-        :tooltip-show-mode="'whenTruncated'"
-        :tooltip-show-delay="150"
-        :tooltip-hide-delay="6000"
-        :stop-editing-when-cells-lose-focus="true"
-        @grid-ready="onGridReady"
-        @first-data-rendered="handleFirstDataRendered"
-        @cell-context-menu="onCellContextMenu"
-        @cell-double-clicked="onCellDoubleClicked"
-        @body-scroll="handleBodyScroll"
-        @column-moved="handleColumnMoved"
-        @column-pinned="handleColumnLayoutChanged"
-        @column-visible="handleColumnLayoutChanged"
-        @column-resized="onColumnResized"
-        @sort-changed="handleGridStateChanged"
-        @filter-changed="handleGridStateChanged"
-      />
+      <div ref="gridTableRef" class="w-full h-full"></div>
     </div>
 
     <!-- Excel-Grade Live Aggregate Bar -->
@@ -440,17 +411,6 @@
       >
         <Trash2 class="w-3.5 h-3.5 text-rose-400" />
         <span>建立 DELETE 語法</span>
-      </button>
-
-      <div class="my-1 border-t border-dark-750"></div>
-
-      <button
-        @click="togglePinColumn"
-        class="w-full text-left px-2.5 py-1.5 hover:bg-dark-750 hover:text-dark-100 flex items-center space-x-2 transition-colors"
-      >
-        <PinOff v-if="isColPinned" class="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
-        <Pin v-else class="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
-        <span>{{ isColPinned ? '取消凍結此欄 (Unpin)' : '凍結此欄於左側 (Pin Left)' }}</span>
       </button>
 
       <div class="my-1 border-t border-dark-750"></div>
@@ -658,8 +618,9 @@
   </div>
 </template>
 
+
 <script setup lang="ts">
-import { ref, computed, reactive, watch, toRaw, onBeforeUnmount } from 'vue';
+import { ref, computed, reactive, watch, toRaw, nextTick, onMounted, onBeforeUnmount } from 'vue';
 import Button from 'primevue/button';
 import InputText from 'primevue/inputtext';
 import IconField from 'primevue/iconfield';
@@ -669,8 +630,6 @@ import Dialog from 'primevue/dialog';
 import {
   Inbox,
   Copy,
-  Pin,
-  PinOff,
   FileSpreadsheet,
   FileText,
   PlusCircle,
@@ -683,20 +642,12 @@ import {
   Eye,
   Heading,
 } from 'lucide-vue-next';
-import { AgGridVue } from 'ag-grid-vue3';
-import {
-  AllCommunityModule,
-  ModuleRegistry,
-  type GridApi,
-  type GridReadyEvent,
-  type ColDef,
-  type CellContextMenuEvent,
-  type CellDoubleClickedEvent,
-  type BodyScrollEvent,
-  type ColumnMovedEvent,
-  type ColumnResizedEvent,
-} from 'ag-grid-community';
-import { sqlightDarkGridTheme, sqlightLightGridTheme } from '@/styles/gridTheme';
+import type {
+  TabulatorCellComponent,
+  TabulatorColumnComponent,
+  TabulatorColumnDefinition,
+  TabulatorRowData,
+} from 'tabulator-tables';
 import { useSettingsStore } from '@/stores/settingsStore';
 import { useQueryStore } from '@/stores/queryStore';
 import { useWorkspaceStore } from '@/stores/workspaceStore';
@@ -711,10 +662,18 @@ import SqlCodeViewer from '@/components/common/SqlCodeViewer.vue';
 import {
   calculateColumnWidth,
   formatCellForExport,
+  formatValueForDisplay,
 } from '@/composables/useColumnAutoWidth';
+import { useTabulatorTable } from '@/composables/useTabulatorTable';
 import { useGridSelection } from '@/composables/useGridSelection';
 import { useGridExport } from '@/composables/useGridExport';
 import { startGridPerfDiag } from '@/composables/useGridPerfDiag';
+import {
+  ROW_INDEX_FIELD,
+  applyCellValueClasses,
+  buildDataColumn,
+  buildRowIndexColumn,
+} from '@/utils/tabulatorColumns';
 import {
   generateInsertStatement,
   generateUpdateStatement,
@@ -725,8 +684,6 @@ import {
   type GenerateDmlParams,
 } from '@/utils/sqlGenerator';
 import type { ResultSet, CellValue, QueryResultTab } from '@/types/query';
-
-ModuleRegistry.registerModules([AllCommunityModule]);
 
 const props = defineProps<{
   resultSet: ResultSet;
@@ -748,10 +705,6 @@ const connectionStore = useConnectionStore();
 const schemaStore = useSchemaStore();
 const dataViewStore = useDataViewStore();
 const gridLayoutStore = useGridLayoutStore();
-
-const activeGridTheme = computed(() => {
-  return settingsStore.colorMode === 'light' ? sqlightLightGridTheme : sqlightDarkGridTheme;
-});
 
 // Quick filter input is debounced once the result set is big enough for a single filter pass to
 // be felt. Measured on a 150 column result set: ~21ms per pass at 1k rows, ~497ms at 50k rows,
@@ -781,13 +734,11 @@ watch(quickFilterInput, (value) => {
   }, QUICK_FILTER_DEBOUNCE_MS);
 });
 
-const gridApi = ref<GridApi | null>(null);
 const gridContainerRef = ref<HTMLDivElement | null>(null);
 
-// AG Grid must not hold a Vue reactive proxy for the row data: with wide result sets the
-// proxy cost is paid on every cell read, and ag-grid-vue3 also deep-watches the rowData
-// prop (which registers a dependency per nested value). Raw arrays keep rendering on plain
-// objects while all modification tracking stays in `modifiedCells`.
+// Tabulator must not hold a Vue reactive proxy for the row data: with wide result sets the proxy
+// cost is paid on every cell read. Raw arrays keep rendering on plain objects while all
+// modification tracking stays in `modifiedCells`.
 const gridRowData = computed<CellValue[][]>(() => {
   const rows = props.resultSet?.rows;
   return rows ? (toRaw(rows) as CellValue[][]) : [];
@@ -797,6 +748,7 @@ const gridRowData = computed<CellValue[][]>(() => {
 // transitions inside the grid are switched off so each frame stays paint-cheap.
 const isHorizontalScrolling = ref(false);
 let horizontalScrollTimer: ReturnType<typeof setTimeout> | null = null;
+let lastScrollLeft = 0;
 
 function markHorizontalScrolling() {
   if (!isHorizontalScrolling.value) {
@@ -811,11 +763,13 @@ function markHorizontalScrolling() {
   }, 150);
 }
 
-function handleBodyScroll(event?: BodyScrollEvent) {
-  if (!event || event.direction === 'horizontal') {
+function handleGridScroll(event: Event) {
+  const target = event.target as HTMLElement | null;
+  if (!target || typeof target.scrollLeft !== 'number') return;
+  if (target.scrollLeft !== lastScrollLeft) {
+    lastScrollLeft = target.scrollLeft;
     markHorizontalScrolling();
   }
-  onBodyScroll();
 }
 
 const currentTab = computed(() => props.queryTab ?? queryStore.activeResultTab);
@@ -834,14 +788,14 @@ function captureLayoutNow() {
     clearTimeout(captureTimer);
     captureTimer = null;
   }
-  gridLayoutStore.capture(layoutKey.value, gridApi.value);
+  gridLayoutStore.capture(layoutKey.value, grid.table.value);
 }
 
 function scheduleLayoutCapture() {
   if (captureTimer) clearTimeout(captureTimer);
   captureTimer = setTimeout(() => {
     captureTimer = null;
-    gridLayoutStore.capture(layoutKey.value, gridApi.value);
+    gridLayoutStore.capture(layoutKey.value, grid.table.value);
   }, 200);
 }
 
@@ -869,7 +823,7 @@ async function handleRefresh() {
     const res = await queryStore.refreshTabResultSet(tab.id, props.setIndex);
     if (res.success) {
       modifiedCells.value = {};
-      gridApi.value?.refreshCells({ force: true });
+      grid.redraw(true);
       workspaceStore.showToast(`資料已重新整理（共 ${res.rowCount.toLocaleString()} 筆）`, 'success', 2000);
     } else {
       workspaceStore.showToast(`重新整理失敗: ${res.error || '未知錯誤'}`, 'error', 3500);
@@ -947,6 +901,14 @@ const primaryKeyColumnNames = computed<Set<string>>(() => {
   return pkNames;
 });
 
+/** Read-only columns (primary key / identity) can never be edited inline. */
+function isColumnEditable(colIdx: number): boolean {
+  const column = props.resultSet?.columns[colIdx];
+  if (!column || !editability.value.canEdit) return false;
+  const name = column.name.toLowerCase();
+  return !primaryKeyColumnNames.value.has(name) && !identityColumnNames.value.has(name);
+}
+
 // Cell modification tracking
 interface CellModification {
   rowKey: string;
@@ -989,6 +951,55 @@ function isCellModified(rowData: CellValue[] | undefined, colIdx: number): boole
   return `${rowKey}___col_${colIdx}` in modifiedCells.value;
 }
 
+/**
+ * Records (or clears) the pending modification for one cell. Shared by the inline editor and the
+ * "set NULL" context menu action so both paths produce identical commit statements.
+ */
+function recordModification(
+  rowData: CellValue[],
+  colIdx: number,
+  previousValue: CellValue,
+  nextValue: CellValue
+): void {
+  const rowKey = getRowPkKey(rowData);
+  if (!rowKey || !props.resultSet) return;
+
+  const cellKey = `${rowKey}___col_${colIdx}`;
+  const existing = modifiedCells.value[cellKey];
+  const originalValue = existing ? existing.originalValue : previousValue;
+
+  if (nextValue === originalValue) {
+    const copy = { ...modifiedCells.value };
+    delete copy[cellKey];
+    modifiedCells.value = copy;
+    return;
+  }
+
+  const pkWhere: Record<string, CellValue> = {};
+  for (const pkCol of editability.value.pkColumns) {
+    const pColIdx = props.resultSet.columns.findIndex(
+      (c) => c.name.toLowerCase() === pkCol.toLowerCase()
+    );
+    if (pColIdx >= 0) {
+      pkWhere[pkCol] = rowData[pColIdx] ?? null;
+    }
+  }
+
+  modifiedCells.value = {
+    ...modifiedCells.value,
+    [cellKey]: {
+      rowKey,
+      originalRowIndex: props.resultSet.rows.indexOf(rowData),
+      colIdx,
+      colName: props.resultSet.columns[colIdx]?.name ?? '',
+      originalValue,
+      currentValue: nextValue,
+      rowRef: rowData,
+      pkWhere,
+    },
+  };
+}
+
 // Clear modified cells when switching result sets or tabs
 watch(
   () => [props.resultSet, queryStore.activeResultTabId],
@@ -1022,7 +1033,7 @@ function handleRevertChanges() {
   }
   const count = modifiedCount.value;
   modifiedCells.value = {};
-  gridApi.value?.refreshCells({ force: true });
+  grid.redraw(true);
   workspaceStore.showToast(`已退回 ${count} 格修改，資料已還原`, 'info', 2000);
 }
 
@@ -1086,7 +1097,7 @@ async function executeCommit() {
     const rowCnt = commitModal.rowCount;
     const cellCnt = commitModal.cellCount;
     modifiedCells.value = {};
-    gridApi.value?.refreshCells({ force: true });
+    grid.redraw(true);
     closeCommitModal();
     workspaceStore.showToast(`成功提交！已更新 ${rowCnt} 筆資料 (共 ${cellCnt} 格)`, 'success', 3000);
   } catch (err: any) {
@@ -1111,11 +1122,7 @@ const isCurrentCellEditable = computed(() => {
   if (!editability.value.canEdit || !contextMenu.visible) return false;
   const colIdx = getColIndex(contextMenu.colId);
   if (colIdx === undefined || !props.resultSet) return false;
-  const col = props.resultSet.columns[colIdx];
-  if (!col) return false;
-  const isPk = primaryKeyColumnNames.value.has(col.name.toLowerCase());
-  const isIdentity = identityColumnNames.value.has(col.name.toLowerCase());
-  return !isPk && !isIdentity;
+  return isColumnEditable(colIdx);
 });
 
 const isCurrentCellNullable = computed(() => {
@@ -1136,6 +1143,7 @@ function setCellNull() {
   if (!isCurrentCellEditable.value || !contextMenu.rowData || !props.resultSet) return;
   const colIdx = getColIndex(contextMenu.colId);
   if (colIdx === undefined) return;
+
   const oldVal: CellValue = contextMenu.rowData[colIdx] ?? null;
   if (oldVal === null) {
     contextMenu.visible = false;
@@ -1143,41 +1151,8 @@ function setCellNull() {
   }
 
   contextMenu.rowData[colIdx] = null;
-  const rowKey = getRowPkKey(contextMenu.rowData);
-  if (rowKey) {
-    const cellKey = `${rowKey}___col_${colIdx}`;
-    const existingMod = modifiedCells.value[cellKey];
-    const originalValue: CellValue = existingMod ? existingMod.originalValue : oldVal;
-
-    if (null === originalValue) {
-      const copy = { ...modifiedCells.value };
-      delete copy[cellKey];
-      modifiedCells.value = copy;
-    } else {
-      const pkWhere: Record<string, CellValue> = {};
-      for (const pkCol of editability.value.pkColumns) {
-        const pColIdx = props.resultSet.columns.findIndex((c) => c.name.toLowerCase() === pkCol.toLowerCase());
-        if (pColIdx >= 0) {
-          pkWhere[pkCol] = contextMenu.rowData[pColIdx] ?? null;
-        }
-      }
-      const originalRowIndex = props.resultSet.rows.indexOf(contextMenu.rowData);
-      modifiedCells.value = {
-        ...modifiedCells.value,
-        [cellKey]: {
-          rowKey,
-          originalRowIndex,
-          colIdx,
-          colName: contextMenu.colName,
-          originalValue,
-          currentValue: null,
-          rowRef: contextMenu.rowData,
-          pkWhere,
-        },
-      };
-    }
-  }
-  gridApi.value?.refreshCells({ force: true });
+  recordModification(contextMenu.rowData, colIdx, oldVal, null);
+  grid.redraw(true);
   contextMenu.visible = false;
 }
 
@@ -1198,7 +1173,7 @@ function revertSingleCell() {
   delete copy[cellKey];
   modifiedCells.value = copy;
 
-  gridApi.value?.refreshCells({ force: true });
+  grid.redraw(true);
   contextMenu.visible = false;
   workspaceStore.showToast(`已還原欄位 [${mod.colName}]`, 'info', 1500);
 }
@@ -1216,12 +1191,11 @@ watch(
   { immediate: true }
 );
 
-// Selection composable
+// Selection composable (Tabulator range based)
 const selection = useGridSelection({
-  getRows: () => props.resultSet.rows ?? [],
+  getTable: () => grid.table.value,
+  getContainer: () => gridContainerRef.value,
   getColumns: () => props.resultSet.columns ?? [],
-  getGridApi: () => gridApi.value,
-  getGridContainer: () => gridContainerRef.value,
   onCopySelected: () => gridExport.copySelectedCells(),
 });
 
@@ -1232,45 +1206,18 @@ const {
   getColIndex,
   formatAggregateNumber,
   clearCellSelection,
-  invalidateVisualColIndices,
-  updateSelectionHighlight,
-  onGridMouseDown,
-  onGridClick,
-  onColumnMoved,
-  onBodyScroll,
 } = selection;
 
-function handleColumnLayoutChanged() {
-  invalidateVisualColIndices();
-  updateSelectionHighlight();
-  scheduleLayoutCapture();
-}
-
-// Column move/resize/sort/filter changes are captured so switching result tabs restores them.
-function handleColumnMoved(event: ColumnMovedEvent) {
-  onColumnMoved(event);
-  scheduleLayoutCapture();
-}
-
-function onColumnResized(event: ColumnResizedEvent) {
-  if (event.finished) scheduleLayoutCapture();
-}
-
-function handleGridStateChanged() {
-  scheduleLayoutCapture();
-}
-
 // Double-click copies the cell value on read-only cells (read-only result sets, PK/Identity
-// columns). Editable cells keep their double-click-to-edit behaviour: AG Grid starts the
-// editor right after dispatching `cellDoubleClicked` and never consults `preventDefault`,
-// so the two actions cannot share the same gesture on the same cell.
-function onCellDoubleClicked(event: CellDoubleClickedEvent) {
-  const colIdx = getColIndex(event.column.getColId());
+// columns). Editable cells keep their double-click-to-edit behaviour: Tabulator opens its editor
+// on the same gesture, so the copy handler has to yield to it.
+function handleCellDoubleClick(_event: MouseEvent, cell: TabulatorCellComponent) {
+  const colIdx = getColIndex(cell.getField());
   if (colIdx === undefined || !props.resultSet) return;
-  if (event.column.isCellEditable(event.node)) return;
+  if (isColumnEditable(colIdx)) return;
 
   const colName = props.resultSet.columns[colIdx]?.name ?? '';
-  const text = formatCellForExport(event.value);
+  const text = formatCellForExport(cell.getValue() as CellValue);
 
   navigator.clipboard.writeText(text).then(
     () => workspaceStore.showToast(`已複製「${colName}」的值至剪貼簿`, 'success', 1800),
@@ -1282,7 +1229,6 @@ function onCellDoubleClicked(event: CellDoubleClickedEvent) {
 watch(
   () => props.resultSet,
   () => {
-    invalidateVisualColIndices();
     clearCellSelection();
   }
 );
@@ -1371,102 +1317,27 @@ function openDataView() {
   contextMenu.visible = false;
 }
 
-const isColPinned = computed(() => {
-  if (!gridApi.value || !contextMenu.colId) return false;
-  const col = gridApi.value.getColumn(contextMenu.colId);
-  return col ? col.isPinned() : false;
-});
+// --------------------------------------------------------------------------
+// Tabulator grid
+// --------------------------------------------------------------------------
 
-function onGridReady(params: GridReadyEvent) {
-  gridApi.value = params.api;
-  const container = gridContainerRef.value;
-  if (container) {
-    disposeGridPerfDiag?.();
-    disposeGridPerfDiag = startGridPerfDiag({
-      api: params.api,
-      container,
-      label: currentTab.value?.title,
-    });
-  }
-  // Restore the remembered layout when returning to a previously viewed result set.
-  gridLayoutStore.restore(layoutKey.value, params.api);
-}
+const gridIsActive = computed(() => !!props.resultSet && props.resultSet.rows.length > 0);
 
-let disposeGridPerfDiag: (() => void) | null = null;
+const gridColumnSignature = computed(() =>
+  [
+    props.resultSet?.columns.map((c) => `${c.name}|${c.dataType}|${c.nullable ? 1 : 0}`).join('\u0001') ?? '',
+    [...primaryKeyColumnNames.value].sort().join(','),
+    [...identityColumnNames.value].sort().join(','),
+    editability.value.canEdit ? '1' : '0',
+    String(props.resultSet?.rows.length ?? 0),
+  ].join('\u0002')
+);
 
-// AG Grid suppresses column virtualisation while its viewport width is still unknown
-// (viewportRight === 0), which renders every column of a wide result set at once. Nudging
-// the viewport once after the first render makes the grid recompute the visible window.
-function handleFirstDataRendered() {
-  const api = gridApi.value;
-  const container = gridContainerRef.value;
-  if (!api || !container) return;
-  ensureColumnVirtualisation(api, container);
-}
-
-function ensureColumnVirtualisation(api: GridApi, container: HTMLElement) {
-  if (api.getAllGridColumns().length <= 30) return;
-  const viewport = container.querySelector<HTMLElement>('.ag-grid-viewport');
-  if (!viewport || viewport.scrollWidth <= viewport.clientWidth) return;
-
-  const renderedColumns = new Set<string>();
-  container.querySelectorAll('.ag-cell[col-id]').forEach((cell) => {
-    const colId = cell.getAttribute('col-id');
-    if (colId) renderedColumns.add(colId);
-  });
-  if (renderedColumns.size <= 40) return;
-
-  const left = viewport.scrollLeft;
-  viewport.scrollLeft = left + 1;
-  viewport.scrollLeft = left;
-}
-
-onBeforeUnmount(() => {
-  captureLayoutNow();
-  disposeGridPerfDiag?.();
-  disposeGridPerfDiag = null;
-  if (horizontalScrollTimer) {
-    clearTimeout(horizontalScrollTimer);
-    horizontalScrollTimer = null;
-  }
-  if (quickFilterTimer) {
-    clearTimeout(quickFilterTimer);
-    quickFilterTimer = null;
-  }
-});
-
-// AG Grid Column Definitions
-function buildColumnDefs(): ColDef[] {
+function buildColumnDefinitions(): TabulatorColumnDefinition[] {
   if (!props.resultSet) return [];
 
-  // 1. Pinned Row Index Column (#)
-  const rowCount = props.resultSet.rows.length;
-  const digits = Math.max(2, String(rowCount).length);
-  const indexWidth = Math.max(60, digits * 10 + 36);
-
-  const indexCol: ColDef = {
-    colId: 'row_index',
-    headerName: '#',
-    pinned: 'left',
-    width: indexWidth,
-    minWidth: 48,
-    suppressMovable: true,
-    lockPosition: 'left',
-    sortable: false,
-    filter: false,
-    resizable: true,
-    valueGetter: (params) => (params.node?.rowIndex != null ? params.node.rowIndex + 1 : ''),
-    // Opaque background: a translucent pinned cell would force per-frame blending of the
-    // horizontally scrolled content underneath it while the scrollbar is being dragged.
-    cellClass: 'text-dark-500 bg-dark-850 text-center font-mono text-xxs select-none !px-1 cursor-pointer',
-    headerClass: 'text-center !px-1 cursor-pointer select-none',
-    headerTooltip: '點選此處全選表格 (Select All)',
-  };
-
   const firstRow = props.resultSet.rows[0];
-
-  // 2. Dynamic Data Columns with standardized colId: `col_${colIdx}`
-  const dataCols: ColDef[] = props.resultSet.columns.map((col, colIdx) => {
+  const dataColumns = props.resultSet.columns.map((col, colIdx) => {
     const isPk = primaryKeyColumnNames.value.has(col.name.toLowerCase());
     const isIdentity = identityColumnNames.value.has(col.name.toLowerCase());
     const isStmtText = col.name === 'StmtText';
@@ -1474,182 +1345,155 @@ function buildColumnDefs(): ColDef[] {
     const baseWidth = calculateColumnWidth(col.name, firstVal, isPk);
     const colWidth = isStmtText ? Math.max(baseWidth, 360) : baseWidth;
 
-    return {
-      colId: `col_${colIdx}`,
-      field: `col_${colIdx}`,
-      headerName: col.name,
-      headerClass: isPk ? 'pk-column-header' : '',
-      cellClass: isStmtText ? '!whitespace-pre font-mono text-dark-100' : '',
-      cellClassRules: {
-        'sqlight-cell-modified': (params) => isCellModified(params.data, colIdx),
-        'sqlight-cell-null': (params) => params.value === null || params.value === undefined,
-        'sqlight-cell-bool-true': (params) => params.value === true,
-        'sqlight-cell-bool-false': (params) => params.value === false,
-        'sqlight-cell-binary': (params) => typeof params.value === 'object' && params.value !== null && 'type' in params.value && (params.value as any).type === 'binary',
-      },
-      editable: () => {
-        return editability.value.canEdit && !isPk && !isIdentity;
-      },
-      valueSetter: (params) => {
-        if (!editability.value.canEdit || isPk || isIdentity || !params.data) return false;
-        const oldVal = params.data[colIdx];
-        let newVal: CellValue = params.newValue;
-
-        if (typeof newVal === 'string') {
-          const trimmed = newVal.trim();
-          if (trimmed.toUpperCase() === 'NULL') {
-            newVal = null;
-          } else if (
-            trimmed === '' &&
-            col.nullable &&
-            !['varchar', 'nvarchar', 'char', 'nchar', 'text', 'ntext'].includes(col.dataType.toLowerCase())
-          ) {
-            newVal = null;
-          } else if (
-            trimmed !== '' &&
-            !Number.isNaN(Number(trimmed)) &&
-            ['int', 'bigint', 'smallint', 'tinyint', 'numeric', 'decimal', 'float', 'real'].includes(col.dataType.toLowerCase())
-          ) {
-            newVal = Number(trimmed);
-          } else if (['bit', 'boolean'].includes(col.dataType.toLowerCase())) {
-            if (trimmed === '1' || trimmed.toLowerCase() === 'true') newVal = true;
-            else if (trimmed === '0' || trimmed.toLowerCase() === 'false') newVal = false;
-          }
-        }
-
-        if (newVal === oldVal) return false;
-
-        params.data[colIdx] = newVal;
-
-        const rowKey = getRowPkKey(params.data);
-        if (!rowKey) return true;
-
-        const cellKey = `${rowKey}___col_${colIdx}`;
-        const existingMod = modifiedCells.value[cellKey];
-        const originalValue = existingMod ? existingMod.originalValue : oldVal;
-
-        if (newVal === originalValue) {
-          const copy = { ...modifiedCells.value };
-          delete copy[cellKey];
-          modifiedCells.value = copy;
-        } else {
-          const pkWhere: Record<string, CellValue> = {};
-          for (const pkCol of editability.value.pkColumns) {
-            const pColIdx = props.resultSet.columns.findIndex((c) => c.name.toLowerCase() === pkCol.toLowerCase());
-            if (pColIdx !== undefined && pColIdx >= 0) {
-              pkWhere[pkCol] = params.data[pColIdx];
-            }
-          }
-
-          const originalRowIndex = props.resultSet.rows.indexOf(params.data) ?? -1;
-
-          modifiedCells.value = {
-            ...modifiedCells.value,
-            [cellKey]: {
-              rowKey,
-              originalRowIndex,
-              colIdx,
-              colName: col.name,
-              originalValue,
-              currentValue: newVal,
-              rowRef: params.data,
-              pkWhere,
-            },
-          };
-        }
-
-        return true;
-      },
+    return buildDataColumn({
+      column: col,
+      columnIndex: colIdx,
       width: colWidth,
       minWidth: isStmtText ? 200 : 70,
-      suppressMovable: false,
-      tooltipShowMode: 'whenTruncated',
       headerTooltip: isPk
-        ? `🔑 [主鍵 / Primary Key (唯讀)] 型別 (Type): ${col.dataType}${col.nullable ? ' | 可為 NULL' : ' | NOT NULL'} (拖曳表頭調整順序，點擊或 Shift 點選)`
+        ? `🔑 [主鍵 / Primary Key (唯讀)] 型別 (Type): ${col.dataType}${col.nullable ? ' | 可為 NULL' : ' | NOT NULL'} (拖曳表頭調整順序，點選表頭選取整欄)`
         : isIdentity
           ? `🔒 [識別欄位 / Identity (唯讀)] 型別 (Type): ${col.dataType} (拖曳表頭調整順序)`
           : `型別 (Type): ${col.dataType}${col.nullable ? ' | 可為 NULL' : ' | NOT NULL'}${editability.value.canEdit ? ' (雙擊可編輯)' : ''} (拖曳表頭調整順序)`,
-      tooltipValueGetter: (params) => {
-        const val = params.value;
-        if (val === null || val === undefined) return 'NULL';
-        if (typeof val === 'object' && val !== null && 'type' in val && (val as any).type === 'binary') {
-          return `[Binary ${(val as any).length} Bytes]`;
-        }
-        if (typeof val === 'boolean') {
-          return val ? 'TRUE' : 'FALSE';
-        }
-        return String(val);
-      },
-      sortable: true,
-      filter: true,
-      resizable: true,
-      valueGetter: (params) => params.data?.[colIdx],
-      valueFormatter: (params) => {
-        const val = params.value;
-        if (val === null || val === undefined) return 'NULL';
-        if (typeof val === 'boolean') return val ? 'TRUE' : 'FALSE';
-        if (typeof val === 'object' && val !== null && 'type' in val && (val as any).type === 'binary') {
-          return `[Binary ${(val as any).length} B]`;
-        }
-        return val != null ? String(val) : '';
-      },
-    };
+      isPrimaryKey: isPk,
+      isIdentity,
+      isEditable: () => isColumnEditable(colIdx),
+      isModified: isCellModified,
+      extraClass: isStmtText ? 'sqlight-stmt-text' : undefined,
+    });
   });
 
-  return [indexCol, ...dataCols];
+  return [buildRowIndexColumn({ rowCount: props.resultSet.rows.length }), ...dataColumns];
 }
 
-// Rebuilding 100+ column definitions on unrelated reactive changes makes AG Grid re-apply
-// the whole column model, so identical inputs reuse the previous array instance.
-let cachedColumnDefs: ColDef[] = [];
-let cachedColumnDefsSignature = '';
-
-function buildColumnDefsSignature(): string {
-  if (!props.resultSet) return 'empty';
-  return [
-    props.resultSet.columns.map((c) => `${c.name}|${c.dataType}|${c.nullable ? 1 : 0}`).join('\u0001'),
-    [...primaryKeyColumnNames.value].sort().join(','),
-    [...identityColumnNames.value].sort().join(','),
-    editability.value.canEdit ? '1' : '0',
-    String(props.resultSet.rows.length),
-  ].join('\u0002');
+/** Visible data field names in display order; the quick filter scans exactly these. */
+function dataFieldNames(): string[] {
+  const table = grid.table.value;
+  if (!table) return (props.resultSet?.columns ?? []).map((_, index) => String(index));
+  return table
+    .getColumns()
+    .filter((column) => column.isVisible() && column.getField() !== ROW_INDEX_FIELD)
+    .map((column) => column.getField());
 }
 
-const columnDefs = computed<ColDef[]>(() => {
-  const signature = buildColumnDefsSignature();
-  if (signature === cachedColumnDefsSignature && cachedColumnDefs.length > 0) {
-    return cachedColumnDefs;
-  }
-  cachedColumnDefsSignature = signature;
-  cachedColumnDefs = buildColumnDefs();
-  return cachedColumnDefs;
-});
+/** Quick filter semantics: every whitespace separated term must match somewhere in the row. */
+function buildQuickFilter(term: string): (data: TabulatorRowData) => boolean {
+  const terms = term
+    .trim()
+    .toLowerCase()
+    .split(/\s+/)
+    .filter(Boolean);
+  const fields = dataFieldNames();
+  return (data) => {
+    for (const needle of terms) {
+      let matched = false;
+      for (const field of fields) {
+        const raw = (data as unknown as Record<string, CellValue>)[field];
+        if (raw === null || raw === undefined) continue;
+        if (formatValueForDisplay(raw).toLowerCase().includes(needle)) {
+          matched = true;
+          break;
+        }
+      }
+      if (!matched) return false;
+    }
+    return true;
+  };
+}
 
-function onCellContextMenu(event: CellContextMenuEvent) {
-  if (event.event) {
-    (event.event as Event).preventDefault?.();
-    (event.event as Event).stopPropagation?.();
+function applyQuickFilterTerm(term: string) {
+  const table = grid.table.value;
+  if (!table) return;
+  if (!term.trim()) {
+    table.clearFilter();
+    return;
   }
-  const mouseEvent = event.event as MouseEvent | undefined;
-  if (!mouseEvent) return;
+  table.setFilter(buildQuickFilter(term));
+}
+
+let disposeGridPerfDiag: (() => void) | null = null;
+let movingRowIndexColumn = false;
+let editSnapshot: { rowData: CellValue[]; colIdx: number; previousValue: CellValue } | null = null;
+
+function handleColumnMoved(moved: TabulatorColumnComponent) {
+  const table = grid.table.value;
+  scheduleLayoutCapture();
+  if (!table || movingRowIndexColumn) return;
+
+  const indexColumn = table.getColumn(ROW_INDEX_FIELD);
+  const firstVisible = table.getColumns().find((column) => column.isVisible());
+  if (indexColumn && firstVisible && firstVisible !== indexColumn) {
+    movingRowIndexColumn = true;
+    // `move` takes a target column/field, not an index: drop the frozen column back in front of
+    // whatever now leads the visible order.
+    indexColumn.move(firstVisible);
+    movingRowIndexColumn = false;
+    workspaceStore.showToast('「#」欄為固定欄，無法移動', 'info', 1600);
+  }
+  void moved;
+}
+
+function handleCellEditing(cell: TabulatorCellComponent) {
+  const colIdx = getColIndex(cell.getField());
+  if (colIdx === undefined) return;
+  editSnapshot = {
+    rowData: cell.getRow().getData() as unknown as CellValue[],
+    colIdx,
+    previousValue: cell.getValue() as CellValue,
+  };
+}
+
+function handleCellEdited(cell: TabulatorCellComponent) {
+  const colIdx = getColIndex(cell.getField());
+  const rowData = cell.getRow().getData() as unknown as CellValue[];
+  if (colIdx === undefined || !props.resultSet) return;
+
+  const snapshot = editSnapshot;
+  editSnapshot = null;
+  if (!snapshot || snapshot.rowData !== rowData || snapshot.colIdx !== colIdx) return;
+
+  // Tabulator turns an empty editor result into `undefined`; the column semantics are `NULL`.
+  const rawNext = cell.getValue() as CellValue;
+  const nextValue = rawNext === undefined ? null : rawNext;
+
+  recordModification(rowData, colIdx, snapshot.previousValue, nextValue);
+  applyCellValueClasses(cell.getElement(), nextValue, isCellModified(rowData, colIdx));
+}
+
+/** Clicking the frozen `#` cell selects the whole row. */
+function handleCellClick(_event: MouseEvent, cell: TabulatorCellComponent) {
+  if (cell.getField() !== ROW_INDEX_FIELD) return;
+  selection.selectRow(cell.getRow());
+}
+
+/** Clicking the `#` header selects the whole table. */
+function handleHeaderClick(_event: MouseEvent, column: TabulatorColumnComponent) {
+  if (column.getField() !== ROW_INDEX_FIELD) return;
+  selection.selectAll();
+}
+
+function handleCellContext(event: MouseEvent, cell: TabulatorCellComponent) {
+  event.preventDefault();
+  event.stopPropagation();
 
   const menuWidth = 220;
   const menuHeight = 390;
-  const x = Math.min(mouseEvent.clientX, Math.max(0, window.innerWidth - menuWidth - 8));
-  const y = Math.min(mouseEvent.clientY, Math.max(0, window.innerHeight - menuHeight - 8));
+  const x = Math.min(event.clientX, Math.max(0, window.innerWidth - menuWidth - 8));
+  const y = Math.min(event.clientY, Math.max(0, window.innerHeight - menuHeight - 8));
 
-  const cId = event.column?.getColId() || '';
-  const colIdx = getColIndex(cId);
-  const realColName = colIdx !== undefined && props.resultSet ? props.resultSet.columns[colIdx]?.name : cId;
+  const field = cell.getField();
+  const colIdx = getColIndex(field);
+  const realColName =
+    colIdx !== undefined && props.resultSet ? props.resultSet.columns[colIdx]?.name ?? field : '#';
 
   contextMenu.visible = true;
   contextMenu.x = x;
   contextMenu.y = y;
-  contextMenu.colId = cId;
+  contextMenu.colId = field;
   contextMenu.colName = realColName || '';
-  contextMenu.cellValue = event.value;
-  contextMenu.rowIndex = event.node?.rowIndex ?? -1;
-  contextMenu.rowData = (event.data as CellValue[]) || (event.node?.data as CellValue[]) || null;
+  contextMenu.cellValue = cell.getValue();
+  contextMenu.rowIndex = cell.getRow().getPosition() - 1;
+  contextMenu.rowData = cell.getRow().getData() as unknown as CellValue[];
 
   function closeMenu() {
     contextMenu.visible = false;
@@ -1659,6 +1503,89 @@ function onCellContextMenu(event: CellContextMenuEvent) {
     document.addEventListener('click', closeMenu);
   }, 0);
 }
+
+const grid = useTabulatorTable({
+  isActive: () => gridIsActive.value,
+  getRows: () => gridRowData.value,
+  getColumnSignature: () => gridColumnSignature.value,
+  buildOptions: () => ({
+    height: '100%',
+    layout: 'fitData',
+    // Per the migration decision the grid ships with Tabulator's default all-columns renderer;
+    // `renderHorizontal: "virtual"` is the documented follow-up if 150 column scrolling suffers.
+    renderHorizontal: 'basic',
+    movableColumns: true,
+    selectableRows: false,
+    selectableRange: true,
+    selectableRangeColumns: true,
+    selectableRangeRows: false,
+    selectableRangeInitializeDefault: false,
+    selectableRangeAutoFocus: false,
+    editTriggerEvent: 'dblclick',
+    headerSortClickElement: 'icon',
+    tooltipDelay: 150,
+    index: '__sqlightRowId',
+    rowHeight: 28,
+    columns: buildColumnDefinitions(),
+  }),
+  onReady: (table) => {
+    selection.attach(table);
+    table.on('cellDblClick', handleCellDoubleClick);
+    table.on('cellContext', handleCellContext);
+    table.on('cellClick', handleCellClick);
+    table.on('headerClick', handleHeaderClick);
+    table.on('cellEditing', handleCellEditing);
+    table.on('cellEdited', handleCellEdited);
+    table.on('columnMoved', handleColumnMoved);
+    table.on('columnResized', scheduleLayoutCapture);
+    table.on('columnVisibilityChanged', scheduleLayoutCapture);
+    table.on('dataSorted', scheduleLayoutCapture);
+
+    // Restore the remembered layout when returning to a previously viewed result set.
+    gridLayoutStore.restore(layoutKey.value, table);
+    applyQuickFilterTerm(quickFilter.value);
+
+    const container = gridContainerRef.value;
+    if (container) {
+      disposeGridPerfDiag?.();
+      disposeGridPerfDiag = startGridPerfDiag({
+        table,
+        container,
+        label: currentTab.value?.title,
+        applyFilter: applyQuickFilterTerm,
+        getFilter: () => quickFilter.value,
+      });
+    }
+  },
+});
+
+watch([gridIsActive, gridColumnSignature], async () => {
+  await nextTick();
+  await grid.sync();
+});
+
+// `useTabulatorTable` builds the table into its own container element; the wrapper keeps the
+// theme/scroll responsibilities.
+const gridTableRef = grid.containerRef;
+
+// The result set is usually already available when this component mounts, so the first build has
+// to be triggered explicitly (the watchers only cover later changes).
+onMounted(async () => {
+  await nextTick();
+  await grid.sync();
+});
+
+watch(
+  () => gridRowData.value,
+  async () => {
+    await nextTick();
+    await grid.sync();
+  }
+);
+
+watch(quickFilter, (value) => {
+  applyQuickFilterTerm(value);
+});
 
 function handleGenerateDml(type: 'INSERT' | 'UPDATE' | 'DELETE') {
   const row = contextMenu.rowData || (contextMenu.rowIndex >= 0 && props.resultSet ? props.resultSet.rows[contextMenu.rowIndex] : null);
@@ -1743,95 +1670,17 @@ function handleGenerateDml(type: 'INSERT' | 'UPDATE' | 'DELETE') {
   contextMenu.visible = false;
 }
 
-function togglePinColumn() {
-  if (!gridApi.value || !contextMenu.colId) return;
-  const col = gridApi.value.getColumn(contextMenu.colId);
-  if (!col) return;
-
-  const newPinState = col.isPinned() ? null : 'left';
-  gridApi.value.setColumnsPinned([contextMenu.colId], newPinState);
-  invalidateVisualColIndices();
-  updateSelectionHighlight();
-  contextMenu.visible = false;
-}
+onBeforeUnmount(() => {
+  captureLayoutNow();
+  disposeGridPerfDiag?.();
+  disposeGridPerfDiag = null;
+  if (horizontalScrollTimer) {
+    clearTimeout(horizontalScrollTimer);
+    horizontalScrollTimer = null;
+  }
+  if (quickFilterTimer) {
+    clearTimeout(quickFilterTimer);
+    quickFilterTimer = null;
+  }
+});
 </script>
-
-<style scoped>
-:deep(.sqlight-cell-selected) {
-  background-color: rgba(59, 130, 246, 0.22) !important;
-}
-
-/* While the horizontal scrollbar is being dragged the grid repaints every frame, so
-   decorative transitions/animations are switched off until the scroll settles. */
-.is-h-scrolling :deep(*) {
-  transition: none !important;
-  animation: none !important;
-}
-
-:deep(.sqlight-header-selected) {
-  background-color: rgba(59, 130, 246, 0.28) !important;
-  color: #93c5fd !important;
-  font-weight: 700 !important;
-}
-
-/* Primary Key Column Header Styling with Lucide Key vector icon */
-:deep(.pk-column-header .ag-header-cell-text) {
-  color: #fbbf24 !important;
-  font-weight: 600 !important;
-  display: inline-flex !important;
-  align-items: center !important;
-  gap: 4px !important;
-}
-
-:deep(.pk-column-header .ag-header-cell-text::before) {
-  content: '' !important;
-  display: inline-block !important;
-  width: 12px !important;
-  height: 12px !important;
-  flex-shrink: 0 !important;
-  background-color: #fbbf24 !important;
-  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='7.5' cy='15.5' r='5.5'/%3E%3Cpath d='m21 2-9.6 9.6'/%3E%3Cpath d='m15.5 7.5 3 3L22 7l-3-3'/%3E%3C/svg%3E") no-repeat center / contain !important;
-  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='7.5' cy='15.5' r='5.5'/%3E%3Cpath d='m21 2-9.6 9.6'/%3E%3Cpath d='m15.5 7.5 3 3L22 7l-3-3'/%3E%3C/svg%3E") no-repeat center / contain !important;
-}
-
-:deep(.sqlight-header-selected.pk-column-header .ag-header-cell-text) {
-  color: #fef08a !important;
-}
-
-:deep(.sqlight-header-selected.pk-column-header .ag-header-cell-text::before) {
-  background-color: #fef08a !important;
-}
-
-/* Modified Cell Visual Feedback */
-:deep(.sqlight-cell-modified) {
-  background-color: rgba(245, 158, 11, 0.15) !important;
-  box-shadow: inset 3px 0 0 0 #f59e0b !important;
-  color: #fef08a !important;
-}
-
-/* Zero-overhead CSS styling for NULL, Booleans, and Binary cells (Native text performance) */
-:deep(.sqlight-cell-null) {
-  color: rgb(var(--color-dark-500)) !important;
-  font-style: italic !important;
-  font-family: var(--ag-font-family) !important;
-  font-size: 0.6875rem !important;
-}
-
-:deep(.sqlight-cell-bool-true) {
-  color: #34d399 !important;
-  font-weight: 600 !important;
-  font-size: 0.6875rem !important;
-}
-
-:deep(.sqlight-cell-bool-false) {
-  color: #fb7185 !important;
-  font-weight: 600 !important;
-  font-size: 0.6875rem !important;
-}
-
-:deep(.sqlight-cell-binary) {
-  color: #93c5fd !important;
-  font-weight: 500 !important;
-  font-size: 0.6875rem !important;
-}
-</style>
