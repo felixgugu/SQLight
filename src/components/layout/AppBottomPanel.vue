@@ -10,7 +10,8 @@
           :severity="workspaceStore.bottomPanelTab === tab.id ? 'primary' : 'secondary'"
           :text="workspaceStore.bottomPanelTab !== tab.id"
           size="small"
-          class="!h-6 !px-2 !py-0 !text-xs !font-medium"
+          class="!h-6 !px-2 !py-0 !text-xs"
+          :class="workspaceStore.bottomPanelTab === tab.id ? '!font-medium' : '!font-normal'"
           @click="workspaceStore.setBottomPanelTab(tab.id)"
         >
           <component :is="tab.icon" class="w-3.5 h-3.5" />

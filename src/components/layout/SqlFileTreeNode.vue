@@ -31,14 +31,14 @@
         />
 
         <!-- Folder Name -->
-        <span class="truncate flex-1 font-medium text-dark-200 group-hover:text-dark-100">
+        <span class="truncate flex-1 text-dark-200 group-hover:text-dark-100">
           {{ node.name }}
         </span>
 
         <!-- Child count badge -->
         <span
           v-if="node.children && node.children.length > 0"
-          class="text-[10px] text-dark-500 font-mono flex-shrink-0 pr-1"
+          class="text-[10px] text-dark-500 font-sans flex-shrink-0 pr-1"
         >
           {{ countSqlFiles(node) }}
         </span>
@@ -63,7 +63,7 @@
         :class="[
           'flex items-center space-x-1.5 px-1.5 py-1 rounded cursor-pointer transition-colors group relative',
           isActiveFile
-            ? 'bg-brand-500/20 text-accent font-semibold border-l-2 border-brand-400'
+            ? 'bg-brand-500/20 text-accent border-l-2 border-brand-400'
             : 'text-dark-300 hover:bg-dark-750 hover:text-dark-100'
         ]"
         :style="{ paddingLeft: `${depth * 14 + 20}px` }"
@@ -72,14 +72,14 @@
         <FileCode class="w-3.5 h-3.5 text-accent flex-shrink-0" />
 
         <!-- File Name -->
-        <span class="truncate flex-1 font-mono text-[11px] group-hover:text-dark-100">
+        <span class="truncate flex-1 font-sans text-[11px] group-hover:text-dark-100">
           {{ node.name }}
         </span>
 
         <!-- File Size -->
         <span
           v-if="node.size !== undefined"
-          class="text-[9px] text-dark-500 font-mono flex-shrink-0 group-hover:text-dark-400 pr-1"
+          class="text-[9px] text-dark-500 font-sans flex-shrink-0 group-hover:text-dark-400 pr-1"
         >
           {{ formatByteSize(node.size) }}
         </span>

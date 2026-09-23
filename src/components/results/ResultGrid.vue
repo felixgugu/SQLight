@@ -38,7 +38,7 @@
               :key="idx"
               @click="activeTabIndex = idx"
               :class="[
-                'h-5.5 px-2 rounded text-xxs font-medium transition-colors flex items-center space-x-1 cursor-pointer flex-shrink-0',
+                'h-5.5 px-2 rounded text-xxs transition-colors flex items-center space-x-1 cursor-pointer flex-shrink-0',
                 activeTabIndex === idx
                   ? 'bg-primary/15 text-primary border border-primary/40 font-semibold shadow-xs'
                   : 'text-dark-400 hover:text-dark-100 hover:bg-dark-800 border border-transparent'

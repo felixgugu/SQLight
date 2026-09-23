@@ -1,7 +1,7 @@
 <template>
   <div class="flex flex-col h-full bg-dark-850 font-sans">
     <!-- Header & Toolbar -->
-    <div class="h-9 px-3 border-b border-dark-700 flex items-center justify-between text-xs font-semibold uppercase tracking-wider text-dark-400 bg-dark-850 flex-shrink-0 select-none">
+    <div class="h-9 px-3 border-b border-dark-700 flex items-center justify-between text-xs uppercase tracking-wider text-dark-400 bg-dark-850 flex-shrink-0 select-none">
       <!-- Left: Title -->
       <div class="flex items-center space-x-1.5">
         <FolderGit2 class="w-3.5 h-3.5 text-accent" />
@@ -64,7 +64,7 @@
     </div>
 
     <!-- Tree Content Area -->
-    <div class="flex-1 overflow-y-auto px-1.5 py-2 text-xs font-mono">
+    <div class="flex-1 overflow-y-auto px-1.5 py-2 text-xs font-sans">
       <!-- Empty State -->
       <div
         v-if="sqlFolderStore.monitoredFolders.length === 0"
@@ -122,7 +122,7 @@
             />
 
             <!-- Name & Path -->
-            <span class="truncate flex-1 font-semibold text-dark-100 text-xs">
+            <span class="truncate flex-1 text-dark-100 text-xs">
               {{ folder.name }}
             </span>
 
@@ -206,7 +206,7 @@
             id="rename-target-input"
             v-model="renameInput"
             :placeholder="targetNode?.isDir ? '例如: Scripts' : '例如: query.sql'"
-            class="w-full font-mono text-xs"
+            class="w-full font-sans text-xs"
             @keyup.enter="handleConfirmRename"
           />
           <p v-if="renameError" class="text-danger text-xxs mt-1.5">{{ renameError }}</p>
@@ -256,7 +256,7 @@
           <InputText
             v-model="manualPathInput"
             placeholder="例如: D:\Projects\Database\Scripts"
-            class="w-full font-mono text-xs"
+            class="w-full font-sans text-xs"
             @keyup.enter="handleConfirmManualPath"
           />
         </div>

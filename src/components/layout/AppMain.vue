@@ -85,6 +85,7 @@
               severity="secondary"
               :value="getTabConnectionAlias(tab)"
               class="!text-[10px] !font-mono !px-1.5 !py-0 flex-shrink-0 ml-auto max-w-[85px] truncate"
+              :class="workspaceStore.activeTabId === tab.id ? '' : '!font-normal'"
               :title="`連線別名: ${getTabConnectionAlias(tab)}`"
             />
           </div>
@@ -329,11 +330,15 @@ function getTabConnectionAlias(tab: WorkspaceTab): string | undefined {
 
 function getTabTitleStyle(tab: WorkspaceTab): Record<string, string> {
   const color = getTabConnectionColor(tab);
-  if (!color) return {};
-  return {
-    color,
-    fontWeight: '600',
-  };
+  const style: Record<string, string> = {};
+  if (color) {
+    style.color = color;
+  }
+  // Only the tab in use is emphasised; inactive tab labels keep the regular weight.
+  if (workspaceStore.activeTabId === tab.id) {
+    style.fontWeight = '600';
+  }
+  return style;
 }
 
 function getTabItemStyle(tab: WorkspaceTab, idx: number) {

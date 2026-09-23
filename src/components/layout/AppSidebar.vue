@@ -1,7 +1,7 @@
 <template>
   <aside ref="sidebarRootRef" class="h-full bg-dark-850 flex flex-col overflow-hidden select-none border-r border-dark-700 relative">
     <!-- Sidebar Header -->
-    <div class="h-9 px-3 border-b border-dark-700 flex items-center justify-between text-xs font-semibold uppercase tracking-wider text-dark-400 bg-dark-850 flex-shrink-0">
+    <div class="h-9 px-3 border-b border-dark-700 flex items-center justify-between text-xs uppercase tracking-wider text-dark-400 bg-dark-850 flex-shrink-0">
       <div class="flex items-center space-x-1.5">
         <Server class="w-3.5 h-3.5 text-accent" />
         <span>Explorer</span>
@@ -63,7 +63,7 @@
           @keydown.esc.stop="handleKeyEsc"
           @blur="handleInputBlur"
           placeholder="Filter tables, views & procs..."
-          class="w-full !bg-dark-900 !border-dark-700 !rounded !px-2 !py-1 !pl-7 !pr-12 !text-xs !text-dark-100 !font-mono"
+          class="w-full !bg-dark-900 !border-dark-700 !rounded !px-2 !py-1 !pl-7 !pr-12 !text-xs !text-dark-100 !font-sans"
         />
 
         <!-- Right Buttons inside Input -->
@@ -105,7 +105,7 @@
             <History class="w-3 h-3 text-accent" />
             <span>搜尋歷史紀錄 (最多 30 筆)</span>
           </span>
-          <span v-if="filterHistory.length > 0" class="text-xxs px-1 py-0.2 bg-dark-700 text-dark-300 rounded font-mono">
+          <span v-if="filterHistory.length > 0" class="text-xxs px-1 py-0.2 bg-dark-700 text-dark-300 rounded font-sans">
             {{ filterHistory.length }}
           </span>
         </div>
@@ -114,7 +114,7 @@
         <div
           v-if="filterHistory.length > 0"
           ref="historyListRef"
-          class="max-h-56 overflow-y-auto py-0.5 font-mono"
+          class="max-h-56 overflow-y-auto py-0.5 font-sans"
         >
           <div
             v-for="(item, idx) in filterHistory"
@@ -168,7 +168,7 @@
     </div>
 
     <!-- Tree Content Area -->
-    <div class="flex-1 overflow-y-auto px-1.5 py-2 text-xs font-mono">
+    <div class="flex-1 overflow-y-auto px-1.5 py-2 text-xs font-sans">
       <!-- Section: Connections -->
       <div
         v-for="conn in connectionStore.connections"
@@ -207,7 +207,7 @@
           />
 
           <span
-            class="font-sans font-medium truncate flex-1"
+            class="font-sans truncate flex-1"
             :style="getConnectionNameStyle(conn)"
           >{{ conn.name }}</span>
 
@@ -216,7 +216,7 @@
             v-if="connectionStore.activeConnectionId === conn.id && connectionStore.status === 'connected'"
             severity="success"
             value="使用中"
-            class="!text-[9px] !px-1 !py-0 flex-shrink-0 mr-1"
+            class="!text-[9px] !px-1 !py-0 !font-normal flex-shrink-0 mr-1"
             title="目前工作區使用中連線"
           />
 
@@ -261,7 +261,7 @@
               :class="[
                 'flex items-center space-x-1 px-1.5 py-0.5 rounded cursor-pointer transition-colors group',
                 connectionStore.activeConnectionId === conn.id && connectionStore.activeDatabase === db
-                  ? 'bg-amber-500/15 text-warn font-semibold'
+                  ? 'bg-amber-500/15 text-warn'
                   : 'text-dark-300 hover:bg-dark-750 hover:text-dark-100'
               ]"
               :title="`${db} - 點擊展開/收合，右鍵開啟選單 (匯出結構 CSV 等)`"
@@ -316,8 +316,8 @@
                       :is="isFolderExpanded(conn.id, db, 'tables') ? FolderOpen : Folder"
                       class="w-3 h-3 text-accent"
                     />
-                    <span class="font-sans font-medium text-dark-200">資料表</span>
-                    <span class="text-xxs text-dark-500 font-mono">({{ getFilteredTables(conn.id, db).length }})</span>
+                    <span class="font-sans text-dark-200">資料表</span>
+                    <span class="text-xxs text-dark-500 font-sans">({{ getFilteredTables(conn.id, db).length }})</span>
                   </div>
 
                   <!-- Tables List -->
@@ -348,7 +348,7 @@
                         :class="[
                           'flex items-center space-x-1 px-1.5 py-0.5 rounded cursor-pointer select-none group transition-all duration-150',
                           activeLocatedKey === tableKey(conn.id, db, table.schema, table.name)
-                            ? 'bg-brand-500/25 ring-1 ring-brand-400 text-accent font-semibold shadow-md shadow-brand-500/10'
+                            ? 'bg-brand-500/25 ring-1 ring-brand-400 text-accent shadow-md shadow-brand-500/10'
                             : 'hover:bg-dark-750 text-dark-300 hover:text-dark-100'
                         ]"
                         :title="`${table.schema}.${table.name} (Table) - 右鍵開啟選單 (Open Data / DDL)`"
@@ -359,7 +359,7 @@
                         />
                         <Table2 class="w-3 h-3 text-accent flex-shrink-0" />
                         <span class="text-dark-400 text-xxs flex-shrink-0">{{ table.schema }}.</span>
-                        <span class="truncate flex-1 font-medium">{{ table.name }}</span>
+                        <span class="truncate flex-1">{{ table.name }}</span>
                         <span
                           v-if="activeLocatedKey === tableKey(conn.id, db, table.schema, table.name)"
                           class="text-[9px] px-1 py-0.2 bg-brand-600 text-white rounded font-sans flex-shrink-0 animate-pulse ml-1"
@@ -403,7 +403,7 @@
                         >
                           <Key v-if="col.isPrimaryKey" class="w-2.5 h-2.5 text-warn flex-shrink-0" />
                           <Columns v-else class="w-2.5 h-2.5 text-dark-500 group-hover:text-dark-300 flex-shrink-0" />
-                          <span :class="[col.isPrimaryKey ? 'text-warn font-semibold' : 'text-dark-300 group-hover:text-dark-100']" class="truncate flex-1">
+                          <span :class="[col.isPrimaryKey ? 'text-warn' : 'text-dark-300 group-hover:text-dark-100']" class="truncate flex-1">
                             {{ col.name }}
                           </span>
                           <span class="text-dark-500 lowercase font-sans text-xxs flex-shrink-0">
@@ -411,7 +411,7 @@
                           </span>
                           <span
                             v-if="isPendingColumn(col.name)"
-                            class="text-xxs px-1 py-0.2 bg-brand-500/30 text-accent font-medium rounded text-[9px] border border-brand-400/40 flex-shrink-0 animate-pulse"
+                            class="text-xxs px-1 py-0.2 bg-brand-500/30 text-accent rounded text-[9px] border border-brand-400/40 flex-shrink-0 animate-pulse"
                           >
                             待貼上
                           </span>
@@ -435,8 +435,8 @@
                       :is="isFolderExpanded(conn.id, db, 'views') ? FolderOpen : Folder"
                       class="w-3 h-3 text-plan"
                     />
-                    <span class="font-sans font-medium text-dark-200">檢視表</span>
-                    <span class="text-xxs text-dark-500 font-mono">({{ getFilteredViews(conn.id, db).length }})</span>
+                    <span class="font-sans text-dark-200">檢視表</span>
+                    <span class="text-xxs text-dark-500 font-sans">({{ getFilteredViews(conn.id, db).length }})</span>
                   </div>
 
                   <!-- Views List -->
@@ -467,7 +467,7 @@
                         :class="[
                           'flex items-center space-x-1 px-1.5 py-0.5 rounded cursor-pointer select-none group transition-all duration-150',
                           activeLocatedKey === tableKey(conn.id, db, view.schema, view.name)
-                            ? 'bg-purple-500/25 ring-1 ring-purple-400 text-plan font-semibold shadow-md shadow-purple-500/10'
+                            ? 'bg-purple-500/25 ring-1 ring-purple-400 text-plan shadow-md shadow-purple-500/10'
                             : 'hover:bg-dark-750 text-dark-300 hover:text-dark-100'
                         ]"
                         :title="`${view.schema}.${view.name} (View) - 右鍵檢視定義或查詢`"
@@ -478,7 +478,7 @@
                         />
                         <FileText class="w-3 h-3 text-plan flex-shrink-0" />
                         <span class="text-dark-400 text-xxs flex-shrink-0">{{ view.schema }}.</span>
-                        <span class="truncate flex-1 font-medium">{{ view.name }}</span>
+                        <span class="truncate flex-1">{{ view.name }}</span>
                         <span
                           v-if="activeLocatedKey === tableKey(conn.id, db, view.schema, view.name)"
                           class="text-[9px] px-1 py-0.2 bg-purple-600 text-white rounded font-sans flex-shrink-0 animate-pulse ml-1"
@@ -547,8 +547,8 @@
                       :is="isFolderExpanded(conn.id, db, 'procs') ? FolderOpen : Folder"
                       class="w-3 h-3 text-warn"
                     />
-                    <span class="font-sans font-medium text-dark-200">預存程序</span>
-                    <span class="text-xxs text-dark-500 font-mono">({{ getFilteredProcedures(conn.id, db).length }})</span>
+                    <span class="font-sans text-dark-200">預存程序</span>
+                    <span class="text-xxs text-dark-500 font-sans">({{ getFilteredProcedures(conn.id, db).length }})</span>
                   </div>
 
                   <!-- Procedures List -->
@@ -573,14 +573,14 @@
                       :class="[
                         'flex items-center space-x-1 px-1.5 py-0.5 rounded cursor-pointer group transition-all duration-150',
                         activeLocatedKey === tableKey(conn.id, db, proc.schema, proc.name)
-                          ? 'bg-amber-500/25 ring-1 ring-amber-400 text-warn font-semibold shadow-md shadow-amber-500/10'
+                          ? 'bg-amber-500/25 ring-1 ring-amber-400 text-warn shadow-md shadow-amber-500/10'
                           : 'hover:bg-dark-750 text-dark-300 hover:text-dark-100'
                       ]"
                       :title="`${proc.schema}.${proc.name} (Stored Procedure) - 雙擊檢視定義，右鍵開啟選單`"
                     >
                       <Cog class="w-3 h-3 text-warn flex-shrink-0" />
                       <span class="text-dark-400 text-xxs flex-shrink-0">{{ proc.schema }}.</span>
-                      <span class="truncate flex-1 font-medium">{{ proc.name }}</span>
+                      <span class="truncate flex-1">{{ proc.name }}</span>
                       <span
                         v-if="activeLocatedKey === tableKey(conn.id, db, proc.schema, proc.name)"
                         class="text-[9px] px-1 py-0.2 bg-amber-700 text-white rounded font-sans flex-shrink-0 animate-pulse ml-1"
@@ -605,8 +605,8 @@
                       :is="isFolderExpanded(conn.id, db, 'funcs') ? FolderOpen : Folder"
                       class="w-3 h-3 text-info"
                     />
-                    <span class="font-sans font-medium text-dark-200">函數</span>
-                    <span class="text-xxs text-dark-500 font-mono">({{ getFilteredFunctions(conn.id, db).length }})</span>
+                    <span class="font-sans text-dark-200">函數</span>
+                    <span class="text-xxs text-dark-500 font-sans">({{ getFilteredFunctions(conn.id, db).length }})</span>
                   </div>
 
                   <!-- Functions List -->
@@ -631,14 +631,14 @@
                       :class="[
                         'flex items-center space-x-1 px-1.5 py-0.5 rounded cursor-pointer group transition-all duration-150',
                         activeLocatedKey === tableKey(conn.id, db, func.schema, func.name)
-                          ? 'bg-sky-500/25 ring-1 ring-sky-400 text-info font-semibold shadow-md shadow-sky-500/10'
+                          ? 'bg-sky-500/25 ring-1 ring-sky-400 text-info shadow-md shadow-sky-500/10'
                           : 'hover:bg-dark-750 text-dark-300 hover:text-dark-100'
                       ]"
                       :title="`${func.schema}.${func.name} (Function) - 雙擊檢視定義，右鍵開啟選單`"
                     >
                       <Code2 class="w-3 h-3 text-info flex-shrink-0" />
                       <span class="text-dark-400 text-xxs flex-shrink-0">{{ func.schema }}.</span>
-                      <span class="truncate flex-1 font-medium">{{ func.name }}</span>
+                      <span class="truncate flex-1">{{ func.name }}</span>
                       <span
                         v-if="activeLocatedKey === tableKey(conn.id, db, func.schema, func.name)"
                         class="text-[9px] px-1 py-0.2 bg-sky-700 text-white rounded font-sans flex-shrink-0 animate-pulse ml-1"

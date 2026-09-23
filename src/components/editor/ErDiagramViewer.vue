@@ -15,7 +15,7 @@
         <Tag
           v-if="tab.rootTable"
           severity="info"
-          class="!font-mono !text-xs !px-2 !py-1"
+          class="!font-sans !text-xs !px-2 !py-1"
         >
           <template #icon>
             <i class="pi pi-database text-accent mr-1 text-xs"></i>
@@ -61,7 +61,7 @@
           outlined
           @click="toggleLayoutDirection"
           v-tooltip.top="`目前方向：${layoutDirection === 'LR' ? '水平左右 (LR)' : '垂直上下 (TB)'}，點擊切換`"
-          class="!text-xs !py-1 !px-2 font-mono"
+          class="!text-xs !py-1 !px-2 font-sans"
         />
 
         <!-- Add Text Note Button -->
@@ -103,7 +103,7 @@
             severity="secondary"
             @click="handleZoomReset"
             v-tooltip.top="'重設縮放 100%'"
-            class="!px-1.5 !py-1 !text-xxs font-mono min-w-[42px]"
+            class="!px-1.5 !py-1 !text-xxs font-sans min-w-[42px]"
           />
           <Button
             type="button"
@@ -209,7 +209,7 @@
 
       <!-- Floating Stats & Linking Tip (Bottom Left) -->
       <div
-        class="absolute bottom-3 left-3 backdrop-blur px-3 py-1.5 rounded-md text-[11px] flex items-center space-x-3 pointer-events-none z-10 font-mono shadow-lg border"
+        class="absolute bottom-3 left-3 backdrop-blur px-3 py-1.5 rounded-md text-[11px] flex items-center space-x-3 pointer-events-none z-10 font-sans shadow-lg border"
         :class="isLightTheme ? 'bg-white/90 border-slate-200 text-slate-600 shadow-slate-200/50' : 'bg-dark-900/90 border-dark-750 text-dark-300'"
       >
         <span>資料表：<strong :class="isLightTheme ? 'text-slate-900' : 'text-dark-100'">{{ nodeCount }}</strong></span>
@@ -230,7 +230,7 @@
       <div
         v-if="edgeMenu.visible"
         :style="{ top: `${edgeMenu.y}px`, left: `${edgeMenu.x}px` }"
-        class="fixed z-50 backdrop-blur border rounded-lg shadow-2xl py-1.5 w-64 text-xs font-sans select-none animate-in fade-in zoom-in-95 duration-100 font-mono"
+        class="fixed z-50 backdrop-blur border rounded-lg shadow-2xl py-1.5 w-64 text-xs font-sans select-none animate-in fade-in zoom-in-95 duration-100"
         :class="isLightTheme ? 'bg-white/95 border-slate-200 text-slate-700 shadow-slate-300/60' : 'bg-dark-850/95 border-dark-700 text-dark-200'"
         @click.stop
       >
@@ -256,7 +256,7 @@
         <div class="px-3 py-2 border-b" :class="isLightTheme ? 'border-slate-100' : 'border-dark-750'">
           <div class="text-[10px] mb-1.5 font-sans flex items-center justify-between" :class="isLightTheme ? 'text-slate-500' : 'text-dark-400'">
             <span>關聯屬性 (Cardinality)</span>
-            <span class="font-bold font-mono" :class="isLightTheme ? 'text-accent' : 'text-accent'">{{ edgeMenu.cardinality }}</span>
+            <span class="font-bold font-sans" :class="isLightTheme ? 'text-accent' : 'text-accent'">{{ edgeMenu.cardinality }}</span>
           </div>
           <div class="grid grid-cols-2 gap-1.5 text-xxs">
             <button
@@ -270,7 +270,7 @@
               ]"
             >
               <span>1 對多</span>
-              <span class="font-mono" :class="isLightTheme ? 'text-slate-600' : 'text-dark-400'">1:N</span>
+              <span class="font-sans" :class="isLightTheme ? 'text-slate-600' : 'text-dark-400'">1:N</span>
             </button>
             <button
               type="button"
@@ -283,7 +283,7 @@
             ]"
             >
               <span>1 對 1</span>
-              <span class="font-mono" :class="isLightTheme ? 'text-slate-600' : 'text-dark-400'">1:1</span>
+              <span class="font-sans" :class="isLightTheme ? 'text-slate-600' : 'text-dark-400'">1:1</span>
             </button>
             <button
               type="button"
@@ -296,7 +296,7 @@
             ]"
             >
               <span>多對 1</span>
-              <span class="font-mono" :class="isLightTheme ? 'text-slate-600' : 'text-dark-400'">N:1</span>
+              <span class="font-sans" :class="isLightTheme ? 'text-slate-600' : 'text-dark-400'">N:1</span>
             </button>
             <button
               type="button"
@@ -309,7 +309,7 @@
             ]"
             >
               <span>多對多</span>
-              <span class="font-mono" :class="isLightTheme ? 'text-slate-600' : 'text-dark-400'">N:M</span>
+              <span class="font-sans" :class="isLightTheme ? 'text-slate-600' : 'text-dark-400'">N:M</span>
             </button>
           </div>
         </div>
@@ -376,6 +376,7 @@ import ErTextNode, { type ErTextNodeData } from './ErTextNode.vue';
 import { useWorkspaceStore } from '@/stores/workspaceStore';
 import { useConnectionStore } from '@/stores/connectionStore';
 import { useSettingsStore } from '@/stores/settingsStore';
+import { DEFAULT_GLOBAL_FONT_FAMILY } from '@/services/themeManager';
 import { schemaService } from '@/services/schemaService';
 import { saveDataUriToFile, saveSvgToFile, saveErDiagramToFile, getAppStylesheets } from '@/utils/fileStorage';
 import type { ErDiagramTab } from '@/types/workspace';
@@ -473,6 +474,14 @@ const connectionStore = useConnectionStore();
 const settingsStore = useSettingsStore();
 
 const isLightTheme = computed(() => settingsStore.erTheme === 'light');
+
+/**
+ * X6 renders cardinality badges as SVG text attributes, where `var(--app-font-sans)` does not
+ * resolve, so the configured global UI font is read from the settings store instead.
+ */
+const erCanvasFontFamily = computed(
+  () => settingsStore.globalFontFamily || DEFAULT_GLOBAL_FONT_FAMILY
+);
 
 const graphContainerRef = ref<HTMLDivElement | null>(null);
 const dropZoneRef = ref<HTMLDivElement | null>(null);
@@ -868,7 +877,7 @@ function applyEdgeCardinality(
           fill: isLight ? '#1e293b' : '#cbd5e1',
           fontSize: 10,
           fontWeight: 'bold',
-          fontFamily: 'monospace',
+          fontFamily: erCanvasFontFamily.value,
         },
         rect: {
           fill: isLight ? '#ffffff' : '#181825',
@@ -888,7 +897,7 @@ function applyEdgeCardinality(
           fill: isLight ? '#1e293b' : '#cbd5e1',
           fontSize: 10,
           fontWeight: 'bold',
-          fontFamily: 'monospace',
+          fontFamily: erCanvasFontFamily.value,
         },
         rect: {
           fill: isLight ? '#ffffff' : '#181825',

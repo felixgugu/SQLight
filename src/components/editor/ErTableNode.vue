@@ -17,8 +17,8 @@
     >
       <div class="flex items-center space-x-1.5 min-w-0 flex-1">
         <Table2 class="w-3.5 h-3.5 flex-shrink-0" :class="isLightTheme ? 'text-ok' : 'text-ok'" />
-        <span class="text-xxs font-mono truncate flex-shrink-0" :class="isLightTheme ? 'text-slate-600' : 'text-dark-400'">{{ nodeData.schema }}.</span>
-        <span class="text-xs font-semibold truncate flex-1 font-mono" :class="isLightTheme ? 'text-slate-800' : 'text-dark-100'" :title="`${nodeData.schema}.${nodeData.table}`">
+        <span class="text-xxs font-sans truncate flex-shrink-0" :class="isLightTheme ? 'text-slate-600' : 'text-dark-400'">{{ nodeData.schema }}.</span>
+        <span class="text-xs font-semibold truncate flex-1 font-sans" :class="isLightTheme ? 'text-slate-800' : 'text-dark-100'" :title="`${nodeData.schema}.${nodeData.table}`">
           {{ nodeData.table }}
         </span>
       </div>
@@ -39,7 +39,7 @@
 
     <!-- Columns List Body -->
     <div
-      class="flex-1 overflow-x-hidden overflow-y-hidden text-xxs font-mono divide-y"
+      class="flex-1 overflow-x-hidden overflow-y-hidden text-xxs font-sans divide-y"
       :class="isLightTheme ? 'divide-slate-100' : 'divide-dark-800/60'"
     >
       <div

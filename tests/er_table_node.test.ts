@@ -94,7 +94,7 @@ test('Resize handler locks width at 260px and respects minSafeH', () => {
 });
 
 test('Columns container has no scrollbars (overflow-x-hidden overflow-y-hidden)', () => {
-  const containerClasses = 'flex-1 overflow-x-hidden overflow-y-hidden divide-y divide-dark-800/60 text-xxs font-mono';
+  const containerClasses = 'flex-1 overflow-x-hidden overflow-y-hidden divide-y divide-dark-800/60 text-xxs font-sans';
   assert.ok(containerClasses.includes('overflow-x-hidden'));
   assert.ok(containerClasses.includes('overflow-y-hidden'));
   assert.ok(!containerClasses.includes('overflow-y-auto'));
@@ -135,4 +135,3 @@ test('ErTableNode uses deepened border (border-slate-400) in light mode', () => 
   assert.ok(lightClass.includes('border-slate-400'), 'Light theme must use deepened border-slate-400');
   assert.ok(!lightClass.includes('border-slate-200'), 'Light theme must not use pale border-slate-200');
 });
-
