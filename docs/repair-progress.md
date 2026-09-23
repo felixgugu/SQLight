@@ -107,6 +107,28 @@ Quick filter benchmark（`applyMs` = 單次套用阻塞主執行緒的時間）�
 4. Tabulator（muted／binary／bool／modified／排序箭頭）、Monaco（抽出 `utils/editorThemeTokens.ts`）、分頁圖示（`iconColorLight`）、執行計畫 tooltip、連線標籤色（新增 `utils/connectionColor.ts`）等元件層修正。
 5. 一致性：AI／資料檢視 modal 固定色碼改回 surface token、`border-dark-650`（Tailwind 未定義）改為 `border-dark-700`、對話框 ring 改為深淺分流、`index.html` 於首次繪製前套用已儲存的色彩模式並宣告 `color-scheme`。
 
+## 已實作（2026-09-23）：多結果集「隱藏工具列」純資料檢視
+
+一次查詢回傳多個 DataGrid 時，逐格檢視資料的可用高度被每個網格自己的工具列（快速篩選、複製、重新整理、DML）與下方統計列吃掉。於多結果集檢視列的「等分高度」左側新增「隱藏工具列」切換鈕。
+
+- 切換後該結果分頁下所有網格（堆疊、最大化、分頁檢視皆同）同時隱藏上方工具列與下方資訊／統計列，只留標題列與資料區；按鈕再按一次（標籤變為「顯示工具列」）即還原。
+- 狀態存放於 `gridLayoutStore`（`isToolbarHidden`／`setToolbarHidden`／`toggleToolbarHidden`），以結果分頁 ID 為 key，切換結果分頁、底部面板分頁或重繪網格都不會遺失，關閉該結果分頁時由 `clearTab` 一併清除。
+- 單一結果集沒有此檢視列，維持原本的工具列；`ResultGrid` 端以 `resultSets.length > 1` 守門，避免舊狀態讓單一網格被鎖在無工具列的畫面。
+- 雙擊分割線等分、拖曳分割線、欄寬與排序記憶皆不受影響（各網格容器高度不變，省下的高度直接給資料區）。
+- 同一波調整：多結果集時每個網格工具列最左側的 `Result #N (N)` 標籤改回一般字重。PrimeVue Aura 的 `.p-tag` 預設 `font-weight: 700`，以 `!font-normal` 覆寫（與 AppMain／AppBottomPanel 的既有寫法一致）。
+
+## 已實作（2026-09-23）：DataGrid 工具列字型回歸「外觀與主題」
+
+症狀：`外觀與主題` 的「全域介面字型」對 DataGrid 沒有作用。原因是三個網格元件的根容器硬寫 `font-mono`（Tailwind 的 Fira Code 堆疊），工具列、快速篩選、列數與空狀態全部繼承它，等於自行跳脫 `--app-font-sans`。
+
+邊界改為：`查詢與結果` 的「結果表格字型」只作用在表格內容（`.tabulator` 由 `--sqlight-grid-font` 決定），其餘屬於 DataGrid 外框的部分一律跟隨全域介面字型。
+
+已實作：
+
+1. `ResultGridItem`／`ResultGrid`／`TableDataViewer`／`TableStructureViewer` 根容器由 `font-mono` 改為 `font-sans`（`var(--app-font-sans)`）。
+2. 工具列內會蓋掉容器字型的寫法一併移除：`Result #N (N)` 標籤的 `!font-mono`、三處快速篩選 `InputText` 的 `font-mono`、`N rows` 列數的 `font-mono`、`TableStructureViewer` 三個統計 Tag 的 `!font-mono`、多結果集分頁按鈕的列數 `font-mono`。PrimeVue 的 `.p-button`／`.p-inputtext` 都是 `font-family: inherit`，因此會直接吃到新設定。
+3. 表格內容不受影響：`--sqlight-grid-font` 仍只綁在 `.sqlight-grid` 外框（`tests/grid_font_settings.test.ts` 既有斷言不變）。下方資訊列的統計數字、右鍵選單的欄名數值、Commit 對話框的 SQL 仍保留等寬字，因為它們顯示的是資料值／SQL，不是外框文案。
+
 ## 待完成與待審核
 
 1. **DML 來源可靠性**：目前仍由 SQL 文字猜測來源；JOIN、別名／運算式、跨庫、跨 server、多結果集的來源應以可驗證 metadata 解析，不能僅依第一個表名。表格與結果面板應共用來源／DML 邏輯。確認 computed、rowversion 等不可寫欄位。
@@ -122,6 +144,9 @@ Quick filter benchmark（`applyMs` = 單次套用阻塞主執行緒的時間）�
 
 ## 驗證紀錄
 
+- （2026-09-23）`npm test`：388 個通過（新增 `tests/global_font_scope.test.ts` 三項：四個 DataGrid 根容器必須用 `font-sans` 且不得攜帶 `--sqlight-grid-font`、工具列區塊不得出現 `font-mono`、網格字型變數僅能綁在 `.sqlight-grid` 外框）。
+- （2026-09-23）`npm test`：385 個通過（新增 `tests/grid_layout.test.ts` 兩項：「隱藏工具列」狀態為每結果分頁獨立且隨分頁關閉清除、以及按鈕位於「等分高度」左側並傳到全部 4 種網格容器且上下兩列都受 `hideToolbar` 控制；新增 `tests/tab_label_weight.test.ts` 一項：多結果集 `Result #N (N)` 標籤必須為一般字重且仍只在 `totalSets > 1` 出現）。
+- （2026-09-23）`npm run typecheck`、`npm run build`：通過。
 - （2026-09-23）`npm test`：370 個通過（新增 `tests/theme_contrast.test.ts`：5 surface × 深淺色階對比、角色色在純色與 15–25% 色塊底的對比、分頁圖示、Monaco 主題、連線標籤色、Tabulator CSS token 對比、啟動前套用色彩模式；並擴充 `tab_category_colors` 的淺色圖示斷言、更新 `grid_selection` 的排序箭頭期望值）。
 - （2026-09-23）`npm run typecheck`、`npm run build`：通過。
 - （2026-09-22）`npm test`：311 個通過（新增合成 fixture 的 spec 解析／維度／決定性／NULL 分佈／型別，以及「結果網格不得無條件停用欄虛擬化」「fixture 必須 dev-gated」「filter benchmark 必須還原 quickFilterText」「quick filter 必須 debounce 並清除 timer」四項回歸）。

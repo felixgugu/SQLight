@@ -1,3 +1,4 @@
+import { ref } from 'vue';
 import { defineStore } from 'pinia';
 import type { Tabulator, TabulatorLayoutColumn, TabulatorSorter } from 'tabulator-tables';
 
@@ -7,7 +8,8 @@ import type { Tabulator, TabulatorLayoutColumn, TabulatorSorter } from 'tabulato
  * Tabulator loses column state when a table is destroyed (the multi result set tabs recycle grid
  * instances) and when its column definitions are replaced (a new query in the same tab rebuilds the
  * grid). This store remembers column widths/visibility/order plus the sorters keyed by
- * `tabId:setIndex`, so switching back restores what the user set up.
+ * `tabId:setIndex`, so switching back restores what the user set up. It also remembers whether the
+ * result grids of a tab render their toolbar / info bars, which is a per result tab view mode too.
  */
 
 export interface GridLayoutColumnEntry {
@@ -36,6 +38,9 @@ export const useGridLayoutStore = defineStore('gridLayout', () => {
   // result width, so keeping them outside Vue's reactivity avoids proxy overhead on every capture.
   const layouts = new Map<string, GridLayoutEntry>();
   const activeSetIndexByTab = new Map<string, number>();
+  // Toolbar visibility is the opposite case: the header button and every grid pane of the tab
+  // render from it, so this one has to be reactive.
+  const toolbarHiddenByTab = ref(new Set<string>());
 
   function layoutKey(tabId: string | null | undefined, setIndex: number): string {
     return buildLayoutKey(tabId, setIndex);
@@ -99,10 +104,36 @@ export const useGridLayoutStore = defineStore('gridLayout', () => {
     activeSetIndexByTab.set(tabId, index);
   }
 
+  /** Whether one result tab hides the toolbar and info bars of all its grids. */
+  function isToolbarHidden(tabId: string | null | undefined): boolean {
+    return !!tabId && toolbarHiddenByTab.value.has(tabId);
+  }
+
+  /** Sets the toolbar visibility of one result tab. An unknown tab id is ignored. */
+  function setToolbarHidden(tabId: string | null | undefined, hidden: boolean): void {
+    if (!tabId) return;
+    const next = new Set(toolbarHiddenByTab.value);
+    if (hidden) {
+      next.add(tabId);
+    } else {
+      next.delete(tabId);
+    }
+    toolbarHiddenByTab.value = next;
+  }
+
+  /** Flips the toolbar visibility of one result tab; returns the resulting state. */
+  function toggleToolbarHidden(tabId: string | null | undefined): boolean {
+    if (!tabId) return false;
+    const hidden = !toolbarHiddenByTab.value.has(tabId);
+    setToolbarHidden(tabId, hidden);
+    return hidden;
+  }
+
   /** Drops every cached layout / remembered index of a closed result tab. */
   function clearTab(tabId: string | null | undefined): void {
     if (!tabId) return;
     activeSetIndexByTab.delete(tabId);
+    toolbarHiddenByTab.value.delete(tabId);
     const prefix = `${tabId}:`;
     for (const key of [...layouts.keys()]) {
       if (key.startsWith(prefix)) layouts.delete(key);
@@ -116,6 +147,9 @@ export const useGridLayoutStore = defineStore('gridLayout', () => {
     has,
     getActiveSetIndex,
     setActiveSetIndex,
+    isToolbarHidden,
+    setToolbarHidden,
+    toggleToolbarHidden,
     clearTab,
   };
 });

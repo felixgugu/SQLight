@@ -1,5 +1,5 @@
 <template>
-  <div ref="containerRef" class="w-full h-full flex flex-col bg-dark-900 overflow-hidden font-mono text-xs select-none relative">
+  <div ref="containerRef" class="w-full h-full flex flex-col bg-dark-900 overflow-hidden font-sans text-xs select-none relative">
     <!-- Empty State -->
     <div
       v-if="!resultSets || resultSets.length === 0"
@@ -17,6 +17,7 @@
       :result-set="resultSets[0]"
       :set-index="0"
       :total-sets="1"
+      :hide-toolbar="toolbarHidden"
       class="flex-1 w-full"
     />
 
@@ -45,7 +46,7 @@
               ]"
             >
               <span>Result #{{ idx + 1 }}</span>
-              <span :class="activeTabIndex === idx ? 'text-primary/70 font-semibold' : 'text-dark-400'" class="font-mono">({{ set.rowCount ?? set.rows.length }})</span>
+              <span :class="activeTabIndex === idx ? 'text-primary/70 font-semibold' : 'text-dark-400'">({{ set.rowCount ?? set.rows.length }})</span>
             </button>
           </div>
 
@@ -66,6 +67,23 @@
 
         <!-- Right: Layout Switcher & Actions -->
         <div class="flex items-center space-x-1 flex-shrink-0">
+          <!-- Hide Grid Toolbars / Info Bars (applies to every grid of this result tab) -->
+          <button
+            v-if="resultSets.length > 1"
+            type="button"
+            @click="toggleToolbarVisibility"
+            :class="[
+              'px-2 py-0.5 rounded text-xxs bg-dark-800 hover:bg-dark-750 border transition-colors flex items-center space-x-1 cursor-pointer',
+              toolbarHidden
+                ? 'border-primary/50 text-primary'
+                : 'border-dark-700 text-dark-300 hover:text-dark-100'
+            ]"
+            :title="toolbarHidden ? '顯示所有 DataGrid 的工具列與資訊列' : '隱藏所有 DataGrid 的工具列與資訊列 (純資料檢視)'"
+          >
+            <component :is="toolbarHidden ? Eye : EyeOff" class="w-2.5 h-2.5" />
+            <span>{{ toolbarHidden ? '顯示工具列' : '隱藏工具列' }}</span>
+          </button>
+
           <!-- Reset Heights Button in Stacked Mode -->
           <button
             v-if="viewMode === 'stacked' && maximizedIndex === null"
@@ -108,6 +126,7 @@
             :set-index="maximizedIndex"
             :total-sets="resultSets.length"
             :is-maximized="true"
+            :hide-toolbar="toolbarHidden"
             @toggle-maximize="toggleMaximize(maximizedIndex)"
           />
         </div>
@@ -126,6 +145,7 @@
                 :set-index="idx"
                 :total-sets="resultSets.length"
                 :is-maximized="false"
+                :hide-toolbar="toolbarHidden"
                 @toggle-maximize="toggleMaximize(idx)"
               />
             </div>
@@ -154,6 +174,7 @@
           :set-index="activeTabIndex"
           :total-sets="resultSets.length"
           :is-maximized="false"
+          :hide-toolbar="toolbarHidden"
           @toggle-maximize="toggleMaximize(activeTabIndex)"
         />
       </div>
@@ -169,6 +190,8 @@ import {
   Split,
   Rows,
   LayoutGrid,
+  Eye,
+  EyeOff,
 } from 'lucide-vue-next';
 import ResizableSplitter from '@/components/common/ResizableSplitter.vue';
 import ResultGridItem from '@/components/results/ResultGridItem.vue';
@@ -186,6 +209,20 @@ const activeTabIndex = ref(0);
 const maximizedIndex = ref<number | null>(null);
 
 const gridLayoutStore = useGridLayoutStore();
+
+/**
+ * Per result tab view mode: hides the toolbar and info bar of every grid in this tab. The state
+ * lives in the layout store so it survives switching between result tabs and bottom panel tabs,
+ * and is dropped when the result tab closes. Single result sets keep their toolbar because the
+ * header carrying this toggle only renders for multiple result sets.
+ */
+const toolbarHidden = computed(
+  () => props.resultSets.length > 1 && gridLayoutStore.isToolbarHidden(props.tabId ?? null)
+);
+
+function toggleToolbarVisibility() {
+  gridLayoutStore.toggleToolbarHidden(props.tabId ?? null);
+}
 
 /** Component key doubles as the persistent layout key for the result set it renders. */
 function itemKey(setIndex: number | null | undefined): string {

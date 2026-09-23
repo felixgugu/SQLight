@@ -1,5 +1,5 @@
 <template>
-  <div class="w-full h-full flex flex-col bg-dark-900 overflow-hidden font-mono text-xs select-none">
+  <div class="w-full h-full flex flex-col bg-dark-900 overflow-hidden font-sans text-xs select-none">
     <!-- Subheader toolbar for Table Data -->
     <div class="h-8 bg-dark-850 border-b border-dark-700 flex items-center justify-between px-2 text-xs flex-shrink-0 space-x-2">
       <div class="flex items-center space-x-2 min-w-0">
@@ -18,7 +18,7 @@
             type="text"
             placeholder="Filter table data..."
             size="small"
-            class="w-full !bg-dark-900 !border-dark-700 !py-0.5 !pl-7 !pr-6 !text-xs font-mono"
+            class="w-full !bg-dark-900 !border-dark-700 !py-0.5 !pl-7 !pr-6 !text-xs"
           />
         </IconField>
       </div>

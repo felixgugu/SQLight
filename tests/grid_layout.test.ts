@@ -141,6 +141,50 @@ test('active set index is remembered per tab and cleared with its layouts', () =
   assert.equal(store.has('tab-y:0'), true);
 });
 
+test('hidden toolbars are remembered per result tab and cleared with the tab', () => {
+  const store = freshStore();
+  assert.equal(store.isToolbarHidden('tab-t'), false);
+  assert.equal(store.isToolbarHidden(null), false);
+  // An unknown tab id must be ignored rather than remembered under a shared key.
+  store.setToolbarHidden(null, true);
+  store.setToolbarHidden(undefined, true);
+  assert.equal(store.isToolbarHidden('orphan'), false);
+
+  store.setToolbarHidden('tab-t', true);
+  assert.equal(store.isToolbarHidden('tab-t'), true);
+  assert.equal(store.isToolbarHidden('tab-other'), false, 'other tabs keep their own toolbars');
+
+  assert.equal(store.toggleToolbarHidden('tab-t'), false);
+  assert.equal(store.isToolbarHidden('tab-t'), false);
+  assert.equal(store.toggleToolbarHidden('tab-t'), true);
+  assert.equal(store.isToolbarHidden('tab-t'), true);
+  assert.equal(store.toggleToolbarHidden(null), false, 'a missing tab id cannot be toggled');
+
+  store.clearTab('tab-t');
+  assert.equal(store.isToolbarHidden('tab-t'), false);
+});
+
+test('the hide-toolbar toggle sits next to 等分高度 and reaches every grid pane', () => {
+  const grid = readSource('src/components/results/ResultGrid.vue');
+  const hideButton = sliceBetween(grid, '<div class="flex items-center space-x-1 flex-shrink-0">', '<!-- Reset Heights Button in Stacked Mode -->');
+  assert.match(hideButton, /隱藏工具列/, 'the button must be labelled 隱藏工具列');
+  assert.match(hideButton, /gridLayoutStore\.toggleToolbarHidden|toggleToolbarVisibility/);
+  assert.equal(
+    (grid.match(/:hide-toolbar="toolbarHidden"/g) ?? []).length,
+    4,
+    'single, maximized, stacked and tabbed panes must all receive the flag'
+  );
+  assert.match(grid, /resultSets\.length > 1 && gridLayoutStore\.isToolbarHidden/);
+
+  const item = readSource('src/components/results/ResultGridItem.vue');
+  assert.match(item, /hideToolbar\?: boolean;/);
+  assert.equal(
+    (item.match(/v-if="!hideToolbar"/g) ?? []).length,
+    2,
+    'both the toolbar and the info bar must be hidden'
+  );
+});
+
 test('result grids wire layout restore and capture into the Tabulator lifecycle', () => {
   const item = readFileSync(
     resolve(process.cwd(), 'src/components/results/ResultGridItem.vue'),

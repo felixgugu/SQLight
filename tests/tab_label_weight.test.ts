@@ -86,3 +86,21 @@ test('result set tabs only gain weight when selected', () => {
     'the selected result set tab keeps its emphasis'
   );
 });
+
+test('the multi result set grid badge drops the theme bold weight', () => {
+  const source = readSource('src/components/results/ResultGridItem.vue');
+  assert.match(
+    source,
+    /v-if="totalSets > 1"[\s\S]{0,200}?Result #\$\{setIndex \+ 1\}/,
+    'the badge must stay gated to multi result set grids'
+  );
+
+  const badge = source.match(/Result #\$\{setIndex \+ 1\}[\s\S]{0,200}?class="([^"]*)"/);
+  assert.ok(badge, 'the badge class list must stay easy to locate');
+  assert.match(
+    badge![1]!,
+    /!font-normal/,
+    'the Aura tag theme bolds every .p-tag, so this badge has to reset the weight'
+  );
+  assert.doesNotMatch(badge![1]!, /font-(medium|semibold|bold)/);
+});

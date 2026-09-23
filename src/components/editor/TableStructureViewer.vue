@@ -1,14 +1,14 @@
 <template>
-  <div class="w-full h-full flex flex-col bg-dark-900 overflow-hidden font-mono text-xs select-none">
+  <div class="w-full h-full flex flex-col bg-dark-900 overflow-hidden font-sans text-xs select-none">
     <!-- Subheader toolbar for Table Structure -->
     <div class="h-8 bg-dark-850 border-b border-dark-700 flex items-center justify-between px-2 text-xs flex-shrink-0 space-x-2">
       <div class="flex items-center space-x-2 min-w-0">
         <i class="pi pi-list text-structure text-xs flex-shrink-0"></i>
         <span class="font-semibold text-dark-100 truncate">{{ schema }}.{{ tableName }}</span>
         <span class="text-dark-600">|</span>
-        <Tag :value="`${columns.length} 欄位`" severity="info" class="!font-mono !text-xxs !px-1.5 !py-0.2" />
-        <Tag v-if="pkCount > 0" :value="`${pkCount} 主鍵`" severity="warn" class="!font-mono !text-xxs !px-1.5 !py-0.2" />
-        <Tag v-if="identityCount > 0" :value="`${identityCount} Identity`" severity="secondary" class="!font-mono !text-xxs !px-1.5 !py-0.2" />
+        <Tag :value="`${columns.length} 欄位`" severity="info" class="!text-xxs !px-1.5 !py-0.2" />
+        <Tag v-if="pkCount > 0" :value="`${pkCount} 主鍵`" severity="warn" class="!text-xxs !px-1.5 !py-0.2" />
+        <Tag v-if="identityCount > 0" :value="`${identityCount} Identity`" severity="secondary" class="!text-xxs !px-1.5 !py-0.2" />
 
         <!-- Quick Filter Input -->
         <IconField class="w-40 sm:w-56 ml-2">
@@ -18,7 +18,7 @@
             type="text"
             placeholder="搜尋欄位名稱、型別..."
             size="small"
-            class="w-full !bg-dark-900 !border-dark-700 !py-0.5 !pl-7 !pr-6 !text-xs font-mono"
+            class="w-full !bg-dark-900 !border-dark-700 !py-0.5 !pl-7 !pr-6 !text-xs"
           />
         </IconField>
       </div>

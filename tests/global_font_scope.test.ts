@@ -9,6 +9,14 @@ function readSource(relativePath: string): string {
   return readFileSync(resolve(root, relativePath), 'utf-8');
 }
 
+function sliceBetween(source: string, start: string, end: string): string {
+  const from = source.indexOf(start);
+  assert.notEqual(from, -1, `missing marker: ${start}`);
+  const to = source.indexOf(end, from);
+  assert.notEqual(to, -1, `missing marker: ${end}`);
+  return source.slice(from, to);
+}
+
 /**
  * The "全域介面字型" setting writes --app-font-sans, which only reaches elements styled with
  * Tailwind's font-sans utility. Any surface that hardcodes a monospace stack silently opts out
@@ -98,4 +106,76 @@ test('the Explorer status tag overrides the bold PrimeVue tag weight', () => {
     /value="使用中"[\s\S]{0,200}?class="[^"]*!font-normal/,
     'the 使用中 tag must be explicitly reset to the regular weight'
   );
+});
+
+/**
+ * The grid font setting (查詢與結果 → 結果表格字型) is a *table* setting: it may only reach the
+ * `.tabulator` content. The chrome around it — the per-grid toolbar and the multi result set
+ * header — has to keep following the 外觀與主題 global UI font.
+ */
+const GRID_CHROME_ROOT = /w-full h-full flex flex-col bg-dark-900 overflow-hidden[^"]*/;
+
+const GRID_TOOLBARS = [
+  {
+    path: 'src/components/results/ResultGridItem.vue',
+    start: '<!-- Subheader Toolbar',
+    end: '<!-- Empty State -->',
+  },
+  {
+    path: 'src/components/results/ResultGrid.vue',
+    start: '<!-- View Mode Header Bar',
+    end: '<!-- Mode 1: Stacked Multi-Grid View',
+  },
+  {
+    path: 'src/components/editor/TableDataViewer.vue',
+    start: '<!-- Subheader toolbar for Table Data',
+    end: '<!-- Loading State -->',
+  },
+  {
+    path: 'src/components/editor/TableStructureViewer.vue',
+    start: '<!-- Subheader toolbar for Table Structure',
+    end: '<!-- Loading State -->',
+  },
+];
+
+test('the grid containers opt into the global UI font', () => {
+  for (const { path } of GRID_TOOLBARS) {
+    const containerLine = readSource(path)
+      .split('\n')
+      .find((line) => GRID_CHROME_ROOT.test(line));
+
+    assert.ok(containerLine, `${path} must keep its known container root`);
+    assert.match(containerLine!, /font-sans/, `${path} must follow the configurable global UI font`);
+    assert.doesNotMatch(containerLine!, /font-mono/, `${path} must not pin its chrome to a monospace stack`);
+    assert.doesNotMatch(
+      containerLine!,
+      /--sqlight-grid-font/,
+      `${path} must keep the grid font on the table wrapper, not on the whole component`
+    );
+  }
+});
+
+test('the grid toolbars carry no hardcoded monospace font', () => {
+  for (const { path, start, end } of GRID_TOOLBARS) {
+    const toolbar = sliceBetween(readSource(path), start, end);
+    assert.doesNotMatch(
+      toolbar,
+      /font-mono/,
+      `${path}: the toolbar must render in the 外觀與主題 font, not in the grid font`
+    );
+  }
+});
+
+test('the grid font only wraps the Tabulator table itself', () => {
+  const tableGrids = GRID_TOOLBARS.filter(
+    (grid) => grid.path !== 'src/components/results/ResultGrid.vue'
+  );
+
+  for (const { path } of tableGrids) {
+    assert.match(
+      readSource(path),
+      /class="sqlight-grid[^"]*"[\s\S]{0,200}?:style="\{ '--sqlight-grid-font': settingsStore\.gridFontFamily \}"/,
+      `${path} must bind the grid font on the .sqlight-grid wrapper`
+    );
+  }
 });

@@ -1,7 +1,10 @@
 <template>
-  <div class="w-full h-full flex flex-col bg-dark-900 overflow-hidden font-mono text-xs select-none">
+  <div class="w-full h-full flex flex-col bg-dark-900 overflow-hidden font-sans text-xs select-none">
     <!-- Subheader Toolbar: Result Set Info, Quick Filter, Warnings, Actions -->
-    <div class="h-8 bg-dark-850 border-b border-dark-700 flex items-center justify-between px-2 flex-shrink-0 space-x-2">
+    <div
+      v-if="!hideToolbar"
+      class="h-8 bg-dark-850 border-b border-dark-700 flex items-center justify-between px-2 flex-shrink-0 space-x-2"
+    >
       <!-- Left: Result Set Label & Quick Filter -->
       <div class="flex items-center space-x-2 min-w-0">
         <!-- Multiple Result Set Index Badge -->
@@ -9,7 +12,7 @@
           v-if="totalSets > 1"
           severity="info"
           :value="`Result #${setIndex + 1} (${resultSet.rowCount ?? resultSet.rows.length})`"
-          class="!font-mono !text-xxs !px-2 !py-0.5 flex-shrink-0"
+          class="!text-xxs !font-normal !px-2 !py-0.5 flex-shrink-0"
         >
           <template #icon>
             <i class="pi pi-table mr-1 text-xs"></i>
@@ -24,7 +27,7 @@
             type="text"
             placeholder="Search grid..."
             size="small"
-            class="w-full !bg-dark-900 !border-dark-700 !py-0.5 !pl-7 !pr-6 !text-xs font-mono"
+            class="w-full !bg-dark-900 !border-dark-700 !py-0.5 !pl-7 !pr-6 !text-xs"
           />
         </IconField>
 
@@ -172,7 +175,7 @@
         <div class="h-3.5 w-px bg-dark-750 mx-0.5"></div>
 
         <!-- Row Count Indicator -->
-        <span class="text-xxs text-dark-400 font-mono">
+        <span class="text-xxs text-dark-400">
           <strong class="text-dark-200">{{ resultSet.rows.length.toLocaleString() }}</strong> rows
         </span>
 
@@ -215,7 +218,10 @@
     </div>
 
     <!-- Excel-Grade Live Aggregate Bar -->
-    <div class="h-6 bg-dark-850 border-t border-dark-700 flex items-center justify-between px-3 text-xxs font-sans text-dark-300 flex-shrink-0 select-none">
+    <div
+      v-if="!hideToolbar"
+      class="h-6 bg-dark-850 border-t border-dark-700 flex items-center justify-between px-3 text-xxs font-sans text-dark-300 flex-shrink-0 select-none"
+    >
       <!-- Left: Statistics or Default Summary -->
       <div class="flex items-center space-x-2.5 overflow-x-auto min-w-0">
         <template v-if="selectionStats">
@@ -650,6 +656,8 @@ const props = defineProps<{
   queryTab?: QueryResultTab | null;
   isMaximized?: boolean;
   tabId?: string | null;
+  /** Hides the grid toolbar and the info bar, leaving only the data area (multi result set view). */
+  hideToolbar?: boolean;
 }>();
 
 defineEmits<{
