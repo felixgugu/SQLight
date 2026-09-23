@@ -327,32 +327,6 @@
         <Braces class="w-3.5 h-3.5 text-cyan-400" />
         <span>複製選取為 JSON 物件陣列</span>
       </button>
-
-      <div class="my-1 border-t border-dark-750"></div>
-
-      <button
-        @click="copyAsTsv"
-        class="w-full text-left px-2.5 py-1.5 hover:bg-dark-750 hover:text-dark-100 flex items-center space-x-2 transition-colors"
-      >
-        <FileSpreadsheet class="w-3.5 h-3.5 text-indigo-400" />
-        <span>複製全表結構為 TSV (Excel)</span>
-      </button>
-
-      <button
-        @click="copyAsJson"
-        class="w-full text-left px-2.5 py-1.5 hover:bg-dark-750 hover:text-dark-100 flex items-center space-x-2 transition-colors"
-      >
-        <Braces class="w-3.5 h-3.5 text-cyan-400" />
-        <span>複製全表結構為 JSON</span>
-      </button>
-
-      <button
-        @click="copyAsMarkdown"
-        class="w-full text-left px-2.5 py-1.5 hover:bg-dark-750 hover:text-dark-100 flex items-center space-x-2 transition-colors"
-      >
-        <Table class="w-3.5 h-3.5 text-pink-400" />
-        <span>複製全表結構為 Markdown 表格</span>
-      </button>
     </div>
   </div>
 </template>
@@ -365,11 +339,9 @@ import IconField from 'primevue/iconfield';
 import InputIcon from 'primevue/inputicon';
 import Tag from 'primevue/tag';
 import {
-  FileSpreadsheet,
   FileText,
   Copy,
   Braces,
-  Table,
   Plus,
   Trash2,
   Pencil,
@@ -912,7 +884,7 @@ function handleCellContext(event: MouseEvent, cell: TabulatorCellComponent) {
   event.stopPropagation();
 
   contextMenu.x = Math.min(event.clientX, window.innerWidth - 275);
-  contextMenu.y = Math.min(event.clientY, window.innerHeight - 440);
+  contextMenu.y = Math.min(event.clientY, window.innerHeight - 350);
   contextMenu.colName = cell.getField();
   contextMenu.cellValue = cell.getValue();
   contextMenu.rowIndex = cell.getRow().getPosition() - 1;

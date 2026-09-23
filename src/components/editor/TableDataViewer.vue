@@ -264,32 +264,6 @@
         <Trash2 class="w-3.5 h-3.5 text-rose-400" />
         <span>建立 DELETE 語法</span>
       </button>
-
-      <div class="my-1 border-t border-dark-750"></div>
-
-      <button
-        @click="copyAsTsv"
-        class="w-full text-left px-2.5 py-1.5 hover:bg-dark-750 hover:text-dark-100 flex items-center space-x-2 transition-colors"
-      >
-        <FileSpreadsheet class="w-3.5 h-3.5 text-indigo-400" />
-        <span>複製全表為 TSV (Excel)</span>
-      </button>
-
-      <button
-        @click="copyAsJson"
-        class="w-full text-left px-2.5 py-1.5 hover:bg-dark-750 hover:text-dark-100 flex items-center space-x-2 transition-colors"
-      >
-        <Braces class="w-3.5 h-3.5 text-cyan-400" />
-        <span>複製全表為 JSON</span>
-      </button>
-
-      <button
-        @click="copyAsMarkdown"
-        class="w-full text-left px-2.5 py-1.5 hover:bg-dark-750 hover:text-dark-100 flex items-center space-x-2 transition-colors"
-      >
-        <Table class="w-3.5 h-3.5 text-pink-400" />
-        <span>複製全表為 Markdown 表格</span>
-      </button>
     </div>
   </div>
 </template>
@@ -301,14 +275,12 @@ import InputText from 'primevue/inputtext';
 import IconField from 'primevue/iconfield';
 import InputIcon from 'primevue/inputicon';
 import {
-  FileSpreadsheet,
   FileText,
   Copy,
   PlusCircle,
   Edit3,
   Trash2,
   Braces,
-  Table,
 } from 'lucide-vue-next';
 import type {
   TabulatorCellComponent,
@@ -660,7 +632,7 @@ function handleCellContext(event: MouseEvent, cell: TabulatorCellComponent) {
   event.stopPropagation();
 
   const menuWidth = 220;
-  const menuHeight = 360;
+  const menuHeight = 280;
   const x = Math.min(event.clientX, Math.max(0, window.innerWidth - menuWidth - 8));
   const y = Math.min(event.clientY, Math.max(0, window.innerHeight - menuHeight - 8));
 
@@ -816,4 +788,3 @@ watch(
   }
 );
 </script>
-
