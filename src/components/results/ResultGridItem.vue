@@ -768,6 +768,28 @@ const requiresModificationPrompt = computed(() => {
 
 const isRefreshing = ref(false);
 
+/**
+ * Refresh drops the visible view state: sorting and filtering are reset so the reloaded result
+ * shows the raw data again. Column widths/order (the remembered layout) are deliberately kept.
+ */
+function resetGridState() {
+  quickFilterInput.value = '';
+  quickFilter.value = '';
+  if (quickFilterTimer) {
+    clearTimeout(quickFilterTimer);
+    quickFilterTimer = null;
+  }
+
+  const table = grid.table.value;
+  if (table) {
+    table.clearSort();
+    table.clearFilter();
+  }
+
+  // Overwrite the remembered layout so a later rebuild does not restore the dropped sorters.
+  gridLayoutStore.capture(layoutKey.value, table);
+}
+
 async function handleRefresh() {
   if (isRefreshing.value) return;
   const tab = currentTab.value;
@@ -781,6 +803,7 @@ async function handleRefresh() {
     const res = await queryStore.refreshTabResultSet(tab.id, props.setIndex);
     if (res.success) {
       modifiedCells.value = {};
+      resetGridState();
       grid.redraw(true);
       workspaceStore.showToast(`資料已重新整理（共 ${res.rowCount.toLocaleString()} 筆）`, 'success', 2000);
     } else {

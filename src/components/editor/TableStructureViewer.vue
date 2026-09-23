@@ -857,11 +857,24 @@ ORDER BY c.ORDINAL_POSITION;
       defaultValue: row[colIndexMap.get('defaultvalue') ?? 10] != null ? String(row[colIndexMap.get('defaultvalue') ?? 10]) : null,
       collation: row[colIndexMap.get('collation') ?? 11] != null ? String(row[colIndexMap.get('collation') ?? 11]) : null,
     }));
+    // Reloading drops the visible view state: sorting and filtering start over from the raw data.
+    resetGridState();
   } catch (err: unknown) {
     console.error('Failed to load table structure:', err);
     error.value = err instanceof Error ? err.message : String(err);
   } finally {
     isLoading.value = false;
+  }
+}
+
+/** Refresh resets sorting and the quick filter; column widths/order are kept. */
+function resetGridState() {
+  quickFilter.value = '';
+
+  const table = grid.table.value;
+  if (table) {
+    table.clearSort();
+    table.clearFilter();
   }
 }
 

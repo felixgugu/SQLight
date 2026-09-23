@@ -11,6 +11,18 @@ function freshStore() {
   return useGridLayoutStore();
 }
 
+function readSource(relativePath: string): string {
+  return readFileSync(resolve(process.cwd(), relativePath), 'utf-8');
+}
+
+function sliceBetween(source: string, start: string, end: string): string {
+  const from = source.indexOf(start);
+  assert.notEqual(from, -1, `missing marker: ${start}`);
+  const to = source.indexOf(end, from);
+  assert.notEqual(to, -1, `missing marker: ${end}`);
+  return source.slice(from, to);
+}
+
 interface FakeTable {
   table: Tabulator;
   appliedLayouts: unknown[][];
@@ -150,4 +162,37 @@ test('result grids wire layout restore and capture into the Tabulator lifecycle'
 
   const panel = readFileSync(resolve(process.cwd(), 'src/components/layout/AppBottomPanel.vue'), 'utf-8');
   assert.match(panel, /:tab-id="queryStore\.activeResultTabId"/);
+});
+
+test('refresh resets sorting and filtering instead of restoring them', () => {
+  const item = readSource('src/components/results/ResultGridItem.vue');
+
+  // The reset runs on every successful refresh…
+  assert.match(
+    sliceBetween(item, 'async function handleRefresh()', '// Check editability'),
+    /resetGridState\(\);/,
+    'refresh must reset the visible view state'
+  );
+
+  // …and drops sorting, filtering and the quick-filter input while keeping column widths.
+  const resetBody = sliceBetween(item, 'function resetGridState()', 'async function handleRefresh()');
+  assert.match(resetBody, /quickFilterInput\.value = ''/);
+  assert.match(resetBody, /table\.clearSort\(\)/);
+  assert.match(resetBody, /table\.clearFilter\(\)/);
+  assert.match(
+    resetBody,
+    /gridLayoutStore\.capture\(layoutKey\.value, table\)/,
+    'the remembered sorters must be overwritten so a rebuild cannot bring them back'
+  );
+  assert.doesNotMatch(resetBody, /setColumnLayout|setSort\(/, 'column layout must survive a refresh');
+
+  for (const path of [
+    'src/components/editor/TableDataViewer.vue',
+    'src/components/editor/TableStructureViewer.vue',
+  ]) {
+    const source = readSource(path);
+    assert.match(source, /resetGridState\(\);/, `${path} must reset on reload`);
+    assert.match(source, /table\.clearSort\(\)/, `${path} must drop the sorter`);
+    assert.match(source, /table\.clearFilter\(\)/, `${path} must drop the quick filter`);
+  }
 });

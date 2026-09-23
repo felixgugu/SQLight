@@ -746,11 +746,29 @@ async function loadData() {
       columns.value = [];
       rows.value = [];
     }
+    // Reloading drops the visible view state: sorting and filtering start over from the raw data.
+    resetGridState();
   } catch (err: unknown) {
     error.value = err instanceof Error ? err.message : String(err);
   } finally {
     isLoading.value = false;
     clearCellSelection();
+  }
+}
+
+/** Refresh resets sorting and the quick filter; column widths/order are kept. */
+function resetGridState() {
+  quickFilter.value = '';
+  quickFilterApplied.value = '';
+  if (quickFilterTimer) {
+    clearTimeout(quickFilterTimer);
+    quickFilterTimer = null;
+  }
+
+  const table = grid.table.value;
+  if (table) {
+    table.clearSort();
+    table.clearFilter();
   }
 }
 
