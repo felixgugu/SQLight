@@ -279,20 +279,6 @@
         </template>
       </div>
 
-      <!-- Right: Copy Selection Button -->
-      <div v-if="selectionStats" class="flex items-center space-x-1 flex-shrink-0 ml-2">
-        <Button
-          type="button"
-          icon="pi pi-copy"
-          label="複製選取"
-          size="small"
-          severity="primary"
-          outlined
-          @click="copySelectedCells"
-          v-tooltip.top="'複製選取內容 (Ctrl+C)'"
-          class="!py-0.5 !px-1.5 !text-[10px]"
-        />
-      </div>
     </div>
 
     <!-- Custom Context Menu for Cells & Column Pinning -->

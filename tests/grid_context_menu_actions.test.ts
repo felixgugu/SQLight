@@ -17,22 +17,22 @@ function countOccurrences(source: string, needle: string): number {
  * The full-table copy actions live in the toolbar. They used to be duplicated at the bottom of
  * every grid context menu, which made the menu longer without adding reachable functionality.
  */
-describe('Grid context menus do not duplicate the toolbar copy actions', () => {
-  const grids: Array<{ path: string; actions: string[] }> = [
-    {
-      path: 'src/components/results/ResultGridItem.vue',
-      actions: ['copyAsTsv', 'copyAsCsv', 'copyAsJson', 'copyAsMarkdown'],
-    },
-    {
-      path: 'src/components/editor/TableDataViewer.vue',
-      actions: ['copyAsTsv', 'copyAsJson', 'copyAsMarkdown'],
-    },
-    {
-      path: 'src/components/editor/TableStructureViewer.vue',
-      actions: ['copyAsTsv', 'copyAsJson', 'copyAsMarkdown'],
-    },
-  ];
+const grids: Array<{ path: string; actions: string[] }> = [
+  {
+    path: 'src/components/results/ResultGridItem.vue',
+    actions: ['copyAsTsv', 'copyAsCsv', 'copyAsJson', 'copyAsMarkdown'],
+  },
+  {
+    path: 'src/components/editor/TableDataViewer.vue',
+    actions: ['copyAsTsv', 'copyAsJson', 'copyAsMarkdown'],
+  },
+  {
+    path: 'src/components/editor/TableStructureViewer.vue',
+    actions: ['copyAsTsv', 'copyAsJson', 'copyAsMarkdown'],
+  },
+];
 
+describe('Grid context menus own the actions the toolbars cannot reach', () => {
   for (const grid of grids) {
     test(`${grid.path} binds each full-table copy action exactly once`, () => {
       const source = readSource(grid.path);
@@ -60,4 +60,27 @@ describe('Grid context menus do not duplicate the toolbar copy actions', () => {
     assert.match(result, /複製整列資料 \(Copy Row\)/);
     assert.match(result, /複製整列為 JSON \(Row JSON\)/);
   });
+
+  for (const grid of grids) {
+    test(`${grid.path} keeps selection copy in the context menu only`, () => {
+      const source = readSource(grid.path);
+
+      assert.equal(
+        countOccurrences(source, '@click="copySelectedCells"'),
+        1,
+        'the aggregate bar must not repeat the context menu action'
+      );
+      assert.doesNotMatch(
+        source,
+        /Copy Selection Button/,
+        'the aggregate bar copy-selection button was removed'
+      );
+      assert.match(
+        source,
+        /onCopySelected: \(\) => gridExport\.copySelectedCells\(\)/,
+        'Ctrl+C must keep copying the current selection'
+      );
+      assert.match(source, /複製選取內容 \(\{\{ selectionStats\?\.totalCells \}\} 格\)/);
+    });
+  }
 });
