@@ -13,6 +13,9 @@ Cargo.lock
 # Tauri build artifacts
 src-tauri/gen
 
+# Agent scaffolding (local tooling, not part of the app)
+.agents/
+
 # Editor & OS
 .vscode/*
 !.vscode/extensions.json
