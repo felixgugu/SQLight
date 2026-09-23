@@ -18,6 +18,12 @@ import type {
 
 /** Explicit NULL marker recommended by the import spec. */
 export const NULL_SENTINEL = '\\N';
+/**
+ * Literal text the grid's Copy TSV export writes for NULL (`formatCellForExport`).
+ * Accepted as SQL NULL for non-text columns only: a typed value can never legitimately
+ * equal the word `NULL`, whereas a text column may genuinely hold that string.
+ */
+export const NULL_LITERAL = 'NULL';
 export const PREVIEW_ROW_LIMIT = 20;
 export const MAX_DISPLAYED_ERRORS = 100;
 /** Source size cap (file upload or pasted text). */
@@ -228,7 +234,10 @@ export function validateCell(raw: string, context: CellValidationContext): CellC
   const { column, rawColumn } = context;
   const isText = TEXT_TYPES.has(column.dataType);
 
-  if (raw === NULL_SENTINEL) {
+  // `\N` always means SQL NULL. The literal `NULL` produced by the grid's TSV export is
+  // only treated as SQL NULL for non-text columns, since text values may be the word itself.
+  const isNullToken = raw === NULL_SENTINEL || (!isText && raw.toUpperCase() === NULL_LITERAL);
+  if (isNullToken) {
     if (!column.nullable) {
       return { ok: false, reason: '必填值缺漏', detail: '欄位不可為 NULL' };
     }

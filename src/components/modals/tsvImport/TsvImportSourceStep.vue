@@ -83,7 +83,7 @@
           :value="store.pastedText"
           rows="9"
           spellcheck="false"
-          placeholder="貼上以 Tab 分隔欄位的文字（支援 Windows 與 Unix 換行，\N 表示 NULL）"
+          placeholder="貼上以 Tab 分隔欄位的文字（支援 Windows 與 Unix 換行；\N 表示 NULL，非文字欄位亦可填 NULL）"
           class="w-full bg-dark-900 border border-dark-700 rounded-md p-2 text-xs font-mono text-dark-100 focus:outline-none focus:border-emerald-500/60 resize-none"
           @input="handlePasteInput"
         ></textarea>

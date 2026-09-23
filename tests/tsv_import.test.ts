@@ -150,6 +150,25 @@ test('validateCell enforces required, NULL and empty value rules', () => {
   expectInvalid('', optionalNumber, '型別不符');
 });
 
+test('validateCell treats the literal NULL export text as SQL NULL for non-text columns', () => {
+  // Grid Copy TSV writes NULL cells as the literal text `NULL`.
+  const optionalDate = column('DueDate', 'date', { isNullable: true });
+  expectValid('NULL', optionalDate, null);
+  expectValid('null', optionalDate, null);
+  expectValid('\\N', optionalDate, null);
+
+  const requiredDate = column('StartDate', 'date', { isNullable: false });
+  expectInvalid('NULL', requiredDate, '必填值缺漏');
+
+  const optionalNumber = column('Age', 'int', { isNullable: true });
+  expectValid('NULL', optionalNumber, null);
+
+  // Text columns keep the literal word as data so genuine `NULL` strings survive.
+  const name = column('Name', 'nvarchar', { maxLength: 10, isNullable: true });
+  expectValid('NULL', name, 'NULL');
+  expectValid('\\N', name, null);
+});
+
 test('validateCell checks text length, GUID, binary, dates and booleans', () => {
   const name = column('Name', 'nvarchar', { maxLength: 3, isNullable: false });
   expectValid('abc', name, 'abc');
