@@ -686,6 +686,7 @@ export default {
     editorBackgroundImageDisabled: '已保留圖片，但目前關閉顯示',
     editorBackgroundImageProcessing: '正在處理圖片…',
     editorBackgroundImageApplied: '已套用背景圖（{width} × {height}，{size}）',
+    editorBackgroundImageNotPersisted: '背景圖已套用，但設定無法寫入本機儲存空間，重開後將不會保留',
     editorBackgroundImageRemoved: '已移除編輯區背景圖',
     editorBackgroundImageUnsupportedType: '僅支援 PNG、JPEG 或 WebP 圖片',
     editorBackgroundImageTooLarge: '圖片過大，請改用尺寸較小的檔案',

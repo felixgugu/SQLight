@@ -179,6 +179,16 @@ async function handleFileChange(event: Event) {
   try {
     const prepared = await prepareEditorBackgroundImage(file);
     settingsStore.setEditorBackgroundImage(prepared.dataUrl);
+    // The settings watcher persists asynchronously, so verify the write here: a full storage quota
+    // must be reported instead of silently keeping a backdrop that vanishes on restart.
+    if (!settingsStore.saveSettings()) {
+      workspaceStore.showToast(
+        t('settingsModal.editorBackgroundImageNotPersisted'),
+        'warning',
+        4200
+      );
+      return;
+    }
     workspaceStore.showToast(
       t('settingsModal.editorBackgroundImageApplied', {
         width: prepared.width,

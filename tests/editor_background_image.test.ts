@@ -123,7 +123,7 @@ describe('editor background image settings', () => {
     store.setEditorBackgroundImage('data:image/png;base64,AAAA');
     store.setEditorBackgroundImageOpacity(0.5);
     store.setEditorBackgroundImageSize(80);
-    store.saveSettings();
+    assert.equal(store.saveSettings(), true, 'a successful write must be reported to the caller');
 
     const saved = JSON.parse(storageData.get('sqlight_app_settings') || '{}');
     assert.equal(saved.editorBackgroundImage, 'data:image/png;base64,AAAA');
@@ -143,6 +143,19 @@ describe('editor background image settings', () => {
     assert.equal(hydrated.editorBackgroundImageEnabled, false);
     assert.equal(hydrated.editorBackgroundImageOpacity, 0.25);
     assert.equal(hydrated.editorBackgroundImageSize, 60);
+  });
+
+  test('a rejected localStorage write is reported instead of thrown', () => {
+    const store = useSettingsStore();
+    const originalSetItem = globalThis.localStorage.setItem;
+    globalThis.localStorage.setItem = () => {
+      throw new Error('QuotaExceededError');
+    };
+    try {
+      assert.equal(store.saveSettings(), false);
+    } finally {
+      globalThis.localStorage.setItem = originalSetItem;
+    }
   });
 
   test('a tampered stored opacity cannot push the layer outside 0-100%', () => {
@@ -214,6 +227,11 @@ describe('SQL editor backdrop wiring', () => {
     assert.match(tab, /setEditorBackgroundImageSize\(/);
     assert.match(tab, /useWorkspaceStore\(\)/, 'failures must surface through the shared toast channel');
     assert.match(tab, /catch \(error\) \{[\s\S]*errorMessageKey\(error\)/);
+    assert.match(
+      tab,
+      /if \(!settingsStore\.saveSettings\(\)\)/,
+      'a rejected localStorage write has to warn instead of silently dropping the backdrop'
+    );
   });
 
   test('both locales describe the backdrop setting', () => {
@@ -227,6 +245,7 @@ describe('SQL editor backdrop wiring', () => {
         'editorBackgroundImageOpacity',
         'editorBackgroundImageSize',
         'editorBackgroundImageApplied',
+        'editorBackgroundImageNotPersisted',
         'editorBackgroundImageTooLarge',
       ]) {
         assert.match(source, new RegExp(`\\b${key}:`), `${locale} is missing ${key}`);

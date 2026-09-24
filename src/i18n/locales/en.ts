@@ -686,6 +686,7 @@ export default {
     editorBackgroundImageDisabled: 'The image is kept but currently hidden',
     editorBackgroundImageProcessing: 'Processing image…',
     editorBackgroundImageApplied: 'Backdrop applied ({width} × {height}, {size})',
+    editorBackgroundImageNotPersisted: 'Backdrop applied, but the setting could not be written to local storage and will not survive a restart',
     editorBackgroundImageRemoved: 'Editor backdrop removed',
     editorBackgroundImageUnsupportedType: 'Only PNG, JPEG or WebP images are supported',
     editorBackgroundImageTooLarge: 'The image is too large; please pick a smaller file',

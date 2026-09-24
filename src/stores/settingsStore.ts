@@ -281,7 +281,8 @@ export const useSettingsStore = defineStore('settings', () => {
     return testTablePatternByRules(hiddenTableRules.value, tableName, schema);
   }
 
-  function saveSettings() {
+  /** Persists the current settings and reports whether the write actually succeeded. */
+  function saveSettings(): boolean {
     const data: AppSettings = {
       colorMode: colorMode.value,
       themePreset: themePreset.value,
@@ -308,8 +309,10 @@ export const useSettingsStore = defineStore('settings', () => {
     };
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+      return true;
     } catch (e) {
       console.warn('Failed to persist settings:', e);
+      return false;
     }
   }
 
