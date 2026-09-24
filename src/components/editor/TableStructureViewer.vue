@@ -6,9 +6,9 @@
         <i class="pi pi-list text-structure text-xs flex-shrink-0"></i>
         <span class="font-semibold text-dark-100 truncate">{{ schema }}.{{ tableName }}</span>
         <span class="text-dark-600">|</span>
-        <Tag :value="`${columns.length} 欄位`" severity="info" class="!text-xxs !px-1.5 !py-0.2" />
-        <Tag v-if="pkCount > 0" :value="`${pkCount} 主鍵`" severity="warn" class="!text-xxs !px-1.5 !py-0.2" />
-        <Tag v-if="identityCount > 0" :value="`${identityCount} Identity`" severity="secondary" class="!text-xxs !px-1.5 !py-0.2" />
+        <Tag :value="$t('structure.columnsTag', { count: columns.length })" severity="info" class="!text-xxs !px-1.5 !py-0.2" />
+        <Tag v-if="pkCount > 0" :value="$t('structure.pkTag', { count: pkCount })" severity="warn" class="!text-xxs !px-1.5 !py-0.2" />
+        <Tag v-if="identityCount > 0" :value="$t('structure.identityTag', { count: identityCount })" severity="secondary" class="!text-xxs !px-1.5 !py-0.2" />
 
         <!-- Quick Filter Input -->
         <IconField class="w-40 sm:w-56 ml-2">
@@ -16,7 +16,7 @@
           <InputText
             v-model="quickFilter"
             type="text"
-            placeholder="搜尋欄位名稱、型別..."
+            :placeholder="$t('structure.searchColumnsPlaceholder')"
             size="small"
             class="w-full !bg-dark-900 !border-dark-700 !py-0.5 !pl-7 !pr-6 !text-xs"
           />
@@ -28,12 +28,12 @@
         <Button
           type="button"
           :icon="copiedTsv ? 'pi pi-check text-ok' : 'pi pi-file-excel text-ok'"
-          :label="copiedTsv ? '已複製' : 'Copy TSV'"
+          :label="copiedTsv ? $t('common.copied') : 'Copy TSV'"
           size="small"
           severity="secondary"
           outlined
           @click="copyAsTsv"
-          v-tooltip.top="'複製全表結構為 TSV (相容 Excel)'"
+          v-tooltip.top="$t('structure.copyTsvTooltip')"
           class="!text-xxs !py-0.5 !px-2"
         />
 
@@ -46,7 +46,7 @@
           severity="secondary"
           outlined
           @click="copyAsJson"
-          v-tooltip.top="'複製全表結構為 JSON 物件陣列'"
+          v-tooltip.top="$t('structure.copyJsonTooltip')"
           class="!text-xxs !py-0.5 !px-2"
         />
 
@@ -59,7 +59,7 @@
           severity="secondary"
           outlined
           @click="copyAsMarkdown"
-          v-tooltip.top="'複製全表結構為 Markdown 表格'"
+          v-tooltip.top="$t('structure.copyMdTooltip')"
           class="!text-xxs !py-0.5 !px-2"
         />
 
@@ -67,12 +67,12 @@
         <Button
           type="button"
           :icon="isLoading ? 'pi pi-spin pi-spinner' : 'pi pi-refresh'"
-          label="重新整理"
+          :label="$t('common.refresh')"
           size="small"
           severity="secondary"
           outlined
           @click="loadStructure"
-          v-tooltip.top="'重新載入資料表結構'"
+          v-tooltip.top="$t('structure.reloadStructureTooltip')"
           class="!text-xxs !py-0.5 !px-2 ml-1"
         />
       </div>
@@ -81,12 +81,12 @@
     <!-- Loading State -->
     <div v-if="isLoading" class="flex-1 flex items-center justify-center text-dark-400 space-x-2">
       <RotateCw class="w-4 h-4 animate-spin text-structure" />
-      <span>載入資料表結構中...</span>
+      <span>{{ $t('structure.loadingStructure') }}</span>
     </div>
 
     <!-- Error State -->
     <div v-else-if="error" class="flex-1 p-4 text-danger">
-      <div class="font-semibold mb-1">載入結構失敗:</div>
+      <div class="font-semibold mb-1">{{ $t('structure.loadFailed') }}</div>
       <div class="font-mono text-xs bg-rose-50 dark:bg-rose-950/30 p-3 rounded border border-rose-200 dark:border-rose-900/50">{{ error }}</div>
     </div>
 
@@ -109,55 +109,55 @@
       <div class="flex items-center space-x-2.5 overflow-x-auto min-w-0">
         <template v-if="selectionStats">
           <div class="flex items-center space-x-1 font-semibold text-accent flex-shrink-0">
-            <span>選取:</span>
+            <span>{{ $t('results.selected') }}:</span>
             <span v-if="selectedColumnsCount > 1" class="text-warn font-mono">
-              {{ selectedColumnsCount }} 欄
+              {{ selectedColumnsCount }} {{ $t('results.columnsUnit') }}
             </span>
             <span class="font-mono text-dark-100">
-              {{ selectedColumnsCount > 1 ? `(${selectionStats.totalCells.toLocaleString()} 格)` : `${selectionStats.totalCells.toLocaleString()} 格` }}
+              {{ selectedColumnsCount > 1 ? `(${selectionStats.totalCells.toLocaleString()} ${$t('results.cellsUnit')})` : `${selectionStats.totalCells.toLocaleString()} ${$t('results.cellsUnit')}` }}
             </span>
             <span v-if="selectionStats.numericCount > 0" class="text-dark-400 font-mono text-[10px]">
-              [{{ selectionStats.numericCount.toLocaleString() }} 數值]
+              [{{ selectionStats.numericCount.toLocaleString() }} {{ $t('results.numericUnit') }}]
             </span>
           </div>
 
           <template v-if="selectionStats.numericCount > 0">
             <span class="text-dark-600 flex-shrink-0">|</span>
             <div class="flex-shrink-0">
-              總和 (Sum): <strong class="font-mono text-ok">{{ formatAggregateNumber(selectionStats.sum) }}</strong>
+              {{ $t('results.sum') }}: <strong class="font-mono text-ok">{{ formatAggregateNumber(selectionStats.sum) }}</strong>
             </div>
             <span class="text-dark-600 flex-shrink-0">|</span>
             <div class="flex-shrink-0">
-              平均 (Avg): <strong class="font-mono text-info">{{ formatAggregateNumber(selectionStats.avg) }}</strong>
+              {{ $t('results.avg') }}: <strong class="font-mono text-info">{{ formatAggregateNumber(selectionStats.avg) }}</strong>
             </div>
           </template>
 
           <span class="text-dark-600 flex-shrink-0">|</span>
           <div class="flex-shrink-0">
-            非重複計數: <strong class="font-mono text-dark-100">{{ selectionStats.distinctCount.toLocaleString() }}</strong>
+            {{ $t('results.distinct') }}: <strong class="font-mono text-dark-100">{{ selectionStats.distinctCount.toLocaleString() }}</strong>
           </div>
 
           <Button
             type="button"
-            label="清除"
+            :label="$t('common.clear')"
             text
             size="small"
             severity="secondary"
             @click="clearCellSelection"
-            v-tooltip.top="'清除選取 (Esc)'"
+            v-tooltip.top="$t('results.clearSelectionTooltip')"
             class="!ml-1 !p-0 !text-[10px] !underline"
           />
         </template>
 
         <template v-else>
           <div class="flex items-center space-x-2 text-dark-400">
-            <span>共 <strong class="font-mono text-structure">{{ columns.length }}</strong> 個欄位</span>
+            <span>{{ $t('structure.totalColumnsSummary', { count: columns.length }) }}</span>
             <span class="text-dark-600">|</span>
-            <span><strong class="font-mono text-warn">{{ pkCount }}</strong> 個主鍵欄位</span>
+            <span>{{ $t('structure.pkColumnsSummary', { count: pkCount }) }}</span>
             <span class="text-dark-600">|</span>
-            <span><strong class="font-mono text-info">{{ identityCount }}</strong> 個自動識別欄位</span>
+            <span>{{ $t('structure.identityColumnsSummary', { count: identityCount }) }}</span>
             <span class="text-dark-600">|</span>
-            <span class="text-dark-500 italic text-[10px]">提示：支援標題列拖曳多欄選取、Shift 連續多欄、Ctrl 多選、儲存格框選與 Ctrl+A 全選</span>
+            <span class="text-dark-500 italic text-[10px]">{{ $t('results.selectionTip') }}</span>
           </div>
         </template>
       </div>
@@ -180,7 +180,7 @@
         class="w-full text-left px-2.5 py-1.5 hover:bg-dark-750 hover:text-dark-100 flex items-center space-x-2 transition-colors"
       >
         <Copy class="w-3.5 h-3.5 text-accent" />
-        <span>複製儲存格值 (Copy Cell)</span>
+        <span>{{ $t('dataView.copyCell') }}</span>
       </button>
 
       <button
@@ -188,7 +188,7 @@
         class="w-full text-left px-2.5 py-1.5 hover:bg-dark-750 hover:text-dark-100 flex items-center space-x-2 transition-colors"
       >
         <FileText class="w-3.5 h-3.5 text-ok" />
-        <span>複製整列欄位資訊 (Copy Row)</span>
+        <span>{{ $t('structure.copyRowInfo') }}</span>
       </button>
 
       <button
@@ -196,14 +196,14 @@
         class="w-full text-left px-2.5 py-1.5 hover:bg-dark-750 hover:text-dark-100 flex items-center space-x-2 transition-colors"
       >
         <Braces class="w-3.5 h-3.5 text-ok" />
-        <span>複製整列為 JSON (Row JSON)</span>
+        <span>{{ $t('dataView.copyRowJson') }}</span>
       </button>
 
       <div class="my-1 border-t border-dark-750"></div>
 
       <!-- ALTER TABLE Section Header -->
       <div class="px-2.5 py-1 text-xxs text-structure font-semibold uppercase tracking-wider flex items-center justify-between">
-        <span>產生 ALTER TABLE 語法</span>
+        <span>{{ $t('structure.generateAlterHeader') }}</span>
         <span v-if="targetColumnName" class="text-dark-500 font-mono text-[10px] truncate max-w-[110px]">
           {{ targetColumnName }}
         </span>
@@ -215,16 +215,16 @@
           type="button"
           @click="handleAlterColumnScript('alter')"
           class="flex-1 text-left px-2.5 py-1.5 hover:text-dark-100 flex items-center space-x-2 transition-colors min-w-0"
-          title="在新查詢分頁開啟 ALTER COLUMN 語法"
+          :title="$t('structure.alterColumnTooltip')"
         >
           <Pencil class="w-3.5 h-3.5 text-warn flex-shrink-0" />
-          <span class="truncate">修改欄位 (ALTER COLUMN...)</span>
+          <span class="truncate">{{ $t('structure.alterColumn') }}</span>
         </button>
         <button
           type="button"
           @click.stop="handleCopyAlterColumnScript('alter')"
           class="p-1.5 text-dark-400 hover:text-accent rounded hover:bg-dark-700 mr-1.5 transition-colors flex-shrink-0"
-          title="複製 ALTER COLUMN 語法至剪貼簿"
+          :title="$t('structure.copyAlterTooltip')"
         >
           <Copy class="w-3 h-3" />
         </button>
@@ -236,16 +236,16 @@
           type="button"
           @click="handleAlterColumnScript('add')"
           class="flex-1 text-left px-2.5 py-1.5 hover:text-dark-100 flex items-center space-x-2 transition-colors min-w-0"
-          title="在新查詢分頁開啟 ADD COLUMN 語法"
+          :title="$t('structure.addColumnTooltip')"
         >
           <Plus class="w-3.5 h-3.5 text-ok flex-shrink-0" />
-          <span class="truncate">新增欄位 (ADD COLUMN...)</span>
+          <span class="truncate">{{ $t('structure.addColumn') }}</span>
         </button>
         <button
           type="button"
           @click.stop="handleCopyAlterColumnScript('add')"
           class="p-1.5 text-dark-400 hover:text-accent rounded hover:bg-dark-700 mr-1.5 transition-colors flex-shrink-0"
-          title="複製 ADD COLUMN 語法至剪貼簿"
+          :title="$t('structure.copyAddTooltip')"
         >
           <Copy class="w-3 h-3" />
         </button>
@@ -257,16 +257,16 @@
           type="button"
           @click="handleAlterColumnScript('drop')"
           class="flex-1 text-left px-2.5 py-1.5 hover:text-danger text-danger/90 flex items-center space-x-2 transition-colors min-w-0"
-          title="在新查詢分頁開啟 DROP COLUMN 語法"
+          :title="$t('structure.dropColumnTooltip')"
         >
           <Trash2 class="w-3.5 h-3.5 text-danger flex-shrink-0" />
-          <span class="truncate">刪除欄位 (DROP COLUMN...)</span>
+          <span class="truncate">{{ $t('structure.dropColumn') }}</span>
         </button>
         <button
           type="button"
           @click.stop="handleCopyAlterColumnScript('drop')"
           class="p-1.5 text-dark-400 hover:text-danger rounded hover:bg-dark-700 mr-1.5 transition-colors flex-shrink-0"
-          title="複製 DROP COLUMN 語法至剪貼簿"
+          :title="$t('structure.copyDropTooltip')"
         >
           <Copy class="w-3 h-3" />
         </button>
@@ -278,16 +278,16 @@
           type="button"
           @click="handleAlterColumnScript('all')"
           class="flex-1 text-left px-2.5 py-1.5 hover:text-dark-100 flex items-center space-x-2 transition-colors min-w-0 text-structure"
-          title="在新查詢分頁產生完整 ALTER TABLE 語法樣板"
+          :title="$t('structure.allAlterTooltip')"
         >
           <FileCode class="w-3.5 h-3.5 text-structure flex-shrink-0" />
-          <span class="truncate">完整 ALTER 樣板 (All-in-One)</span>
+          <span class="truncate">{{ $t('structure.allAlterTemplate') }}</span>
         </button>
         <button
           type="button"
           @click.stop="handleCopyAlterColumnScript('all')"
           class="p-1.5 text-dark-400 hover:text-structure rounded hover:bg-dark-700 mr-1.5 transition-colors flex-shrink-0"
-          title="複製完整樣板至剪貼簿"
+          :title="$t('structure.copyAllAlterTooltip')"
         >
           <Copy class="w-3 h-3" />
         </button>
@@ -302,7 +302,7 @@
         class="w-full text-left px-2.5 py-1.5 hover:bg-dark-750 hover:text-dark-100 flex items-center space-x-2 transition-colors"
       >
         <Copy class="w-3.5 h-3.5 text-accent" />
-        <span>複製選取內容 ({{ selectionStats?.totalCells }} 格)</span>
+        <span>{{ $t('results.copySelectionCells', { count: selectionStats?.totalCells }) }}</span>
       </button>
 
       <button
@@ -311,7 +311,7 @@
         class="w-full text-left px-2.5 py-1.5 hover:bg-dark-750 hover:text-dark-100 flex items-center space-x-2 transition-colors"
       >
         <Braces class="w-3.5 h-3.5 text-er" />
-        <span>複製選取為 JSON 物件陣列</span>
+        <span>{{ $t('results.copySelectionAsJson') }}</span>
       </button>
     </div>
   </div>

@@ -5,7 +5,7 @@
       <!-- Left: Title -->
       <div class="flex items-center space-x-1.5">
         <FolderGit2 class="w-3.5 h-3.5 text-accent" />
-        <span>SQL 檔案</span>
+        <span>{{ $t('sidebar.sqlFiles') }}</span>
       </div>
 
       <!-- Right: Toolbar (新增, 恢復排除, 重新整理, 全部收合) -->
@@ -19,7 +19,7 @@
           text
           rounded
           class="!h-6 !w-6 !p-0 !text-warn"
-          v-tooltip.bottom="`恢復已取消監控的項目 (${sqlFolderStore.excludedPaths.length})`"
+          v-tooltip.bottom="$t('sidebar.restoreExcludedPaths', { count: sqlFolderStore.excludedPaths.length })"
           @click="sqlFolderStore.restoreExcludedPaths"
         />
 
@@ -32,7 +32,7 @@
           rounded
           class="!h-6 !w-6 !p-0"
           :disabled="sqlFolderStore.isLoading"
-          v-tooltip.bottom="'新增監控資料夾 (Add Folder)'"
+          v-tooltip.bottom="$t('sidebar.addFolderTooltip')"
           @click="handleAddFolder"
         />
 
@@ -45,7 +45,7 @@
           rounded
           class="!h-6 !w-6 !p-0"
           :disabled="sqlFolderStore.isLoading"
-          v-tooltip.bottom="'重新整理 (Refresh)'"
+          v-tooltip.bottom="$t('common.refresh')"
           @click="handleRefreshAll"
         />
 
@@ -57,7 +57,7 @@
           text
           rounded
           class="!h-6 !w-6 !p-0"
-          v-tooltip.bottom="'全部收合 (Collapse All)'"
+          v-tooltip.bottom="$t('sidebar.collapseAll')"
           @click="sqlFolderStore.collapseAll"
         />
       </div>
@@ -72,13 +72,13 @@
       >
         <FolderSearch class="w-8 h-8 text-dark-600 mx-auto stroke-1" />
         <div class="text-xxs leading-relaxed">
-          尚未加入 SQL 監控資料夾<br />
-          可加入本機目錄隨時瀏覽與直接開啟編輯 .sql 檔案
+          {{ $t('sidebar.noMonitoredFolders') }}<br />
+          {{ $t('sidebar.monitoredFoldersHint') }}
         </div>
         <Button
           type="button"
           size="small"
-          label="新增資料夾"
+          :label="$t('sidebar.addFolder')"
           icon="pi pi-folder-open"
           severity="secondary"
           class="!text-xxs !py-1 !px-2.5"
@@ -101,7 +101,7 @@
               'flex items-center space-x-1.5 px-1.5 py-1 rounded cursor-pointer transition-colors group select-none',
               'hover:bg-dark-750 text-dark-200'
             ]"
-            :title="`${folder.name}\n路徑: ${folder.path}\n(右鍵開啟選單)`"
+            :title="`${folder.name}\n${folder.path}`"
           >
             <!-- Chevron -->
             <button
@@ -133,7 +133,7 @@
                 type="button"
                 @click.stop="sqlFolderStore.refreshFolder(folder.path)"
                 class="p-0.5 hover:bg-dark-700 text-dark-400 hover:text-dark-200 rounded"
-                title="重新整理此資料夾"
+                :title="$t('sidebar.refreshThisFolder')"
               >
                 <RotateCw :class="['w-2.5 h-2.5', sqlFolderStore.refreshingPath === folder.path ? 'animate-spin text-accent' : '']" />
               </button>
@@ -143,7 +143,7 @@
                 type="button"
                 @click.stop="sqlFolderStore.unmonitorItem(folder.path, folder.name, true)"
                 class="p-0.5 hover:bg-dark-700 text-dark-400 hover:text-danger rounded"
-                title="取消監控"
+                :title="$t('sidebar.unmonitor')"
               >
                 <X class="w-2.5 h-2.5" />
               </button>
@@ -161,7 +161,7 @@
               class="py-1 px-2 text-xxs text-dark-500 flex items-center space-x-1.5"
             >
               <RotateCw class="w-2.5 h-2.5 animate-spin text-accent" />
-              <span>掃描中...</span>
+              <span>{{ $t('sidebar.scanning') }}</span>
             </div>
 
             <!-- No .sql files -->
@@ -169,7 +169,7 @@
               v-else-if="!sqlFolderStore.folderTrees[folder.path]?.children || sqlFolderStore.folderTrees[folder.path]?.children?.length === 0"
               class="py-1 px-2 text-xxs text-dark-500 italic"
             >
-              (無 .sql 檔案)
+              {{ $t('sidebar.noSqlFiles') }}
             </div>
 
             <!-- Children Nodes -->
@@ -193,25 +193,25 @@
     <Dialog
       v-model:visible="isRenameModalOpen"
       modal
-      :header="targetNode?.isDir ? '重新命名資料夾' : '重新命名檔案'"
+      :header="targetNode?.isDir ? $t('sidebar.renameFolder') : $t('sidebar.renameFile')"
       class="w-full max-w-md font-sans"
     >
       <div class="space-y-3 text-xs py-1">
         <p class="text-dark-300 leading-relaxed">
-          請輸入新的{{ targetNode?.isDir ? '資料夾' : '檔案' }}名稱：
+          {{ $t('sidebar.promptNewName', { target: targetNode?.isDir ? $t('sidebar.folder') : $t('sidebar.file') }) }}
         </p>
         <div>
-          <label class="block text-xxs text-dark-400 mb-1">新名稱</label>
+          <label class="block text-xxs text-dark-400 mb-1">{{ $t('sidebar.newName') }}</label>
           <InputText
             id="rename-target-input"
             v-model="renameInput"
-            :placeholder="targetNode?.isDir ? '例如: Scripts' : '例如: query.sql'"
+            :placeholder="targetNode?.isDir ? $t('sidebar.folderPlaceholder') : $t('sidebar.filePlaceholder')"
             class="w-full font-sans text-xs"
             @keyup.enter="handleConfirmRename"
           />
           <p v-if="renameError" class="text-danger text-xxs mt-1.5">{{ renameError }}</p>
           <p v-else-if="!targetNode?.isDir" class="text-dark-400 text-xxs mt-1.5">
-            若未輸入 .sql 副檔名，系統將會自動補齊。
+            {{ $t('sidebar.sqlExtHint') }}
           </p>
         </div>
       </div>
@@ -220,7 +220,7 @@
         <div class="flex items-center justify-end space-x-2 pt-2">
           <Button
             type="button"
-            label="取消"
+            :label="$t('common.cancel')"
             severity="secondary"
             size="small"
             text
@@ -228,7 +228,7 @@
           />
           <Button
             type="button"
-            label="確認"
+            :label="$t('common.confirm')"
             icon="pi pi-check"
             severity="primary"
             size="small"
@@ -244,18 +244,18 @@
     <Dialog
       v-model:visible="isManualPathModalOpen"
       modal
-      header="新增 SQL 監控資料夾"
+      :header="$t('sidebar.addFolderTitle')"
       class="w-full max-w-md font-sans"
     >
       <div class="space-y-3 text-xs py-1">
         <p class="text-dark-300 leading-relaxed">
-          請輸入或貼上本機資料夾之絕對路徑：
+          {{ $t('sidebar.manualPathPrompt') }}
         </p>
         <div>
-          <label class="block text-xxs text-dark-400 mb-1">資料夾完整路徑</label>
+          <label class="block text-xxs text-dark-400 mb-1">{{ $t('sidebar.folderFullPath') }}</label>
           <InputText
             v-model="manualPathInput"
-            placeholder="例如: D:\Projects\Database\Scripts"
+            :placeholder="$t('sidebar.manualPathPlaceholder')"
             class="w-full font-sans text-xs"
             @keyup.enter="handleConfirmManualPath"
           />
@@ -266,7 +266,7 @@
         <div class="flex items-center justify-end space-x-2 pt-2">
           <Button
             type="button"
-            label="取消"
+            :label="$t('common.cancel')"
             severity="secondary"
             size="small"
             text
@@ -274,7 +274,7 @@
           />
           <Button
             type="button"
-            label="新增"
+            :label="$t('common.add')"
             icon="pi pi-check"
             severity="primary"
             size="small"
@@ -289,6 +289,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, provide, nextTick } from 'vue';
+import { useI18n } from 'vue-i18n';
 import Button from 'primevue/button';
 import InputText from 'primevue/inputtext';
 import Dialog from 'primevue/dialog';
@@ -315,6 +316,7 @@ interface ContextMenuTarget {
   rawNode?: SqlFileNode;
 }
 
+const { t } = useI18n();
 const sqlFolderStore = useSqlFolderStore();
 
 const contextMenuRef = ref();
@@ -379,11 +381,11 @@ async function handleConfirmRename() {
   if (!targetNode.value) return;
   const input = renameInput.value.trim();
   if (!input) {
-    renameError.value = '名稱不能為空';
+    renameError.value = t('sidebar.nameCannotBeEmpty');
     return;
   }
   if (/[\\/:*?"<>|]/.test(input)) {
-    renameError.value = '名稱不可包含特殊字元: \\ / : * ? " < > |';
+    renameError.value = t('sidebar.invalidChars');
     return;
   }
 
@@ -411,7 +413,7 @@ const contextMenuItems = computed(() => {
   if (!target) return [];
 
   const copyPathItem = {
-    label: '複製完整路徑',
+    label: t('sidebar.copyFullPath'),
     icon: 'pi pi-copy',
     command: () => {
       try {
@@ -421,13 +423,13 @@ const contextMenuItems = computed(() => {
   };
 
   const renameMenuItem = {
-    label: '重新命名',
+    label: t('sidebar.rename'),
     icon: 'pi pi-pencil',
     command: () => openRenameModal(target),
   };
 
   const unmonitorMenuItem = {
-    label: '取消監控',
+    label: t('sidebar.unmonitor'),
     icon: 'pi pi-eye-slash',
     class: '!text-danger',
     command: () => sqlFolderStore.unmonitorItem(target.path, target.name, target.isRoot),
@@ -441,7 +443,7 @@ const contextMenuItems = computed(() => {
       },
       { separator: true },
       {
-        label: '重新整理此資料夾',
+        label: t('sidebar.refreshThisFolder'),
         icon: 'pi pi-refresh',
         command: () => {
           if (target.isRoot) {
@@ -465,7 +467,7 @@ const contextMenuItems = computed(() => {
     },
     { separator: true },
     {
-      label: '在編輯區開啟',
+      label: t('sidebar.openInEditor'),
       icon: 'pi pi-file-edit',
       command: () => {
         if (target.rawNode) {

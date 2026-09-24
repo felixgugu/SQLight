@@ -13,6 +13,8 @@ import ConfirmationService from 'primevue/confirmationservice';
 import Ripple from 'primevue/ripple';
 import 'primeicons/primeicons.css';
 
+import { i18n, primevueZhTW, primevueLocales } from './i18n';
+
 // Prevent default browser/system context menu globally for a native desktop feel
 window.addEventListener('contextmenu', (e) => {
   e.preventDefault();
@@ -21,9 +23,27 @@ window.addEventListener('contextmenu', (e) => {
 const app = createApp(App);
 const pinia = createPinia();
 
+// Read initial saved locale if present to configure PrimeVue
+let initialLocale = 'zh-TW';
+try {
+  const savedSettings = localStorage.getItem('sqlight_app_settings');
+  if (savedSettings) {
+    const parsed = JSON.parse(savedSettings);
+    if (parsed.locale === 'en' || parsed.locale === 'zh-TW') {
+      initialLocale = parsed.locale;
+    }
+  }
+} catch {
+  // fallback to default
+}
+
+(i18n.global.locale as any).value = initialLocale;
+
 app.use(pinia);
+app.use(i18n);
 app.use(PrimeVue, {
   ripple: true,
+  locale: (primevueLocales as any)[initialLocale] || primevueZhTW,
   theme: {
     preset: Aura,
     options: {

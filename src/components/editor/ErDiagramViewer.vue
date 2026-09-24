@@ -29,12 +29,12 @@
         <Button
           type="button"
           :icon="isEditMode ? 'pi pi-pencil' : 'pi pi-eye'"
-          :label="isEditMode ? '編輯模式 (ON)' : '檢視模式 (OFF)'"
+          :label="isEditMode ? $t('erDiagram.editModeOn') : $t('erDiagram.editModeOff')"
           size="small"
           :severity="isEditMode ? 'warn' : 'secondary'"
           :outlined="!isEditMode"
           @click="toggleEditMode"
-          v-tooltip.top="isEditMode ? '目前為編輯模式：可自由拖曳連線與勾選隱藏欄位 (點擊切換為檢視模式)' : '目前為檢視模式：僅可移動卡片 (點擊開啟編輯模式)'"
+          v-tooltip.top="isEditMode ? $t('erDiagram.editModeTooltip') : $t('erDiagram.viewModeTooltip')"
           class="!text-xs !py-1 !px-2.5 font-medium shadow-xs"
         />
 
@@ -42,12 +42,12 @@
         <Button
           type="button"
           icon="pi pi-th-large text-accent"
-          label="自動排版"
+          :label="$t('erDiagram.layout')"
           size="small"
           severity="secondary"
           outlined
           @click="applyAutoLayout(layoutDirection)"
-          v-tooltip.top="'以階層拓撲演算法自動重新排列所有資料表'"
+          v-tooltip.top="$t('erDiagram.autoLayoutTooltip')"
           class="!text-xs !py-1 !px-2.5 shadow-xs"
         />
 
@@ -60,7 +60,7 @@
           severity="secondary"
           outlined
           @click="toggleLayoutDirection"
-          v-tooltip.top="`目前方向：${layoutDirection === 'LR' ? '水平左右 (LR)' : '垂直上下 (TB)'}，點擊切換`"
+          v-tooltip.top="$t('erDiagram.directionTooltip', { dir: layoutDirection === 'LR' ? $t('erDiagram.horizontal') : $t('erDiagram.vertical') })"
           class="!text-xs !py-1 !px-2 font-sans"
         />
 
@@ -68,12 +68,12 @@
         <Button
           type="button"
           icon="pi pi-align-left"
-          label="文字"
+          :label="$t('erDiagram.addTextNote')"
           size="small"
           severity="secondary"
           outlined
           @click="handleAddTextNode"
-          v-tooltip.top="'在畫布上新增文字說明 / 備註便箋'"
+          v-tooltip.top="$t('erDiagram.addTextNoteTooltip')"
           class="!text-xs !py-1 !px-2.5 shadow-xs"
         />
       </div>
@@ -92,7 +92,7 @@
             size="small"
             severity="secondary"
             @click="handleZoomOut"
-            v-tooltip.top="'縮小 (Ctrl + 滾輪下滾)'"
+            v-tooltip.top="$t('erDiagram.zoomOutTooltip')"
             class="!p-1.5 !w-7 !h-7"
           />
           <Button
@@ -102,7 +102,7 @@
             size="small"
             severity="secondary"
             @click="handleZoomReset"
-            v-tooltip.top="'重設縮放 100%'"
+            v-tooltip.top="$t('erDiagram.zoomResetTooltip')"
             class="!px-1.5 !py-1 !text-xxs font-sans min-w-[42px]"
           />
           <Button
@@ -112,7 +112,7 @@
             size="small"
             severity="secondary"
             @click="handleZoomIn"
-            v-tooltip.top="'放大 (Ctrl + 滾輪上滾)'"
+            v-tooltip.top="$t('erDiagram.zoomInTooltip')"
             class="!p-1.5 !w-7 !h-7"
           />
           <Button
@@ -122,7 +122,7 @@
             size="small"
             severity="secondary"
             @click="handleZoomFit"
-            v-tooltip.top="'最適大小 (Fit)'"
+            v-tooltip.top="$t('erDiagram.zoomFitTooltip')"
             class="!p-1.5 !w-7 !h-7 border-l"
           />
         </div>
@@ -133,12 +133,12 @@
         <Button
           type="button"
           :icon="isLightTheme ? 'pi pi-sun text-warn' : 'pi pi-moon text-structure'"
-          :label="isLightTheme ? '淺色' : '深色'"
+          :label="isLightTheme ? $t('erDiagram.lightTheme') : $t('erDiagram.darkTheme')"
           size="small"
           severity="secondary"
           outlined
           @click="toggleTheme"
-          v-tooltip.top="`佈景切換：目前為${isLightTheme ? '淺色系' : '深色系'} (點擊切換)`"
+          v-tooltip.top="$t('erDiagram.themeTooltip', { theme: isLightTheme ? $t('erDiagram.lightThemeName') : $t('erDiagram.darkThemeName') })"
           class="!text-xs !py-1 !px-2.5 shadow-xs"
         />
 
@@ -148,7 +148,7 @@
         <Button
           type="button"
           icon="pi pi-download"
-          label="匯出"
+          :label="$t('erDiagram.export')"
           iconPos="left"
           size="small"
           severity="primary"
@@ -182,7 +182,7 @@
       >
         <div class="bg-dark-850/90 px-4 py-2 rounded-lg border border-brand-500/50 shadow-2xl flex items-center space-x-2 text-accent text-sm font-medium">
           <PlusCircle class="w-4 h-4 animate-bounce" />
-          <span>放開滑鼠以將資料表加入至此 ER 圖</span>
+          <span>{{ $t('erDiagram.dropTableHint') }}</span>
         </div>
       </div>
 
@@ -203,8 +203,8 @@
         :class="isLightTheme ? 'text-slate-600' : 'text-dark-500'"
       >
         <Layers class="w-10 h-10" :class="isLightTheme ? 'text-slate-500' : 'text-dark-600'" />
-        <span>畫布尚無資料表</span>
-        <span class="text-xxs" :class="isLightTheme ? 'text-slate-600' : 'text-dark-600'">可從左側資料庫清單拖拉資料表，或由右鍵選單加入</span>
+        <span>{{ $t('erDiagram.emptyCanvas') }}</span>
+        <span class="text-xxs" :class="isLightTheme ? 'text-slate-600' : 'text-dark-600'">{{ $t('erDiagram.emptyCanvasHint') }}</span>
       </div>
 
       <!-- Floating Stats & Linking Tip (Bottom Left) -->
@@ -212,17 +212,17 @@
         class="absolute bottom-3 left-3 backdrop-blur px-3 py-1.5 rounded-md text-[11px] flex items-center space-x-3 pointer-events-none z-10 font-sans shadow-lg border"
         :class="isLightTheme ? 'bg-white/90 border-slate-200 text-slate-600 shadow-slate-200/50' : 'bg-dark-900/90 border-dark-750 text-dark-300'"
       >
-        <span>資料表：<strong :class="isLightTheme ? 'text-slate-900' : 'text-dark-100'">{{ nodeCount }}</strong></span>
+        <span>{{ $t('erDiagram.tableCount') }}<strong :class="isLightTheme ? 'text-slate-900' : 'text-dark-100'">{{ nodeCount }}</strong></span>
         <span :class="isLightTheme ? 'text-slate-500' : 'text-dark-600'">•</span>
-        <span>關聯線：<strong :class="isLightTheme ? 'text-slate-900' : 'text-dark-100'">{{ edgeCount }}</strong></span>
+        <span>{{ $t('erDiagram.edgeCount') }}<strong :class="isLightTheme ? 'text-slate-900' : 'text-dark-100'">{{ edgeCount }}</strong></span>
         <span :class="isLightTheme ? 'text-slate-500' : 'text-dark-600'">•</span>
         <span v-if="isEditMode" class="flex items-center space-x-1" :class="isLightTheme ? 'text-warn font-medium' : 'text-warn'">
           <Edit3 class="w-3 h-3 text-warn" />
-          <span>編輯模式：可勾選欄位隱藏/顯示，拖曳圓點自由連線，單擊徽章切換屬性</span>
+          <span>{{ $t('erDiagram.editModeBanner') }}</span>
         </span>
         <span v-else class="flex items-center space-x-1" :class="isLightTheme ? 'text-slate-500' : 'text-dark-400'">
           <Eye class="w-3 h-3" :class="isLightTheme ? 'text-slate-600' : 'text-dark-400'" />
-          <span>檢視模式：僅可平移與移動資料表 (未勾選欄位已隱藏)。點擊上方「編輯模式」可開始連線與設定欄位</span>
+          <span>{{ $t('erDiagram.viewModeBanner') }}</span>
         </span>
       </div>
 
@@ -238,15 +238,15 @@
         <div class="px-3 py-1.5 border-b text-[11px]" :class="isLightTheme ? 'border-slate-100' : 'border-dark-750'">
           <div class="flex items-center space-x-1.5 font-semibold mb-1 font-sans" :class="isLightTheme ? 'text-accent' : 'text-accent'">
             <Link2 class="w-3.5 h-3.5" />
-            <span>關聯設定 (Relation Properties)</span>
+            <span>{{ $t('erDiagram.relationProperties') }}</span>
           </div>
           <div class="truncate text-[10px] space-y-0.5" :class="isLightTheme ? 'text-slate-500' : 'text-dark-400'">
             <div class="flex items-center space-x-1">
-              <span class="w-10 flex-shrink-0 font-sans" :class="isLightTheme ? 'text-slate-600' : 'text-dark-500'">來源：</span>
+              <span class="w-10 flex-shrink-0 font-sans" :class="isLightTheme ? 'text-slate-600' : 'text-dark-500'">{{ $t('erDiagram.source') }}</span>
               <span class="font-medium truncate" :class="isLightTheme ? 'text-slate-800' : 'text-dark-100'">{{ edgeMenu.sourceTable }}.{{ edgeMenu.sourceColumn }}</span>
             </div>
             <div class="flex items-center space-x-1">
-              <span class="w-10 flex-shrink-0 font-sans" :class="isLightTheme ? 'text-slate-600' : 'text-dark-500'">目標：</span>
+              <span class="w-10 flex-shrink-0 font-sans" :class="isLightTheme ? 'text-slate-600' : 'text-dark-500'">{{ $t('erDiagram.target') }}</span>
               <span class="font-medium truncate" :class="isLightTheme ? 'text-slate-800' : 'text-dark-100'">{{ edgeMenu.targetTable }}.{{ edgeMenu.targetColumn }}</span>
             </div>
           </div>
@@ -255,7 +255,7 @@
         <!-- Cardinality Selection -->
         <div class="px-3 py-2 border-b" :class="isLightTheme ? 'border-slate-100' : 'border-dark-750'">
           <div class="text-[10px] mb-1.5 font-sans flex items-center justify-between" :class="isLightTheme ? 'text-slate-500' : 'text-dark-400'">
-            <span>關聯屬性 (Cardinality)</span>
+            <span>{{ $t('erDiagram.cardinality') }}</span>
             <span class="font-bold font-sans" :class="isLightTheme ? 'text-accent' : 'text-accent'">{{ edgeMenu.cardinality }}</span>
           </div>
           <div class="grid grid-cols-2 gap-1.5 text-xxs">

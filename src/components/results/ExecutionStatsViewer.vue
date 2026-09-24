@@ -9,9 +9,9 @@
         <i class="pi pi-chart-bar text-xl"></i>
       </div>
       <div class="space-y-1 max-w-md">
-        <div class="text-sm font-medium text-dark-200">尚無執行統計與 IO 分析資料</div>
+        <div class="text-sm font-medium text-dark-200">{{ $t('stats.noStats') }}</div>
         <div class="text-xs text-dark-500 leading-relaxed">
-          請於頂部工具列勾選「<span class="text-warn font-semibold">效能分析</span>」後執行查詢，系統將自動擷取 CPU 耗時、各資料表邏輯/實體讀取量及伺服器等候事件。
+          {{ $t('stats.enableStatsHint') }}
         </div>
       </div>
     </div>
@@ -23,10 +23,10 @@
         <div class="flex items-center space-x-2 truncate">
           <span class="flex items-center space-x-1.5 text-warn font-medium">
             <i class="pi pi-chart-bar text-xs"></i>
-            <span>執行效能分析報告</span>
+            <span>{{ $t('stats.reportTitle') }}</span>
           </span>
           <span class="text-dark-600">|</span>
-          <span class="text-dark-400 font-mono text-xxs">時間: {{ stats.executedAt }}</span>
+          <span class="text-dark-400 font-mono text-xxs">{{ $t('stats.time') }}: {{ stats.executedAt }}</span>
           <span class="text-dark-600">|</span>
           <span class="text-dark-400 truncate max-w-xs font-mono text-xxs" :title="stats.querySql">
             SQL: {{ stats.querySql.replace(/\s+/g, ' ').slice(0, 60) }}...
@@ -37,24 +37,24 @@
           <Button
             type="button"
             icon="pi pi-sparkles"
-            label="AI 調校建議"
+            :label="$t('stats.aiAdvice')"
             size="small"
             severity="help"
             outlined
             @click="requestAiStatsTuning"
-            v-tooltip.top="'使用 AI 智能分析 IO 讀取瓶頸、等候事件與調校建言'"
+            v-tooltip.top="$t('stats.aiAdviceTooltip')"
             class="!text-xxs !py-1 !px-2 text-plan border-purple-500/40 hover:bg-purple-950/30"
           />
 
           <Button
             type="button"
             icon="pi pi-copy"
-            label="複製報告"
+            :label="$t('stats.copyReport')"
             size="small"
             severity="secondary"
             outlined
             @click="copyStatsMarkdown"
-            v-tooltip.top="'複製 Markdown 格式統計報表至剪貼簿'"
+            v-tooltip.top="$t('stats.copyReportTooltip')"
             class="!text-xxs !py-1 !px-2"
           />
 
@@ -66,7 +66,7 @@
             size="small"
             severity="danger"
             @click="queryStore.clearExecutionStats()"
-            v-tooltip.top="'清除分析報告'"
+            v-tooltip.top="$t('stats.clearReportTooltip')"
             class="!w-7 !h-7 !p-0"
           />
         </div>
@@ -78,7 +78,7 @@
         <Card class="!bg-dark-850 !border !border-dark-750 !rounded-lg" :pt="{ body: { class: '!p-2.5 flex flex-col justify-between h-full' } }">
           <template #content>
             <div class="flex items-center justify-between text-dark-400 text-xxs">
-              <span>CPU 耗時</span>
+              <span>{{ $t('stats.cpuTimeCard') }}</span>
               <i class="pi pi-microchip text-warn text-xs"></i>
             </div>
             <div class="mt-1 flex items-baseline space-x-1 font-mono">
@@ -86,7 +86,7 @@
               <span class="text-dark-400 text-xxs">ms</span>
             </div>
             <div class="text-[10px] text-dark-500 font-mono mt-0.5 truncate">
-              編譯: {{ stats.compileCpuTimeMs ?? 0 }} ms
+              {{ $t('stats.compile', { ms: stats.compileCpuTimeMs ?? 0 }) }}
             </div>
           </template>
         </Card>
@@ -95,7 +95,7 @@
         <Card class="!bg-dark-850 !border !border-dark-750 !rounded-lg" :pt="{ body: { class: '!p-2.5 flex flex-col justify-between h-full' } }">
           <template #content>
             <div class="flex items-center justify-between text-dark-400 text-xxs">
-              <span>總執行耗時</span>
+              <span>{{ $t('stats.elapsedTimeCard') }}</span>
               <i class="pi pi-clock text-info text-xs"></i>
             </div>
             <div class="mt-1 flex items-baseline space-x-1 font-mono">
@@ -103,7 +103,7 @@
               <span class="text-dark-400 text-xxs">ms</span>
             </div>
             <div class="text-[10px] text-dark-500 font-mono mt-0.5 truncate">
-              編譯: {{ stats.compileElapsedTimeMs ?? 0 }} ms
+              {{ $t('stats.compile', { ms: stats.compileElapsedTimeMs ?? 0 }) }}
             </div>
           </template>
         </Card>
@@ -112,15 +112,15 @@
         <Card class="!bg-dark-850 !border !border-dark-750 !rounded-lg" :pt="{ body: { class: '!p-2.5 flex flex-col justify-between h-full' } }">
           <template #content>
             <div class="flex items-center justify-between text-dark-400 text-xxs">
-              <span>邏輯讀取 (Logical)</span>
+              <span>{{ $t('stats.logicalReadsCard') }}</span>
               <i class="pi pi-book text-ok text-xs"></i>
             </div>
             <div class="mt-1 flex items-baseline space-x-1 font-mono">
               <span class="text-lg font-bold text-ok">{{ stats.totalLogicalReads.toLocaleString() }}</span>
-              <span class="text-dark-400 text-xxs">頁</span>
+              <span class="text-dark-400 text-xxs">{{ $t('stats.pages') }}</span>
             </div>
             <div class="text-[10px] text-ok font-mono mt-0.5 truncate">
-              容量: {{ extractByteSize(stats.logicalReadsFormatted) }}
+              {{ $t('stats.size', { size: extractByteSize(stats.logicalReadsFormatted) }) }}
             </div>
           </template>
         </Card>
@@ -129,15 +129,15 @@
         <Card class="!bg-dark-850 !border !border-dark-750 !rounded-lg" :pt="{ body: { class: '!p-2.5 flex flex-col justify-between h-full' } }">
           <template #content>
             <div class="flex items-center justify-between text-dark-400 text-xxs">
-              <span>實體讀取 (Physical)</span>
+              <span>{{ $t('stats.physicalReadsCard') }}</span>
               <i class="pi pi-server text-plan text-xs"></i>
             </div>
             <div class="mt-1 flex items-baseline space-x-1 font-mono">
               <span class="text-lg font-bold text-dark-100">{{ stats.totalPhysicalReads.toLocaleString() }}</span>
-              <span class="text-dark-400 text-xxs">頁</span>
+              <span class="text-dark-400 text-xxs">{{ $t('stats.pages') }}</span>
             </div>
             <div class="text-[10px] text-dark-500 font-mono mt-0.5 truncate">
-              預讀: {{ stats.totalReadAheadReads }} 頁
+              {{ $t('stats.readAhead', { count: stats.totalReadAheadReads }) }}
             </div>
           </template>
         </Card>
@@ -146,15 +146,15 @@
         <Card class="!bg-dark-850 !border !border-dark-750 !rounded-lg" :pt="{ body: { class: '!p-2.5 flex flex-col justify-between h-full' } }">
           <template #content>
             <div class="flex items-center justify-between text-dark-400 text-xxs">
-              <span>寫入與 LOB 讀取</span>
+              <span>{{ $t('stats.writesAndLobCard') }}</span>
               <i class="pi pi-database text-structure text-xs"></i>
             </div>
             <div class="mt-1 flex items-baseline space-x-1 font-mono">
               <span class="text-lg font-bold text-dark-100">{{ stats.totalPhysicalWrites.toLocaleString() }}</span>
-              <span class="text-dark-400 text-xxs">頁寫入</span>
+              <span class="text-dark-400 text-xxs">{{ $t('stats.pagesWritten') }}</span>
             </div>
             <div class="text-[10px] text-dark-500 font-mono mt-0.5 truncate">
-              LOB 讀取: {{ stats.totalLobReads }} 頁
+              {{ $t('stats.lobReads', { count: stats.totalLobReads }) }}
             </div>
           </template>
         </Card>
@@ -167,7 +167,7 @@
         :closable="false"
         class="!text-xs"
       >
-        <strong>效能警示：</strong>部分資料表邏輯讀取量超過 1,000 頁或存在全表掃描 (Scan count > 0)。建議排查是否有缺失索引或未加入有效過濾條件。
+        {{ $t('stats.highIoAlert') }}
       </Message>
       <Message
         v-else-if="stats.totalLogicalReads > 0"
@@ -175,7 +175,7 @@
         :closable="false"
         class="!text-xs"
       >
-        查詢資源消耗處於健康水位，快取命中率約 <strong>{{ stats.cacheHitRatio }}%</strong>。
+        {{ $t('stats.healthyBanner', { ratio: stats.cacheHitRatio }) }}
       </Message>
 
       <!-- 3. Per-Table IO Breakdown Table -->
@@ -184,7 +184,7 @@
         <div class="h-8 px-3 bg-dark-800/80 border-b border-dark-750 flex items-center justify-between text-xs flex-shrink-0">
           <div class="flex items-center space-x-1.5 font-medium text-dark-200">
             <i class="pi pi-table text-accent text-xs"></i>
-            <span>各資料表 IO 讀取明細 (Per-Table IO Breakdown)</span>
+            <span>{{ $t('stats.tableBreakdown') }}</span>
             <Tag :value="stats.tableStats.length" severity="secondary" class="!font-mono !text-xxs !px-1.5 !py-0" />
           </div>
 
@@ -193,7 +193,7 @@
             <InputIcon class="pi pi-search text-dark-500" />
             <InputText
               v-model="tableFilterQuery"
-              placeholder="過濾資料表..."
+              :placeholder="$t('stats.filterTablesPlaceholder')"
               size="small"
               class="w-40 font-mono !text-xxs !py-0.5 !pl-6"
             />
@@ -210,18 +210,18 @@
           >
             <template #empty>
               <div class="p-6 text-center text-dark-500 italic text-xs">
-                無符合條件之資料表 IO 紀錄
+                {{ $t('stats.noTableIo') }}
               </div>
             </template>
-            <Column field="tableName" header="資料表名稱" sortable class="!py-1.5 !px-3 font-sans font-medium text-dark-200" />
-            <Column field="scanCount" header="掃描次數" sortable class="!py-1.5 !px-2 text-right">
+            <Column field="tableName" :header="$t('stats.tableNameCol')" sortable class="!py-1.5 !px-3 font-sans font-medium text-dark-200" />
+            <Column field="scanCount" :header="$t('stats.scanCountCol')" sortable class="!py-1.5 !px-2 text-right">
               <template #body="{ data }">
                 <span :class="data.scanCount > 1 ? 'text-warn font-bold' : 'text-dark-300'">
                   {{ data.scanCount }}
                 </span>
               </template>
             </Column>
-            <Column field="logicalReads" header="邏輯讀取 (佔比)" sortable class="!py-1.5 !px-3 text-right w-44">
+            <Column field="logicalReads" :header="$t('stats.logicalReadsRatioCol')" sortable class="!py-1.5 !px-3 text-right w-44">
               <template #body="{ data }">
                 <div class="flex items-center justify-end space-x-2">
                   <div class="w-16 bg-dark-750 rounded-full h-1.5 overflow-hidden flex-shrink-0">
@@ -237,23 +237,23 @@
                 </div>
               </template>
             </Column>
-            <Column field="physicalReads" header="實體讀取" sortable class="!py-1.5 !px-2 text-right text-dark-300">
+            <Column field="physicalReads" :header="$t('stats.physicalReadsCol')" sortable class="!py-1.5 !px-2 text-right text-dark-300">
               <template #body="{ data }">
                 {{ data.physicalReads.toLocaleString() }}
               </template>
             </Column>
-            <Column field="readAheadReads" header="預讀" sortable class="!py-1.5 !px-2 text-right text-dark-400">
+            <Column field="readAheadReads" :header="$t('stats.readAheadCol')" sortable class="!py-1.5 !px-2 text-right text-dark-400">
               <template #body="{ data }">
                 {{ data.readAheadReads.toLocaleString() }}
               </template>
             </Column>
-            <Column field="lobLogicalReads" header="LOB 讀取" sortable class="!py-1.5 !px-2 text-right text-dark-400">
+            <Column field="lobLogicalReads" :header="$t('stats.lobReadsCol')" sortable class="!py-1.5 !px-2 text-right text-dark-400">
               <template #body="{ data }">
                 {{ data.lobLogicalReads.toLocaleString() }}
               </template>
             </Column>
-            <Column field="bytesFormatted" header="總計容量" sortable class="!py-1.5 !px-2 text-right font-medium text-dark-300" />
-            <Column header="狀態" class="!py-1.5 !px-3 text-center">
+            <Column field="bytesFormatted" :header="$t('stats.totalBytesCol')" sortable class="!py-1.5 !px-2 text-right font-medium text-dark-300" />
+            <Column :header="$t('stats.statusCol')" class="!py-1.5 !px-3 text-center">
               <template #body="{ data }">
                 <Tag
                   :severity="data.isHighIo ? 'danger' : 'success'"
@@ -270,7 +270,7 @@
       <div v-if="stats.waitStats.length > 0" class="bg-dark-850 border border-dark-750 rounded-lg p-2.5 flex flex-col space-y-2 flex-shrink-0">
         <div class="flex items-center space-x-1.5 text-xs font-medium text-dark-200">
           <i class="pi pi-bolt text-warn text-xs"></i>
-          <span>工作階段等候事件分析 (Session Wait Statistics)</span>
+          <span>{{ $t('stats.sessionWaitStats') }}</span>
         </div>
 
         <DataTable
@@ -279,14 +279,14 @@
           class="p-datatable-sm w-full font-mono text-xxs"
           :rowClass="() => '!bg-dark-900'"
         >
-          <Column field="waitType" header="等候類型 (Wait Type)" class="!py-1 !px-2 text-dark-300 font-semibold" />
-          <Column field="waitingTasksCount" header="等候次數" class="!py-1 !px-2 text-right text-dark-400" />
-          <Column field="waitTimeMs" header="總等候時間 (ms)" class="!py-1 !px-2 text-right text-warn font-bold">
+          <Column field="waitType" :header="$t('stats.waitTypeCol')" class="!py-1 !px-2 text-dark-300 font-semibold" />
+          <Column field="waitingTasksCount" :header="$t('stats.waitCountCol')" class="!py-1 !px-2 text-right text-dark-400" />
+          <Column field="waitTimeMs" :header="$t('stats.totalWaitTimeCol')" class="!py-1 !px-2 text-right text-warn font-bold">
             <template #body="{ data }">
               {{ data.waitTimeMs }} ms
             </template>
           </Column>
-          <Column field="maxWaitTimeMs" header="最大單次等候 (ms)" class="!py-1 !px-2 text-right text-dark-400">
+          <Column field="maxWaitTimeMs" :header="$t('stats.maxWaitTimeCol')" class="!py-1 !px-2 text-right text-dark-400">
             <template #body="{ data }">
               {{ data.maxWaitTimeMs }} ms
             </template>
@@ -299,6 +299,7 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue';
+import { useI18n } from 'vue-i18n';
 import Button from 'primevue/button';
 import Card from 'primevue/card';
 import Tag from 'primevue/tag';
@@ -312,6 +313,7 @@ import { useQueryStore } from '@/stores/queryStore';
 import { useWorkspaceStore } from '@/stores/workspaceStore';
 import { useAiChatStore } from '@/stores/aiChatStore';
 
+const { t } = useI18n();
 const queryStore = useQueryStore();
 const workspaceStore = useWorkspaceStore();
 const aiChatStore = useAiChatStore();
@@ -399,7 +401,7 @@ function copyStatsMarkdown() {
 
   try {
     navigator.clipboard?.writeText(md);
-    workspaceStore.showToast('已複製效能分析 Markdown 報表至剪貼簿', 'success', 2500);
+    workspaceStore.showToast(t('stats.copiedToast'), 'success', 2500);
   } catch (err) {
     console.error('Failed to copy to clipboard:', err);
   }

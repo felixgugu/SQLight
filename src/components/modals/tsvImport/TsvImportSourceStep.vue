@@ -4,10 +4,10 @@
       <!-- Target table -->
       <section class="rounded-lg border border-dark-700 bg-dark-900/60 p-3">
         <div class="flex items-center justify-between">
-          <div class="text-xxs font-semibold text-dark-300 tracking-wide">目標表格</div>
+          <div class="text-xxs font-semibold text-dark-300 tracking-wide">{{ $t('tsvImportModal.targetTable') }}</div>
           <span v-if="store.isLoadingMetadata" class="text-xxs text-dark-400 flex items-center space-x-1">
             <i class="pi pi-spin pi-spinner text-[10px]"></i>
-            <span>讀取欄位定義中…</span>
+            <span>{{ $t('tsvImportModal.readingDefinitions') }}</span>
           </span>
         </div>
         <div class="mt-1.5 flex flex-wrap items-center gap-2 text-xs font-mono">
@@ -28,7 +28,7 @@
 
       <!-- Data source -->
       <section class="rounded-lg border border-dark-700 bg-dark-900/60 p-3 space-y-3">
-        <div class="text-xxs font-semibold text-dark-300 tracking-wide">資料來源</div>
+        <div class="text-xxs font-semibold text-dark-300 tracking-wide">{{ $t('tsvImportModal.dataSource') }}</div>
 
         <div class="flex items-center space-x-2">
           <button
@@ -41,7 +41,7 @@
             "
             @click="store.setSourceMode('file')"
           >
-            上傳檔案
+            {{ $t('tsvImportModal.uploadFile') }}
           </button>
           <button
             type="button"
@@ -53,7 +53,7 @@
             "
             @click="store.setSourceMode('paste')"
           >
-            貼上文字
+            {{ $t('tsvImportModal.pasteText') }}
           </button>
         </div>
 
@@ -62,7 +62,7 @@
           <div class="flex items-center space-x-2">
             <Button
               type="button"
-              label="選擇 .tsv 檔案"
+              :label="$t('tsvImportModal.pickFileBtn')"
               icon="pi pi-upload"
               size="small"
               severity="secondary"
@@ -73,7 +73,7 @@
             <span v-if="store.fileName" class="text-xs font-mono text-dark-200 truncate">
               {{ store.fileName }}
             </span>
-            <span v-else class="text-xxs text-dark-500">支援 UTF-8 編碼的 .tsv（上限 20 MB）</span>
+            <span v-else class="text-xxs text-dark-500">{{ $t('tsvImportModal.fileHint') }}</span>
           </div>
         </div>
 
@@ -83,13 +83,13 @@
           :value="store.pastedText"
           rows="9"
           spellcheck="false"
-          placeholder="貼上以 Tab 分隔欄位的文字（支援 Windows 與 Unix 換行；\N 表示 NULL，非文字欄位亦可填 NULL）"
+          :placeholder="$t('tsvImportModal.pastePlaceholder')"
           class="w-full bg-dark-900 border border-dark-700 rounded-md p-2 text-xs font-mono text-dark-100 focus:outline-none focus:border-emerald-500/60 resize-none"
           @input="handlePasteInput"
         ></textarea>
 
         <div class="text-xxs text-dark-400 font-mono">
-          目前大小：{{ formatBytes(sourceBytes) }} / 20 MB
+          {{ $t('tsvImportModal.currentSize', { size: formatBytes(sourceBytes) }) }}
         </div>
 
         <div v-if="localError" class="text-xxs text-danger bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800/60 rounded px-2 py-1.5">
@@ -99,7 +99,7 @@
 
       <!-- Options -->
       <section class="rounded-lg border border-dark-700 bg-dark-900/60 p-3 space-y-2">
-        <div class="text-xxs font-semibold text-dark-300 tracking-wide">匯入設定</div>
+        <div class="text-xxs font-semibold text-dark-300 tracking-wide">{{ $t('tsvImportModal.importSettings') }}</div>
 
         <label class="flex items-center space-x-2 text-xs cursor-pointer select-none">
           <input
@@ -108,7 +108,7 @@
             :checked="store.skipHeader"
             @change="store.setSkipHeader(($event.target as HTMLInputElement).checked)"
           />
-          <span>略過首行（視為標題，不匯入；欄位仍依下方順序對應）</span>
+          <span>{{ $t('tsvImportModal.skipHeader') }}</span>
         </label>
 
         <label
@@ -123,18 +123,18 @@
             :disabled="!store.manualIdentityAvailable"
             @change="store.setManualIdentity(($event.target as HTMLInputElement).checked)"
           />
-          <span>允許手動指定識別值 (SET IDENTITY_INSERT)</span>
+          <span>{{ $t('tsvImportModal.manualIdentity') }}</span>
         </label>
 
         <div class="text-xxs text-dark-400 pl-6">
           <template v-if="store.manualIdentityAvailable">
-            勾選後匯入會先執行 SET IDENTITY_INSERT ON，讓 TSV 的識別值寫入
+            {{ $t('tsvImportModal.manualIdentityEnabledDesc') }}
             <span v-if="store.identityColumnName" class="font-mono text-dark-200">
               （{{ store.identityColumnName }}）
             </span>
-            ；未勾選時識別值仍會送出，資料庫將拒絕並回報錯誤
+            {{ $t('tsvImportModal.manualIdentityUncheckedDesc') }}
           </template>
-          <template v-else>無法使用：{{ store.manualIdentityDisabledReason }}</template>
+          <template v-else>{{ $t('tsvImportModal.manualIdentityUnavailable', { reason: store.manualIdentityDisabledReason }) }}</template>
         </div>
 
         <div
@@ -149,19 +149,19 @@
       <section class="rounded-lg border border-dark-700 bg-dark-900/60 overflow-hidden">
         <div class="px-3 py-2 border-b border-dark-750 flex items-center justify-between">
           <div class="text-xxs font-semibold text-dark-300 tracking-wide">
-            預期匯入欄位（{{ store.importColumns.length }} 欄，依此順序對應）
+            {{ $t('tsvImportModal.expectedColumns', { count: store.importColumns.length }) }}
           </div>
-          <div class="text-xxs text-dark-500">自動產生且不可寫入的欄位不列入</div>
+          <div class="text-xxs text-dark-500">{{ $t('tsvImportModal.generatedColumnsNotice') }}</div>
         </div>
         <div class="max-h-56 overflow-y-auto">
           <table class="w-full text-xxs">
             <thead class="bg-dark-850 text-dark-400 sticky top-0">
               <tr>
-                <th class="text-left px-3 py-1.5 font-medium">#</th>
-                <th class="text-left px-3 py-1.5 font-medium">欄位</th>
-                <th class="text-left px-3 py-1.5 font-medium">型別</th>
-                <th class="text-left px-3 py-1.5 font-medium">必填</th>
-                <th class="text-left px-3 py-1.5 font-medium">備註</th>
+                <th class="text-left px-3 py-1.5 font-medium">{{ $t('tsvImportModal.colNum') }}</th>
+                <th class="text-left px-3 py-1.5 font-medium">{{ $t('tsvImportModal.colName') }}</th>
+                <th class="text-left px-3 py-1.5 font-medium">{{ $t('tsvImportModal.colType') }}</th>
+                <th class="text-left px-3 py-1.5 font-medium">{{ $t('tsvImportModal.colRequired') }}</th>
+                <th class="text-left px-3 py-1.5 font-medium">{{ $t('tsvImportModal.colNotes') }}</th>
               </tr>
             </thead>
             <tbody class="font-mono">
@@ -174,20 +174,20 @@
                 <td class="px-3 py-1.5 text-dark-100">{{ column.name }}</td>
                 <td class="px-3 py-1.5 text-dark-300">{{ column.fullType }}</td>
                 <td class="px-3 py-1.5" :class="column.nullable ? 'text-dark-400' : 'text-warn'">
-                  {{ column.nullable ? '可為 NULL' : 'NOT NULL' }}
+                  {{ column.nullable ? $t('tsvImportModal.nullable') : $t('tsvImportModal.notNull') }}
                 </td>
                 <td class="px-3 py-1.5 text-dark-400 font-sans">
-                  <span v-if="column.isPrimaryKey" class="text-info">PK</span>
+                  <span v-if="column.isPrimaryKey" class="text-info">{{ $t('tsvImportModal.pk') }}</span>
                   <span v-if="column.isPrimaryKey && column.isIdentity"> · </span>
                   <span v-if="column.isIdentity" class="text-warn">
-                    Identity（未勾選允許手動指定時由資料庫回報錯誤）
+                    {{ $t('tsvImportModal.identityNote') }}
                   </span>
                   <span v-if="!column.isPrimaryKey && !column.isIdentity">—</span>
                 </td>
               </tr>
               <tr v-if="store.importColumns.length === 0">
                 <td colspan="5" class="px-3 py-3 text-center text-dark-500 font-sans">
-                  沒有可匯入的欄位
+                  {{ $t('tsvImportModal.noImportColumns') }}
                 </td>
               </tr>
             </tbody>
@@ -200,7 +200,7 @@
     <div class="h-12 px-4 border-t border-dark-750 bg-dark-850 flex items-center justify-end space-x-2 flex-shrink-0">
       <Button
         type="button"
-        label="取消"
+        :label="$t('common.cancel')"
         size="small"
         severity="secondary"
         text
@@ -209,13 +209,13 @@
       />
       <Button
         type="button"
-        :label="store.isValidating ? '驗證中…' : '下一步'"
+        :label="store.isValidating ? $t('tsvImportModal.validatingBtn') : $t('tsvImportModal.nextBtn')"
         icon="pi pi-arrow-right"
         icon-pos="right"
         size="small"
         :loading="store.isValidating"
         :disabled="!store.canValidate || store.isValidating"
-        v-tooltip.top="store.canValidate ? '' : '請先提供資料來源與可匯入的資料列'"
+        v-tooltip.top="store.canValidate ? '' : $t('tsvImportModal.provideSourceHint')"
         class="!text-xs"
         @click="emit('next')"
       />
@@ -225,10 +225,13 @@
 
 <script setup lang="ts">
 import { computed, ref } from 'vue';
+import { useI18n } from 'vue-i18n';
 import Button from 'primevue/button';
 import { checkUtf8File, openTsvFile } from '@/utils/fileStorage';
 import { countUtf8Bytes, MAX_SOURCE_BYTES } from '@/utils/tsvImport';
 import { useTsvImportStore } from '@/stores/tsvImportStore';
+
+const { t } = useI18n();
 
 const emit = defineEmits<{
   (e: 'cancel'): void;
@@ -257,7 +260,7 @@ async function pickFile() {
     return;
   }
   if (countUtf8Bytes(result.content) > MAX_SOURCE_BYTES) {
-    localError.value = '檔案超過 20 MB 上限，請先分批切割';
+    localError.value = t('tsvImportModal.fileTooLarge');
     return;
   }
   store.setFile(result.fileName, result.content);
@@ -267,7 +270,7 @@ function handlePasteInput(event: Event) {
   const value = (event.target as HTMLTextAreaElement).value;
   localError.value = '';
   if (countUtf8Bytes(value) > MAX_SOURCE_BYTES) {
-    localError.value = '貼上內容超過 20 MB 上限，請先分批切割';
+    localError.value = t('tsvImportModal.pasteTooLarge');
     return;
   }
   store.setPastedText(value);

@@ -2,37 +2,37 @@
   <div class="w-full h-full flex flex-col overflow-hidden font-mono text-xs">
     <!-- Subheader with Clear Action and Expand/Collapse All -->
     <div class="h-6 bg-dark-850 border-b border-dark-750 flex items-center justify-between px-3 text-xxs text-dark-400 select-none flex-shrink-0">
-      <span>{{ messages.length }} messages in this session</span>
+      <span>{{ $t('results.messagesInSession', { count: messages.length }) }}</span>
       <div class="flex items-center space-x-2">
         <Button
           v-if="hasErrorMessages"
           type="button"
           icon="pi pi-sparkles"
-          label="AI 診斷最新錯誤"
+          :label="$t('results.diagnoseLatestError')"
           size="small"
           text
           severity="help"
           @click="handleDiagnoseLatestError"
-          v-tooltip.top="'呼叫 AI 智能助手深度診斷最新發生的錯誤'"
+          :v-tooltip.top="$t('results.diagnoseLatestErrorTooltip')"
           class="!text-xxs !p-0 text-plan hover:text-plan"
         />
         <span v-if="hasErrorMessages" class="text-dark-600">|</span>
         <Button
           type="button"
           icon="pi pi-file"
-          label="實體日誌 (Log)"
+          :label="$t('results.physicalLog')"
           size="small"
           text
           severity="secondary"
           @click="handleOpenLog"
-          v-tooltip.top="'開啟與應用程式同目錄的實體日誌檔 (sqlight.log)'"
+          :v-tooltip.top="$t('results.openLogTooltip')"
           class="!text-xxs !p-0"
         />
         <span v-if="messages.length > 0" class="text-dark-600">|</span>
         <Button
           v-if="messages.length > 0"
           type="button"
-          :label="isAllExpanded ? '全部收合' : '全部展開'"
+          :label="isAllExpanded ? $t('common.collapseAll') : $t('common.expandAll')"
           size="small"
           text
           severity="secondary"
@@ -43,7 +43,7 @@
         <Button
           v-if="messages.length > 0"
           type="button"
-          label="Clear Messages"
+          :label="$t('common.clear')"
           size="small"
           text
           severity="danger"
@@ -55,7 +55,7 @@
 
     <!-- Empty State -->
     <div v-if="messages.length === 0" class="flex-1 flex items-center justify-center text-dark-500 italic select-none">
-      No messages in this session
+      {{ $t('results.noMessages') }}
     </div>
 
     <!-- Messages List (Newest at the top) -->
@@ -96,12 +96,12 @@
               v-if="msg.level === 'error' || msg.level === 'warning'"
               type="button"
               icon="pi pi-sparkles"
-              label="AI 診斷"
+              :label="$t('results.aiDiagnose')"
               size="small"
               severity="help"
               text
               @click.stop="handleDiagnoseWithAi(msg)"
-              v-tooltip.top="'使用 AI 智能診斷此錯誤並取得修復建議'"
+              :v-tooltip.top="$t('results.aiDiagnoseTooltip')"
               class="!text-xxs !py-0.5 !px-1.5 !h-5 text-plan hover:text-plan hover:bg-purple-950/40 font-sans font-medium"
             />
 
@@ -113,7 +113,7 @@
               size="small"
               severity="secondary"
               @click.stop="toggleExpand(getMsgKey(msg, idx))"
-              v-tooltip.top="isExpanded(getMsgKey(msg, idx)) ? '收合 (Collapse)' : '展開 (Expand)'"
+              :v-tooltip.top="isExpanded(getMsgKey(msg, idx)) ? $t('common.collapse') : $t('common.expand')"
               class="opacity-0 group-hover:opacity-100 !w-6 !h-6 !p-0"
             />
 
@@ -125,7 +125,7 @@
               size="small"
               severity="secondary"
               @click.stop="copyMessage(msg.message, msg.seq ?? idx)"
-              v-tooltip.top="copiedKey === (msg.seq ?? idx) ? '已複製 (Copied)' : '複製訊息 (Copy message)'"
+              :v-tooltip.top="copiedKey === (msg.seq ?? idx) ? $t('common.copied') : $t('results.copyMessage')"
               class="opacity-0 group-hover:opacity-100 !w-6 !h-6 !p-0"
             />
           </div>

@@ -11,22 +11,22 @@
       <div class="flex items-center space-x-2">
         <i class="pi pi-database text-accent text-base" />
         <span class="font-semibold text-sm text-dark-100">
-          {{ editProfile ? 'Edit SQL Server Connection' : (initialProfile ? 'Duplicate SQL Server Connection' : 'New SQL Server Connection') }}
+          {{ editProfile ? $t('connectionModal.editTitle') : (initialProfile ? $t('connectionModal.duplicateTitle') : $t('connectionModal.newTitle')) }}
         </span>
       </div>
     </template>
 
     <form @submit.prevent="handleSave" class="space-y-3.5 text-xs py-1">
       <!-- Fieldset 1: Server & Database -->
-      <Fieldset legend="連線主機與資料庫 (Server & Database)" class="!text-xs">
+      <Fieldset :legend="$t('connectionModal.serverAndDatabase')" class="!text-xs">
         <div class="space-y-3 pt-1">
           <!-- Connection Name & Alias Row -->
           <div class="grid grid-cols-3 gap-3">
             <div class="col-span-2">
               <div class="flex items-center justify-between mb-1">
-                <label class="block text-dark-300 font-medium">連線名稱 (Name) *</label>
+                <label class="block text-dark-300 font-medium">{{ $t('connectionModal.nameRequired') }}</label>
                 <span v-if="isDuplicateName" class="text-danger text-xxs font-medium">
-                  * 名稱已存在
+                  {{ $t('connectionModal.nameExists') }}
                 </span>
               </div>
               <InputText
@@ -39,7 +39,7 @@
             </div>
             <div>
               <div class="flex items-center justify-between mb-1">
-                <label class="block text-dark-300 font-medium">別名 (Alias)</label>
+                <label class="block text-dark-300 font-medium">{{ $t('connectionModal.alias') }}</label>
               </div>
               <InputText
                 v-model="form.alias"
@@ -52,7 +52,7 @@
           <!-- Host, Port, Database Row -->
           <div class="grid grid-cols-5 gap-3">
             <div class="col-span-3">
-              <label class="block text-dark-300 font-medium mb-1">主機位置 (Host) *</label>
+              <label class="block text-dark-300 font-medium mb-1">{{ $t('connectionModal.hostRequired') }}</label>
               <InputText
                 v-model="form.host"
                 required
@@ -61,7 +61,7 @@
               />
             </div>
             <div class="col-span-2">
-              <label class="block text-dark-300 font-medium mb-1">連接埠 (Port) *</label>
+              <label class="block text-dark-300 font-medium mb-1">{{ $t('connectionModal.portRequired') }}</label>
               <InputNumber
                 v-model="form.port"
                 :use-grouping="false"
@@ -73,7 +73,7 @@
           </div>
 
           <div>
-            <label class="block text-dark-300 font-medium mb-1">預設資料庫 (Default Database) *</label>
+            <label class="block text-dark-300 font-medium mb-1">{{ $t('connectionModal.defaultDatabaseRequired') }}</label>
             <InputText
               v-model="form.database"
               required
@@ -85,10 +85,10 @@
       </Fieldset>
 
       <!-- Fieldset 2: Authentication -->
-      <Fieldset legend="身分驗證 (Authentication)" class="!text-xs">
+      <Fieldset :legend="$t('connectionModal.authLegend')" class="!text-xs">
         <div class="grid grid-cols-2 gap-3 pt-1">
           <div>
-            <label class="block text-dark-300 font-medium mb-1">使用者帳號 (Username) *</label>
+            <label class="block text-dark-300 font-medium mb-1">{{ $t('connectionModal.usernameRequired') }}</label>
             <InputText
               v-model="form.username"
               required
@@ -97,7 +97,7 @@
             />
           </div>
           <div>
-            <label class="block text-dark-300 font-medium mb-1">密碼 (Password)</label>
+            <label class="block text-dark-300 font-medium mb-1">{{ $t('connectionModal.passwordLabel') }}</label>
             <Password
               v-model="form.password"
               :toggle-mask="true"
@@ -105,25 +105,25 @@
               fluid
               class="w-full !text-xs"
               input-class="!text-xs !bg-dark-900 !border-dark-700 font-mono w-full"
-              :placeholder="editProfile ? '•••••••• (保留原密碼)' : (initialProfile ? '•••••••• (沿用複製密碼)' : '輸入密碼')"
+              :placeholder="editProfile ? $t('connectionModal.keepPasswordPlaceholder') : (initialProfile ? $t('connectionModal.reusePasswordPlaceholder') : $t('connectionModal.enterPasswordPlaceholder'))"
             />
           </div>
         </div>
       </Fieldset>
 
       <!-- Fieldset 3: Security & Safe Guard -->
-      <Fieldset legend="安全性與標籤色彩 (Security & Appearance)" class="!text-xs">
+      <Fieldset :legend="$t('connectionModal.securityLegend')" class="!text-xs">
         <div class="space-y-3 pt-1">
           <!-- Modification Prompt Safe Guard -->
           <div class="flex items-start space-x-2.5 p-2 rounded bg-amber-500/15 border border-amber-500/30">
             <ToggleSwitch v-model="form.modificationPrompt" class="mt-0.5 flex-shrink-0" />
             <div class="flex-1 min-w-0">
               <div class="flex items-center space-x-1.5">
-                <span class="font-semibold text-warn text-xs">修改提示 (危險指令二次確認保護)</span>
+                <span class="font-semibold text-warn text-xs">{{ $t('connectionModal.modificationPromptTitle') }}</span>
                 <Tag severity="warn" value="SAFE GUARD" class="!text-[9px] !px-1 !py-0 font-mono" />
               </div>
               <p class="text-xxs text-dark-400 mt-0.5 leading-relaxed">
-                勾選後，在此連線執行 <code class="text-warn font-mono">UPDATE</code>、<code class="text-warn font-mono">DELETE</code>、<code class="text-warn font-mono">DROP</code> 等修改指令時，強制要求連續確認 2 次，防範意外誤更動。
+                {{ $t('connectionModal.modificationPromptDesc') }}
               </p>
             </div>
           </div>
@@ -132,17 +132,17 @@
           <div class="flex items-center space-x-4 text-dark-300">
             <div class="flex items-center space-x-2">
               <Checkbox v-model="form.encrypt" :binary="true" input-id="encrypt-cb" />
-              <label for="encrypt-cb" class="cursor-pointer">強制 TLS 加密</label>
+              <label for="encrypt-cb" class="cursor-pointer">{{ $t('connectionModal.forceTls') }}</label>
             </div>
             <div class="flex items-center space-x-2">
               <Checkbox v-model="form.trustServerCertificate" :binary="true" input-id="trust-cert-cb" />
-              <label for="trust-cert-cb" class="cursor-pointer">信任自我簽署憑證 (Trust Cert)</label>
+              <label for="trust-cert-cb" class="cursor-pointer">{{ $t('connectionModal.trustSelfSigned') }}</label>
             </div>
           </div>
 
           <!-- Color Picker Row -->
           <div class="flex items-center space-x-2 pt-1">
-            <label class="text-dark-300 font-medium">標籤色彩:</label>
+            <label class="text-dark-300 font-medium">{{ $t('connectionModal.colorLabel') }}</label>
             <div class="flex items-center space-x-1.5">
               <button
                 v-for="preset in PRESET_COLORS"
@@ -159,7 +159,7 @@
                 :title="preset"
               />
             </div>
-            <label class="relative cursor-pointer flex items-center justify-center w-5 h-5 rounded border border-dark-600 bg-dark-900 hover:border-dark-400 ml-1" title="自訂色彩">
+            <label class="relative cursor-pointer flex items-center justify-center w-5 h-5 rounded border border-dark-600 bg-dark-900 hover:border-dark-400 ml-1" :title="$t('connectionModal.customColorTooltip')">
               <input
                 type="color"
                 v-model="form.color"
@@ -172,7 +172,7 @@
             </label>
             <Button
               v-if="form.color"
-              label="清除"
+              :label="$t('common.clear')"
               size="small"
               text
               severity="secondary"
@@ -182,7 +182,7 @@
 
             <!-- Preview -->
             <div class="ml-auto flex items-center space-x-1.5 px-2 py-0.5 rounded bg-dark-900 border border-dark-750 text-xxs">
-              <span class="text-dark-500">預覽:</span>
+              <span class="text-dark-500">{{ $t('connectionModal.preview') }}</span>
               <span
                 class="w-2 h-2 rounded-full shrink-0"
                 :style="{ backgroundColor: form.color || '#64748b' }"
@@ -208,7 +208,7 @@
         :closable="false"
         class="!text-xs"
       >
-        <span class="font-medium">{{ testResult.success ? '連線測試成功！' : '連線測試失敗' }}</span>
+        <span class="font-medium">{{ testResult.success ? $t('connectionModal.testSuccessTitle') : $t('connectionModal.testFailedTitle') }}</span>
         <span v-if="testResult.message" class="block text-xxs mt-0.5 font-mono">{{ testResult.message }}</span>
       </Message>
     </form>
@@ -218,7 +218,7 @@
       <div class="flex items-center justify-between w-full pt-2">
         <Button
           type="button"
-          label="測試連線 (Test)"
+          :label="$t('connectionModal.testButton')"
           icon="pi pi-bolt"
           severity="secondary"
           size="small"
@@ -229,7 +229,7 @@
         <div class="flex items-center space-x-2">
           <Button
             type="button"
-            label="取消 (Cancel)"
+            :label="$t('connectionModal.cancelButton')"
             severity="secondary"
             size="small"
             text
@@ -237,7 +237,7 @@
           />
           <Button
             type="button"
-            label="儲存並連線 (Save & Connect)"
+            :label="$t('connectionModal.saveAndConnectButton')"
             icon="pi pi-check"
             severity="primary"
             size="small"

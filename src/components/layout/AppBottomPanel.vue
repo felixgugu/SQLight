@@ -185,6 +185,7 @@
 
 <script setup lang="ts">
 import { ref, computed, reactive, nextTick, onBeforeUnmount } from 'vue';
+import { useI18n } from 'vue-i18n';
 import Button from 'primevue/button';
 import Badge from 'primevue/badge';
 import ContextMenu from 'primevue/contextmenu';
@@ -200,6 +201,7 @@ import ExecutionStatsViewer from '@/components/results/ExecutionStatsViewer.vue'
 import type { BottomPanelTab } from '@/types/workspace';
 import type { QueryResultTab } from '@/types/query';
 
+const { t } = useI18n();
 const workspaceStore = useWorkspaceStore();
 const queryStore = useQueryStore();
 const settingsStore = useSettingsStore();
@@ -363,23 +365,23 @@ const tabContextMenuItems = computed(() => {
     },
     { separator: true },
     {
-      label: '重新命名 (Rename)',
+      label: t('editor.renameTab'),
       icon: 'pi pi-pencil',
       command: handleContextMenuRename,
     },
     {
-      label: tab.isPinned ? '解除釘選 (Unpin)' : '釘選此結果 (Pin)',
+      label: tab.isPinned ? t('common.unpin') : t('results.pinTab'),
       icon: tab.isPinned ? 'pi pi-bookmark-fill' : 'pi pi-bookmark',
       command: handleContextMenuPin,
     },
     {
-      label: '關閉此結果 (Close)',
+      label: t('results.closeTab'),
       icon: 'pi pi-times',
       disabled: queryStore.resultTabs.length <= 1,
       command: handleContextMenuClose,
     },
     {
-      label: '關閉其它結果 (Close Others)',
+      label: t('results.closeOtherTabs'),
       icon: 'pi pi-clone',
       disabled: otherClosableCount === 0,
       command: handleContextMenuCloseOthers,
@@ -435,25 +437,25 @@ const hasErrorMessages = computed(() => {
 const panelTabs = computed<{ id: BottomPanelTab; label: string; icon: typeof TableProperties; badge?: number }[]>(() => [
   {
     id: 'results',
-    label: 'Results',
+    label: t('results.tabResults'),
     icon: TableProperties,
     badge: queryStore.resultTabs.length > 0 ? queryStore.resultTabs.length : (queryStore.activeResult?.resultSets[0]?.rowCount ?? 0),
   },
   {
     id: 'messages',
-    label: 'Messages',
+    label: t('results.tabMessages'),
     icon: MessageSquare,
     badge: queryStore.sessionMessages.length,
   },
   {
     id: 'history',
-    label: 'History',
+    label: t('results.tabHistory'),
     icon: History,
     badge: queryStore.history.length,
   },
   {
     id: 'stats',
-    label: 'Stats',
+    label: t('results.tabStats'),
     icon: Gauge,
     badge: queryStore.activeExecutionStats?.tableStats.length,
   },

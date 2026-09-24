@@ -20,7 +20,8 @@
 </template>
 
 <script setup lang="ts">
-import type { Component } from 'vue';
+import { computed, type Component } from 'vue';
+import { useI18n } from 'vue-i18n';
 import Button from 'primevue/button';
 import {
   ClipboardPaste,
@@ -30,6 +31,8 @@ import {
   UnfoldVertical,
 } from 'lucide-vue-next';
 import type { SqlEditorToolbarAction } from '@/types/editor';
+
+const { t } = useI18n();
 
 defineProps<{
   disabled?: boolean;
@@ -46,36 +49,36 @@ interface SqlEditorToolbarItem {
   icon: Component;
 }
 
-const actions: SqlEditorToolbarItem[] = [
+const actions = computed<SqlEditorToolbarItem[]>(() => [
   {
     action: 'cut',
-    label: '剪下',
-    tooltip: '剪下選取內容 (Ctrl + X)',
+    label: t('common.cut'),
+    tooltip: t('editor.cutTooltip'),
     icon: Scissors,
   },
   {
     action: 'copy',
-    label: '複製',
-    tooltip: '複製選取內容 (Ctrl + C)',
+    label: t('common.copy'),
+    tooltip: t('editor.copyTooltip'),
     icon: Copy,
   },
   {
     action: 'paste',
-    label: '貼上',
-    tooltip: '貼上剪貼簿內容 (Ctrl + V)',
+    label: t('common.paste'),
+    tooltip: t('editor.pasteTooltip'),
     icon: ClipboardPaste,
   },
   {
     action: 'unfoldAll',
-    label: '展開',
-    tooltip: '展開整份 SQL 的所有區塊',
+    label: t('common.expand'),
+    tooltip: t('editor.unfoldAllTooltip'),
     icon: UnfoldVertical,
   },
   {
     action: 'foldAll',
-    label: '收合',
-    tooltip: '收合整份 SQL 的所有區塊',
+    label: t('common.collapse'),
+    tooltip: t('editor.foldAllTooltip'),
     icon: FoldVertical,
   },
-];
+]);
 </script>

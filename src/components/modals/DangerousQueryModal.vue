@@ -15,7 +15,7 @@
         />
         <i v-else class="pi pi-exclamation-triangle text-warn text-lg" />
         <span class="font-semibold text-sm text-dark-100">
-          {{ step === 2 ? '高危險變更確認 (第二次確認 2/2 — 最終確認)' : '修改提示 — 偵測到變更指令 (第一次確認 1/2)' }}
+          {{ step === 2 ? $t('dangerousQuery.step2Title') : $t('dangerousQuery.step1Title') }}
         </span>
       </div>
     </template>
@@ -25,12 +25,12 @@
       <!-- Target Environment & Database Info -->
       <div class="flex items-center space-x-2 text-xxs font-mono bg-dark-900 p-2 rounded border border-dark-750">
         <div class="flex items-center space-x-1 text-dark-300">
-          <span class="text-dark-500">連線:</span>
+          <span class="text-dark-500">{{ $t('dangerousQuery.connLabel') }}</span>
           <span class="font-semibold text-dark-100">{{ connectionName }}</span>
         </div>
         <span class="text-dark-600">/</span>
         <div class="flex items-center space-x-1 text-dark-300">
-          <span class="text-dark-500">資料庫:</span>
+          <span class="text-dark-500">{{ $t('dangerousQuery.dbLabel') }}</span>
           <span class="font-semibold text-dark-100">{{ databaseName }}</span>
         </div>
       </div>
@@ -40,8 +40,8 @@
         <!-- Detected Keywords List -->
         <div class="space-y-1.5">
           <div class="text-dark-300 flex items-center justify-between">
-            <span>偵測到即將執行的修改/變更指令：</span>
-            <span class="text-xxs text-dark-500 font-mono">{{ detectedKeywords.length }} 種關鍵字</span>
+            <span>{{ $t('dangerousQuery.detectedTitle') }}</span>
+            <span class="text-xxs text-dark-500 font-mono">{{ $t('dangerousQuery.keywordsCount', { count: detectedKeywords.length }) }}</span>
           </div>
           <div class="flex items-center flex-wrap gap-1.5">
             <Tag
@@ -58,15 +58,13 @@
         <div class="space-y-1">
           <div class="text-dark-400 text-xxs flex items-center space-x-1">
             <i class="pi pi-code text-dark-400" />
-            <span>即將執行的 SQL 片段預覽：</span>
+            <span>{{ $t('dangerousQuery.sqlPreview') }}</span>
           </div>
           <pre class="bg-dark-950 p-2.5 rounded border border-dark-800 font-mono text-xxs text-dark-200 overflow-auto max-h-32 whitespace-pre-wrap select-text leading-relaxed">{{ sql }}</pre>
         </div>
 
         <!-- Prompt description -->
-        <p class="text-dark-300 leading-relaxed bg-amber-500/15 border border-amber-500/30 p-2.5 rounded text-xxs">
-          連線「<strong>{{ connectionName }}</strong>」已開啟「修改提示」保護機制。<br />
-          為避免改錯或刪除正式資料，系統要求必須<strong>連續確認 2 次</strong>才可執行。請確認是否要進行第二次確認？
+        <p class="text-dark-300 leading-relaxed bg-amber-500/15 border border-amber-500/30 p-2.5 rounded text-xxs" v-html="$t('dangerousQuery.promptDesc', { connection: connectionName })">
         </p>
       </template>
 
@@ -76,18 +74,15 @@
         <div class="bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-600/60 p-3.5 rounded-lg space-y-2 text-danger leading-relaxed">
           <div class="flex items-center space-x-2 text-danger font-bold text-xs">
             <i class="pi pi-ban text-danger text-base flex-shrink-0" />
-            <span>注意：此操作將直接更動目標資料庫！</span>
+            <span>{{ $t('dangerousQuery.dangerAlertTitle') }}</span>
           </div>
-          <p class="text-xxs text-danger/90 leading-relaxed">
-            即將對目標伺服器 <strong>{{ connectionName }}</strong> 的 <strong>{{ databaseName }}</strong> 資料庫執行包含
-            <strong class="text-danger">{{ detectedKeywords.join('、') }}</strong> 的變更操作。<br />
-            資料修改或結構刪除後<strong>可能無法復原或復原成本極高</strong>。
+          <p class="text-xxs text-danger/90 leading-relaxed" v-html="$t('dangerousQuery.dangerAlertDesc', { connection: connectionName, database: databaseName, keywords: detectedKeywords.join('、') })">
           </p>
         </div>
 
         <div class="text-center py-1">
           <span class="text-xs font-semibold text-dark-100">
-            請再次審慎確認：是否確定要立即執行此 SQL？
+            {{ $t('dangerousQuery.confirmQuestion') }}
           </span>
         </div>
       </template>
@@ -98,7 +93,7 @@
       <div class="flex items-center justify-between w-full pt-2">
         <Button
           type="button"
-          :label="step === 2 ? '放棄執行 (Esc)' : '取消 (Esc)'"
+          :label="step === 2 ? $t('dangerousQuery.abort') : $t('dangerousQuery.cancel')"
           severity="secondary"
           size="small"
           text
@@ -108,7 +103,7 @@
         <Button
           v-if="step === 1"
           type="button"
-          label="繼續確認 (1/2)"
+          :label="$t('dangerousQuery.proceedStep1')"
           icon="pi pi-arrow-right"
           iconPos="right"
           severity="warn"
@@ -119,7 +114,7 @@
         <Button
           v-else
           type="button"
-          label="確定立即執行 (Execute)"
+          :label="$t('dangerousQuery.execute')"
           icon="pi pi-exclamation-triangle"
           severity="danger"
           size="small"

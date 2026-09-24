@@ -10,7 +10,7 @@
           'text-dark-300 hover:bg-dark-750 hover:text-dark-100'
         ]"
         :style="{ paddingLeft: `${depth * 14 + 6}px` }"
-        :title="`${node.path} (點擊展開/收合，右鍵開啟選單)`"
+        :title="`${node.path} (${$t('sidebar.clickToExpand')})`"
       >
         <!-- Chevron -->
         <button
@@ -67,7 +67,7 @@
             : 'text-dark-300 hover:bg-dark-750 hover:text-dark-100'
         ]"
         :style="{ paddingLeft: `${depth * 14 + 20}px` }"
-        :title="`${node.path} (點擊在編輯區開啟，右鍵開啟選單)`"
+        :title="`${node.path} (${$t('sidebar.clickToOpen')})`"
       >
         <FileCode class="w-3.5 h-3.5 text-accent flex-shrink-0" />
 

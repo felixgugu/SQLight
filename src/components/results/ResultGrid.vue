@@ -29,7 +29,7 @@
         <div class="flex items-center space-x-1.5 min-w-0">
           <div class="flex items-center space-x-1 text-xxs font-sans text-primary font-medium px-1.5 py-0.5 rounded bg-dark-800 border border-dark-700">
             <Layers class="w-3 h-3 text-primary" />
-            <span>{{ effectiveResultSets.length }} Result Sets (共 {{ totalRowsSum.toLocaleString() }} 筆)</span>
+            <span>{{ $t('results.resultSetsOverview', { count: effectiveResultSets.length, total: totalRowsSum.toLocaleString() }) }}</span>
           </div>
 
           <!-- If in Tabbed Mode, render tab buttons -->
@@ -55,12 +55,12 @@
             v-else-if="maximizedIndex !== null"
             class="flex items-center space-x-1.5 text-xxs text-warn bg-amber-500/15 border border-amber-500/30 px-2 py-0.5 rounded"
           >
-            <span>已最大化 Result #{{ maximizedIndex + 1 }}</span>
+            <span>{{ $t('results.maximizedResult', { index: maximizedIndex + 1 }) }}</span>
             <button
               @click="maximizedIndex = null"
               class="text-warn hover:text-warn underline cursor-pointer font-medium"
             >
-              還原多網格
+              {{ $t('results.restoreMultiGrid') }}
             </button>
           </div>
         </div>
@@ -78,10 +78,10 @@
                 ? 'border-primary/50 text-primary'
                 : 'border-dark-700 text-dark-300 hover:text-dark-100'
             ]"
-            :title="toolbarHidden ? '顯示所有 DataGrid 的工具列與資訊列' : '隱藏所有 DataGrid 的工具列與資訊列 (純資料檢視)'"
+            :title="toolbarHidden ? $t('results.showToolbarsTooltip') : $t('results.hideToolbarsTooltip')"
           >
             <component :is="toolbarHidden ? Eye : EyeOff" class="w-2.5 h-2.5" />
-            <span>{{ toolbarHidden ? '顯示工具列' : '隱藏工具列' }}</span>
+            <span>{{ toolbarHidden ? $t('results.showToolbars') : $t('results.hideToolbars') }}</span>
           </button>
 
           <!-- Reset Heights Button in Stacked Mode -->
@@ -90,10 +90,10 @@
             type="button"
             @click="resetEqualHeights"
             class="px-2 py-0.5 rounded text-xxs bg-dark-800 hover:bg-dark-750 text-dark-300 hover:text-dark-100 border border-dark-700 transition-colors flex items-center space-x-1 cursor-pointer"
-            title="等分重設所有網格高度 (亦可雙擊分割線)"
+            :title="$t('results.equalHeightsTooltip')"
           >
             <Split class="w-2.5 h-2.5" />
-            <span>等分高度</span>
+            <span>{{ $t('results.equalHeights') }}</span>
           </button>
 
           <!-- Toggle View Mode Button -->
@@ -101,10 +101,10 @@
             type="button"
             @click="toggleViewMode"
             class="px-2 py-0.5 rounded text-xxs bg-dark-800 hover:bg-dark-750 text-dark-300 hover:text-dark-100 border border-dark-700 transition-colors flex items-center space-x-1 cursor-pointer"
-            :title="viewMode === 'stacked' ? '切換為分頁標籤檢視 (Tabs)' : '切換為 SSMS 垂直多網格檢視 (Stacked)'"
+            :title="viewMode === 'stacked' ? $t('results.switchToTabsTooltip') : $t('results.switchToStackedTooltip')"
           >
             <component :is="viewMode === 'stacked' ? Rows : LayoutGrid" class="w-2.5 h-2.5 text-primary" />
-            <span>{{ viewMode === 'stacked' ? 'SSMS 堆疊' : '分頁檢視' }}</span>
+            <span>{{ viewMode === 'stacked' ? $t('results.ssmsStacked') : $t('results.tabbedView') }}</span>
           </button>
         </div>
       </div>

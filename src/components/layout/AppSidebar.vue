@@ -14,7 +14,7 @@
           text
           rounded
           class="!h-6 !w-6 !p-0"
-          v-tooltip.bottom="'快速定位游標處資料表 (Locate Table)'"
+          :v-tooltip.bottom="$t('results.locateInExplorer')"
           @click="handleLocateCurrentTable"
         />
         <Button
@@ -24,7 +24,7 @@
           text
           rounded
           class="!h-6 !w-6 !p-0"
-          v-tooltip.bottom="'新增連線 (New Connection)'"
+          :v-tooltip.bottom="$t('sidebar.newConnection')"
           @click="$emit('open-connection-modal')"
         />
         <Button
@@ -34,7 +34,7 @@
           text
           rounded
           class="!h-6 !w-6 !p-0"
-          v-tooltip.bottom="'重新整理 (Refresh Explorer)'"
+          :v-tooltip.bottom="$t('sidebar.refresh')"
           @click="refreshCurrent"
         />
         <Button
@@ -44,7 +44,7 @@
           text
           rounded
           class="!h-6 !w-6 !p-0"
-          v-tooltip.bottom="'全部收合 (Collapse All)'"
+          :v-tooltip.bottom="$t('common.collapse')"
           @click="handleCollapseAll"
         />
       </div>
@@ -62,7 +62,7 @@
           @keydown.up.prevent="handleKeyUp"
           @keydown.esc.stop="handleKeyEsc"
           @blur="handleInputBlur"
-          placeholder="Filter tables, views & procs..."
+          :placeholder="$t('sidebar.filterPlaceholder')"
           class="w-full !bg-dark-900 !border-dark-700 !rounded !px-2 !py-1 !pl-7 !pr-12 !text-xs !text-dark-100 !font-sans"
         />
 
@@ -74,7 +74,7 @@
             type="button"
             @click.stop="clearFilter"
             class="p-0.5 text-dark-400 hover:text-dark-100 hover:bg-dark-750 rounded transition-colors"
-            title="清除搜尋條件 (Esc)"
+            :title="$t('sidebar.filterClear')"
           >
             <X class="w-3 h-3" />
           </button>
@@ -87,7 +87,7 @@
               'p-0.5 rounded transition-colors',
               isHistoryDropdownOpen ? 'text-accent bg-dark-750' : 'text-dark-400 hover:text-dark-200 hover:bg-dark-750'
             ]"
-            title="過濾歷史紀錄 (Recent Filters)"
+            :title="$t('sidebar.filterHistory')"
           >
             <ChevronDown :class="['w-3 h-3 transition-transform duration-150', isHistoryDropdownOpen ? 'rotate-180' : '']" />
           </button>
@@ -103,7 +103,7 @@
         <div class="px-2.5 py-1 text-xxs text-dark-400 border-b border-dark-750 flex items-center justify-between font-sans">
           <span class="flex items-center space-x-1">
             <History class="w-3 h-3 text-accent" />
-            <span>搜尋歷史紀錄 (最多 30 筆)</span>
+            <span>{{ $t('sidebar.filterHistoryTitle') }}</span>
           </span>
           <span v-if="filterHistory.length > 0" class="text-xxs px-1 py-0.2 bg-dark-700 text-dark-300 rounded font-sans">
             {{ filterHistory.length }}
@@ -137,7 +137,7 @@
               type="button"
               @click.stop="handleRemoveHistoryItem(item)"
               class="p-0.5 text-dark-500 hover:text-danger rounded opacity-0 group-hover:opacity-100 transition-all flex-shrink-0"
-              title="刪除此筆紀錄"
+              :title="$t('sidebar.deleteHistoryItem')"
             >
               <X class="w-3 h-3" />
             </button>
@@ -146,7 +146,7 @@
 
         <!-- Empty State -->
         <div v-else class="px-3 py-4 text-center text-dark-500 text-xs font-sans">
-          尚無過濾歷史紀錄
+          {{ $t('sidebar.noFilterHistory') }}
         </div>
 
         <!-- Dropdown Footer -->
@@ -154,14 +154,14 @@
           v-if="filterHistory.length > 0"
           class="border-t border-dark-750 px-2.5 py-1 flex items-center justify-between bg-dark-850/60 font-sans"
         >
-          <span class="text-xxs text-dark-500">按 Enter 或點選套用</span>
+          <span class="text-xxs text-dark-500">{{ $t('sidebar.pressEnterToApply') }}</span>
           <button
             type="button"
             @mousedown.prevent
             @click.stop="handleClearAllHistory"
             class="text-xxs text-dark-400 hover:text-danger transition-colors"
           >
-            清除全部紀錄
+            {{ $t('sidebar.clearAllHistory') }}
           </button>
         </div>
       </div>
@@ -190,7 +190,7 @@
             type="button"
             @click.stop="toggleConnectionExpand(conn.id)"
             class="p-0.5 hover:bg-dark-700 text-dark-500 hover:text-dark-200 rounded transition-colors flex-shrink-0 flex items-center justify-center"
-            title="展開/收合 (Expand/Collapse)"
+            :title="$t('sidebar.expandCollapse')"
           >
             <component
               :is="expandedConns[conn.id] ? ChevronDown : ChevronRight"
@@ -215,9 +215,9 @@
           <Tag
             v-if="connectionStore.activeConnectionId === conn.id && connectionStore.status === 'connected'"
             severity="success"
-            value="使用中"
+            :value="$t('sidebar.inUse')"
             class="!text-[9px] !px-1 !py-0 !font-normal flex-shrink-0 mr-1"
-            title="目前工作區使用中連線"
+            :title="$t('sidebar.currentActiveConn')"
           />
 
           <!-- Action Buttons on Hover -->
@@ -230,7 +230,7 @@
               type="button"
               @click.stop="handleRefreshConn(conn)"
               class="p-1 hover:bg-dark-700 text-dark-400 hover:text-dark-200 rounded transition-colors"
-              title="重新整理 (Refresh)"
+              :title="$t('sidebar.refresh')"
             >
               <RotateCw :class="['w-3 h-3', refreshingConnId === conn.id ? 'animate-spin text-accent' : '']" />
             </button>
@@ -240,7 +240,7 @@
               type="button"
               @click.stop="handleEditConn(conn)"
               class="p-1 hover:bg-dark-700 text-dark-400 hover:text-dark-200 rounded transition-colors"
-              title="編輯設定 (Edit)"
+              :title="$t('sidebar.editConnection')"
             >
               <Settings class="w-3 h-3" />
             </button>
@@ -271,7 +271,7 @@
                 type="button"
                 @click.stop="toggleDatabaseExpand(conn.id, db)"
                 class="p-0.5 hover:bg-dark-700 text-dark-500 hover:text-dark-200 rounded transition-colors flex-shrink-0 flex items-center justify-center"
-                title="展開/收合資料表 (Expand/Collapse Objects)"
+                :title="$t('sidebar.expandCollapse')"
               >
                 <component
                   :is="expandedDbs[`${conn.id}:${db}`] ? ChevronDown : ChevronRight"
@@ -284,9 +284,9 @@
               <span
                 v-if="connectionStore.activeConnectionId === conn.id && connectionStore.activeDatabase === db"
                 class="text-[9px] px-1 py-0.2 rounded bg-amber-500/15 text-warn font-sans border border-amber-500/30 flex-shrink-0 mr-1"
-                title="目前工作區使用中資料庫"
+                :title="$t('sidebar.currentActiveDb')"
               >
-                使用中
+                {{ $t('sidebar.inUse') }}
               </span>
             </div>
 
@@ -298,7 +298,7 @@
                 class="py-1 px-1.5 text-xxs text-dark-400 flex items-center space-x-1.5"
               >
                 <RotateCw class="w-3 h-3 animate-spin text-accent" />
-                <span>載入物件中...</span>
+                <span>{{ $t('sidebar.loadingObjects') }}</span>
               </div>
 
               <div v-else class="space-y-1">
@@ -316,7 +316,7 @@
                       :is="isFolderExpanded(conn.id, db, 'tables') ? FolderOpen : Folder"
                       class="w-3 h-3 text-accent"
                     />
-                    <span class="font-sans text-dark-200">資料表</span>
+                    <span class="font-sans text-dark-200">{{ $t('sidebar.tables') }}</span>
                     <span class="text-xxs text-dark-500 font-sans">({{ getFilteredTables(conn.id, db).length }})</span>
                   </div>
 
@@ -329,7 +329,7 @@
                       v-if="getFilteredTables(conn.id, db).length === 0"
                       class="py-0.5 px-1.5 text-xxs text-dark-500 italic"
                     >
-                      無資料表 (No tables)
+                      {{ $t('sidebar.noTables') }}
                     </div>
 
                     <div
@@ -351,7 +351,7 @@
                             ? 'bg-brand-500/25 ring-1 ring-brand-400 text-accent shadow-md shadow-brand-500/10'
                             : 'hover:bg-dark-750 text-dark-300 hover:text-dark-100'
                         ]"
-                        :title="`${table.schema}.${table.name} (Table) - 右鍵開啟選單 (Open Data / DDL)`"
+                        :title="`${table.schema}.${table.name} (Table)`"
                       >
                         <component
                           :is="isTableExpanded(conn.id, db, table.schema, table.name) ? ChevronDown : ChevronRight"
@@ -364,7 +364,7 @@
                           v-if="activeLocatedKey === tableKey(conn.id, db, table.schema, table.name)"
                           class="text-[9px] px-1 py-0.2 bg-brand-600 text-white rounded font-sans flex-shrink-0 animate-pulse ml-1"
                         >
-                          已定位
+                          {{ $t('sidebar.located') }}
                         </span>
                       </div>
 
@@ -378,14 +378,14 @@
                           class="py-0.5 px-1 text-xxs text-dark-400 flex items-center space-x-1.5"
                         >
                           <RotateCw class="w-2.5 h-2.5 animate-spin text-accent" />
-                          <span>載入欄位中...</span>
+                          <span>{{ $t('sidebar.loadingColumns') }}</span>
                         </div>
 
                         <div
                           v-else-if="getTableColumns(conn.id, db, table.schema, table.name).length === 0"
                           class="py-0.5 px-1 text-xxs text-dark-500 italic"
                         >
-                          無欄位資訊
+                          {{ $t('sidebar.noColumns') }}
                         </div>
 
                         <div
@@ -399,7 +399,7 @@
                               ? 'bg-brand-500/25 text-accent border border-brand-500/40 shadow-xs'
                               : 'text-dark-400 hover:text-dark-100 hover:bg-dark-750/70'
                           ]"
-                          :title="`雙擊記住此欄位 (${col.name})，點擊編輯區游標處即可貼上`"
+                          :title="$t('sidebar.doubleClickToPaste', { name: col.name })"
                         >
                           <Key v-if="col.isPrimaryKey" class="w-2.5 h-2.5 text-warn flex-shrink-0" />
                           <Columns v-else class="w-2.5 h-2.5 text-dark-500 group-hover:text-dark-300 flex-shrink-0" />
@@ -413,7 +413,7 @@
                             v-if="isPendingColumn(col.name)"
                             class="text-xxs px-1 py-0.2 bg-brand-500/30 text-accent rounded text-[9px] border border-brand-400/40 flex-shrink-0 animate-pulse"
                           >
-                            待貼上
+                            {{ $t('sidebar.pendingPaste') }}
                           </span>
                         </div>
                       </div>
@@ -435,7 +435,7 @@
                       :is="isFolderExpanded(conn.id, db, 'views') ? FolderOpen : Folder"
                       class="w-3 h-3 text-plan"
                     />
-                    <span class="font-sans text-dark-200">檢視表</span>
+                    <span class="font-sans text-dark-200">{{ $t('sidebar.views') }}</span>
                     <span class="text-xxs text-dark-500 font-sans">({{ getFilteredViews(conn.id, db).length }})</span>
                   </div>
 
@@ -448,7 +448,7 @@
                       v-if="getFilteredViews(conn.id, db).length === 0"
                       class="py-0.5 px-1.5 text-xxs text-dark-500 italic"
                     >
-                      無檢視表 (No views)
+                      {{ $t('sidebar.noViews') }}
                     </div>
 
                     <div
@@ -470,7 +470,7 @@
                             ? 'bg-purple-500/25 ring-1 ring-purple-400 text-plan shadow-md shadow-purple-500/10'
                             : 'hover:bg-dark-750 text-dark-300 hover:text-dark-100'
                         ]"
-                        :title="`${view.schema}.${view.name} (View) - 右鍵檢視定義或查詢`"
+                        :title="`${view.schema}.${view.name} (View)`"
                       >
                         <component
                           :is="isTableExpanded(conn.id, db, view.schema, view.name) ? ChevronDown : ChevronRight"
@@ -483,7 +483,7 @@
                           v-if="activeLocatedKey === tableKey(conn.id, db, view.schema, view.name)"
                           class="text-[9px] px-1 py-0.2 bg-purple-600 text-white rounded font-sans flex-shrink-0 animate-pulse ml-1"
                         >
-                          已定位
+                          {{ $t('sidebar.located') }}
                         </span>
                       </div>
 
@@ -497,14 +497,14 @@
                           class="py-0.5 px-1 text-xxs text-dark-400 flex items-center space-x-1.5"
                         >
                           <RotateCw class="w-2.5 h-2.5 animate-spin text-accent" />
-                          <span>載入欄位中...</span>
+                          <span>{{ $t('sidebar.loadingColumns') }}</span>
                         </div>
 
                         <div
                           v-else-if="getTableColumns(conn.id, db, view.schema, view.name).length === 0"
                           class="py-0.5 px-1 text-xxs text-dark-500 italic"
                         >
-                          無欄位資訊
+                          {{ $t('sidebar.noColumns') }}
                         </div>
 
                         <div
@@ -518,7 +518,7 @@
                               ? 'bg-brand-500/25 text-accent border border-brand-500/40 shadow-xs'
                               : 'text-dark-400 hover:text-dark-100 hover:bg-dark-750/70'
                           ]"
-                          :title="`雙擊記住此欄位 (${col.name})，點擊編輯區游標處即可貼上`"
+                          :title="$t('sidebar.doubleClickToPaste', { name: col.name })"
                         >
                           <Columns class="w-2.5 h-2.5 text-dark-500 group-hover:text-dark-300 flex-shrink-0" />
                           <span class="text-dark-300 group-hover:text-dark-100 truncate flex-1">
@@ -547,7 +547,7 @@
                       :is="isFolderExpanded(conn.id, db, 'procs') ? FolderOpen : Folder"
                       class="w-3 h-3 text-warn"
                     />
-                    <span class="font-sans text-dark-200">預存程序</span>
+                    <span class="font-sans text-dark-200">{{ $t('sidebar.storedProcedures') }}</span>
                     <span class="text-xxs text-dark-500 font-sans">({{ getFilteredProcedures(conn.id, db).length }})</span>
                   </div>
 
@@ -560,7 +560,7 @@
                       v-if="getFilteredProcedures(conn.id, db).length === 0"
                       class="py-0.5 px-1.5 text-xxs text-dark-500 italic"
                     >
-                      無預存程序 (No stored procedures)
+                      {{ $t('sidebar.noStoredProcedures') }}
                     </div>
 
                     <div
@@ -576,7 +576,7 @@
                           ? 'bg-amber-500/25 ring-1 ring-amber-400 text-warn shadow-md shadow-amber-500/10'
                           : 'hover:bg-dark-750 text-dark-300 hover:text-dark-100'
                       ]"
-                      :title="`${proc.schema}.${proc.name} (Stored Procedure) - 雙擊檢視定義，右鍵開啟選單`"
+                      :title="`${proc.schema}.${proc.name} (Stored Procedure)`"
                     >
                       <Cog class="w-3 h-3 text-warn flex-shrink-0" />
                       <span class="text-dark-400 text-xxs flex-shrink-0">{{ proc.schema }}.</span>
@@ -585,7 +585,7 @@
                         v-if="activeLocatedKey === tableKey(conn.id, db, proc.schema, proc.name)"
                         class="text-[9px] px-1 py-0.2 bg-amber-700 text-white rounded font-sans flex-shrink-0 animate-pulse ml-1"
                       >
-                        已定位
+                        {{ $t('sidebar.located') }}
                       </span>
                     </div>
                   </div>
@@ -605,7 +605,7 @@
                       :is="isFolderExpanded(conn.id, db, 'funcs') ? FolderOpen : Folder"
                       class="w-3 h-3 text-info"
                     />
-                    <span class="font-sans text-dark-200">函數</span>
+                    <span class="font-sans text-dark-200">{{ $t('sidebar.functions') }}</span>
                     <span class="text-xxs text-dark-500 font-sans">({{ getFilteredFunctions(conn.id, db).length }})</span>
                   </div>
 
@@ -618,7 +618,7 @@
                       v-if="getFilteredFunctions(conn.id, db).length === 0"
                       class="py-0.5 px-1.5 text-xxs text-dark-500 italic"
                     >
-                      無函數 (No functions)
+                      {{ $t('sidebar.noFunctions') }}
                     </div>
 
                     <div
@@ -634,7 +634,7 @@
                           ? 'bg-sky-500/25 ring-1 ring-sky-400 text-info shadow-md shadow-sky-500/10'
                           : 'hover:bg-dark-750 text-dark-300 hover:text-dark-100'
                       ]"
-                      :title="`${func.schema}.${func.name} (Function) - 雙擊檢視定義，右鍵開啟選單`"
+                      :title="`${func.schema}.${func.name} (Function)`"
                     >
                       <Code2 class="w-3 h-3 text-info flex-shrink-0" />
                       <span class="text-dark-400 text-xxs flex-shrink-0">{{ func.schema }}.</span>
@@ -643,7 +643,7 @@
                         v-if="activeLocatedKey === tableKey(conn.id, db, func.schema, func.name)"
                         class="text-[9px] px-1 py-0.2 bg-sky-700 text-white rounded font-sans flex-shrink-0 animate-pulse ml-1"
                       >
-                        已定位
+                        {{ $t('sidebar.located') }}
                       </span>
                     </div>
                   </div>
@@ -686,10 +686,10 @@
     <!-- Delete Connection Confirm Modal -->
     <ConfirmModal
       :is-open="isDeleteModalOpen"
-      title="刪除連線"
-      :message="`確定要刪除連線「${connToDelete?.name}」嗎？\n\n此動作將同時清除已儲存的伺服器認證資訊，且無法復原。`"
-      confirm-text="刪除"
-      cancel-text="取消"
+      :title="$t('sidebar.deleteConnection')"
+      :message="$t('sidebar.deleteConnectionConfirm', { name: connToDelete?.name || '' })"
+      :confirm-text="$t('common.delete')"
+      :cancel-text="$t('common.cancel')"
       :is-danger="true"
       @confirm="confirmDelete"
       @cancel="cancelDelete"
@@ -699,6 +699,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, reactive, nextTick, watch, computed } from 'vue';
+import { useI18n } from 'vue-i18n';
 import Button from 'primevue/button';
 import InputText from 'primevue/inputtext';
 import ContextMenu from 'primevue/contextmenu';
@@ -733,6 +734,8 @@ import { useSchemaStore } from '@/stores/schemaStore';
 import { useSettingsStore } from '@/stores/settingsStore';
 import { useTsvImportStore } from '@/stores/tsvImportStore';
 import { schemaService } from '@/services/schemaService';
+
+const { t } = useI18n();
 import { connectionService } from '@/services/connectionService';
 import { wrapIdentifierIfNeeded } from '@/utils/sqlParser';
 import { resolveConnectionLabelColor } from '@/utils/connectionColor';
@@ -823,7 +826,7 @@ function handleColumnDoubleClick(col: ColumnItem) {
   } catch (err) {
     // Ignore clipboard access errors
   }
-  workspaceStore.showToast(`已記住欄位 ${colText}，點擊編輯區游標處即可貼上`, 'info', 2500);
+  workspaceStore.showToast(t('sidebar.rememberedColumn', { col: colText }), 'info', 2500);
 }
 
 const filterQuery = ref('');
@@ -1320,25 +1323,25 @@ const objectMenuItems = computed(() => {
   const items: any[] = [];
   if (isTable || isView) {
     items.push({
-      label: isTable ? '開啟資料表 (Open Data)' : '開啟檢視表資料',
+      label: isTable ? t('sidebar.openData') : t('sidebar.openViewData'),
       icon: 'pi pi-table',
       command: handleOpenData,
     });
     items.push({
-      label: '資料表結構 (Table Structure)',
+      label: t('sidebar.tableStructure'),
       icon: 'pi pi-list',
       command: handleOpenStructure,
     });
   }
   if (isTable) {
     items.push({
-      label: '建立關聯實體圖 (ER Model)',
+      label: t('sidebar.erModel'),
       icon: 'pi pi-sitemap',
       command: () => handleOpenErDiagram(2),
     });
     if (workspaceStore.activeTab?.type === 'er_diagram') {
       items.push({
-        label: '加入至當前 ER 圖',
+        label: t('sidebar.addToCurrentEr'),
         icon: 'pi pi-plus-circle',
         command: handleAddToCurrentErDiagram,
       });
@@ -1346,40 +1349,40 @@ const objectMenuItems = computed(() => {
   }
   if (isTable || isView) {
     items.push({
-      label: '產生 SELECT 語法',
+      label: t('sidebar.generateSelect'),
       icon: 'pi pi-file-edit',
       command: handleGenerateSelect,
     });
   }
   if (isTable) {
     items.push({
-      label: '產生 CREATE TABLE 腳本',
+      label: t('sidebar.scriptCreate'),
       icon: 'pi pi-file',
       command: handleGenerateCreateTableDdl,
     });
     items.push({
-      label: 'TSV 匯入 (Import TSV)',
+      label: t('sidebar.importTsv'),
       icon: 'pi pi-upload',
       command: handleTsvImport,
     });
   }
   if (isView || isProc || isFunc) {
     items.push({
-      label: '檢視定義 (View Definition)',
+      label: t('sidebar.viewDefinition'),
       icon: 'pi pi-code',
       command: () => handleViewDefinition(contextMenu.connId, contextMenu.database, contextMenu.schema, contextMenu.tableName),
     });
   }
   if (isProc) {
     items.push({
-      label: '產生 EXEC 呼叫樣板',
+      label: t('sidebar.generateExec'),
       icon: 'pi pi-play',
       command: handleGenerateExec,
     });
   }
   if (isFunc) {
     items.push({
-      label: '產生 SELECT 呼叫樣板',
+      label: t('sidebar.generateFuncSelect'),
       icon: 'pi pi-file-edit',
       command: handleGenerateFuncSelect,
     });
@@ -1397,17 +1400,17 @@ const connMenuItems = computed(() => {
     },
     { separator: true },
     {
-      label: '重新整理 (Refresh)',
+      label: t('sidebar.refresh'),
       icon: 'pi pi-refresh',
       command: () => handleRefreshConn(conn),
     },
     {
-      label: '編輯設定 (Edit)',
+      label: t('sidebar.editConnection'),
       icon: 'pi pi-pencil',
       command: () => handleEditConn(conn),
     },
     {
-      label: '複製連線 (Duplicate)',
+      label: t('sidebar.duplicateConnection'),
       icon: 'pi pi-copy',
       command: () => handleDuplicateConn(conn),
     },
@@ -1415,7 +1418,7 @@ const connMenuItems = computed(() => {
 
   if (connectionStore.activeConnectionId === conn.id && connectionStore.status === 'connected') {
     items.push({
-      label: '中斷連線 (Disconnect)',
+      label: t('sidebar.disconnect'),
       icon: 'pi pi-power-off',
       command: handleDisconnect,
     });
@@ -1423,7 +1426,7 @@ const connMenuItems = computed(() => {
 
   items.push({ separator: true });
   items.push({
-    label: '刪除連線 (Delete)',
+    label: t('sidebar.deleteConnection'),
     icon: 'pi pi-trash',
     class: '!text-danger',
     command: () => handlePromptDelete(conn),
@@ -1476,12 +1479,12 @@ const dbMenuItems = computed(() => {
     },
     { separator: true },
     {
-      label: '匯出資料庫結構 CSV',
+      label: t('sidebar.exportDbSchemaCsv'),
       icon: 'pi pi-file-export',
       command: () => handleOpenExportSchemaModal(conn, db),
     },
     {
-      label: '重新整理物件 (Refresh)',
+      label: t('sidebar.refreshObjects'),
       icon: 'pi pi-refresh',
       command: () => loadDatabaseTables(conn.id, db, true),
     },
@@ -1489,7 +1492,7 @@ const dbMenuItems = computed(() => {
 
   if (connectionStore.activeConnectionId !== conn.id || connectionStore.activeDatabase !== db) {
     items.push({
-      label: '設為目前使用資料庫 (USE)',
+      label: t('sidebar.setAsCurrentDb'),
       icon: 'pi pi-database',
       command: async () => {
         if (connectionStore.activeConnectionId !== conn.id) {
@@ -1684,7 +1687,7 @@ async function handleGenerateCreateTableDdl() {
   });
 
   workspaceStore.addSqlTab(ddl, `${tableName}_ddl.sql`);
-  workspaceStore.showToast(`已產生 [${schema}].[${tableName}] 之 CREATE TABLE 腳本`, 'success', 2500);
+  workspaceStore.showToast(t('sidebar.generatedCreateTable', { schema, table: tableName }), 'success', 2500);
   contextMenu.visible = false;
 }
 
@@ -1696,7 +1699,7 @@ async function handleViewDefinition(connId: string, database: string, schema: st
     const def = await schemaStore.getObjectDefinition(connId, database, schema, name);
     if (def) {
       workspaceStore.addSqlTab(def, `${schema}.${name}.sql`);
-      workspaceStore.showToast(`已載入 [${schema}].[${name}] 之 SQL 定義`, 'success', 2500);
+      workspaceStore.showToast(t('sidebar.loadedSqlDef', { schema, name }), 'success', 2500);
     } else {
       const fallback = `-- 提示：未能直接讀取到 OBJECT_DEFINITION（可能為加密物件或缺少 VIEW DEFINITION 權限）
 USE [${database}];
@@ -1706,7 +1709,7 @@ SELECT OBJECT_DEFINITION(OBJECT_ID(N'[${schema}].[${name}]')) AS [Definition];
 GO
 `;
       workspaceStore.addSqlTab(fallback, `${schema}.${name}.sql`);
-      workspaceStore.showToast(`未能直接讀取到定義，已開啟查詢語句`, 'info', 2500);
+      workspaceStore.showToast(t('sidebar.cannotReadDef'), 'info', 2500);
     }
   } catch (err) {
     console.error('Failed to load object definition:', err);
@@ -1735,7 +1738,7 @@ SELECT @RC AS [Return Code];
 GO
 `;
   workspaceStore.addSqlTab(sql, `EXEC_${tableName}.sql`);
-  workspaceStore.showToast(`已產生 [${schema}].[${tableName}] 之 EXEC 呼叫樣板`, 'success', 2500);
+  workspaceStore.showToast(t('sidebar.generatedExecTemplate', { schema, table: tableName }), 'success', 2500);
   contextMenu.visible = false;
 }
 
@@ -1756,7 +1759,7 @@ SELECT [${schema}].[${tableName}]() AS [Result];
 GO
 `;
   workspaceStore.addSqlTab(sql, `SELECT_${tableName}.sql`);
-  workspaceStore.showToast(`已產生 [${schema}].[${tableName}] 之呼叫樣板`, 'success', 2500);
+  workspaceStore.showToast(t('sidebar.generatedFuncTemplate', { schema, table: tableName }), 'success', 2500);
   contextMenu.visible = false;
 }
 
@@ -1767,7 +1770,7 @@ async function locateTable(options: ExtractedTableIdentifier & { database?: stri
     connectionStore.activeConnectionId;
 
   if (!targetConnId) {
-    workspaceStore.showToast('尚未建立連線，無法進行定位', 'warning', 2500);
+    workspaceStore.showToast(t('sidebar.noConnCannotLocate'), 'warning', 2500);
     return;
   }
 
@@ -1783,7 +1786,7 @@ async function locateTable(options: ExtractedTableIdentifier & { database?: stri
       await connectionStore.connect(targetConnId);
     } catch (err: unknown) {
       workspaceStore.showToast(
-        `連線伺服器失敗: ${err instanceof Error ? err.message : String(err)}`,
+        t('sidebar.connFailed', { error: err instanceof Error ? err.message : String(err) }),
         'error',
         3000
       );
@@ -1853,7 +1856,7 @@ async function locateTable(options: ExtractedTableIdentifier & { database?: stri
   if (!matchedName) {
     const displayTarget = options.schema ? `${options.schema}.${options.table}` : options.table;
     workspaceStore.showToast(
-      `在資料庫 [${targetDb}] 中找不到相符的物件「${displayTarget}」`,
+      t('sidebar.objectNotFoundInDb', { db: targetDb, target: displayTarget }),
       'warning',
       3000
     );
@@ -1925,12 +1928,12 @@ async function locateTable(options: ExtractedTableIdentifier & { database?: stri
   }, 3500);
 
   const typeDesc =
-    matchedType === 'TABLE' ? '資料表' :
-    matchedType === 'VIEW' ? '檢視表' :
-    matchedType === 'PROCEDURE' ? '預存程序' : '函數';
+    matchedType === 'TABLE' ? t('sidebar.tables') :
+    matchedType === 'VIEW' ? t('sidebar.views') :
+    matchedType === 'PROCEDURE' ? t('sidebar.storedProcedures') : t('sidebar.functions');
 
   workspaceStore.showToast(
-    `已在物件總管定位到${typeDesc} [${matchedSchema}].[${matchedName}]`,
+    t('sidebar.locatedObject', { type: typeDesc, schema: matchedSchema, name: matchedName }),
     'success',
     2500
   );

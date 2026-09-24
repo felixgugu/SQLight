@@ -16,8 +16,9 @@ import {
   type ThemePresetName,
 } from '@/services/themeManager';
 import { DEFAULT_GRID_FONT_FAMILY } from '@/data/fontOptions';
+import { type SupportedLocale, DEFAULT_LOCALE, setAppLocale } from '@/i18n';
 
-export type { FilterRule, FilterTarget, HiddenTableRule, ThemePresetName };
+export type { FilterRule, FilterTarget, HiddenTableRule, ThemePresetName, SupportedLocale };
 
 export interface AppSettings {
   // Theme & Appearance
@@ -27,6 +28,7 @@ export interface AppSettings {
   surfaceColor: string;
   ripple: boolean;
   globalFontFamily: string;
+  locale: SupportedLocale;
 
   editorFontSize: number;
   editorFontFamily: string;
@@ -52,6 +54,7 @@ const DEFAULT_SETTINGS: AppSettings = {
   surfaceColor: 'slate',
   ripple: true,
   globalFontFamily: DEFAULT_GLOBAL_FONT_FAMILY,
+  locale: DEFAULT_LOCALE,
 
   editorFontSize: 13,
   editorFontFamily: '"Fira Code", Consolas, Monaco, monospace',
@@ -96,6 +99,7 @@ export const useSettingsStore = defineStore('settings', () => {
   const surfaceColor = ref<string>(initial.surfaceColor || 'slate');
   const ripple = ref<boolean>(initial.ripple ?? true);
   const globalFontFamily = ref<string>(initial.globalFontFamily || DEFAULT_GLOBAL_FONT_FAMILY);
+  const locale = ref<SupportedLocale>(initial.locale || DEFAULT_LOCALE);
 
   const editorFontSize = ref<number>(initial.editorFontSize);
   const editorFontFamily = ref<string>(initial.editorFontFamily);
@@ -144,6 +148,11 @@ export const useSettingsStore = defineStore('settings', () => {
   function setGlobalFontFamily(fontFamily: string) {
     globalFontFamily.value = fontFamily;
     themeManager.applyGlobalFontFamily(fontFamily);
+  }
+
+  function setLocale(newLocale: SupportedLocale, primevueConfig?: any) {
+    locale.value = newLocale;
+    setAppLocale(newLocale, primevueConfig);
   }
 
   function addFilterRule(pattern: string, target: FilterTarget = 'all', description?: string) {
@@ -229,6 +238,7 @@ export const useSettingsStore = defineStore('settings', () => {
       surfaceColor: surfaceColor.value,
       ripple: ripple.value,
       globalFontFamily: globalFontFamily.value,
+      locale: locale.value,
       editorFontSize: editorFontSize.value,
       editorFontFamily: editorFontFamily.value,
       editorWordWrap: editorWordWrap.value,
@@ -259,6 +269,7 @@ export const useSettingsStore = defineStore('settings', () => {
       surfaceColor,
       ripple,
       globalFontFamily,
+      locale,
       editorFontSize,
       editorFontFamily,
       editorWordWrap,
@@ -286,6 +297,7 @@ export const useSettingsStore = defineStore('settings', () => {
     setSurfaceColor(DEFAULT_SETTINGS.surfaceColor);
     setRipple(DEFAULT_SETTINGS.ripple);
     setGlobalFontFamily(DEFAULT_SETTINGS.globalFontFamily);
+    setLocale(DEFAULT_SETTINGS.locale);
 
     editorFontSize.value = DEFAULT_SETTINGS.editorFontSize;
     editorFontFamily.value = DEFAULT_SETTINGS.editorFontFamily;
@@ -309,12 +321,14 @@ export const useSettingsStore = defineStore('settings', () => {
     surfaceColor,
     ripple,
     globalFontFamily,
+    locale,
     setColorMode,
     setThemePreset,
     setPrimaryColor,
     setSurfaceColor,
     setRipple,
     setGlobalFontFamily,
+    setLocale,
     editorFontSize,
     editorFontFamily,
     editorWordWrap,

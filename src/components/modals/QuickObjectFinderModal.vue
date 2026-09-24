@@ -18,7 +18,7 @@
             ref="searchInputRef"
             v-model="searchQuery"
             type="text"
-            placeholder="尋找資料表、檢視表、預存程序、函數... (如 uslog 或 t: xxx)"
+            :placeholder="$t('quickFinder.placeholder')"
             class="w-full !bg-dark-900/50 !border-dark-700 !text-sm font-mono text-dark-100 placeholder-dark-500"
             @keydown.down.prevent="navigateDown"
             @keydown.up.prevent="navigateUp"
@@ -35,7 +35,7 @@
           size="small"
           severity="secondary"
           @click="clearSearch"
-          v-tooltip.top="'清除搜尋'"
+          v-tooltip.top="$t('quickFinder.clearTooltip')"
           class="!w-7 !h-7 !p-0 !rounded-md !border-0 hover:!bg-dark-750"
         />
 
@@ -50,7 +50,7 @@
           severity="secondary"
           @click="refreshObjects"
           :disabled="isLoading"
-          v-tooltip.top="'重新整理物件清單'"
+          v-tooltip.top="$t('quickFinder.refreshTooltip')"
           class="!w-7 !h-7 !p-0 !rounded-md !border-0 hover:!bg-dark-750"
         />
 
@@ -62,7 +62,7 @@
           size="small"
           severity="secondary"
           @click="closeModal"
-          v-tooltip.top="'關閉 (Esc)'"
+          v-tooltip.top="$t('quickFinder.closeTooltip')"
           class="!w-7 !h-7 !p-0 !rounded-md !border-0 !shadow-none hover:!bg-rose-500/20 hover:!text-danger"
         />
       </div>
@@ -74,7 +74,7 @@
           <span class="flex items-center space-x-1">
             <i class="pi pi-server text-ok text-xs"></i>
             <span class="text-dark-300 font-medium truncate max-w-[120px]">
-              {{ connectionStore.activeConnection?.name || '未連線' }}
+              {{ connectionStore.activeConnection?.name || $t('quickFinder.unconnected') }}
             </span>
           </span>
           <span>/</span>
@@ -124,7 +124,7 @@
       class="px-4 py-8 flex flex-col items-center justify-center space-y-2 text-dark-400"
     >
       <i class="pi pi-spin pi-spinner text-2xl text-accent"></i>
-      <span class="text-xs">正在載入資料庫物件...</span>
+      <span class="text-xs">{{ $t('quickFinder.loading') }}</span>
     </div>
 
     <!-- Empty State (No connection) -->
@@ -133,8 +133,8 @@
       class="px-4 py-12 flex flex-col items-center justify-center space-y-2 text-dark-400"
     >
       <i class="pi pi-server text-3xl text-dark-600 mb-1"></i>
-      <span class="text-xs text-dark-300 font-medium">尚未連線至資料庫</span>
-      <span class="text-xxs text-dark-500">請先於側邊欄或頂部選單建立或啟動伺服器連線</span>
+      <span class="text-xs text-dark-300 font-medium">{{ $t('quickFinder.noConnection') }}</span>
+      <span class="text-xxs text-dark-500">{{ $t('quickFinder.noConnectionSub') }}</span>
     </div>
 
     <!-- Empty State (No matched objects) -->
@@ -143,8 +143,8 @@
       class="px-4 py-12 flex flex-col items-center justify-center space-y-1.5 text-dark-400"
     >
       <i class="pi pi-search text-3xl text-dark-600 mb-1"></i>
-      <span class="text-xs text-dark-300">找不到符合「{{ searchQuery }}」的物件</span>
-      <span class="text-xxs text-dark-500">可嘗試使用縮寫或前綴（如 t: 資料表、p: 預存程序）</span>
+      <span class="text-xs text-dark-300">{{ $t('quickFinder.notFound', { query: searchQuery }) }}</span>
+      <span class="text-xxs text-dark-500">{{ $t('quickFinder.notFoundSub') }}</span>
     </div>
 
     <!-- Results Scrollable List -->
@@ -213,34 +213,34 @@
             <Button
               type="button"
               icon="pi pi-table"
-              label="資料"
+              :label="$t('quickFinder.dataBtn')"
               size="small"
               severity="secondary"
               outlined
               @click.stop="openTableData(res.item)"
-              v-tooltip.top="'開啟資料 (Enter)'"
+              v-tooltip.top="$t('quickFinder.openDataTooltip')"
               class="!text-xxs !py-0.5 !px-2"
             />
             <Button
               type="button"
               icon="pi pi-list"
-              label="結構"
+              :label="$t('quickFinder.structureBtn')"
               size="small"
               severity="secondary"
               outlined
               @click.stop="openTableStructure(res.item)"
-              v-tooltip.top="'開啟結構 (Shift + Enter)'"
+              v-tooltip.top="$t('quickFinder.openStructureTooltip')"
               class="!text-xxs !py-0.5 !px-2"
             />
             <Button
               type="button"
               icon="pi pi-file-edit"
-              label="SELECT"
+              :label="$t('quickFinder.selectBtn')"
               size="small"
               severity="secondary"
               outlined
               @click.stop="generateSelectQuery(res.item)"
-              v-tooltip.top="'產生 SELECT 腳本 (Ctrl + Enter)'"
+              v-tooltip.top="$t('quickFinder.generateSelectTooltip')"
               class="!text-xxs !py-0.5 !px-2"
             />
           </template>
@@ -250,23 +250,23 @@
             <Button
               type="button"
               icon="pi pi-code"
-              label="定義"
+              :label="$t('quickFinder.definitionBtn')"
               size="small"
               severity="secondary"
               outlined
               @click.stop="viewDefinition(res.item)"
-              v-tooltip.top="'檢視定義 (Enter)'"
+              v-tooltip.top="$t('quickFinder.viewDefinitionTooltip')"
               class="!text-xxs !py-0.5 !px-2"
             />
             <Button
               type="button"
               icon="pi pi-play"
-              label="EXEC"
+              :label="$t('quickFinder.execBtn')"
               size="small"
               severity="secondary"
               outlined
               @click.stop="generateExecQuery(res.item)"
-              v-tooltip.top="'產生 EXEC 範本 (Ctrl + Enter)'"
+              v-tooltip.top="$t('quickFinder.generateExecTooltip')"
               class="!text-xxs !py-0.5 !px-2"
             />
           </template>
@@ -276,23 +276,23 @@
             <Button
               type="button"
               icon="pi pi-code"
-              label="定義"
+              :label="$t('quickFinder.definitionBtn')"
               size="small"
               severity="secondary"
               outlined
               @click.stop="viewDefinition(res.item)"
-              v-tooltip.top="'檢視定義 (Enter)'"
+              v-tooltip.top="$t('quickFinder.viewDefinitionTooltip')"
               class="!text-xxs !py-0.5 !px-2"
             />
             <Button
               type="button"
               icon="pi pi-file-edit"
-              label="SELECT"
+              :label="$t('quickFinder.selectBtn')"
               size="small"
               severity="secondary"
               outlined
               @click.stop="generateFuncSelectQuery(res.item)"
-              v-tooltip.top="'產生 SELECT 範本 (Ctrl + Enter)'"
+              v-tooltip.top="$t('quickFinder.generateFuncSelectTooltip')"
               class="!text-xxs !py-0.5 !px-2"
             />
           </template>
@@ -306,29 +306,29 @@
       <div class="flex items-center space-x-3">
         <span class="flex items-center space-x-1">
           <kbd class="px-1 py-0.2 rounded bg-dark-750 text-dark-300 font-mono border border-dark-700">↑↓</kbd>
-          <span>導航</span>
+          <span>{{ $t('quickFinder.navKbd') }}</span>
         </span>
         <span class="flex items-center space-x-1">
           <kbd class="px-1 py-0.2 rounded bg-dark-750 text-dark-300 font-mono border border-dark-700">↵</kbd>
-          <span>開啟資料/定義</span>
+          <span>{{ $t('quickFinder.openKbd') }}</span>
         </span>
         <span class="flex items-center space-x-1">
           <kbd class="px-1 py-0.2 rounded bg-dark-750 text-dark-300 font-mono border border-dark-700">Shift+↵</kbd>
-          <span>結構</span>
+          <span>{{ $t('quickFinder.structureKbd') }}</span>
         </span>
         <span class="flex items-center space-x-1">
           <kbd class="px-1 py-0.2 rounded bg-dark-750 text-dark-300 font-mono border border-dark-700">Ctrl+↵</kbd>
-          <span>產生腳本</span>
+          <span>{{ $t('quickFinder.scriptKbd') }}</span>
         </span>
         <span class="flex items-center space-x-1">
           <kbd class="px-1 py-0.2 rounded bg-dark-750 text-dark-300 font-mono border border-dark-700">Esc</kbd>
-          <span>關閉</span>
+          <span>{{ $t('quickFinder.closeKbd') }}</span>
         </span>
       </div>
 
       <!-- Right: Item Counter -->
       <div class="font-mono text-dark-500">
-        顯示 <span class="text-dark-300 font-semibold">{{ scoredResults.length }}</span> / {{ totalMatchingCount }} 個物件
+        {{ $t('quickFinder.displayCount', { shown: scoredResults.length, total: totalMatchingCount }) }}
       </div>
     </div>
   </Dialog>
@@ -336,6 +336,7 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, nextTick } from 'vue';
+import { useI18n } from 'vue-i18n';
 import Dialog from 'primevue/dialog';
 import IconField from 'primevue/iconfield';
 import InputIcon from 'primevue/inputicon';
@@ -426,6 +427,8 @@ const rawObjects = computed<QuickFinderItem[]>(() => {
   });
 });
 
+const { t } = useI18n();
+
 const filterChips = computed(() => {
   const all = rawObjects.value;
   const tables = all.filter((o) => o.type === 'table').length;
@@ -434,11 +437,11 @@ const filterChips = computed(() => {
   const funcs = all.filter((o) => o.type === 'function').length;
 
   return [
-    { type: 'all' as const, label: '全部', count: all.length },
-    { type: 'table' as const, label: '資料表', count: tables },
-    { type: 'view' as const, label: '檢視表', count: views },
-    { type: 'procedure' as const, label: '預存程序', count: procs },
-    { type: 'function' as const, label: '函數', count: funcs },
+    { type: 'all' as const, label: t('quickFinder.all'), count: all.length },
+    { type: 'table' as const, label: t('quickFinder.tables'), count: tables },
+    { type: 'view' as const, label: t('quickFinder.views'), count: views },
+    { type: 'procedure' as const, label: t('quickFinder.procedures'), count: procs },
+    { type: 'function' as const, label: t('quickFinder.functions'), count: funcs },
   ];
 });
 

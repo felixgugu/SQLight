@@ -17,8 +17,8 @@ describe('Result tab context menu close other results', () => {
     // Context menu item check
     assert.match(
       bottomPanelSource,
-      /label:\s*'關閉其它結果 \(Close Others\)'/,
-      'AppBottomPanel context menu must contain 關閉其它結果 (Close Others)'
+      /label:\s*t\('results\.closeOtherTabs'\)/,
+      'AppBottomPanel context menu must contain closeOtherTabs'
     );
     assert.match(
       bottomPanelSource,

@@ -16,7 +16,7 @@
         text
         rounded
         class="!h-7 !w-7 !p-0 !text-accent"
-        v-tooltip.bottom="'新增查詢分頁 (Ctrl+N)'"
+        v-tooltip.bottom="$t('editor.newTab')"
         @click="handleAddNewTab"
       />
 
@@ -85,7 +85,7 @@
               :value="getTabConnectionAlias(tab)"
               class="!text-[10px] !font-mono !px-1.5 !py-0 flex-shrink-0 ml-auto max-w-[85px] truncate"
               :class="workspaceStore.activeTabId === tab.id ? '' : '!font-normal'"
-              :title="`連線別名: ${getTabConnectionAlias(tab)}`"
+              :title="`${$t('sidebar.connections')}: ${getTabConnectionAlias(tab)}`"
             />
           </div>
 
@@ -93,7 +93,7 @@
           <span
             v-if="tab.isDirty && editingTabId !== tab.id"
             class="w-1.5 h-1.5 rounded-full bg-amber-400 flex-shrink-0 ring-1 ring-black/30"
-            title="未儲存變更 (Unsaved changes)"
+            :title="$t('editor.unsavedChanges')"
           />
 
           <!-- Close Tab Button -->
@@ -102,7 +102,7 @@
             type="button"
             @click.stop="workspaceStore.closeTab(tab.id)"
             class="p-0.5 rounded transition-opacity flex-shrink-0 opacity-0 group-hover:opacity-100 text-dark-400 hover:text-danger hover:bg-rose-500/15 cursor-pointer"
-            title="關閉分頁 (Close tab)"
+            :title="$t('editor.closeTab')"
           >
             <X class="w-2.5 h-2.5" />
           </button>
@@ -182,6 +182,7 @@
 
 <script setup lang="ts">
 import { ref, reactive, watch, nextTick, onBeforeUnmount, computed } from 'vue';
+import { useI18n } from 'vue-i18n';
 import Button from 'primevue/button';
 import Tag from 'primevue/tag';
 import ContextMenu from 'primevue/contextmenu';
@@ -204,6 +205,7 @@ import { dispatchClearGridSelection } from '@/utils/tabulatorGrid';
 import type { SqlEditorToolbarAction } from '@/types/editor';
 import type { SqlEditorTab, TableDataTab, TableStructureTab, ExecutionPlanTab, ErDiagramTab, WorkspaceTab } from '@/types/workspace';
 
+const { t } = useI18n();
 const workspaceStore = useWorkspaceStore();
 const connectionStore = useConnectionStore();
 const queryStore = useQueryStore();
@@ -436,7 +438,7 @@ const tabContextMenuItems = computed(() => {
     },
     { separator: true },
     {
-      label: '重新命名 (Rename)',
+      label: t('editor.renameTab'),
       icon: 'pi pi-pencil',
       command: handleContextMenuRename,
     },
@@ -444,25 +446,25 @@ const tabContextMenuItems = computed(() => {
 
   if (tab.type === 'sql_editor') {
     items.push({
-      label: '複製此分頁 (Duplicate)',
+      label: t('editor.duplicateTab'),
       icon: 'pi pi-copy',
       command: handleContextMenuDuplicate,
     });
     items.push({
-      label: '另存為 .sql 檔案...',
+      label: t('editor.saveAs'),
       icon: 'pi pi-save',
       command: handleContextMenuSaveAs,
     });
   }
 
   items.push({
-    label: '關閉此分頁 (Close)',
+    label: t('editor.closeTab'),
     icon: 'pi pi-times',
     command: handleContextMenuClose,
   });
 
   items.push({
-    label: '關閉其他分頁 (Close Others)',
+    label: t('editor.closeOthers'),
     icon: 'pi pi-clone',
     disabled: workspaceStore.tabs.length <= 1,
     command: handleContextMenuCloseOthers,

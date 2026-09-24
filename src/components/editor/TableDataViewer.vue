@@ -7,7 +7,7 @@
         <span class="font-semibold text-dark-100 truncate">{{ schema }}.{{ tableName }}</span>
         <span class="text-dark-600">|</span>
         <span class="text-dark-400 text-xxs flex-shrink-0">
-          <strong class="text-ok">{{ rows.length.toLocaleString() }}</strong> rows
+          <strong class="text-ok">{{ rows.length.toLocaleString() }}</strong> {{ $t('results.rowsUnit') || 'rows' }}
         </span>
 
         <!-- Quick Filter Input -->
@@ -16,7 +16,7 @@
           <InputText
             v-model="quickFilter"
             type="text"
-            placeholder="Filter table data..."
+            :placeholder="$t('dataView.filterTableDataPlaceholder')"
             size="small"
             class="w-full !bg-dark-900 !border-dark-700 !py-0.5 !pl-7 !pr-6 !text-xs"
           />
@@ -28,12 +28,12 @@
         <Button
           type="button"
           :icon="copiedTsv ? 'pi pi-check text-ok' : 'pi pi-file-excel text-ok'"
-          :label="copiedTsv ? 'Copied!' : 'Copy TSV'"
+          :label="copiedTsv ? $t('common.copied') : 'Copy TSV'"
           size="small"
           severity="secondary"
           outlined
           @click="copyAsTsv"
-          v-tooltip.top="'複製全部為 TSV (相容 Excel)'"
+          v-tooltip.top="$t('dataView.copyAllTsvTooltip')"
           class="!text-xxs !py-0.5 !px-2"
         />
 
@@ -46,7 +46,7 @@
           severity="secondary"
           outlined
           @click="copyAsJson"
-          v-tooltip.top="'複製全表為 JSON 物件陣列'"
+          v-tooltip.top="$t('dataView.copyAllJsonTooltip')"
           class="!text-xxs !py-0.5 !px-2"
         />
 
@@ -59,7 +59,7 @@
           severity="secondary"
           outlined
           @click="copyAsMarkdown"
-          v-tooltip.top="'複製全表為 Markdown 表格 (貼入 GitHub / Notion)'"
+          v-tooltip.top="$t('dataView.copyAllMdTooltip')"
           class="!text-xxs !py-0.5 !px-2"
         />
 
@@ -67,12 +67,12 @@
         <Button
           type="button"
           :icon="isLoading ? 'pi pi-spin pi-spinner' : 'pi pi-refresh'"
-          label="Refresh"
+          :label="$t('common.refresh')"
           size="small"
           severity="secondary"
           outlined
           @click="loadData"
-          v-tooltip.top="'Reload table data'"
+          v-tooltip.top="$t('dataView.reloadTableData')"
           class="!text-xxs !py-0.5 !px-2 ml-1"
         />
       </div>
@@ -81,12 +81,12 @@
     <!-- Loading State -->
     <div v-if="isLoading" class="flex-1 flex items-center justify-center text-dark-400 space-x-2">
       <RotateCw class="w-4 h-4 animate-spin text-accent" />
-      <span>Loading table data...</span>
+      <span>{{ $t('dataView.loadingData') }}</span>
     </div>
 
     <!-- Error State -->
     <div v-else-if="error" class="flex-1 p-4 text-danger">
-      <div class="font-semibold mb-1">Error querying table:</div>
+      <div class="font-semibold mb-1">{{ $t('dataView.errorQueryingTable') }}</div>
       <div class="font-mono text-xs bg-rose-50 dark:bg-rose-950/30 p-3 rounded border border-rose-200 dark:border-rose-900/50">{{ error }}</div>
     </div>
 
@@ -109,61 +109,61 @@
       <div class="flex items-center space-x-2.5 overflow-x-auto min-w-0">
         <template v-if="selectionStats">
           <div class="flex items-center space-x-1 font-semibold text-accent flex-shrink-0">
-            <span>選取:</span>
+            <span>{{ $t('results.selected') }}:</span>
             <span v-if="selectedColumnsCount > 1" class="text-warn font-mono">
-              {{ selectedColumnsCount }} 欄
+              {{ selectedColumnsCount }} {{ $t('results.columnsUnit') }}
             </span>
             <span class="font-mono text-dark-100">
-              {{ selectedColumnsCount > 1 ? `(${selectionStats.totalCells.toLocaleString()} 格)` : `${selectionStats.totalCells.toLocaleString()} 格` }}
+              {{ selectedColumnsCount > 1 ? `(${selectionStats.totalCells.toLocaleString()} ${$t('results.cellsUnit')})` : `${selectionStats.totalCells.toLocaleString()} ${$t('results.cellsUnit')}` }}
             </span>
             <span v-if="selectionStats.numericCount > 0" class="text-dark-400 font-mono text-[10px]">
-              [{{ selectionStats.numericCount.toLocaleString() }} 數值]
+              [{{ selectionStats.numericCount.toLocaleString() }} {{ $t('results.numericUnit') }}]
             </span>
           </div>
 
           <template v-if="selectionStats.numericCount > 0">
             <span class="text-dark-600 flex-shrink-0">|</span>
             <div class="flex-shrink-0">
-              總和 (Sum): <strong class="font-mono text-ok">{{ formatAggregateNumber(selectionStats.sum) }}</strong>
+              {{ $t('results.sum') }}: <strong class="font-mono text-ok">{{ formatAggregateNumber(selectionStats.sum) }}</strong>
             </div>
             <span class="text-dark-600 flex-shrink-0">|</span>
             <div class="flex-shrink-0">
-              平均 (Avg): <strong class="font-mono text-info">{{ formatAggregateNumber(selectionStats.avg) }}</strong>
+              {{ $t('results.avg') }}: <strong class="font-mono text-info">{{ formatAggregateNumber(selectionStats.avg) }}</strong>
             </div>
             <span class="text-dark-600 flex-shrink-0">|</span>
             <div class="flex-shrink-0">
-              最小值 (Min): <strong class="font-mono text-warn">{{ formatAggregateNumber(selectionStats.min) }}</strong>
+              {{ $t('results.min') }}: <strong class="font-mono text-warn">{{ formatAggregateNumber(selectionStats.min) }}</strong>
             </div>
             <span class="text-dark-600 flex-shrink-0">|</span>
             <div class="flex-shrink-0">
-              最大值 (Max): <strong class="font-mono text-plan">{{ formatAggregateNumber(selectionStats.max) }}</strong>
+              {{ $t('results.max') }}: <strong class="font-mono text-plan">{{ formatAggregateNumber(selectionStats.max) }}</strong>
             </div>
           </template>
 
           <span class="text-dark-600 flex-shrink-0">|</span>
           <div class="flex-shrink-0">
-            非重複計數: <strong class="font-mono text-dark-100">{{ selectionStats.distinctCount.toLocaleString() }}</strong>
+            {{ $t('results.distinct') }}: <strong class="font-mono text-dark-100">{{ selectionStats.distinctCount.toLocaleString() }}</strong>
           </div>
 
           <Button
             type="button"
-            label="清除"
+            :label="$t('common.clear')"
             text
             size="small"
             severity="secondary"
             @click="clearCellSelection"
-            v-tooltip.top="'清除選取 (Esc)'"
+            v-tooltip.top="$t('results.clearSelectionTooltip')"
             class="!ml-1 !p-0 !text-[10px] !underline"
           />
         </template>
 
         <template v-else>
           <div class="flex items-center space-x-2 text-dark-400">
-            <span>共 <strong class="font-mono text-dark-200">{{ rows.length.toLocaleString() }}</strong> 列</span>
+            <span>{{ $t('results.totalRows', { count: rows.length.toLocaleString() }) }}</span>
             <span class="text-dark-600">|</span>
-            <span><strong class="font-mono text-dark-200">{{ columns.length }}</strong> 個欄位</span>
+            <span>{{ $t('results.totalColumns', { count: columns.length }) }}</span>
             <span class="text-dark-600">|</span>
-            <span class="text-dark-500 italic text-[10px]">提示：支援標題列拖曳多欄選取、Shift 連續多欄、Ctrl 多選、儲存格框選與 Ctrl+A 全選</span>
+            <span class="text-dark-500 italic text-[10px]">{{ $t('results.selectionTip') }}</span>
           </div>
         </template>
       </div>
@@ -186,7 +186,7 @@
         class="w-full text-left px-2.5 py-1.5 hover:bg-dark-750 hover:text-dark-100 flex items-center space-x-2 transition-colors"
       >
         <Copy class="w-3.5 h-3.5 text-accent" />
-        <span>複製儲存格值 (Copy Cell)</span>
+        <span>{{ $t('dataView.copyCell') }}</span>
       </button>
 
       <button
@@ -194,7 +194,7 @@
         class="w-full text-left px-2.5 py-1.5 hover:bg-dark-750 hover:text-dark-100 flex items-center space-x-2 transition-colors"
       >
         <FileText class="w-3.5 h-3.5 text-ok" />
-        <span>複製整列資料 (Copy Row)</span>
+        <span>{{ $t('dataView.copyRow') }}</span>
       </button>
 
       <button
@@ -202,7 +202,7 @@
         class="w-full text-left px-2.5 py-1.5 hover:bg-dark-750 hover:text-dark-100 flex items-center space-x-2 transition-colors"
       >
         <Braces class="w-3.5 h-3.5 text-ok" />
-        <span>複製整列為 JSON (Row JSON)</span>
+        <span>{{ $t('dataView.copyRowJson') }}</span>
       </button>
 
       <div class="my-1 border-t border-dark-750"></div>
@@ -214,7 +214,7 @@
         class="w-full text-left px-2.5 py-1.5 hover:bg-dark-750 hover:text-dark-100 flex items-center space-x-2 transition-colors"
       >
         <Copy class="w-3.5 h-3.5 text-accent" />
-        <span>複製選取內容 ({{ selectionStats?.totalCells }} 格)</span>
+        <span>{{ $t('results.copySelectionCells', { count: selectionStats?.totalCells }) }}</span>
       </button>
 
       <button
@@ -223,7 +223,7 @@
         class="w-full text-left px-2.5 py-1.5 hover:bg-dark-750 hover:text-dark-100 flex items-center space-x-2 transition-colors"
       >
         <Braces class="w-3.5 h-3.5 text-er" />
-        <span>複製選取為 JSON 物件陣列</span>
+        <span>{{ $t('dataView.copySelectionJson') }}</span>
       </button>
 
       <!-- DML SQL Generation Options -->
@@ -232,7 +232,7 @@
         class="w-full text-left px-2.5 py-1.5 hover:bg-dark-750 hover:text-dark-100 flex items-center space-x-2 transition-colors"
       >
         <PlusCircle class="w-3.5 h-3.5 text-info" />
-        <span>建立 INSERT 語法</span>
+        <span>{{ $t('dataView.createInsert') }}</span>
       </button>
 
       <button
@@ -240,7 +240,7 @@
         class="w-full text-left px-2.5 py-1.5 hover:bg-dark-750 hover:text-dark-100 flex items-center space-x-2 transition-colors"
       >
         <Edit3 class="w-3.5 h-3.5 text-warn" />
-        <span>建立 UPDATE 語法</span>
+        <span>{{ $t('dataView.createUpdate') }}</span>
       </button>
 
       <button
@@ -248,7 +248,7 @@
         class="w-full text-left px-2.5 py-1.5 hover:bg-dark-750 hover:text-dark-100 flex items-center space-x-2 transition-colors"
       >
         <Trash2 class="w-3.5 h-3.5 text-danger" />
-        <span>建立 DELETE 語法</span>
+        <span>{{ $t('dataView.createDelete') }}</span>
       </button>
     </div>
   </div>

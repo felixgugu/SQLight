@@ -30,7 +30,7 @@
           icon="pi pi-code"
           label="SQL"
           @click="showSql = !showSql"
-          v-tooltip.top="'查看執行的 SQL 語句'"
+          v-tooltip.top="$t('executionPlan.viewSqlTooltip')"
           class="!text-xs !py-0.5 !px-2 flex-shrink-0"
         />
       </div>
@@ -65,7 +65,7 @@
             severity="secondary"
             :disabled="zoom <= 30"
             @click="zoomOut"
-            v-tooltip.top="'縮小 (Zoom Out)'"
+            v-tooltip.top="$t('executionPlan.zoomOutTooltip')"
             class="!p-1.5 !w-7 !h-7"
           />
           <Button
@@ -75,7 +75,7 @@
             size="small"
             severity="secondary"
             @click="resetZoom"
-            v-tooltip.top="'重設為 100%'"
+            v-tooltip.top="$t('executionPlan.zoomResetTooltip')"
             class="!px-1.5 !py-1 !text-xxs font-mono min-w-[42px]"
           />
           <Button
@@ -86,7 +86,7 @@
             severity="secondary"
             :disabled="zoom >= 250"
             @click="zoomIn"
-            v-tooltip.top="'放大 (Zoom In)'"
+            v-tooltip.top="$t('executionPlan.zoomInTooltip')"
             class="!p-1.5 !w-7 !h-7"
           />
           <Button
@@ -96,7 +96,7 @@
             size="small"
             severity="secondary"
             @click="resetZoom"
-            v-tooltip.top="'重設大小'"
+            v-tooltip.top="$t('executionPlan.zoomFitTooltip')"
             class="!p-1.5 !w-7 !h-7 border-l border-dark-700"
           />
         </div>
@@ -106,12 +106,12 @@
           v-if="viewMode === 'diagram'"
           type="button"
           :icon="planTheme === 'dark' ? 'pi pi-moon text-plan' : 'pi pi-sun text-warn'"
-          :label="planTheme === 'dark' ? '深色' : '淺色'"
+          :label="planTheme === 'dark' ? $t('executionPlan.darkTheme') : $t('executionPlan.lightTheme')"
           size="small"
           severity="secondary"
           outlined
           @click="togglePlanTheme"
-          v-tooltip.top="planTheme === 'dark' ? '切換為 SSMS 經典淺色風格' : '切換為深色主題風格'"
+          v-tooltip.top="planTheme === 'dark' ? $t('executionPlan.darkThemeTooltip') : $t('executionPlan.lightThemeTooltip')"
           class="!text-xs !py-1 !px-2"
         />
 
@@ -121,12 +121,12 @@
         <Button
           type="button"
           icon="pi pi-sparkles"
-          label="AI 調校建議"
+          :label="$t('executionPlan.aiAdvice')"
           size="small"
           severity="help"
           outlined
           @click="requestAiPlanTuning"
-          v-tooltip.top="'使用 AI 智能分析執行計畫瓶頸、缺失索引並提供 SQL 重構建言'"
+          v-tooltip.top="$t('executionPlan.aiAdviceTooltip')"
           class="!text-xs !py-1 !px-2.5 text-plan border-purple-500/40 hover:bg-purple-950/30"
         />
 
@@ -134,12 +134,12 @@
         <Button
           type="button"
           :icon="copied ? 'pi pi-check text-ok' : 'pi pi-copy'"
-          :label="copied ? '已複製！' : '複製原始 XML'"
+          :label="copied ? $t('executionPlan.copied') : $t('executionPlan.copyRawXml')"
           size="small"
           severity="secondary"
           outlined
           @click="copyXml"
-          v-tooltip.top="'一鍵複製原始 XML 執行計畫至剪貼簿'"
+          v-tooltip.top="$t('executionPlan.copyRawXmlTooltip')"
           class="!text-xs !py-1 !px-2.5"
         />
 
@@ -151,7 +151,7 @@
           severity="secondary"
           outlined
           @click="exportSqlPlanFile"
-          v-tooltip.top="'另存為 .sqlplan 檔案 (可直接用 SSMS / Azure Data Studio 開啟)'"
+          v-tooltip.top="$t('executionPlan.saveSqlPlanTooltip')"
           class="!text-xs !py-1 !px-2"
         />
       </div>
@@ -275,6 +275,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onBeforeUnmount, watch, nextTick } from 'vue';
+import { useI18n } from 'vue-i18n';
 import Button from 'primevue/button';
 import Tag from 'primevue/tag';
 import SelectButton from 'primevue/selectbutton';
@@ -291,10 +292,12 @@ import { useAiChatStore } from '@/stores/aiChatStore';
 import { formatXml } from '@/utils/planXmlParser';
 import { savePlanToFile } from '@/utils/fileStorage';
 
-const viewModeOptions = [
-  { label: '圖形計畫', value: 'diagram', icon: 'pi pi-sitemap' },
-  { label: '原始 XML', value: 'xml', icon: 'pi pi-code' },
-];
+const { t } = useI18n();
+
+const viewModeOptions = computed(() => [
+  { label: t('executionPlan.viewDiagram'), value: 'diagram', icon: 'pi pi-sitemap' },
+  { label: t('executionPlan.viewXml'), value: 'xml', icon: 'pi pi-code' },
+]);
 
 const props = defineProps<{
   tab: ExecutionPlanTab;

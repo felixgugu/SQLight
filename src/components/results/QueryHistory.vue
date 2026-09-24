@@ -7,19 +7,19 @@
         <Button
           type="button"
           icon="pi pi-file"
-          label="實體日誌 (Log)"
+          :label="$t('results.physicalLog')"
           size="small"
           text
           severity="secondary"
           @click="handleOpenLog"
-          v-tooltip.top="'開啟與應用程式同目錄的實體日誌檔 (sqlight.log)'"
+          :v-tooltip.top="$t('results.openLogTooltip')"
           class="!text-xxs !p-0"
         />
         <span v-if="history.length > 0" class="text-dark-600">|</span>
         <Button
           v-if="history.length > 0"
           type="button"
-          :label="isAllExpanded ? '全部收合' : '全部展開'"
+          :label="isAllExpanded ? $t('common.collapseAll') : $t('common.expandAll')"
           size="small"
           text
           severity="secondary"
@@ -30,7 +30,7 @@
         <Button
           v-if="history.length > 0"
           type="button"
-          label="Clear History"
+          :label="$t('history.clearHistory')"
           size="small"
           text
           severity="danger"
@@ -42,7 +42,7 @@
 
     <!-- Empty State -->
     <div v-if="history.length === 0" class="flex-1 flex items-center justify-center text-dark-500 italic select-none">
-      No query execution history in this session
+      {{ $t('history.noHistory') }}
     </div>
 
     <!-- Query History List (Newest at the top) -->
@@ -96,7 +96,7 @@
               size="small"
               severity="secondary"
               @click.stop="toggleExpand(item.id ?? idx)"
-              v-tooltip.top="isExpanded(item.id ?? idx) ? '收合 (Collapse)' : '展開 (Expand)'"
+              :v-tooltip.top="isExpanded(item.id ?? idx) ? $t('common.collapse') : $t('common.expand')"
               class="opacity-0 group-hover:opacity-100 !w-6 !h-6 !p-0"
             />
 
@@ -108,7 +108,7 @@
               size="small"
               severity="secondary"
               @click.stop="copySql(item.sql, item.id ?? idx)"
-              v-tooltip.top="copiedKey === (item.id ?? idx) ? '已複製 (Copied)' : '複製 SQL (Copy SQL)'"
+              :v-tooltip.top="copiedKey === (item.id ?? idx) ? $t('common.copied') : 'Copy SQL'"
               class="opacity-0 group-hover:opacity-100 !w-6 !h-6 !p-0"
             />
           </div>

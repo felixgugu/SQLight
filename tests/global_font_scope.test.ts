@@ -103,7 +103,7 @@ test('the Explorer status tag overrides the bold PrimeVue tag weight', () => {
   const source = readSource('src/components/layout/AppSidebar.vue');
   assert.match(
     source,
-    /value="使用中"[\s\S]{0,200}?class="[^"]*!font-normal/,
+    /(?:value="使用中"|:value="\$t\('sidebar\.inUse'\)")[\s\S]{0,200}?class="[^"]*!font-normal/,
     'the 使用中 tag must be explicitly reset to the regular weight'
   );
 });

@@ -3,10 +3,10 @@
     <div class="flex-1 min-h-0 overflow-y-auto px-4 py-3 space-y-4">
       <!-- Summary -->
       <section class="rounded-lg border border-dark-700 bg-dark-900/60 p-3">
-        <div class="text-xxs font-semibold text-dark-300 tracking-wide mb-2">匯入摘要</div>
+        <div class="text-xxs font-semibold text-dark-300 tracking-wide mb-2">{{ $t('tsvImportModal.importSummary') }}</div>
         <div class="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
           <div>
-            <div class="text-xxs text-dark-400">目標表格</div>
+            <div class="text-xxs text-dark-400">{{ $t('tsvImportModal.targetTable') }}</div>
             <div class="font-mono text-dark-100 truncate">
               {{ store.target?.schema }}.{{ store.target?.table }}
             </div>
@@ -15,20 +15,20 @@
             </div>
           </div>
           <div>
-            <div class="text-xxs text-dark-400">資料來源</div>
+            <div class="text-xxs text-dark-400">{{ $t('tsvImportModal.source') }}</div>
             <div class="text-dark-100 truncate">{{ store.sourceLabel }}</div>
           </div>
           <div>
-            <div class="text-xxs text-dark-400">預計匯入</div>
+            <div class="text-xxs text-dark-400">{{ $t('tsvImportModal.estimatedImport') }}</div>
             <div class="text-dark-100 font-mono">
-              {{ validRowsText }} 筆 · {{ store.importColumns.length }} 欄
+              {{ $t('tsvImportModal.recordsAndCols', { count: validRowsText, cols: store.importColumns.length }) }}
             </div>
           </div>
           <div>
-            <div class="text-xxs text-dark-400">設定</div>
+            <div class="text-xxs text-dark-400">{{ $t('tsvImportModal.settings') }}</div>
             <div class="text-dark-200">
-              {{ store.skipHeader ? '略過首行' : '不略過首行' }} ·
-              {{ store.manualIdentity ? '手動識別值' : '自動識別值' }}
+              {{ store.skipHeader ? $t('tsvImportModal.skippedHeaderLabel') : $t('tsvImportModal.notSkippedHeaderLabel') }} ·
+              {{ store.manualIdentity ? $t('tsvImportModal.manualIdentityLabel') : $t('tsvImportModal.autoIdentityLabel') }}
             </div>
           </div>
         </div>
@@ -49,23 +49,21 @@
       >
         <div class="flex items-center justify-between">
           <div class="text-xxs font-semibold text-danger">
-            驗證失敗，請修正後重新驗證
+            {{ $t('tsvImportModal.validationFailedTitle') }}
           </div>
           <div class="text-xxs text-danger font-mono">
-            總筆數 {{ store.validation.totalRows.toLocaleString() }} · 有效
-            {{ store.validation.validRows.toLocaleString() }} · 異常
-            {{ store.validation.invalidRows.toLocaleString() }}
+            {{ $t('tsvImportModal.totalRows', { total: store.validation.totalRows.toLocaleString(), valid: store.validation.validRows.toLocaleString(), invalid: store.validation.invalidRows.toLocaleString() }) }}
           </div>
         </div>
         <div class="overflow-x-auto max-h-72 rounded border border-rose-200 dark:border-rose-900/50">
           <table class="w-full text-xxs">
             <thead class="bg-rose-100 dark:bg-rose-950/60 text-danger sticky top-0">
               <tr>
-                <th class="text-left px-3 py-1.5 font-medium w-20">行數</th>
-                <th class="text-left px-3 py-1.5 font-medium w-24">欄位位置</th>
-                <th class="text-left px-3 py-1.5 font-medium w-40">欄位</th>
-                <th class="text-left px-3 py-1.5 font-medium">原始值</th>
-                <th class="text-left px-3 py-1.5 font-medium w-56">錯誤原因</th>
+                <th class="text-left px-3 py-1.5 font-medium w-20">{{ $t('tsvImportModal.errLine') }}</th>
+                <th class="text-left px-3 py-1.5 font-medium w-24">{{ $t('tsvImportModal.errColumnPos') }}</th>
+                <th class="text-left px-3 py-1.5 font-medium w-40">{{ $t('tsvImportModal.errColumn') }}</th>
+                <th class="text-left px-3 py-1.5 font-medium">{{ $t('tsvImportModal.errRawValue') }}</th>
+                <th class="text-left px-3 py-1.5 font-medium w-56">{{ $t('tsvImportModal.errReason') }}</th>
               </tr>
             </thead>
             <tbody class="font-mono">
@@ -86,7 +84,7 @@
           </table>
         </div>
         <div v-if="hiddenErrorCount > 0" class="text-xxs text-danger">
-          僅顯示前 {{ MAX_DISPLAYED_ERRORS }} 筆，其餘 {{ hiddenErrorCount.toLocaleString() }} 筆異常未列出
+          {{ $t('tsvImportModal.hiddenErrorCount', { max: MAX_DISPLAYED_ERRORS, count: hiddenErrorCount.toLocaleString() }) }}
         </div>
       </section>
 
@@ -97,16 +95,15 @@
       >
         <div class="px-3 py-2 border-b border-dark-750 flex items-center justify-between">
           <div class="text-xxs font-semibold text-dark-300 tracking-wide">
-            資料預覽（前 {{ store.validation.preview.length }} 筆 / 共
-            {{ store.validation.totalRows.toLocaleString() }} 筆）
+            {{ $t('tsvImportModal.dataPreviewTitle', { preview: store.validation.preview.length, total: store.validation.totalRows.toLocaleString() }) }}
           </div>
-          <div class="text-xxs text-dark-500">驗證通過，尚未寫入資料庫</div>
+          <div class="text-xxs text-dark-500">{{ $t('tsvImportModal.passedNotice') }}</div>
         </div>
         <div class="overflow-auto max-h-72">
           <table class="text-xxs font-mono">
             <thead class="bg-dark-850 text-dark-400 sticky top-0">
               <tr>
-                <th class="text-left px-2 py-1.5 font-medium border-r border-dark-750">行</th>
+                <th class="text-left px-2 py-1.5 font-medium border-r border-dark-750">{{ $t('tsvImportModal.rowColHeader') }}</th>
                 <th
                   v-for="column in store.importColumns"
                   :key="column.name"
@@ -142,7 +139,7 @@
         <div class="flex items-center justify-between text-xxs text-ok">
           <span class="flex items-center space-x-1.5">
             <i class="pi pi-spin pi-spinner text-[10px]"></i>
-            <span>匯入中，請勿關閉視窗（單一交易，失敗將全部回滾）</span>
+            <span>{{ $t('tsvImportModal.importingNotice') }}</span>
           </span>
           <span class="font-mono">
             {{ store.importProgress.processedRows.toLocaleString() }} /
@@ -169,23 +166,20 @@
       >
         <template v-if="!store.importResult.rolledBack">
           <div class="text-xs text-ok">
-            已成功新增
-            <strong class="font-mono">{{ store.importResult.insertedCount.toLocaleString() }}</strong>
-            筆資料（耗時 {{ store.importResult.executionTimeMs }} ms），表格資料已重新載入。
+            {{ $t('tsvImportModal.successInserted', { count: store.importResult.insertedCount.toLocaleString(), ms: store.importResult.executionTimeMs }) }}
           </div>
         </template>
         <template v-else>
           <div class="text-xs text-danger">
-            匯入失敗：本次未寫入任何資料（已全部回滾）。資料庫回報
-            {{ store.importResult.errors.length.toLocaleString() }} 筆錯誤。
+            {{ $t('tsvImportModal.failedNotice', { count: store.importResult.errors.length.toLocaleString() }) }}
           </div>
           <div class="overflow-x-auto max-h-56 rounded border border-rose-200 dark:border-rose-900/50">
             <table class="w-full text-xxs">
               <thead class="bg-rose-100 dark:bg-rose-950/60 text-danger sticky top-0">
                 <tr>
-                  <th class="text-left px-3 py-1.5 font-medium w-20">行數</th>
-                  <th class="text-left px-3 py-1.5 font-medium w-40">欄位</th>
-                  <th class="text-left px-3 py-1.5 font-medium">資料庫訊息</th>
+                  <th class="text-left px-3 py-1.5 font-medium w-20">{{ $t('tsvImportModal.errLine') }}</th>
+                  <th class="text-left px-3 py-1.5 font-medium w-40">{{ $t('tsvImportModal.errColumn') }}</th>
+                  <th class="text-left px-3 py-1.5 font-medium">{{ $t('tsvImportModal.dbMessage') }}</th>
                 </tr>
               </thead>
               <tbody class="font-mono">
@@ -215,13 +209,13 @@
     <!-- Footer -->
     <div class="h-12 px-4 border-t border-dark-750 bg-dark-850 flex items-center justify-between flex-shrink-0">
       <div class="text-xxs text-dark-500">
-        <span v-if="store.hasBlockingErrors">有驗證錯誤時無法匯入，請返回修正資料</span>
-        <span v-else-if="!store.importResult">匯入採新增模式，重複主鍵不會覆寫既有資料</span>
+        <span v-if="store.hasBlockingErrors">{{ $t('tsvImportModal.hasErrorsCannotImport') }}</span>
+        <span v-else-if="!store.importResult">{{ $t('tsvImportModal.appendModeNotice') }}</span>
       </div>
       <div class="flex items-center space-x-2">
         <Button
           type="button"
-          label="上一步"
+          :label="$t('tsvImportModal.backBtn')"
           icon="pi pi-arrow-left"
           size="small"
           severity="secondary"
@@ -232,7 +226,7 @@
         />
         <Button
           type="button"
-          label="取消"
+          :label="$t('common.cancel')"
           size="small"
           severity="secondary"
           text
@@ -243,19 +237,19 @@
         <Button
           v-if="!store.importResult || store.importResult.rolledBack"
           type="button"
-          :label="store.isImporting ? '匯入中…' : '開始匯入'"
+          :label="store.isImporting ? $t('tsvImportModal.importingBtn') : $t('tsvImportModal.startImport')"
           icon="pi pi-database"
           size="small"
           :loading="store.isImporting"
           :disabled="!store.canImport"
-          v-tooltip.top="store.hasBlockingErrors ? '請先修正驗證錯誤' : ''"
+          v-tooltip.top="store.hasBlockingErrors ? $t('tsvImportModal.fixValidationHint') : ''"
           class="!text-xs"
           @click="store.startImport()"
         />
         <Button
           v-else
           type="button"
-          label="關閉"
+          :label="$t('tsvImportModal.close')"
           icon="pi pi-check"
           size="small"
           severity="success"

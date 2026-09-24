@@ -11,7 +11,7 @@
     <template #header>
       <div class="flex items-center space-x-2">
         <i class="pi pi-cog text-accent text-base" />
-        <span class="text-sm font-semibold text-dark-100">設定 (Settings)</span>
+        <span class="text-sm font-semibold text-dark-100">{{ $t('settingsModal.title') }}</span>
       </div>
     </template>
 
@@ -34,12 +34,30 @@
     <div class="p-6 overflow-y-auto flex-1 space-y-6 text-xs text-dark-200">
       <!-- Tab 0: Appearance & Theme Settings -->
       <div v-if="activeTab === 'theme'" class="space-y-6">
+        <!-- Language Selector -->
+        <div class="space-y-2.5 pb-4 border-b border-dark-800">
+          <div class="flex items-center justify-between gap-4">
+            <div>
+              <label class="font-medium text-dark-100 block">{{ $t('settingsModal.language') }}</label>
+              <span class="text-xxs text-dark-400">{{ $t('settingsModal.languageDesc') }}</span>
+            </div>
+            <Select
+              :model-value="settingsStore.locale"
+              :options="SUPPORTED_LOCALES"
+              option-label="label"
+              option-value="value"
+              class="min-w-[240px] !text-xs !bg-dark-900 !border-dark-700"
+              @update:model-value="handleLocaleChange"
+            />
+          </div>
+        </div>
+
         <!-- Global UI Font -->
         <div class="space-y-2.5 pb-4 border-b border-dark-800">
           <div class="flex items-center justify-between gap-4">
             <div>
-              <label class="font-medium text-dark-100 block">全域介面字型 (Global UI Font)</label>
-              <span class="text-xxs text-dark-400">套用至按鈕、選單、對話框與一般介面文字；SQL 編輯器與既有等寬資料區不受影響。</span>
+              <label class="font-medium text-dark-100 block">{{ $t('settingsModal.globalFont') }}</label>
+              <span class="text-xxs text-dark-400">{{ $t('settingsModal.globalFontDesc') }}</span>
             </div>
             <FontFamilyPicker
               :model-value="settingsStore.globalFontFamily"
@@ -63,14 +81,14 @@
         <!-- 1. Color Mode (Dark / Light) -->
         <div class="flex items-center justify-between pb-4 border-b border-dark-800">
           <div>
-            <label class="font-medium text-dark-100 block">深淺色彩模式 (Color Mode)</label>
-            <span class="text-xxs text-dark-400">切換深色系 (Dark) 或淺色系 (Light) 介面外觀</span>
+            <label class="font-medium text-dark-100 block">{{ $t('settingsModal.colorMode') }}</label>
+            <span class="text-xxs text-dark-400">{{ $t('settingsModal.colorModeDesc') }}</span>
           </div>
           <SelectButton
             :model-value="settingsStore.colorMode"
             :options="[
-              { label: '深色 (Dark)', value: 'dark', icon: 'pi pi-moon' },
-              { label: '淺色 (Light)', value: 'light', icon: 'pi pi-sun' },
+              { label: $t('settingsModal.darkMode'), value: 'dark', icon: 'pi pi-moon' },
+              { label: $t('settingsModal.lightMode'), value: 'light', icon: 'pi pi-sun' },
             ]"
             option-label="label"
             option-value="value"
@@ -90,8 +108,8 @@
         <div class="space-y-2 pb-4 border-b border-dark-800">
           <div class="flex items-center justify-between">
             <div>
-              <label class="font-medium text-dark-100 block">PrimeVue 佈景風格 (Theme Preset)</label>
-              <span class="text-xxs text-dark-400">切換 PrimeVue 官方預設主題架構風格</span>
+              <label class="font-medium text-dark-100 block">{{ $t('settingsModal.themePreset') }}</label>
+              <span class="text-xxs text-dark-400">{{ $t('settingsModal.themePresetDesc') }}</span>
             </div>
             <span class="text-xxs font-mono text-accent font-semibold">{{ settingsStore.themePreset }}</span>
           </div>
@@ -119,8 +137,8 @@
         <div class="space-y-2.5 pb-4 border-b border-dark-800">
           <div class="flex items-center justify-between">
             <div>
-              <label class="font-medium text-dark-100 block">主要色彩基調 (Primary Palette)</label>
-              <span class="text-xxs text-dark-400">按鈕、焦點邊框、啟用指示等核心元件之主色調</span>
+              <label class="font-medium text-dark-100 block">{{ $t('settingsModal.primaryColor') }}</label>
+              <span class="text-xxs text-dark-400">{{ $t('settingsModal.primaryColorDesc') }}</span>
             </div>
             <span class="text-xxs font-mono text-dark-300">{{ currentPrimaryLabel }}</span>
           </div>
@@ -155,8 +173,8 @@
         <div class="space-y-2.5 pb-4 border-b border-dark-800">
           <div class="flex items-center justify-between">
             <div>
-              <label class="font-medium text-dark-100 block">表面底色傾向 (Surface Palette)</label>
-              <span class="text-xxs text-dark-400">背景、卡片與對話框表面冷暖色調</span>
+              <label class="font-medium text-dark-100 block">{{ $t('settingsModal.surfaceColor') }}</label>
+              <span class="text-xxs text-dark-400">{{ $t('settingsModal.surfaceColorDesc') }}</span>
             </div>
             <span class="text-xxs font-mono text-dark-300">{{ currentSurfaceLabel }}</span>
           </div>
@@ -196,8 +214,8 @@
         <!-- 5. Ripple Effect -->
         <div class="flex items-center justify-between pb-4 border-b border-dark-800">
           <div>
-            <label class="font-medium text-dark-100 block">水波紋點擊特效 (Ripple Effect)</label>
-            <span class="text-xxs text-dark-400">啟用按鈕與可點選元件點擊時擴散的水波紋動畫</span>
+            <label class="font-medium text-dark-100 block">{{ $t('settingsModal.rippleEffect') }}</label>
+            <span class="text-xxs text-dark-400">{{ $t('settingsModal.rippleEffectDesc') }}</span>
           </div>
           <ToggleSwitch
             :model-value="settingsStore.ripple"
@@ -210,9 +228,9 @@
           <div class="flex items-center justify-between">
             <span class="text-xs font-semibold text-dark-200 flex items-center space-x-1.5">
               <i class="pi pi-eye text-accent" />
-              <span>主題即時預覽 (Theme Live Preview)</span>
+              <span>{{ $t('settingsModal.livePreview') }}</span>
             </span>
-            <span class="text-xxs text-dark-400">當前風格即時反映</span>
+            <span class="text-xxs text-dark-400">{{ $t('settingsModal.livePreviewDesc') }}</span>
           </div>
           <div class="flex flex-wrap items-center gap-2.5 pt-1">
             <Button label="主要按鈕" icon="pi pi-check" size="small" />
@@ -234,8 +252,8 @@
         <!-- Font Size -->
         <div class="flex items-center justify-between">
           <div>
-            <label class="font-medium text-dark-100 block">編輯器字型大小 (Font Size)</label>
-            <span class="text-xxs text-dark-400">控制 SQL 編輯器代碼文字尺寸</span>
+            <label class="font-medium text-dark-100 block">{{ $t('settingsModal.editorFontSize') }}</label>
+            <span class="text-xxs text-dark-400">{{ $t('settingsModal.editorFontSizeDesc') }}</span>
           </div>
           <Select
             v-model="settingsStore.editorFontSize"
@@ -249,8 +267,8 @@
         <!-- Font Family -->
         <div class="space-y-1.5">
           <div class="flex items-center justify-between">
-            <label class="font-medium text-dark-100">字型家族 (Font Family)</label>
-            <span class="text-xxs text-dark-400 font-mono">等寬字型 (Monospace)</span>
+            <label class="font-medium text-dark-100">{{ $t('settingsModal.editorFontFamily') }}</label>
+            <span class="text-xxs text-dark-400 font-mono">{{ $t('settingsModal.editorFontFamilyDesc') }}</span>
           </div>
           <FontFamilyPicker
             v-model="settingsStore.editorFontFamily"
@@ -263,8 +281,8 @@
         <!-- Word Wrap -->
         <div class="flex items-center justify-between pt-2 border-t border-dark-800">
           <div>
-            <label class="font-medium text-dark-100 block">自動換行 (Word Wrap)</label>
-            <span class="text-xxs text-dark-400">長 SQL 語句超出可視範圍時自動折行</span>
+            <label class="font-medium text-dark-100 block">{{ $t('settingsModal.editorWordWrap') }}</label>
+            <span class="text-xxs text-dark-400">{{ $t('settingsModal.editorWordWrapDesc') }}</span>
           </div>
           <Select
             v-model="settingsStore.editorWordWrap"
@@ -281,8 +299,8 @@
         <!-- Tab Size -->
         <div class="flex items-center justify-between pt-2 border-t border-dark-800">
           <div>
-            <label class="font-medium text-dark-100 block">Tab 縮排格數 (Tab Size)</label>
-            <span class="text-xxs text-dark-400">按下 Tab 鍵時縮排的空格數</span>
+            <label class="font-medium text-dark-100 block">{{ $t('settingsModal.editorTabSize') }}</label>
+            <span class="text-xxs text-dark-400">{{ $t('settingsModal.editorTabSizeDesc') }}</span>
           </div>
           <Select
             v-model="settingsStore.editorTabSize"
@@ -299,8 +317,8 @@
         <!-- Auto Completion Trigger Switch -->
         <div class="flex items-center justify-between pt-2 border-t border-dark-800">
           <div>
-            <label class="font-medium text-dark-100 block">自動觸發補全 (Auto-trigger Completion)</label>
-            <span class="text-xxs text-dark-400">鍵入字元或符號時自動彈出補全建議（關閉後仍可透過 Ctrl+Shift+A 手動喚起）</span>
+            <label class="font-medium text-dark-100 block">{{ $t('settingsModal.editorAutoCompletion') }}</label>
+            <span class="text-xxs text-dark-400">{{ $t('settingsModal.editorAutoCompletionDesc') }}</span>
           </div>
           <ToggleSwitch v-model="settingsStore.editorAutoCompletion" />
         </div>
@@ -308,8 +326,8 @@
         <!-- Highlight Color -->
         <div class="flex items-center justify-between pt-2 border-t border-dark-800">
           <div>
-            <label class="font-medium text-dark-100 block">執行暫態高亮顏色 (Highlight Color)</label>
-            <span class="text-xxs text-dark-400">Ctrl + Enter 執行或格式化語句時的閃爍高亮顏色</span>
+            <label class="font-medium text-dark-100 block">{{ $t('settingsModal.editorHighlightColor') }}</label>
+            <span class="text-xxs text-dark-400">{{ $t('settingsModal.editorHighlightColorDesc') }}</span>
           </div>
           <div class="flex items-center space-x-2">
             <input
@@ -329,15 +347,15 @@
         <!-- Active SQL Tab Color -->
         <div class="pt-3 border-t border-dark-800 space-y-3">
           <div>
-            <label class="font-medium text-dark-100 block">當前 SQL 查詢分頁顏色 (Active SQL Tab Colors)</label>
-            <span class="text-xxs text-dark-400">自訂上方 SQL 查詢分頁在選取啟用時的前景文字與背景顏色</span>
+            <label class="font-medium text-dark-100 block">{{ $t('settingsModal.activeTabColor') }}</label>
+            <span class="text-xxs text-dark-400">{{ $t('settingsModal.activeTabColorDesc') }}</span>
           </div>
 
           <!-- Color controls: Background & Foreground -->
           <div class="grid grid-cols-2 gap-3 bg-dark-900 p-2.5 rounded border border-dark-800">
             <!-- Background Color -->
             <div class="space-y-1.5">
-              <span class="text-xxs text-dark-300 block font-medium">背景顏色 (Background)</span>
+              <span class="text-xxs text-dark-300 block font-medium">{{ $t('settingsModal.activeTabBg') }}</span>
               <div class="flex items-center space-x-2">
                 <input
                   type="color"
@@ -354,7 +372,7 @@
 
             <!-- Text Color -->
             <div class="space-y-1.5">
-              <span class="text-xxs text-dark-300 block font-medium">前景文字顏色 (Text Color)</span>
+              <span class="text-xxs text-dark-300 block font-medium">{{ $t('settingsModal.activeTabText') }}</span>
               <div class="flex items-center space-x-2">
                 <input
                   type="color"
@@ -374,7 +392,7 @@
           <div class="flex items-center justify-between pt-1">
             <!-- Presets -->
             <div class="flex items-center space-x-1.5">
-              <span class="text-xxs text-dark-400">快速預設:</span>
+              <span class="text-xxs text-dark-400">{{ $t('settingsModal.quickPresets') }}</span>
               <button
                 v-for="preset in [
                   { name: 'Royal Blue', bg: '#1e40af', text: '#ffffff' },
@@ -396,7 +414,7 @@
 
             <!-- Live Preview Badge -->
             <div class="flex items-center space-x-1.5 text-xxs">
-              <span class="text-dark-400">預覽:</span>
+              <span class="text-dark-400">{{ $t('settingsModal.previewBadge') }}</span>
               <div
                 class="h-6 px-2.5 flex items-center space-x-1.5 rounded text-xs font-medium shadow-xs"
                 :style="{
@@ -422,9 +440,9 @@
         <!-- Result grid font -->
         <div class="flex items-center justify-between pb-4 border-b border-dark-800">
           <div class="pr-4">
-            <label class="font-medium text-dark-100 block">結果表格字型 (Grid Font)</label>
+            <label class="font-medium text-dark-100 block">{{ $t('settingsModal.gridFont') }}</label>
             <span class="text-xxs text-dark-400">
-              套用至查詢結果、檢視資料與資料表結構中的所有欄位、列號與表頭。
+              {{ $t('settingsModal.gridFontDesc') }}
             </span>
           </div>
           <FontFamilyPicker
@@ -439,9 +457,9 @@
         <!-- Max Result Tabs -->
         <div class="flex items-center justify-between">
           <div class="pr-4">
-            <label class="font-medium text-dark-100 block">Results 歷史分頁保留上限 (History Limit)</label>
+            <label class="font-medium text-dark-100 block">{{ $t('settingsModal.maxResultTabs') }}</label>
             <span class="text-xxs text-dark-400">
-              每次查詢新增一組結果，保留最近 N 組。超過時自動移除最舊的未釘選分頁。
+              {{ $t('settingsModal.maxResultTabsDesc') }}
             </span>
           </div>
           <Select
@@ -463,8 +481,8 @@
         <!-- Default Max Rows -->
         <div class="flex items-center justify-between pt-2 border-t border-dark-800">
           <div class="pr-4">
-            <label class="font-medium text-dark-100 block">預設最大查詢筆數 (Default Limit)</label>
-            <span class="text-xxs text-dark-400">新建查詢分頁時的預設資料截斷防護上限</span>
+            <label class="font-medium text-dark-100 block">{{ $t('settingsModal.defaultMaxRows') }}</label>
+            <span class="text-xxs text-dark-400">{{ $t('settingsModal.defaultMaxRowsDesc') }}</span>
           </div>
           <Select
             v-model="settingsStore.defaultMaxRows"
@@ -501,16 +519,16 @@
             <Tag severity="info" value="v0.1.1" class="!text-xxs !font-mono !px-1.5 !py-0.5" />
           </div>
           <p class="text-xxs text-dark-400 leading-relaxed">
-            極致輕量、現代高效的 Microsoft SQL Server 桌面客戶端。<br />
-            架構基於 Tauri v2 + Rust + Vue 3 + TypeScript + PrimeVue v4 + Monaco Editor + Tabulator。
+            {{ $t('settingsModal.aboutTitle') }}<br />
+            {{ $t('settingsModal.aboutSubtitle') }}
           </p>
         </div>
 
         <!-- Keyboard Shortcuts -->
         <div class="space-y-3">
           <div class="flex items-center justify-between">
-            <span class="font-semibold text-dark-100 text-xs">常用快捷鍵 (Keyboard Shortcuts)</span>
-            <span class="text-xxs text-dark-500 font-mono">支援 macOS (Cmd ⌘) 與 Windows/Linux (Ctrl)</span>
+            <span class="font-semibold text-dark-100 text-xs">{{ $t('settingsModal.shortcutsTitle') }}</span>
+            <span class="text-xxs text-dark-500 font-mono">{{ $t('settingsModal.shortcutsSubtitle') }}</span>
           </div>
 
           <div class="grid grid-cols-2 gap-2.5 text-xxs font-mono">
@@ -518,18 +536,18 @@
             <div class="bg-dark-900 p-2.5 rounded border border-dark-800 space-y-2">
               <div class="text-[11px] font-semibold text-ok flex items-center space-x-1.5 pb-1 border-b border-dark-800">
                 <i class="pi pi-play text-xs"></i>
-                <span>查詢執行與中斷</span>
+                <span>{{ $t('settingsModal.shortcutGroupRun') }}</span>
               </div>
               <div class="flex justify-between items-center py-0.5">
-                <span class="text-dark-300">執行當前語句 (或選取)</span>
+                <span class="text-dark-300">{{ $t('settingsModal.shortcutRunSelected') }}</span>
                 <kbd class="bg-dark-800 px-1.5 py-0.5 rounded text-ok border border-dark-700">Ctrl + Enter</kbd>
               </div>
               <div class="flex justify-between items-center py-0.5">
-                <span class="text-dark-300">執行整頁所有 SQL</span>
+                <span class="text-dark-300">{{ $t('settingsModal.shortcutRunAll') }}</span>
                 <kbd class="bg-dark-800 px-1.5 py-0.5 rounded text-ok border border-dark-700">Ctrl+Shift+Enter</kbd>
               </div>
               <div class="flex justify-between items-center py-0.5">
-                <span class="text-dark-300">中斷並取消執行中查詢</span>
+                <span class="text-dark-300">{{ $t('settingsModal.shortcutCancel') }}</span>
                 <kbd class="bg-dark-800 px-1.5 py-0.5 rounded text-danger border border-dark-700">Esc / Alt+Pause</kbd>
               </div>
             </div>
@@ -538,18 +556,18 @@
             <div class="bg-dark-900 p-2.5 rounded border border-dark-800 space-y-2">
               <div class="text-[11px] font-semibold text-info flex items-center space-x-1.5 pb-1 border-b border-dark-800">
                 <i class="pi pi-folder text-xs"></i>
-                <span>分頁與檔案操作</span>
+                <span>{{ $t('settingsModal.shortcutGroupTabs') }}</span>
               </div>
               <div class="flex justify-between items-center py-0.5">
-                <span class="text-dark-300">新增 SQL 查詢分頁</span>
+                <span class="text-dark-300">{{ $t('settingsModal.shortcutNewTab') }}</span>
                 <kbd class="bg-dark-800 px-1.5 py-0.5 rounded text-info border border-dark-700">Ctrl + N</kbd>
               </div>
               <div class="flex justify-between items-center py-0.5">
-                <span class="text-dark-300">另存 / 儲存 SQL 檔案</span>
+                <span class="text-dark-300">{{ $t('settingsModal.shortcutSaveFile') }}</span>
                 <kbd class="bg-dark-800 px-1.5 py-0.5 rounded text-info border border-dark-700">Ctrl + S</kbd>
               </div>
               <div class="flex justify-between items-center py-0.5">
-                <span class="text-dark-300">開啟本機 SQL 檔案</span>
+                <span class="text-dark-300">{{ $t('settingsModal.shortcutOpenFile') }}</span>
                 <kbd class="bg-dark-800 px-1.5 py-0.5 rounded text-info border border-dark-700">Ctrl + O</kbd>
               </div>
             </div>
@@ -558,26 +576,26 @@
             <div class="bg-dark-900 p-2.5 rounded border border-dark-800 space-y-2">
               <div class="text-[11px] font-semibold text-warn flex items-center space-x-1.5 pb-1 border-b border-dark-800">
                 <i class="pi pi-code text-xs"></i>
-                <span>編輯器與格式化</span>
+                <span>{{ $t('settingsModal.shortcutGroupEditor') }}</span>
               </div>
               <div class="flex justify-between items-center py-0.5">
-                <span class="text-dark-300">程式碼智慧補全 (手動喚起)</span>
+                <span class="text-dark-300">{{ $t('settingsModal.shortcutCompletion') }}</span>
                 <kbd class="bg-dark-800 px-1.5 py-0.5 rounded text-warn border border-dark-700">Ctrl+Shift+A</kbd>
               </div>
               <div class="flex justify-between items-center py-0.5">
-                <span class="text-dark-300">格式化 SQL (選取/當前語句)</span>
+                <span class="text-dark-300">{{ $t('settingsModal.shortcutFormat') }}</span>
                 <kbd class="bg-dark-800 px-1.5 py-0.5 rounded text-warn border border-dark-700">Shift+Alt+F</kbd>
               </div>
               <div class="flex justify-between items-center py-0.5">
-                <span class="text-dark-300">AI SQL 助手 (分析/最佳化)</span>
+                <span class="text-dark-300">{{ $t('settingsModal.shortcutAi') }}</span>
                 <kbd class="bg-dark-800 px-1.5 py-0.5 rounded text-warn border border-dark-700">Ctrl + I</kbd>
               </div>
               <div class="flex justify-between items-center py-0.5">
-                <span class="text-dark-300">向下快速複製 (行/選取塊)</span>
+                <span class="text-dark-300">{{ $t('settingsModal.shortcutDuplicateLine') }}</span>
                 <kbd class="bg-dark-800 px-1.5 py-0.5 rounded text-dark-200 border border-dark-700">Ctrl + D</kbd>
               </div>
               <div class="flex justify-between items-center py-0.5">
-                <span class="text-dark-300">尋找 / 替換程式碼</span>
+                <span class="text-dark-300">{{ $t('settingsModal.shortcutFindReplace') }}</span>
                 <kbd class="bg-dark-800 px-1.5 py-0.5 rounded text-dark-200 border border-dark-700">Ctrl+F / Ctrl+H</kbd>
               </div>
             </div>
@@ -586,22 +604,22 @@
             <div class="bg-dark-900 p-2.5 rounded border border-dark-800 space-y-2">
               <div class="text-[11px] font-semibold text-er flex items-center space-x-1.5 pb-1 border-b border-dark-800">
                 <i class="pi pi-search text-xs"></i>
-                <span>檢索、結果與圖表</span>
+                <span>{{ $t('settingsModal.shortcutGroupExplore') }}</span>
               </div>
               <div class="flex justify-between items-center py-0.5">
-                <span class="text-dark-300">快速物件檢索器 (Spotlight)</span>
+                <span class="text-dark-300">{{ $t('settingsModal.shortcutQuickFinder') }}</span>
                 <kbd class="bg-dark-800 px-1.5 py-0.5 rounded text-er border border-dark-700">Ctrl + P</kbd>
               </div>
               <div class="flex justify-between items-center py-0.5">
-                <span class="text-dark-300">查詢結果 - 複製選取儲存格</span>
+                <span class="text-dark-300">{{ $t('settingsModal.shortcutCopyCell') }}</span>
                 <kbd class="bg-dark-800 px-1.5 py-0.5 rounded text-structure border border-dark-700">Ctrl + C</kbd>
               </div>
               <div class="flex justify-between items-center py-0.5">
-                <span class="text-dark-300">查詢結果 - 全選所有資料列</span>
+                <span class="text-dark-300">{{ $t('settingsModal.shortcutSelectAllRows') }}</span>
                 <kbd class="bg-dark-800 px-1.5 py-0.5 rounded text-structure border border-dark-700">Ctrl + A</kbd>
               </div>
               <div class="flex justify-between items-center py-0.5">
-                <span class="text-dark-300">ER 關聯圖 - 刪除所選元素</span>
+                <span class="text-dark-300">{{ $t('settingsModal.shortcutErDelete') }}</span>
                 <kbd class="bg-dark-800 px-1.5 py-0.5 rounded text-dark-200 border border-dark-700">Del / Backspace</kbd>
               </div>
             </div>
@@ -615,7 +633,7 @@
       <div class="px-5 py-2.5 border-t border-dark-750 bg-dark-800/80 flex items-center justify-between w-full">
         <Button
           type="button"
-          label="重設為預設值 (Reset Defaults)"
+          :label="$t('settingsModal.resetDefaults')"
           severity="danger"
           size="small"
           text
@@ -624,7 +642,7 @@
         />
         <Button
           type="button"
-          label="完成 (Done)"
+          :label="$t('settingsModal.done')"
           severity="primary"
           size="small"
           @click="$emit('close')"
@@ -636,6 +654,7 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue';
+import { useI18n } from 'vue-i18n';
 import Dialog from 'primevue/dialog';
 import Button from 'primevue/button';
 import Select from 'primevue/select';
@@ -647,6 +666,7 @@ import InputText from 'primevue/inputtext';
 import Tag from 'primevue/tag';
 import { usePrimeVue } from 'primevue/config';
 import { useSettingsStore } from '@/stores/settingsStore';
+import { SUPPORTED_LOCALES, type SupportedLocale } from '@/i18n';
 import {
   GLOBAL_FONT_OPTIONS,
   DEFAULT_GLOBAL_FONT_FAMILY,
@@ -673,18 +693,25 @@ defineEmits<{
   (e: 'close'): void;
 }>();
 
+const { t } = useI18n();
 const primevue = usePrimeVue();
 const settingsStore = useSettingsStore();
 const activeTab = ref<'theme' | 'editor' | 'results' | 'table_filter' | 'ai' | 'about'>('theme');
 
-const tabs = [
-  { id: 'theme' as const, label: '外觀與主題 (Appearance & Theme)', icon: 'pi pi-palette' },
-  { id: 'editor' as const, label: '編輯器 (Editor)', icon: 'pi pi-code' },
-  { id: 'results' as const, label: '查詢與結果 (Results)', icon: 'pi pi-table' },
-  { id: 'table_filter' as const, label: '名稱過濾 (Object Filter)', icon: 'pi pi-filter' },
-  { id: 'ai' as const, label: 'AI 設定 (AI Assistant)', icon: 'pi pi-sparkles' },
-  { id: 'about' as const, label: '關於 (About)', icon: 'pi pi-info-circle' },
-];
+const tabs = computed(() => [
+  { id: 'theme' as const, label: t('settingsModal.tabs.appearance'), icon: 'pi pi-palette' },
+  { id: 'editor' as const, label: t('settingsModal.tabs.editor'), icon: 'pi pi-code' },
+  { id: 'results' as const, label: t('settingsModal.tabs.results'), icon: 'pi pi-table' },
+  { id: 'table_filter' as const, label: t('settingsModal.tabs.filter'), icon: 'pi pi-filter' },
+  { id: 'ai' as const, label: t('settingsModal.tabs.ai'), icon: 'pi pi-sparkles' },
+  { id: 'about' as const, label: t('settingsModal.tabs.about'), icon: 'pi pi-info-circle' },
+]);
+
+function handleLocaleChange(val: unknown) {
+  if (val && typeof val === 'string') {
+    settingsStore.setLocale(val as SupportedLocale, primevue.config);
+  }
+}
 
 const themePresets: { id: ThemePresetName; label: string; desc: string }[] = [
   { id: 'Aura', label: 'Aura (現代)', desc: '精緻圓角與柔和光澤，SQLight 預設推薦' },
@@ -733,7 +760,7 @@ const fontSizeOptions = [
 ];
 
 function handleReset() {
-  if (confirm('確定要將所有設定重設回預設值嗎？')) {
+  if (confirm(t('settingsModal.resetConfirm'))) {
     settingsStore.resetToDefaults();
   }
 }

@@ -29,7 +29,7 @@
             class="pi pi-sparkles text-sm"
             :class="aiChatStore.isGenerating ? 'animate-spin text-plan' : 'text-plan'"
           />
-          <span class="text-xs font-semibold text-dark-100">AI SQL 智能助理</span>
+          <span class="text-xs font-semibold text-dark-100">{{ $t('aiSqlChat.title') }}</span>
         </div>
 
         <!-- 視窗控制按鈕組 (點擊不觸發拖曳) -->
@@ -40,7 +40,7 @@
             text
             rounded
             size="small"
-            v-tooltip.top="'開啟 AI 請求記錄檔 (ai.log)'"
+            v-tooltip.top="$t('aiSqlChat.openLogTooltip')"
             class="!w-7 !h-7 !p-0 hover:text-plan"
             @click="handleOpenAiLog"
           />
@@ -50,7 +50,7 @@
             text
             rounded
             size="small"
-            v-tooltip.top="'清除對話記錄'"
+            v-tooltip.top="$t('aiSqlChat.clearHistoryTooltip')"
             class="!w-7 !h-7 !p-0"
             @click="aiChatStore.clearHistory()"
           />
@@ -60,7 +60,7 @@
             text
             rounded
             size="small"
-            v-tooltip.top="isMaximized ? '還原大小' : '最大化視窗 (100vw 100vh)'"
+            v-tooltip.top="isMaximized ? $t('aiSqlChat.restoreSizeTooltip') : $t('aiSqlChat.maximizeTooltip')"
             class="!w-7 !h-7 !p-0"
             @click="toggleMaximize"
           />
@@ -70,7 +70,7 @@
             text
             rounded
             size="small"
-            v-tooltip.top="'最小化至浮動膠囊 (可繼續背景分析)'"
+            v-tooltip.top="$t('aiSqlChat.minimizeTooltip')"
             class="!w-7 !h-7 !p-0"
             @click="aiChatStore.toggleMinimize()"
           />
@@ -80,7 +80,7 @@
             text
             rounded
             size="small"
-            v-tooltip.top="'關閉視窗'"
+            v-tooltip.top="$t('aiSqlChat.closeTooltip')"
             class="!w-7 !h-7 !p-0 hover:text-danger"
             @click="aiChatStore.closeChat()"
           />
@@ -101,7 +101,7 @@
             @mouseleave="isSqlHovered = false"
           >
             <Tag
-              :value="aiChatStore.isSelectionOnly ? '選取範圍 SQL' : '整頁 SQL'"
+              :value="aiChatStore.isSelectionOnly ? $t('aiSqlChat.selectionOnlyTag') : $t('aiSqlChat.fullPageTag')"
               severity="info"
               class="!text-[10px] !py-0.5 !px-1.5 flex-shrink-0"
             />
@@ -122,7 +122,7 @@
                 <div class="px-3 py-1.5 bg-dark-800 border-b border-dark-700 flex items-center justify-between text-xxs text-dark-300 select-none">
                   <span class="font-semibold text-plan flex items-center gap-1.5">
                     <i class="pi pi-code text-xs text-plan" />
-                    完整附帶 SQL (共 {{ sqlLineCount }} 行)
+                    {{ $t('aiSqlChat.attachedSqlTitle', { count: sqlLineCount }) }}
                   </span>
                   <div class="flex items-center space-x-2">
                     <button
@@ -130,7 +130,7 @@
                       class="text-dark-300 hover:text-ok transition-colors flex items-center gap-1 cursor-pointer"
                       @click.stop="copySql(aiChatStore.currentSql)"
                     >
-                      <i class="pi pi-copy text-[10px]" />複製
+                      <i class="pi pi-copy text-[10px]" />{{ $t('aiSqlChat.copyBtn') }}
                     </button>
                   </div>
                 </div>
@@ -146,7 +146,7 @@
             text
             rounded
             size="small"
-            v-tooltip.top="'移除附加 SQL'"
+            v-tooltip.top="$t('aiSqlChat.removeSqlTooltip')"
             class="!w-5 !h-5 !p-0"
             @click="aiChatStore.clearSqlContext()"
           />
@@ -163,9 +163,9 @@
               <i class="pi pi-sparkles text-xl" />
             </div>
             <div>
-              <h4 class="font-semibold text-sm text-dark-100">歡迎使用 SQLight AI 智能助手</h4>
+              <h4 class="font-semibold text-sm text-dark-100">{{ $t('aiSqlChat.welcomeTitle') }}</h4>
               <p class="text-dark-400 mt-1 max-w-sm leading-relaxed text-xs">
-                選取 SQL 語法後點選下方快捷分析，或直接在輸入框提出針對 T-SQL 最佳化、執行計畫或除錯的疑問。
+                {{ $t('aiSqlChat.welcomeSub') }}
               </p>
             </div>
           </div>
@@ -182,7 +182,7 @@
                 }"
               >
                 <div v-if="msg.sqlContext" class="mb-2 pb-1.5 border-b border-white/20 opacity-90 font-mono text-[11px] truncate">
-                  <i class="pi pi-code mr-1" />【附帶 SQL】{{ msg.sqlContext.slice(0, 50) }}...
+                  <i class="pi pi-code mr-1" />{{ $t('aiSqlChat.userSqlTag') }}{{ msg.sqlContext.slice(0, 50) }}...
                 </div>
                 <div class="whitespace-pre-wrap select-text font-sans">{{ msg.content }}</div>
               </div>
@@ -205,10 +205,10 @@
                     <!-- SQL Code Block -->
                     <div v-else-if="segment.type === 'sql'" class="my-2.5 rounded border border-dark-700 bg-dark-900 overflow-hidden select-none">
                       <div class="flex items-center justify-between px-3 py-1 text-[11px] border-b border-dark-750 bg-dark-800 text-black dark:text-plan">
-                        <span class="font-mono font-semibold text-black dark:text-plan">T-SQL 語法建議</span>
+                        <span class="font-mono font-semibold text-black dark:text-plan">{{ $t('aiSqlChat.suggestionTitle') }}</span>
                         <div class="flex items-center space-x-1.5">
                           <Button
-                            label="複製"
+                            :label="$t('aiSqlChat.copyBtn')"
                             icon="pi pi-copy"
                             severity="secondary"
                             text
@@ -217,7 +217,7 @@
                             @click="copySql(segment.value)"
                           />
                           <Button
-                            label="開啟至新分頁"
+                            :label="$t('aiSqlChat.openToNewTab')"
                             icon="pi pi-external-link"
                             severity="primary"
                             size="small"
@@ -233,7 +233,7 @@
 
                 <div v-if="msg.tokensUsed" class="mt-2 pt-1 border-t border-dark-750 flex justify-end">
                   <span class="text-[10px] text-dark-400 font-mono">
-                    消耗 {{ msg.tokensUsed }} tokens
+                    {{ $t('aiSqlChat.tokensUsed', { count: msg.tokensUsed }) }}
                   </span>
                 </div>
               </div>
@@ -246,9 +246,9 @@
           <!-- 運算中進度列 -->
           <div v-if="aiChatStore.isGenerating" class="flex items-center space-x-2 py-2 text-dark-400">
             <ProgressBar mode="indeterminate" class="w-24 !h-1.5" />
-            <span class="text-[11px]">AI 分析中... ({{ aiChatStore.executionElapsedSeconds }}s)</span>
+            <span class="text-[11px]">{{ $t('aiSqlChat.analyzing', { seconds: aiChatStore.executionElapsedSeconds }) }}</span>
             <Button
-              label="中斷"
+              :label="$t('aiSqlChat.abortBtn')"
               icon="pi pi-stop-circle"
               severity="danger"
               text
@@ -262,7 +262,7 @@
         <!-- 快捷提示詞晶片 (純文字無圖示，點選填入輸入框) -->
         <div class="px-3 py-1.5 border-t border-dark-750 bg-dark-850/80 flex items-center space-x-2 overflow-x-auto flex-shrink-0 select-none scrollbar-none">
           <span class="text-[11px] text-dark-400 flex-shrink-0">
-            快捷提問:
+            {{ $t('aiSqlChat.quickPromptsLabel') }}
           </span>
           <Button
             v-for="chip in aiChatStore.quickPrompts"
@@ -285,7 +285,7 @@
               v-model="inputQuery"
               rows="2"
               auto-resize
-              placeholder="請輸入針對此 SQL 的問題... (Enter 送出, Shift+Enter 換行)"
+              :placeholder="$t('aiSqlChat.inputPlaceholder')"
               class="w-full !text-xs !p-2.5 font-sans !resize-none !bg-dark-900 !border-dark-700"
               :disabled="aiChatStore.isGenerating"
               @keydown.enter.exact.prevent="handleSubmit"
@@ -321,6 +321,7 @@
 
 <script setup lang="ts">
 import { ref, reactive, computed, watch, nextTick, onMounted, onBeforeUnmount } from 'vue';
+import { useI18n } from 'vue-i18n';
 import Button from 'primevue/button';
 import Textarea from 'primevue/textarea';
 import Tag from 'primevue/tag';
@@ -331,6 +332,7 @@ import { useWorkspaceStore } from '@/stores/workspaceStore';
 import { aiLoggerService } from '@/services/aiLoggerService';
 import { renderMarkdownToHtml } from '@/utils/markdownRenderer';
 
+const { t } = useI18n();
 const aiChatStore = useAiChatStore();
 const workspaceStore = useWorkspaceStore();
 const toast = useToast();
@@ -498,7 +500,7 @@ const sqlPreviewText = computed(() => {
   if (!aiChatStore.currentSql) return '';
   const lines = aiChatStore.currentSql.trim().split('\n');
   const firstLine = lines[0] ?? '';
-  return `(${lines.length} 行) ${firstLine.slice(0, 45)}...`;
+  return `${t('aiSqlChat.sqlLinesCount', { count: lines.length })} ${firstLine.slice(0, 45)}...`;
 });
 
 const sqlLineCount = computed(() => {
@@ -577,15 +579,15 @@ async function copySql(sqlText: string) {
     await navigator.clipboard.writeText(sqlText);
     toast.add({
       severity: 'success',
-      summary: '複製成功',
-      detail: '已將 SQL 語法複製至剪貼簿',
+      summary: t('aiSqlChat.copySuccess'),
+      detail: t('aiSqlChat.copySuccessDetail'),
       life: 2000,
     });
   } catch {
     toast.add({
       severity: 'error',
-      summary: '複製失敗',
-      detail: '無法寫入系統剪貼簿',
+      summary: t('aiSqlChat.copyFailed'),
+      detail: t('aiSqlChat.copyFailedDetail'),
       life: 2500,
     });
   }
@@ -595,8 +597,8 @@ function openInNewTab(sqlText: string) {
   workspaceStore.addSqlTab(sqlText, 'AI Generated');
   toast.add({
     severity: 'info',
-    summary: '分頁已開啟',
-    detail: '已將 AI 建議 SQL 載入至新分頁',
+    summary: t('aiSqlChat.tabOpened'),
+    detail: t('aiSqlChat.tabOpenedDetail'),
     life: 2000,
   });
 }

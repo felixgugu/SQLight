@@ -28,11 +28,11 @@ describe('SQL editor toolbar actions', () => {
     }
 
     assert.match(source, /:disabled="disabled"/, 'buttons should share the disabled prop');
-    assert.match(source, /label: '剪下'/, 'cut should have a Chinese tooltip label');
-    assert.match(source, /label: '複製'/, 'copy should have a Chinese tooltip label');
-    assert.match(source, /label: '貼上'/, 'paste should have a Chinese tooltip label');
-    assert.match(source, /label: '展開'/, 'unfold should have a Chinese tooltip label');
-    assert.match(source, /label: '收合'/, 'fold should have a Chinese tooltip label');
+    assert.match(source, /(?:label: '剪下'|label: t\('common\.cut'\))/, 'cut should have a localized label');
+    assert.match(source, /(?:label: '複製'|label: t\('common\.copy'\))/, 'copy should have a localized label');
+    assert.match(source, /(?:label: '貼上'|label: t\('common\.paste'\))/, 'paste should have a localized label');
+    assert.match(source, /(?:label: '展開'|label: t\('common\.expand'\))/, 'unfold should have a localized label');
+    assert.match(source, /(?:label: '收合'|label: t\('common\.collapse'\))/, 'fold should have a localized label');
   });
 
   test('AppHeader places the actions immediately before Format SQL', () => {

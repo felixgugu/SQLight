@@ -25,7 +25,7 @@
           <InputText
             v-model="quickFilterInput"
             type="text"
-            :placeholder="hasRows ? 'Search grid...' : '無資料可供搜尋'"
+            :placeholder="hasRows ? $t('results.filterPlaceholder') : $t('results.noDataToSearch')"
             :disabled="!hasRows"
             size="small"
             class="w-full !bg-dark-900 !border-dark-700 !py-0.5 !pl-7 !pr-6 !text-xs disabled:opacity-50 disabled:cursor-not-allowed"
@@ -36,7 +36,7 @@
         <Tag
           v-if="resultSet.isTruncated"
           severity="warn"
-          :value="`已達上限 ${resultSet.rowCount.toLocaleString()} 筆（共 ${(resultSet.totalCount ?? resultSet.rowCount).toLocaleString()} 筆，其餘已截斷）`"
+          :value="$t('results.truncatedWarning', { count: resultSet.rowCount.toLocaleString(), total: (resultSet.totalCount ?? resultSet.rowCount).toLocaleString() })"
           class="hidden md:flex !text-xxs font-sans truncate"
         >
           <template #icon>
@@ -48,7 +48,7 @@
         <Tag
           v-if="queryStore.activeResultTab?.isShowplan"
           severity="info"
-          value="預估執行計畫 (Estimated Plan)"
+          :value="$t('results.estimatedPlan')"
           class="hidden md:flex !text-xxs font-sans truncate"
         >
           <template #icon>
@@ -65,13 +65,13 @@
             <Button
               type="button"
               icon="pi pi-undo"
-              label="退回"
+              :label="$t('common.revert')"
               size="small"
               :severity="modifiedCount > 0 ? 'warn' : 'secondary'"
               outlined
               :disabled="modifiedCount === 0 || !hasRows"
               @click="handleRevertChanges"
-              v-tooltip.top="'退回所有未提交的修改 (Revert All)'"
+              :v-tooltip.top="$t('results.revertAllTooltip')"
               class="!text-xxs !py-0.5 !px-2 select-none"
             />
 
@@ -84,7 +84,7 @@
               :severity="modifiedCount > 0 ? 'success' : 'secondary'"
               :disabled="modifiedCount === 0 || !hasRows"
               @click="openCommitModal"
-              v-tooltip.top="'提交所有修改至資料庫 (Commit Changes)'"
+              :v-tooltip.top="$t('results.commitChangesTooltip')"
               class="!text-xxs !py-0.5 !px-2.5 font-semibold select-none shadow-xs"
             />
           </template>
@@ -93,7 +93,7 @@
           <template v-else>
             <Tag
               severity="secondary"
-              :value="editability.shortReason || '唯讀'"
+              :value="editability.shortReason || $t('results.readOnly')"
               v-tooltip.top="editability.reason"
               class="!text-xxs select-none"
             >
@@ -111,13 +111,13 @@
         <Button
           type="button"
           :icon="isRefreshing ? 'pi pi-spin pi-spinner' : 'pi pi-refresh'"
-          :label="isRefreshing ? 'Refreshing...' : '重新整理'"
+          :label="isRefreshing ? $t('common.refreshing') : $t('common.refresh')"
           size="small"
           severity="secondary"
           outlined
           :disabled="isRefreshing"
           @click="handleRefresh"
-          v-tooltip.top="isRefreshing ? '正在重新整理中...' : '重新整理此查詢結果 (Re-run SQL)'"
+          :v-tooltip.top="isRefreshing ? $t('common.refreshing') : $t('results.refreshTooltip')"
           class="!text-xxs !py-0.5 !px-2"
         />
 
@@ -130,7 +130,7 @@
           severity="secondary"
           outlined
           @click="copyAsTsv"
-          v-tooltip.top="'複製全部為 TSV (相容 Excel 貼上)'"
+          :v-tooltip.top="$t('results.copyTsvTooltip')"
           class="!text-xxs !py-0.5 !px-2"
         />
 
@@ -143,7 +143,7 @@
           severity="secondary"
           outlined
           @click="copyAsCsv"
-          v-tooltip.top="'複製為 CSV 格式'"
+          :v-tooltip.top="$t('results.copyCsvTooltip')"
           class="!text-xxs !py-0.5 !px-2"
         />
 
@@ -156,7 +156,7 @@
           severity="secondary"
           outlined
           @click="copyAsJson"
-          v-tooltip.top="'複製全表為 JSON 物件陣列'"
+          :v-tooltip.top="$t('results.copyJsonTooltip')"
           class="!text-xxs !py-0.5 !px-2"
         />
 
@@ -169,7 +169,7 @@
           severity="secondary"
           outlined
           @click="copyAsMarkdown"
-          v-tooltip.top="'複製全表為 Markdown 表格 (貼入 GitHub / Notion)'"
+          :v-tooltip.top="$t('results.copyMdTooltip')"
           class="!text-xxs !py-0.5 !px-2"
         />
 
@@ -177,7 +177,7 @@
 
         <!-- Row Count Indicator -->
         <span class="text-xxs text-dark-400">
-          <strong class="text-dark-200">{{ resultSet.rows.length.toLocaleString() }}</strong> rows
+          <strong class="text-dark-200">{{ resultSet.rows.length.toLocaleString() }}</strong> {{ $t('results.rowCount', { count: '' }).trim() || 'rows' }}
         </span>
 
         <!-- Maximize / Restore Toggle (when multiple result sets) -->
@@ -190,7 +190,7 @@
           size="small"
           severity="secondary"
           @click="$emit('toggle-maximize')"
-          v-tooltip.top="isMaximized ? '恢復預設多網格檢視' : '最大化檢視此結果集'"
+          :v-tooltip.top="isMaximized ? $t('results.restoreGrid') : $t('results.maximizeGrid')"
           class="!w-6 !h-6 !p-0 ml-1"
         />
       </div>
@@ -227,61 +227,61 @@
       <div class="flex items-center space-x-2.5 overflow-x-auto min-w-0">
         <template v-if="selectionStats">
           <div class="flex items-center space-x-1 font-semibold text-accent flex-shrink-0">
-            <span>選取:</span>
+            <span>{{ $t('results.selected') }}:</span>
             <span v-if="selectedColumnsCount > 1" class="text-warn font-mono">
-              {{ selectedColumnsCount }} 欄
+              {{ selectedColumnsCount }} {{ $t('results.columnsUnit') }}
             </span>
             <span class="font-mono text-dark-100">
-              {{ selectedColumnsCount > 1 ? `(${selectionStats.totalCells.toLocaleString()} 格)` : `${selectionStats.totalCells.toLocaleString()} 格` }}
+              {{ selectedColumnsCount > 1 ? `(${selectionStats.totalCells.toLocaleString()} ${$t('results.cellsUnit')})` : `${selectionStats.totalCells.toLocaleString()} ${$t('results.cellsUnit')}` }}
             </span>
             <span v-if="selectionStats.numericCount > 0" class="text-dark-400 font-mono text-[10px]">
-              [{{ selectionStats.numericCount.toLocaleString() }} 數值]
+              [{{ selectionStats.numericCount.toLocaleString() }} {{ $t('results.numericUnit') }}]
             </span>
           </div>
 
           <template v-if="selectionStats.numericCount > 0">
             <span class="text-dark-600 flex-shrink-0">|</span>
             <div class="flex-shrink-0">
-              總和 (Sum): <strong class="font-mono text-ok">{{ formatAggregateNumber(selectionStats.sum) }}</strong>
+              {{ $t('results.sum') }}: <strong class="font-mono text-ok">{{ formatAggregateNumber(selectionStats.sum) }}</strong>
             </div>
             <span class="text-dark-600 flex-shrink-0">|</span>
             <div class="flex-shrink-0">
-              平均 (Avg): <strong class="font-mono text-info">{{ formatAggregateNumber(selectionStats.avg) }}</strong>
+              {{ $t('results.avg') }}: <strong class="font-mono text-info">{{ formatAggregateNumber(selectionStats.avg) }}</strong>
             </div>
             <span class="text-dark-600 flex-shrink-0">|</span>
             <div class="flex-shrink-0">
-              最小值 (Min): <strong class="font-mono text-warn">{{ formatAggregateNumber(selectionStats.min) }}</strong>
+              {{ $t('results.min') }}: <strong class="font-mono text-warn">{{ formatAggregateNumber(selectionStats.min) }}</strong>
             </div>
             <span class="text-dark-600 flex-shrink-0">|</span>
             <div class="flex-shrink-0">
-              最大值 (Max): <strong class="font-mono text-plan">{{ formatAggregateNumber(selectionStats.max) }}</strong>
+              {{ $t('results.max') }}: <strong class="font-mono text-plan">{{ formatAggregateNumber(selectionStats.max) }}</strong>
             </div>
           </template>
 
           <span class="text-dark-600 flex-shrink-0">|</span>
           <div class="flex-shrink-0">
-            非重複計數: <strong class="font-mono text-dark-100">{{ selectionStats.distinctCount.toLocaleString() }}</strong>
+            {{ $t('results.distinct') }}: <strong class="font-mono text-dark-100">{{ selectionStats.distinctCount.toLocaleString() }}</strong>
           </div>
 
           <Button
             type="button"
-            label="清除"
+            :label="$t('common.clear')"
             text
             size="small"
             severity="secondary"
             @click="clearCellSelection"
-            v-tooltip.top="'清除選取 (Esc)'"
+            :v-tooltip.top="$t('results.clearSelectionTooltip')"
             class="!ml-1 !p-0 !text-[10px] !underline"
           />
         </template>
 
         <template v-else>
           <div class="flex items-center space-x-2 text-dark-400">
-            <span>共 <strong class="font-mono text-dark-200">{{ resultSet.rows.length.toLocaleString() }}</strong> 列</span>
+            <span>{{ $t('results.totalRows', { count: resultSet.rows.length.toLocaleString() }) }}</span>
             <span class="text-dark-600">|</span>
-            <span><strong class="font-mono text-dark-200">{{ resultSet.columns.length }}</strong> 個欄位</span>
+            <span>{{ $t('results.totalColumns', { count: resultSet.columns.length }) }}</span>
             <span class="text-dark-600">|</span>
-            <span class="text-dark-500 italic text-[10px]">提示：支援標題列拖曳多欄選取、Shift 連續多欄、Ctrl 多選、儲存格框選與 Ctrl+A 全選</span>
+            <span class="text-dark-500 italic text-[10px]">{{ $t('results.selectionTip') }}</span>
           </div>
         </template>
       </div>
@@ -304,7 +304,7 @@
         class="w-full text-left px-2.5 py-1.5 hover:bg-dark-750 hover:text-dark-100 flex items-center space-x-2 transition-colors"
       >
         <Copy class="w-3.5 h-3.5 text-accent" />
-        <span>複製儲存格值 (Copy Cell)</span>
+        <span>{{ $t('results.copyCell') }}</span>
       </button>
 
       <button
@@ -312,7 +312,7 @@
         class="w-full text-left px-2.5 py-1.5 hover:bg-dark-750 hover:text-dark-100 flex items-center space-x-2 transition-colors"
       >
         <Heading class="w-3.5 h-3.5 text-plan" />
-        <span>複製欄位名稱 (Column Name)</span>
+        <span>{{ $t('results.copyColumnName') }}</span>
       </button>
 
       <button
@@ -320,7 +320,7 @@
         class="w-full text-left px-2.5 py-1.5 hover:bg-dark-750 hover:text-dark-100 flex items-center space-x-2 transition-colors"
       >
         <FileText class="w-3.5 h-3.5 text-ok" />
-        <span>複製整列資料 (Copy Row)</span>
+        <span>{{ $t('results.copyRow') }}</span>
       </button>
 
       <button
@@ -328,7 +328,7 @@
         class="w-full text-left px-2.5 py-1.5 hover:bg-dark-750 hover:text-dark-100 flex items-center space-x-2 transition-colors"
       >
         <Braces class="w-3.5 h-3.5 text-ok" />
-        <span>複製整列為 JSON (Row JSON)</span>
+        <span>{{ $t('results.copyRowJson') }}</span>
       </button>
 
       <button
@@ -336,7 +336,7 @@
         class="w-full text-left px-2.5 py-1.5 hover:bg-dark-750 hover:text-dark-100 flex items-center space-x-2 transition-colors"
       >
         <Eye class="w-3.5 h-3.5 text-info" />
-        <span>資料檢視 (Data View)</span>
+        <span>{{ $t('results.dataView') }}</span>
       </button>
 
       <!-- Cell Editing Quick Actions in Context Menu -->
@@ -348,7 +348,7 @@
           class="w-full text-left px-2.5 py-1.5 hover:bg-dark-750 hover:text-warn flex items-center space-x-2 transition-colors text-warn"
         >
           <Slash class="w-3.5 h-3.5" />
-          <span>設為 NULL (Set NULL)</span>
+          <span>{{ $t('results.setNull') }}</span>
         </button>
         <button
           v-if="isCurrentCellModified"
@@ -356,7 +356,7 @@
           class="w-full text-left px-2.5 py-1.5 hover:bg-dark-750 hover:text-warn flex items-center space-x-2 transition-colors text-warn"
         >
           <Undo2 class="w-3.5 h-3.5" />
-          <span>退回此儲存格修改 (Revert Cell)</span>
+          <span>{{ $t('results.revertCell') }}</span>
         </button>
       </template>
 
@@ -369,7 +369,7 @@
         class="w-full text-left px-2.5 py-1.5 hover:bg-dark-750 hover:text-dark-100 flex items-center space-x-2 transition-colors"
       >
         <Copy class="w-3.5 h-3.5 text-accent" />
-        <span>複製選取內容 ({{ selectionStats?.totalCells }} 格)</span>
+        <span>{{ $t('results.copySelection') }} ({{ selectionStats?.totalCells }} {{ $t('results.cellsUnit') }})</span>
       </button>
 
       <button
@@ -378,7 +378,7 @@
         class="w-full text-left px-2.5 py-1.5 hover:bg-dark-750 hover:text-dark-100 flex items-center space-x-2 transition-colors"
       >
         <Braces class="w-3.5 h-3.5 text-er" />
-        <span>複製選取為 JSON 物件陣列</span>
+        <span>{{ $t('results.copySelectionAsJson') }}</span>
       </button>
 
       <!-- DML SQL Generation Options -->
@@ -387,7 +387,7 @@
         class="w-full text-left px-2.5 py-1.5 hover:bg-dark-750 hover:text-dark-100 flex items-center space-x-2 transition-colors"
       >
         <PlusCircle class="w-3.5 h-3.5 text-info" />
-        <span>建立 INSERT 語法</span>
+        <span>{{ $t('results.generateInsert') }}</span>
       </button>
 
       <button
@@ -395,7 +395,7 @@
         class="w-full text-left px-2.5 py-1.5 hover:bg-dark-750 hover:text-dark-100 flex items-center space-x-2 transition-colors"
       >
         <Edit3 class="w-3.5 h-3.5 text-warn" />
-        <span>建立 UPDATE 語法</span>
+        <span>{{ $t('results.generateUpdate') }}</span>
       </button>
 
       <button
@@ -403,7 +403,7 @@
         class="w-full text-left px-2.5 py-1.5 hover:bg-dark-750 hover:text-dark-100 flex items-center space-x-2 transition-colors"
       >
         <Trash2 class="w-3.5 h-3.5 text-danger" />
-        <span>建立 DELETE 語法</span>
+        <span>{{ $t('results.generateDelete') }}</span>
       </button>
     </div>
 

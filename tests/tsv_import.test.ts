@@ -314,8 +314,8 @@ test('unique key SQL escapes identifiers and source size cap stays documented', 
 
 test('import entry points are wired for the Explorer table menu only', () => {
   const sidebar = readFileSync(resolve(process.cwd(), 'src/components/layout/AppSidebar.vue'), 'utf-8');
-  const importEntry = sidebar.indexOf("label: 'TSV 匯入 (Import TSV)'");
-  const ddlEntry = sidebar.indexOf("label: '產生 CREATE TABLE 腳本'");
+  const importEntry = sidebar.indexOf("t('sidebar.importTsv')");
+  const ddlEntry = sidebar.indexOf("t('sidebar.scriptCreate')");
   const viewBlock = sidebar.indexOf('if (isView || isProc || isFunc) {');
   assert.ok(importEntry > 0, 'table menu must expose the TSV import entry');
   assert.ok(

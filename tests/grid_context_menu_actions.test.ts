@@ -55,10 +55,10 @@ describe('Grid context menus own the actions the toolbars cannot reach', () => {
 
   test('the row level copy actions stay in the context menu', () => {
     const result = readSource('src/components/results/ResultGridItem.vue');
-    assert.match(result, /複製儲存格值 \(Copy Cell\)/);
-    assert.match(result, /複製欄位名稱 \(Column Name\)/);
-    assert.match(result, /複製整列資料 \(Copy Row\)/);
-    assert.match(result, /複製整列為 JSON \(Row JSON\)/);
+    assert.match(result, /(?:複製儲存格值 \(Copy Cell\)|results\.copyCell)/);
+    assert.match(result, /(?:複製欄位名稱 \(Column Name\)|results\.copyColumnName)/);
+    assert.match(result, /(?:複製整列資料 \(Copy Row\)|results\.copyRow)/);
+    assert.match(result, /(?:複製整列為 JSON \(Row JSON\)|results\.copyRowJson)/);
   });
 
   for (const grid of grids) {
@@ -80,7 +80,7 @@ describe('Grid context menus own the actions the toolbars cannot reach', () => {
         /onCopySelected: \(\) => gridExport\.copySelectedCells\(\)/,
         'Ctrl+C must keep copying the current selection'
       );
-      assert.match(source, /複製選取內容 \(\{\{ selectionStats\?\.totalCells \}\} 格\)/);
+      assert.match(source, /(?:複製選取內容 \(\{\{ selectionStats\?\.totalCells \}\} 格\)|results\.copySelection)/);
     });
   }
 });

@@ -37,9 +37,9 @@ describe('Result grid context menu: copy column name', () => {
   test('ResultGridItem renders the column name item directly below Copy Cell', () => {
     const source = readSource('src/components/results/ResultGridItem.vue');
 
-    const copyCellIdx = source.indexOf('複製儲存格值 (Copy Cell)');
-    const copyColumnIdx = source.indexOf('複製欄位名稱 (Column Name)');
-    const copyRowIdx = source.indexOf('複製整列資料 (Copy Row)');
+    const copyCellIdx = source.indexOf('results.copyCell') !== -1 ? source.indexOf('results.copyCell') : source.indexOf('複製儲存格值 (Copy Cell)');
+    const copyColumnIdx = source.indexOf('results.copyColumnName') !== -1 ? source.indexOf('results.copyColumnName') : source.indexOf('複製欄位名稱 (Column Name)');
+    const copyRowIdx = source.indexOf('results.copyRow') !== -1 ? source.indexOf('results.copyRow') : source.indexOf('複製整列資料 (Copy Row)');
 
     assert.ok(copyCellIdx !== -1, 'Copy Cell item should exist');
     assert.ok(copyColumnIdx !== -1, 'Column Name item should exist');

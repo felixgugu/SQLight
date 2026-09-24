@@ -16,14 +16,14 @@
             <div class="w-6 h-6 rounded-md bg-emerald-500/20 text-ok flex items-center justify-center flex-shrink-0">
               <Upload class="w-3.5 h-3.5" />
             </div>
-            <span class="text-xs font-semibold truncate">TSV 匯入</span>
+            <span class="text-xs font-semibold truncate">{{ $t('tsvImportModal.title') }}</span>
             <Tag
               v-if="targetLabel"
               severity="secondary"
               :value="targetLabel"
               class="!text-xxs !py-0.5 !px-1.5 font-mono max-w-[320px] truncate"
             />
-            <span class="text-xxs text-dark-400">步驟 {{ store.step }} / 2</span>
+            <span class="text-xxs text-dark-400">{{ $t('tsvImportModal.stepProgress', { step: store.step }) }}</span>
           </div>
           <Button
             type="button"
@@ -33,7 +33,7 @@
             rounded
             size="small"
             :disabled="store.isImporting"
-            v-tooltip.top="store.isImporting ? '匯入進行中不可關閉' : '關閉 (Esc)'"
+            v-tooltip.top="store.isImporting ? $t('tsvImportModal.cannotCloseWhileImporting') : $t('tsvImportModal.closeTooltip')"
             class="!w-7 !h-7 !p-0"
             @click="store.close()"
           />

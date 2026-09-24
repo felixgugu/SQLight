@@ -13,7 +13,7 @@
           <i class="pi pi-file-export text-sm" />
         </div>
         <div>
-          <span class="font-semibold text-sm text-dark-100">匯出資料庫結構 CSV</span>
+          <span class="font-semibold text-sm text-dark-100">{{ $t('exportSchemaModal.title') }}</span>
           <span class="ml-2 text-xxs text-dark-400 font-normal">
             {{ stepTitle }}
           </span>
@@ -26,12 +26,12 @@
       <!-- Target Environment & Database Info -->
       <div class="flex items-center space-x-2 text-xxs font-mono bg-dark-900 p-2 rounded border border-dark-750">
         <div class="flex items-center space-x-1.5 text-dark-300">
-          <span class="text-dark-500">連線:</span>
+          <span class="text-dark-500">{{ $t('exportSchemaModal.connLabel') }}</span>
           <span class="font-semibold text-dark-100">{{ connectionName || connectionId }}</span>
         </div>
         <span class="text-dark-600">/</span>
         <div class="flex items-center space-x-1.5 text-dark-300">
-          <span class="text-dark-500">資料庫:</span>
+          <span class="text-dark-500">{{ $t('exportSchemaModal.dbLabel') }}</span>
           <span class="font-semibold text-accent">{{ database }}</span>
         </div>
       </div>
@@ -39,11 +39,10 @@
       <!-- Step 1: Confirm -->
       <template v-if="step === 'confirm'">
         <div class="p-3 bg-dark-850/80 rounded-lg border border-dark-750 space-y-2.5">
-          <p class="text-dark-200 leading-relaxed text-xs">
-            此功能將擷取資料庫「<strong class="text-accent font-semibold">{{ database }}</strong>」之完整結構規格，以供輸出 CSV 進行版本控管或與其他環境資料庫進行結構比對。
+          <p class="text-dark-200 leading-relaxed text-xs" v-html="$t('exportSchemaModal.confirmDesc', { database: `<strong class='text-accent font-semibold'>${database}</strong>` })">
           </p>
           <div class="text-xxs text-dark-400">
-            即將執行下列 3 項標準系統目錄探勘查詢：
+            {{ $t('exportSchemaModal.queriesIntro') }}
           </div>
 
           <!-- 3 Queries Overview List -->
@@ -58,14 +57,14 @@
                   <span class="w-4 h-4 rounded-full bg-brand-500/20 text-accent font-mono text-[10px] flex items-center justify-center font-bold">
                     {{ idx + 1 }}
                   </span>
-                  <span class="font-medium text-dark-200 text-xs">{{ item.title }}</span>
+                  <span class="font-medium text-dark-200 text-xs">{{ getItemTitle(item.key) }}</span>
                 </div>
                 <span class="text-xxs font-mono text-dark-400 bg-dark-800 px-1.5 py-0.5 rounded">
                   {{ item.defaultFileName }}
                 </span>
               </div>
               <div class="mt-1 pl-6 text-xxs text-dark-400 leading-normal">
-                {{ item.description }}
+                {{ getItemDescription(item.key) }}
               </div>
             </div>
           </div>
@@ -80,14 +79,14 @@
           >
             <span class="flex items-center space-x-1.5">
               <i class="pi pi-code text-xs text-accent" />
-              <span>檢視即將執行的 SQL 語句 (3 段查詢)</span>
+              <span>{{ $t('exportSchemaModal.viewSql') }}</span>
             </span>
             <i :class="['pi text-xxs transition-transform duration-200', showSqlPreview ? 'pi-chevron-down' : 'pi-chevron-right']" />
           </button>
 
           <div v-if="showSqlPreview" class="p-3 border-t border-dark-750 space-y-3 max-h-60 overflow-y-auto">
             <div v-for="(item, idx) in exportItems" :key="item.key" class="space-y-1">
-              <div class="text-xxs font-semibold text-dark-300">{{ idx + 1 }}. {{ item.title }}</div>
+              <div class="text-xxs font-semibold text-dark-300">{{ idx + 1 }}. {{ getItemTitle(item.key) }}</div>
               <pre class="bg-dark-950 p-2 rounded border border-dark-800 font-mono text-[11px] text-dark-300 overflow-x-auto select-text">{{ item.sql }}</pre>
             </div>
           </div>
@@ -99,7 +98,7 @@
         <div class="space-y-3">
           <div class="flex items-center space-x-2 text-dark-300 text-xs py-1">
             <i class="pi pi-spin pi-spinner text-accent" />
-            <span>正在自資料庫查詢結構規格，請稍候...</span>
+            <span>{{ $t('exportSchemaModal.querying') }}</span>
           </div>
 
           <!-- Progress Items -->
@@ -144,12 +143,12 @@
 
                   <div>
                     <div class="font-medium text-dark-200 text-xs flex items-center space-x-2">
-                      <span>{{ item.title }}</span>
+                      <span>{{ getItemTitle(item.key) }}</span>
                       <span
                         v-if="item.status === 'running'"
                         class="text-[10px] text-accent animate-pulse"
                       >
-                        查詢中...
+                        {{ $t('exportSchemaModal.inProgress') }}
                       </span>
                     </div>
                     <div class="text-xxs text-dark-400 font-mono">
@@ -161,7 +160,7 @@
                 <!-- Right badge / summary -->
                 <div class="text-right">
                   <div v-if="item.status === 'success'" class="text-ok font-semibold font-mono text-xs">
-                    {{ item.result?.rowCount ?? 0 }} 列
+                    {{ $t('results.rowCount', { count: item.result?.rowCount ?? 0 }) }}
                   </div>
                   <div v-if="item.durationMs" class="text-xxs text-dark-500 font-mono">
                     {{ item.durationMs }} ms
@@ -174,7 +173,7 @@
                 v-if="item.status === 'error'"
                 class="mt-2 text-xxs text-danger bg-rose-50 dark:bg-rose-950/40 p-2 rounded border border-rose-200 dark:border-rose-800/50 leading-normal"
               >
-                {{ item.errorMessage || '查詢執行失敗' }}
+                {{ item.errorMessage || $t('exportSchemaModal.queryFailed') }}
               </div>
             </div>
           </div>
@@ -187,9 +186,9 @@
           <div class="p-3 bg-emerald-500/10 border border-emerald-500/30 rounded-lg flex items-center space-x-2.5">
             <i class="pi pi-check-circle text-ok text-lg flex-shrink-0" />
             <div class="text-xs text-ok">
-              <span class="font-semibold">3 項結構查詢已成功擷取！</span>
+              <span class="font-semibold">{{ $t('exportSchemaModal.successTitle') }}</span>
               <span class="text-xxs text-ok block mt-0.5">
-                請選擇儲存位置與存檔方式以匯出 CSV。
+                {{ $t('exportSchemaModal.successDesc') }}
               </span>
             </div>
           </div>
@@ -206,7 +205,7 @@
                   {{ idx + 1 }}
                 </span>
                 <div>
-                  <div class="text-xs font-medium text-dark-200">{{ item.title }}</div>
+                  <div class="text-xs font-medium text-dark-200">{{ getItemTitle(item.key) }}</div>
                   <div class="text-xxs font-mono text-dark-400">{{ item.defaultFileName }}</div>
                 </div>
               </div>
@@ -214,7 +213,7 @@
               <div class="flex items-center space-x-3">
                 <div class="text-right">
                   <div class="text-xs font-mono font-semibold text-dark-100">
-                    {{ item.result?.rowCount ?? 0 }} 筆記錄
+                    {{ $t('exportSchemaModal.recordsCount', { count: item.result?.rowCount ?? 0 }) }}
                   </div>
                   <div class="text-xxs text-dark-400 font-mono">
                     {{ formatByteSize(item.fileSizeBytes || 0) }}
@@ -228,7 +227,7 @@
                   text
                   severity="secondary"
                   class="!p-1 text-dark-300 hover:text-dark-100"
-                  title="個別另存此 CSV 檔案"
+                  :title="$t('exportSchemaModal.saveSingleTooltip')"
                   @click="handleSaveSingle(item)"
                 >
                   <i class="pi pi-download text-xs" />
@@ -241,7 +240,7 @@
           <div class="p-3 bg-dark-850 rounded-lg border border-dark-750 space-y-2.5">
             <div class="text-xs font-semibold text-dark-200 flex items-center space-x-1.5">
               <i class="pi pi-folder-open text-accent" />
-              <span>請選擇存檔方式：</span>
+              <span>{{ $t('exportSchemaModal.chooseSaveMode') }}</span>
             </div>
 
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-0.5">
@@ -254,10 +253,10 @@
               >
                 <div class="flex items-center space-x-2 text-accent font-semibold text-xs mb-1">
                   <i class="pi pi-folder text-sm text-accent group-hover:scale-110 transition-transform" />
-                  <span>選擇資料夾儲存 (推薦)</span>
+                  <span>{{ $t('exportSchemaModal.saveFolderTitle') }}</span>
                 </div>
                 <div class="text-xxs text-dark-300 leading-normal">
-                  一次存入 3 個獨立 CSV 檔案至指定目錄
+                  {{ $t('exportSchemaModal.saveFolderDesc') }}
                 </div>
               </button>
 
@@ -270,17 +269,17 @@
               >
                 <div class="flex items-center space-x-2 text-dark-200 font-semibold text-xs mb-1">
                   <i class="pi pi-file text-sm text-dark-400 group-hover:scale-110 transition-transform" />
-                  <span>合併為單一 CSV 檔案</span>
+                  <span>{{ $t('exportSchemaModal.saveCombinedTitle') }}</span>
                 </div>
                 <div class="text-xxs text-dark-400 leading-normal">
-                  包含 3 個區塊規格之單一整合 CSV
+                  {{ $t('exportSchemaModal.saveCombinedDesc') }}
                 </div>
               </button>
             </div>
 
             <div class="text-xxs text-dark-400 flex items-center space-x-1 pt-1">
               <i class="pi pi-info-circle text-[11px] text-dark-500" />
-              <span>所有 CSV 檔案均自動內嵌 UTF-8 BOM，支援 Microsoft Excel 直接開啟無亂碼。</span>
+              <span>{{ $t('exportSchemaModal.utf8BomNotice') }}</span>
             </div>
           </div>
         </div>
@@ -294,9 +293,9 @@
           </div>
 
           <div class="space-y-1">
-            <h3 class="text-sm font-semibold text-dark-100">資料庫結構 CSV 匯出完成！</h3>
+            <h3 class="text-sm font-semibold text-dark-100">{{ $t('exportSchemaModal.completedTitle') }}</h3>
             <p class="text-xs text-dark-300">
-              已成功儲存下列檔案：
+              {{ $t('exportSchemaModal.completedDesc') }}
             </p>
           </div>
 
@@ -317,7 +316,7 @@
             </div>
 
             <div v-if="savedDirectoryName" class="mt-2 pt-2 border-t border-dark-750/70 text-xxs text-dark-400">
-              儲存資料夾：<span class="text-dark-200 font-mono font-semibold">{{ savedDirectoryName }}</span>
+              {{ $t('exportSchemaModal.savedFolder') }} <span class="text-dark-200 font-mono font-semibold">{{ savedDirectoryName }}</span>
             </div>
           </div>
 
@@ -325,10 +324,9 @@
           <div class="text-left bg-dark-850 p-2.5 rounded border border-dark-750 text-xxs text-dark-300 space-y-1 leading-relaxed">
             <div class="font-semibold text-accent flex items-center space-x-1">
               <i class="pi pi-lightbulb text-warn" />
-              <span>結構比對技巧：</span>
+              <span>{{ $t('exportSchemaModal.diffTipsTitle') }}</span>
             </div>
-            <div>
-              若要比對兩資料庫，可使用此功能分別匯出兩個資料庫的 CSV，接著透過 <strong>WinMerge</strong>、<strong>Beyond Compare</strong> 或 <strong>VS Code (選取兩檔案右鍵 Compare)</strong> 即可秒速揪出欄位型態、長度或索引差異！
+            <div v-html="$t('exportSchemaModal.diffTipsDesc')">
             </div>
           </div>
         </div>
@@ -343,7 +341,7 @@
           <Button
             v-if="step === 'confirm'"
             type="button"
-            label="取消 (Esc)"
+            :label="$t('exportSchemaModal.cancel')"
             severity="secondary"
             size="small"
             text
@@ -352,7 +350,7 @@
           <Button
             v-else-if="step === 'save_prompt'"
             type="button"
-            label="重新執行查詢"
+            :label="$t('exportSchemaModal.rerun')"
             icon="pi pi-refresh"
             severity="secondary"
             size="small"
@@ -362,7 +360,7 @@
           <Button
             v-else-if="step === 'completed'"
             type="button"
-            label="另存其他位置"
+            :label="$t('exportSchemaModal.saveAnother')"
             icon="pi pi-replay"
             severity="secondary"
             size="small"
@@ -376,7 +374,7 @@
           <Button
             v-if="step === 'confirm'"
             type="button"
-            label="開始執行匯出"
+            :label="$t('exportSchemaModal.startExport')"
             icon="pi pi-play"
             severity="warn"
             size="small"
@@ -385,7 +383,7 @@
           <Button
             v-else-if="step === 'running' && hasError"
             type="button"
-            label="重試"
+            :label="$t('exportSchemaModal.retry')"
             icon="pi pi-refresh"
             severity="warn"
             size="small"
@@ -394,7 +392,7 @@
           <Button
             v-else-if="step === 'completed'"
             type="button"
-            label="完成"
+            :label="$t('exportSchemaModal.finish')"
             icon="pi pi-check"
             severity="primary"
             size="small"
@@ -408,6 +406,7 @@
 
 <script setup lang="ts">
 import { ref, reactive, computed, watch } from 'vue';
+import { useI18n } from 'vue-i18n';
 import Dialog from 'primevue/dialog';
 import Button from 'primevue/button';
 import { queryService } from '@/services/queryService';
@@ -436,6 +435,7 @@ const emit = defineEmits<{
   (e: 'close'): void;
 }>();
 
+const { t } = useI18n();
 const workspaceStore = useWorkspaceStore();
 
 type Step = 'confirm' | 'running' | 'save_prompt' | 'completed';
@@ -445,29 +445,41 @@ const isSaving = ref(false);
 const savedDirectoryName = ref<string>('');
 const savedFilesList = ref<{ fileName: string; size: number }[]>([]);
 
+function getItemTitle(key: string): string {
+  if (key === 'tables_columns') return t('exportSchemaModal.tablesColumnsTitle');
+  if (key === 'indexes') return t('exportSchemaModal.indexesTitle');
+  return t('exportSchemaModal.programmabilityTitle');
+}
+
+function getItemDescription(key: string): string {
+  if (key === 'tables_columns') return t('exportSchemaModal.tablesColumnsDesc');
+  if (key === 'indexes') return t('exportSchemaModal.indexesDesc');
+  return t('exportSchemaModal.programmabilityDesc');
+}
+
 const exportItems = reactive<
   (SchemaExportItem & { description: string })[]
 >([
   {
     key: 'tables_columns',
-    title: '資料表與欄位規格 (Tables & Columns)',
-    description: '欄位名稱、資料型態、長度、Precision、Scale、Nullable、Identity、預設值、定序 Collation',
+    title: '',
+    description: '',
     defaultFileName: '',
     sql: '',
     status: 'pending',
   },
   {
     key: 'indexes',
-    title: '索引與鍵值規格 (Indexes & Keys)',
-    description: '索引名稱、類型 (Clustered/Non-Clustered)、主鍵 PK、唯一性 Unique、鍵值欄位順序、包含欄位 Included',
+    title: '',
+    description: '',
     defaultFileName: '',
     sql: '',
     status: 'pending',
   },
   {
     key: 'programmability',
-    title: '程式化物件雜湊 (Views / SP / Functions)',
-    description: '檢視表、預存程序、函式、觸發程序之物件類型、建立異動時間與 SHA2_256 代碼雜湊值',
+    title: '',
+    description: '',
     defaultFileName: '',
     sql: '',
     status: 'pending',
@@ -477,13 +489,13 @@ const exportItems = reactive<
 const stepTitle = computed(() => {
   switch (step.value) {
     case 'confirm':
-      return '(確認執行)';
+      return t('exportSchemaModal.stepConfirm');
     case 'running':
-      return '(查詢執行中...)';
+      return t('exportSchemaModal.stepRunning');
     case 'save_prompt':
-      return '(選擇儲存位置)';
+      return t('exportSchemaModal.stepSavePrompt');
     case 'completed':
-      return '(匯出完成)';
+      return t('exportSchemaModal.stepCompleted');
   }
 });
 
@@ -572,7 +584,7 @@ async function startExecution() {
       item.durationMs = Date.now() - startTime;
       item.status = 'error';
       item.errorMessage = err instanceof Error ? err.message : String(err);
-      workspaceStore.showToast(`執行查詢失敗: ${item.title}`, 'error', 3000);
+      workspaceStore.showToast(t('exportSchemaModal.queryItemFailed', { title: getItemTitle(item.key) }), 'error', 3000);
       return; // Stop on error so user can inspect or retry
     }
   }
@@ -602,10 +614,10 @@ async function handleSaveToDirectory() {
         }));
 
         const saved = await saveFilesToDirectory(dirHandle, filesToSave);
-        savedDirectoryName.value = (dirHandle as any).name || '已選取資料夾';
+        savedDirectoryName.value = (dirHandle as any).name || t('exportSchemaModal.selectedFolder');
         savedFilesList.value = saved;
         step.value = 'completed';
-        workspaceStore.showToast(`已成功儲存 3 個結構 CSV 檔案！`, 'success', 2500);
+        workspaceStore.showToast(t('exportSchemaModal.saved3Files'), 'success', 2500);
         return;
       } catch (err: unknown) {
         if (err instanceof Error && err.name === 'AbortError') {
@@ -620,7 +632,7 @@ async function handleSaveToDirectory() {
     const combinedName = `${props.database}_schema_complete.csv`;
     const combinedCsv = combineResultSetsToCsv(
       exportItems.map((item) => ({
-        title: item.title,
+        title: getItemTitle(item.key),
         columns: item.result?.columns || [],
         rows: item.result?.rows || [],
       }))
@@ -636,11 +648,11 @@ async function handleSaveToDirectory() {
         },
       ];
       step.value = 'completed';
-      workspaceStore.showToast(`已成功儲存合併結構 CSV！`, 'success', 2500);
+      workspaceStore.showToast(t('exportSchemaModal.savedCombined'), 'success', 2500);
     }
   } catch (err) {
     console.error('Save to directory failed:', err);
-    workspaceStore.showToast(`存檔失敗: ${String(err)}`, 'error', 3000);
+    workspaceStore.showToast(t('exportSchemaModal.saveFailed', { error: String(err) }), 'error', 3000);
   } finally {
     isSaving.value = false;
   }
@@ -657,7 +669,7 @@ async function handleSaveCombined() {
     const combinedName = `${props.database}_schema_full.csv`;
     const combinedCsv = combineResultSetsToCsv(
       exportItems.map((item) => ({
-        title: item.title,
+        title: getItemTitle(item.key),
         columns: item.result?.columns || [],
         rows: item.result?.rows || [],
       }))
@@ -673,11 +685,11 @@ async function handleSaveCombined() {
         },
       ];
       step.value = 'completed';
-      workspaceStore.showToast(`已成功儲存合併結構 CSV！`, 'success', 2500);
+      workspaceStore.showToast(t('exportSchemaModal.savedCombined'), 'success', 2500);
     }
   } catch (err) {
     console.error('Save combined CSV failed:', err);
-    workspaceStore.showToast(`存檔失敗: ${String(err)}`, 'error', 3000);
+    workspaceStore.showToast(t('exportSchemaModal.saveFailed', { error: String(err) }), 'error', 3000);
   } finally {
     isSaving.value = false;
   }
@@ -692,11 +704,11 @@ async function handleSaveSingle(item: SchemaExportItem) {
   try {
     const res = await saveSingleCsvWithPicker(item.csvContent, item.defaultFileName);
     if (res.saved) {
-      workspaceStore.showToast(`已儲存「${res.fileName || item.defaultFileName}」`, 'success', 2000);
+      workspaceStore.showToast(t('exportSchemaModal.savedSingle', { name: res.fileName || item.defaultFileName }), 'success', 2000);
     }
   } catch (err) {
     console.error('Save single CSV failed:', err);
-    workspaceStore.showToast(`存檔失敗: ${String(err)}`, 'error', 3000);
+    workspaceStore.showToast(t('exportSchemaModal.saveFailed', { error: String(err) }), 'error', 3000);
   }
 }
 </script>

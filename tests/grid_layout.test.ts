@@ -167,7 +167,7 @@ test('hidden toolbars are remembered per result tab and cleared with the tab', (
 test('the hide-toolbar toggle sits next to 等分高度 and reaches every grid pane', () => {
   const grid = readSource('src/components/results/ResultGrid.vue');
   const hideButton = sliceBetween(grid, '<div class="flex items-center space-x-1 flex-shrink-0">', '<!-- Reset Heights Button in Stacked Mode -->');
-  assert.match(hideButton, /隱藏工具列/, 'the button must be labelled 隱藏工具列');
+  assert.match(hideButton, /隱藏工具列|results\.hideToolbars/, 'the button must be labelled 隱藏工具列');
   assert.match(hideButton, /gridLayoutStore\.toggleToolbarHidden|toggleToolbarVisibility/);
   assert.equal(
     (grid.match(/:hide-toolbar="toolbarHidden"/g) ?? []).length,

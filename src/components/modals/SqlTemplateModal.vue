@@ -15,7 +15,7 @@
       <div class="flex items-center space-x-2.5">
         <i class="pi pi-book text-warn text-base flex-shrink-0"></i>
         <span class="text-sm font-semibold text-dark-100 flex items-center space-x-2">
-          <span>常用 SQL 範本庫</span>
+          <span>{{ $t('sqlTemplates.title') }}</span>
           <Tag :value="templateStore.allTemplates.length" severity="secondary" class="!font-mono !text-xxs !px-1.5 !py-0.2" />
         </span>
 
@@ -28,7 +28,7 @@
             ref="searchInputRef"
             v-model="templateStore.searchQuery"
             type="text"
-            placeholder="搜尋常用語法、CTE、遞迴、分頁、PIVOT、說明關鍵字... (如 cte, merge, json)"
+            :placeholder="$t('sqlTemplates.searchPlaceholder')"
             class="w-full !bg-dark-800 !border-dark-700 font-mono !text-xs text-dark-100 placeholder-dark-500"
             @keydown.down.prevent="navigateDown"
             @keydown.up.prevent="navigateUp"
@@ -45,7 +45,7 @@
           size="small"
           severity="secondary"
           @click="clearSearch"
-          v-tooltip.top="'清除搜尋'"
+          v-tooltip.top="$t('sqlTemplates.clearSearchTooltip')"
           class="!w-7 !h-7 !p-0 !rounded-md !border-0 hover:!bg-dark-750"
         />
 
@@ -57,7 +57,7 @@
           size="small"
           severity="secondary"
           @click="closeModal"
-          v-tooltip.top="'關閉 (Esc)'"
+          v-tooltip.top="$t('sqlTemplates.closeTooltip')"
           class="!w-7 !h-7 !p-0 !rounded-md !border-0 !shadow-none hover:!bg-rose-500/20 hover:!text-danger"
         />
       </div>
@@ -85,24 +85,24 @@
           <Button
             type="button"
             :icon="templateStore.isLoading ? 'pi pi-spin pi-spinner' : 'pi pi-refresh'"
-            label="重新載入"
+            :label="$t('sqlTemplates.reloadBtn')"
             size="small"
             severity="secondary"
             outlined
             @click="handleReloadFromDisk"
             :disabled="templateStore.isLoading"
-            v-tooltip.top="'從應用程式同層檔案 (sql_custom_templates.json) 重新載入自訂語法'"
+            v-tooltip.top="$t('sqlTemplates.reloadTooltip')"
             class="!text-xxs !py-1 !px-2"
           />
 
           <Button
             type="button"
             icon="pi pi-plus"
-            label="新增自訂範本"
+            :label="$t('sqlTemplates.addNewBtn')"
             size="small"
             severity="primary"
             @click="openAddTemplateModal"
-            v-tooltip.top="'新增自訂 SQL 範本並儲存至應用程式同層檔案'"
+            v-tooltip.top="$t('sqlTemplates.addNewTooltip')"
             class="!text-xxs !py-1 !px-2.5"
           />
         </div>
@@ -114,8 +114,8 @@
       <!-- Left Pane: Templates List (40%) -->
       <div class="w-[40%] flex flex-col overflow-hidden bg-dark-900/40">
         <div class="px-3 py-1.5 border-b border-dark-750/70 text-xxs text-dark-400 flex items-center justify-between">
-          <span>搜尋結果 ({{ templateStore.filteredTemplates.length }})</span>
-          <span class="text-dark-500">按 ↑↓ 選擇 · Enter 插入</span>
+          <span>{{ $t('sqlTemplates.searchResults', { count: templateStore.filteredTemplates.length }) }}</span>
+          <span class="text-dark-500">{{ $t('sqlTemplates.navHint') }}</span>
         </div>
 
         <!-- Scrollable List -->
@@ -149,7 +149,7 @@
                 <Tag
                   v-if="tpl.isCustom"
                   severity="danger"
-                  value="自訂文件"
+                  :value="$t('sqlTemplates.customDoc')"
                   class="!text-[10px] !px-1.5 !py-0.2"
                 />
               </div>
@@ -188,13 +188,13 @@
           class="flex-1 flex flex-col items-center justify-center p-6 text-center space-y-2 text-dark-400"
         >
           <i class="pi pi-search text-3xl text-dark-600 mb-1"></i>
-          <span class="text-xs text-dark-300 font-medium">找不到符合的範本</span>
+          <span class="text-xs text-dark-300 font-medium">{{ $t('sqlTemplates.notFound') }}</span>
           <span class="text-xxs text-dark-500 max-w-xs">
-            嘗試輸入其他關鍵字，或切換至「全部」分類檢視完整語法清單
+            {{ $t('sqlTemplates.notFoundSub') }}
           </span>
           <Button
             type="button"
-            label="重設搜尋條件"
+            :label="$t('sqlTemplates.resetSearchBtn')"
             size="small"
             severity="secondary"
             outlined
@@ -219,7 +219,7 @@
                 <Tag
                   v-if="templateStore.selectedTemplate.isCustom"
                   severity="danger"
-                  value="外部自訂檔案"
+                  :value="$t('sqlTemplates.externalCustomDoc')"
                   class="!text-xxs"
                 />
               </div>
@@ -234,12 +234,12 @@
               <Button
                 type="button"
                 :icon="hasCopied ? 'pi pi-check' : 'pi pi-copy'"
-                :label="hasCopied ? '已複製' : '複製'"
+                :label="hasCopied ? $t('sqlTemplates.copied') : $t('sqlTemplates.copy')"
                 size="small"
                 severity="secondary"
                 outlined
                 @click="copyCode(templateStore.selectedTemplate.code)"
-                v-tooltip.top="'複製語法至剪貼簿'"
+                v-tooltip.top="$t('sqlTemplates.copyTooltip')"
                 class="!text-xs !py-1.5 !px-2.5"
               />
 
@@ -247,12 +247,12 @@
               <Button
                 type="button"
                 icon="pi pi-external-link"
-                label="新分頁開啟"
+                :label="$t('sqlTemplates.openInNewTab')"
                 size="small"
                 severity="secondary"
                 outlined
                 @click="openInNewTab(templateStore.selectedTemplate)"
-                v-tooltip.top="'在新查詢分頁載入此範本'"
+                v-tooltip.top="$t('sqlTemplates.openInNewTabTooltip')"
                 class="!text-xs !py-1.5 !px-2.5"
               />
 
@@ -260,11 +260,11 @@
               <Button
                 type="button"
                 icon="pi pi-arrow-down-left"
-                label="插入到目前編輯點"
+                :label="$t('sqlTemplates.insertAtCursor')"
                 size="small"
                 severity="primary"
                 @click="insertIntoEditor(templateStore.selectedTemplate)"
-                v-tooltip.top="'將範本直接插入目前查詢編輯器的游標位置 (Enter)'"
+                v-tooltip.top="$t('sqlTemplates.insertAtCursorTooltip')"
                 class="!text-xs !py-1.5 !px-3 shadow-xs"
               />
 
@@ -278,7 +278,7 @@
                   size="small"
                   severity="secondary"
                   @click="openEditTemplateModal(templateStore.selectedTemplate)"
-                  v-tooltip.top="'編輯此自訂範本'"
+                  v-tooltip.top="$t('sqlTemplates.editTemplateTooltip')"
                   class="!p-1 !w-7 !h-7"
                 />
 
@@ -290,7 +290,7 @@
                   size="small"
                   severity="danger"
                   @click="handleDeleteTemplate(templateStore.selectedTemplate.id)"
-                  v-tooltip.top="'刪除此自訂範本'"
+                  v-tooltip.top="$t('sqlTemplates.deleteTemplateTooltip')"
                   class="!p-1 !w-7 !h-7"
                 />
               </template>
@@ -303,7 +303,7 @@
             <div class="p-3 bg-dark-800/80 border border-dark-700/80 rounded-lg text-dark-300 text-xs leading-relaxed space-y-1.5">
               <div class="flex items-center space-x-1.5 font-semibold text-warn text-xxs uppercase tracking-wider">
                 <i class="pi pi-info-circle text-xs"></i>
-                <span>說明與最佳實踐 (Usage Notes & Guidelines)</span>
+                <span>{{ $t('sqlTemplates.usageNotes') }}</span>
               </div>
               <div class="text-dark-200">
                 {{ templateStore.selectedTemplate.description }}
@@ -323,8 +323,8 @@
             <!-- SQL Code View Box -->
             <div class="space-y-1.5">
               <div class="flex items-center justify-between text-xxs text-dark-400 font-mono">
-                <span>SQL 程式碼預覽 (T-SQL Syntax):</span>
-                <span>按 Enter 立即插入至編輯器游標處</span>
+                <span>{{ $t('sqlTemplates.codePreview') }}</span>
+                <span>{{ $t('sqlTemplates.enterToInsert') }}</span>
               </div>
 
               <div class="relative bg-dark-950 border border-dark-700 rounded-lg overflow-hidden group">
@@ -342,7 +342,7 @@
           class="flex-1 flex flex-col items-center justify-center p-8 text-center text-dark-500 space-y-2"
         >
           <i class="pi pi-book text-4xl text-dark-700"></i>
-          <span class="text-xs text-dark-400">請從左側選擇要預覽或插入的範本</span>
+          <span class="text-xs text-dark-400">{{ $t('sqlTemplates.noSelection') }}</span>
         </div>
       </div>
     </div>
@@ -353,33 +353,33 @@
       <div class="flex items-center space-x-2 min-w-0 flex-1 mr-4">
         <span class="flex items-center space-x-1 text-dark-400 flex-shrink-0">
           <i class="pi pi-file text-accent text-xs"></i>
-          <span>自訂範本文件:</span>
+          <span>{{ $t('sqlTemplates.customDocLabel') }}</span>
         </span>
         <span
           class="text-dark-300 font-mono truncate max-w-md bg-dark-800 px-1.5 py-0.5 rounded border border-dark-750 select-text"
           :title="templateStore.customFilePath || 'sql_custom_templates.json'"
         >
-          {{ templateStore.customFilePath || 'sql_custom_templates.json (同層目錄)' }}
+          {{ templateStore.customFilePath || $t('sqlTemplates.colocatedDefault') }}
         </span>
 
         <Button
           type="button"
           icon="pi pi-folder-open"
-          label="在檔案總管顯示"
+          :label="$t('sqlTemplates.revealInExplorer')"
           size="small"
           severity="secondary"
           outlined
           @click="handleRevealInExplorer"
-          v-tooltip.top="'在 Windows 檔案總管中開啟並反白此自訂語法檔案'"
+          v-tooltip.top="$t('sqlTemplates.revealTooltip')"
           class="!text-xxs !py-0.5 !px-2"
         />
       </div>
 
       <!-- Right: Keyboard Hints -->
       <div class="flex items-center space-x-2.5 flex-shrink-0 text-dark-400">
-        <span><kbd class="px-1 py-0.5 bg-dark-800 border border-dark-700 rounded text-dark-300 font-mono">↑</kbd> <kbd class="px-1 py-0.5 bg-dark-800 border border-dark-700 rounded text-dark-300 font-mono">↓</kbd> 選擇</span>
-        <span><kbd class="px-1 py-0.5 bg-dark-800 border border-dark-700 rounded text-dark-300 font-mono">Enter</kbd> 插入游標處</span>
-        <span><kbd class="px-1 py-0.5 bg-dark-800 border border-dark-700 rounded text-dark-300 font-mono">Esc</kbd> 關閉</span>
+        <span><kbd class="px-1 py-0.5 bg-dark-800 border border-dark-700 rounded text-dark-300 font-mono">↑</kbd> <kbd class="px-1 py-0.5 bg-dark-800 border border-dark-700 rounded text-dark-300 font-mono">↓</kbd> {{ $t('sqlTemplates.selectKbd') }}</span>
+        <span><kbd class="px-1 py-0.5 bg-dark-800 border border-dark-700 rounded text-dark-300 font-mono">Enter</kbd> {{ $t('sqlTemplates.insertKbd') }}</span>
+        <span><kbd class="px-1 py-0.5 bg-dark-800 border border-dark-700 rounded text-dark-300 font-mono">Esc</kbd> {{ $t('sqlTemplates.closeKbd') }}</span>
       </div>
     </div>
   </Dialog>
@@ -388,18 +388,18 @@
   <Dialog
     v-model:visible="isCustomFormOpen"
     modal
-    :header="editingTemplateId ? '編輯自訂 SQL 範本' : '新增自訂 SQL 範本'"
+    :header="editingTemplateId ? $t('sqlTemplates.editModalTitle') : $t('sqlTemplates.addModalTitle')"
     class="w-full max-w-xl !bg-dark-850 !border-dark-700"
   >
     <form @submit.prevent="saveCustomTemplateForm" class="p-2 space-y-3 text-xs font-sans">
       <!-- Title Field -->
       <div class="space-y-1">
-        <label class="block text-dark-300 font-medium">範本標題 <span class="text-danger">*</span></label>
+        <label class="block text-dark-300 font-medium">{{ $t('sqlTemplates.tplTitle') }} <span class="text-danger">*</span></label>
         <InputText
           v-model="formState.title"
           required
           type="text"
-          placeholder="例如: ERP 訂單每日彙總批次查詢"
+          :placeholder="$t('sqlTemplates.tplTitlePlaceholder')"
           size="small"
           class="w-full"
         />
@@ -408,7 +408,7 @@
       <!-- Category & Tags Row -->
       <div class="grid grid-cols-2 gap-3">
         <div class="space-y-1">
-          <label class="block text-dark-300 font-medium">範本分類</label>
+          <label class="block text-dark-300 font-medium">{{ $t('sqlTemplates.tplCategory') }}</label>
           <Select
             v-model="formState.category"
             :options="customCategoryOptions"
@@ -420,11 +420,11 @@
         </div>
 
         <div class="space-y-1">
-          <label class="block text-dark-300 font-medium">標籤 (逗號分隔)</label>
+          <label class="block text-dark-300 font-medium">{{ $t('sqlTemplates.tplTags') }}</label>
           <InputText
             v-model="formState.tagsInput"
             type="text"
-            placeholder="如: erp, 報表, sync"
+            :placeholder="$t('sqlTemplates.tplTagsPlaceholder')"
             size="small"
             class="w-full font-mono"
           />
@@ -433,11 +433,11 @@
 
       <!-- Description Field -->
       <div class="space-y-1">
-        <label class="block text-dark-300 font-medium">使用情境與說明</label>
+        <label class="block text-dark-300 font-medium">{{ $t('sqlTemplates.tplDesc') }}</label>
         <Textarea
           v-model="formState.description"
           rows="2"
-          placeholder="描述此範本的適用情境、注意事項或需替換的欄位與參數"
+          :placeholder="$t('sqlTemplates.tplDescPlaceholder')"
           size="small"
           class="w-full resize-none leading-relaxed"
         />
@@ -445,7 +445,7 @@
 
       <!-- SQL Code Field -->
       <div class="space-y-1">
-        <label class="block text-dark-300 font-medium">SQL 語法內容 <span class="text-danger">*</span></label>
+        <label class="block text-dark-300 font-medium">{{ $t('sqlTemplates.tplCode') }} <span class="text-danger">*</span></label>
         <Textarea
           v-model="formState.code"
           required
@@ -459,19 +459,19 @@
       <!-- Modal Footer -->
       <div class="pt-3 flex items-center justify-between border-t border-dark-750">
         <span class="text-xxs text-dark-500">
-          將儲存至應用程式同層檔案 (sql_custom_templates.json)
+          {{ $t('sqlTemplates.saveLocationNotice') }}
         </span>
         <div class="flex items-center space-x-2">
           <Button
             type="button"
-            label="取消"
+            :label="$t('sqlTemplates.cancel')"
             severity="secondary"
             size="small"
             @click="isCustomFormOpen = false"
           />
           <Button
             type="submit"
-            label="儲存範本"
+            :label="$t('sqlTemplates.saveTemplate')"
             severity="primary"
             size="small"
           />
@@ -483,6 +483,7 @@
 
 <script setup lang="ts">
 import { ref, reactive, computed, watch, nextTick } from 'vue';
+import { useI18n } from 'vue-i18n';
 import Dialog from 'primevue/dialog';
 import IconField from 'primevue/iconfield';
 import InputIcon from 'primevue/inputicon';
@@ -505,6 +506,7 @@ const emit = defineEmits<{
   (e: 'open-in-new-tab', template: SqlTemplate): void;
 }>();
 
+const { t } = useI18n();
 const templateStore = useSqlTemplateStore();
 const workspaceStore = useWorkspaceStore();
 
@@ -527,14 +529,14 @@ const formState = reactive({
   code: '',
 });
 
-const customCategoryOptions = [
-  { label: '自訂範本', value: 'custom' },
-  { label: '常用語法', value: 'basic' },
-  { label: 'CTE 語法', value: 'cte' },
-  { label: '進階用法', value: 'advanced' },
-  { label: '表結構探勘', value: 'inspection' },
-  { label: '診斷維護', value: 'maintenance' },
-];
+const customCategoryOptions = computed(() => [
+  { label: t('sqlTemplates.catCustom'), value: 'custom' },
+  { label: t('sqlTemplates.catBasic'), value: 'basic' },
+  { label: t('sqlTemplates.catCte'), value: 'cte' },
+  { label: t('sqlTemplates.catAdvanced'), value: 'advanced' },
+  { label: t('sqlTemplates.catInspection'), value: 'inspection' },
+  { label: t('sqlTemplates.catMaintenance'), value: 'maintenance' },
+]);
 
 function setItemRef(el: unknown, idx: number) {
   if (el) {
@@ -545,13 +547,13 @@ function setItemRef(el: unknown, idx: number) {
 const categoryChips = computed<{ category: SqlTemplateCategory; label: string; count: number }[]>(() => {
   const counts = templateStore.categoryCounts;
   return [
-    { category: 'all', label: '全部', count: counts.all },
-    { category: 'basic', label: '常用語法', count: counts.basic },
-    { category: 'cte', label: 'CTE 語法', count: counts.cte },
-    { category: 'advanced', label: '進階用法', count: counts.advanced },
-    { category: 'inspection', label: '表結構探勘', count: counts.inspection },
-    { category: 'maintenance', label: '診斷維護', count: counts.maintenance },
-    { category: 'custom', label: '自訂文件', count: counts.custom },
+    { category: 'all', label: t('sqlTemplates.catAll'), count: counts.all },
+    { category: 'basic', label: t('sqlTemplates.catBasic'), count: counts.basic },
+    { category: 'cte', label: t('sqlTemplates.catCte'), count: counts.cte },
+    { category: 'advanced', label: t('sqlTemplates.catAdvanced'), count: counts.advanced },
+    { category: 'inspection', label: t('sqlTemplates.catInspection'), count: counts.inspection },
+    { category: 'maintenance', label: t('sqlTemplates.catMaintenance'), count: counts.maintenance },
+    { category: 'custom', label: t('sqlTemplates.catCustom'), count: counts.custom },
   ];
 });
 
@@ -655,7 +657,7 @@ async function copyCode(code: string) {
     copyTimer = setTimeout(() => {
       hasCopied.value = false;
     }, 2000);
-    workspaceStore.showToast('已複製範本語法至剪貼簿', 'success', 2000);
+    workspaceStore.showToast(t('sqlTemplates.templateCopied'), 'success', 2000);
   } catch (e) {
     console.warn('Failed to copy code:', e);
   }
@@ -663,12 +665,12 @@ async function copyCode(code: string) {
 
 async function handleReloadFromDisk() {
   await templateStore.loadTemplates(true);
-  workspaceStore.showToast('已從 sql_custom_templates.json 重新載入最新語法', 'success', 2500);
+  workspaceStore.showToast(t('sqlTemplates.reloadTooltip'), 'success', 2500);
 }
 
 async function handleRevealInExplorer() {
   await templateStore.openInExplorer();
-  workspaceStore.showToast('已在檔案總管中定位自訂語法檔案', 'info', 2500);
+  workspaceStore.showToast(t('sqlTemplates.revealTooltip'), 'info', 2500);
 }
 
 function openAddTemplateModal() {
@@ -698,42 +700,44 @@ async function saveCustomTemplateForm() {
     .filter((t) => Boolean(t));
 
   const categoryLabels: Record<string, string> = {
-    custom: '自訂範本',
-    basic: '常用語法',
-    cte: 'CTE 語法',
-    advanced: '進階用法',
-    maintenance: '診斷維護',
+    custom: t('sqlTemplates.catCustom'),
+    basic: t('sqlTemplates.catBasic'),
+    cte: t('sqlTemplates.catCte'),
+    advanced: t('sqlTemplates.catAdvanced'),
+    maintenance: t('sqlTemplates.catMaintenance'),
   };
 
   if (editingTemplateId.value) {
     await templateStore.updateCustomTemplate(editingTemplateId.value, {
       title: formState.title.trim(),
       category: formState.category,
-      categoryLabel: categoryLabels[formState.category] || '自訂範本',
+      categoryLabel: categoryLabels[formState.category] || t('sqlTemplates.catCustom'),
       tags,
       description: formState.description.trim(),
       code: formState.code.trim(),
     });
-    workspaceStore.showToast('已更新自訂範本至 sql_custom_templates.json', 'success', 2200);
+    workspaceStore.showToast(t('sqlTemplates.templateSaved'), 'success', 2200);
   } else {
     await templateStore.addCustomTemplate({
       title: formState.title.trim(),
       category: formState.category,
-      categoryLabel: categoryLabels[formState.category] || '自訂範本',
+      categoryLabel: categoryLabels[formState.category] || t('sqlTemplates.catCustom'),
       tags,
       description: formState.description.trim(),
       code: formState.code.trim(),
     });
-    workspaceStore.showToast('已新增自訂範本至 sql_custom_templates.json', 'success', 2200);
+    workspaceStore.showToast(t('sqlTemplates.templateSaved'), 'success', 2200);
   }
 
   isCustomFormOpen.value = false;
 }
 
 async function handleDeleteTemplate(id: string) {
-  if (confirm('確定要自 sql_custom_templates.json 刪除此自訂範本嗎？')) {
+  const tpl = templateStore.allTemplates.find((t) => t.id === id);
+  const title = tpl?.title || '';
+  if (confirm(t('sqlTemplates.deleteConfirm', { title }))) {
     await templateStore.deleteCustomTemplate(id);
-    workspaceStore.showToast('已刪除該自訂範本', 'info', 2200);
+    workspaceStore.showToast(t('sqlTemplates.templateDeleted'), 'info', 2200);
   }
 }
 

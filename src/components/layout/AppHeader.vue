@@ -24,7 +24,7 @@
           :options="connectionStore.connections"
           option-value="id"
           option-label="name"
-          placeholder="選擇連線..."
+          :placeholder="$t('sidebar.connections') + '...'"
           size="small"
           class="!h-7 !text-xs !bg-dark-800 !border-dark-600 hover:!border-dark-500 min-w-[160px] max-w-[220px]"
           :style="activeConnStyle"
@@ -35,7 +35,7 @@
               <i
                 class="pi pi-server text-xs flex-shrink-0"
                 :class="connectionStore.status === 'connected' ? 'text-ok' : 'text-dark-400'"
-                :title="connectionStore.status === 'connected' ? '已連線 (Connected)' : '未連線 (Disconnected)'"
+                :title="connectionStore.status === 'connected' ? $t('sidebar.connected') : $t('sidebar.disconnected')"
               />
               <span
                 class="font-semibold text-xs truncate text-dark-100"
@@ -50,7 +50,7 @@
                 class="!text-[10px] !px-1 !py-0 flex-shrink-0"
               />
             </div>
-            <span v-else class="text-dark-400 text-xs">選擇連線...</span>
+            <span v-else class="text-dark-400 text-xs">{{ $t('sidebar.connections') }}...</span>
           </template>
 
           <template #option="slotProps">
@@ -58,7 +58,7 @@
               <i
                 class="pi pi-server text-xs flex-shrink-0"
                 :class="isOptionConnected(slotProps.option) ? 'text-ok' : 'text-dark-400'"
-                :title="isOptionConnected(slotProps.option) ? '已連線 (Connected)' : '未連線 (Disconnected)'"
+                :title="isOptionConnected(slotProps.option) ? $t('sidebar.connected') : $t('sidebar.disconnected')"
               />
               <div class="flex-1 min-w-0 flex flex-col">
                 <div class="flex items-center space-x-1.5">
@@ -87,7 +87,7 @@
           <template #footer>
             <div class="p-1 border-t border-dark-700">
               <Button
-                label="建立新連線..."
+                :label="$t('sidebar.newConnection') + '...'"
                 icon="pi pi-plus"
                 size="small"
                 text
@@ -102,7 +102,7 @@
         <Select
           :model-value="connectionStore.activeDatabase"
           :options="filteredAvailableDatabases"
-          placeholder="選擇資料庫..."
+          :placeholder="$t('header.selectDatabase') + '...'"
           size="small"
           class="!h-7 !text-xs !bg-dark-800 !border-dark-600 hover:!border-dark-500 min-w-[130px] max-w-[180px]"
           @update:model-value="val => onDatabaseChange(val as string)"
@@ -111,7 +111,7 @@
             <div class="flex items-center space-x-1.5 min-w-0">
               <i class="pi pi-database text-warn text-xs flex-shrink-0" />
               <span class="font-mono text-xs truncate text-warn font-semibold">
-                {{ slotProps.value || '選擇資料庫...' }}
+                {{ slotProps.value || $t('header.selectDatabase') + '...' }}
               </span>
             </div>
           </template>
@@ -136,7 +136,7 @@
           severity="success"
           size="small"
           class="!h-7 !w-7 !p-0"
-          v-tooltip.bottom="'執行當前語句或選取內容 (Ctrl + Enter)'"
+          v-tooltip.bottom="$t('header.runTooltip')"
           @click="$emit('run-query', 'current')"
         />
         <Button
@@ -146,7 +146,7 @@
           size="small"
           class="!h-7 !w-7 !p-0 animate-pulse"
           :disabled="queryStore.isCancelling"
-          v-tooltip.bottom="queryStore.isCancelling ? '正在中斷查詢中...' : '中斷並取消查詢 (Esc)'"
+          v-tooltip.bottom="queryStore.isCancelling ? $t('common.running') : $t('header.cancelQueryTooltip')"
           @click="$emit('cancel-query')"
         />
 
@@ -158,7 +158,7 @@
           outlined
           class="!h-7 !w-7 !p-0"
           :disabled="queryStore.isExecuting"
-          v-tooltip.bottom="'無條件執行整頁全部內容 (Ctrl + Shift + Enter)'"
+          v-tooltip.bottom="$t('header.runAllTooltip')"
           @click="$emit('run-query', 'all')"
         />
 
@@ -177,7 +177,7 @@
           size="small"
           text
           class="!h-7 !w-7 !p-0"
-          v-tooltip.bottom="'格式化 SQL (Shift + Alt + F)'"
+          v-tooltip.bottom="$t('header.formatSqlTooltip')"
           @click="$emit('format-sql')"
         />
 
@@ -188,7 +188,7 @@
           size="small"
           text
           class="!h-7 !w-7 !p-0 !text-info"
-          v-tooltip.bottom="'開啟本機 SQL 檔案 (Ctrl + O)'"
+          v-tooltip.bottom="$t('editor.openFile')"
           @click="$emit('open-sql-file')"
         />
 
@@ -199,7 +199,7 @@
           size="small"
           text
           class="!h-7 !w-7 !p-0 !text-warn"
-          v-tooltip.bottom="'另存當前 SQL 至檔案 (Ctrl + S)'"
+          v-tooltip.bottom="$t('editor.saveFile')"
           @click="$emit('save-sql-file')"
         />
 
@@ -210,7 +210,7 @@
           size="small"
           text
           class="!h-7 !w-7 !p-0 !text-accent"
-          v-tooltip.bottom="'開啟新查詢分頁 (Ctrl + N)'"
+          v-tooltip.bottom="$t('editor.newTab')"
           @click="workspaceStore.addSqlTab()"
         />
 
@@ -221,7 +221,7 @@
           size="small"
           text
           class="!h-7 !w-7 !p-0 !text-er"
-          v-tooltip.bottom="'快速物件檢索器 (Ctrl + P)'"
+          v-tooltip.bottom="$t('header.quickFinderTooltip')"
           @click="$emit('open-quick-finder')"
         />
 
@@ -232,7 +232,7 @@
           size="small"
           text
           class="!h-7 !w-7 !p-0 !text-warn"
-          v-tooltip.bottom="'常用 SQL 範本庫 (語法、CTE、維護樣板)'"
+          v-tooltip.bottom="$t('sqlTemplates.title')"
           @click="$emit('open-sql-templates')"
         />
 
@@ -243,7 +243,7 @@
           size="small"
           text
           class="!h-7 !w-7 !p-0 !text-plan hover:!text-plan"
-          v-tooltip.bottom="'AI SQL 智能助手 (Ctrl + I)'"
+          v-tooltip.bottom="$t('header.aiAssistantTooltip')"
           @click="$emit('open-ai-chat')"
         />
 
@@ -359,7 +359,7 @@
           :severity="workspaceStore.isSidebarOpen ? 'primary' : 'secondary'"
           :text="!workspaceStore.isSidebarOpen"
           class="!h-7 !w-7 !p-0"
-          v-tooltip.bottom="'切換左側邊欄'"
+          :v-tooltip.bottom="$t('header.toggleSidebar')"
           @click="workspaceStore.toggleSidebar()"
         />
 
@@ -371,7 +371,7 @@
           :text="!workspaceStore.isBottomPanelOpen"
           :disabled="workspaceStore.activeTab?.type === 'er_diagram'"
           class="!h-7 !w-7 !p-0"
-          v-tooltip.bottom="workspaceStore.activeTab?.type === 'er_diagram' ? 'ER 圖模式下隱藏下方面板' : '切換下方結果面板'"
+          :v-tooltip.bottom="$t('header.toggleBottomPanel')"
           @click="workspaceStore.toggleBottomPanel()"
         />
 
@@ -382,7 +382,7 @@
           severity="secondary"
           text
           class="!h-7 !w-7 !p-0"
-          v-tooltip.bottom="'系統設定'"
+          :v-tooltip.bottom="$t('header.settingsTooltip')"
           @click="$emit('open-settings-modal')"
         />
       </div>
