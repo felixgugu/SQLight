@@ -71,7 +71,7 @@
             class="rounded-md border border-dark-750 bg-dark-900/70 px-3 py-2.5 text-sm text-dark-100"
             :style="{ fontFamily: settingsStore.globalFontFamily }"
           >
-            SQLight 資料庫工具 · 查詢結果 · ABC 123
+            PuffSQL 資料庫工具 · 查詢結果 · ABC 123
           </div>
           <span v-if="selectedGlobalFont" class="text-xxs text-dark-500 block">
             {{ selectedGlobalFont.description }}
@@ -420,15 +420,23 @@
 
       <!-- Tab 5: About & Shortcuts -->
       <div v-else-if="activeTab === 'about'" class="space-y-4">
-        <div class="bg-dark-900 border border-dark-750 p-3.5 rounded space-y-2">
-          <div class="flex items-center space-x-2">
-            <div class="w-5 h-5 rounded bg-brand-500/20 text-accent flex items-center justify-center font-mono text-xs font-black">
-              SQL
+        <div class="bg-dark-900 border border-dark-750 p-4 rounded-lg space-y-3">
+          <div class="flex items-center space-x-3">
+            <img
+              :src="appIcon"
+              alt="PuffSQL"
+              class="w-10 h-10 rounded-lg select-none shadow-sm flex-shrink-0"
+              draggable="false"
+            />
+            <div>
+              <div class="flex items-center space-x-2">
+                <span class="font-bold text-dark-100 text-sm">PuffSQL</span>
+                <Tag severity="info" value="v0.1.1" class="!text-xxs !font-mono !px-1.5 !py-0.5" />
+              </div>
+              <span class="text-xxs text-dark-400 font-mono">Lightweight & Fast SQL Client</span>
             </div>
-            <span class="font-semibold text-dark-100 text-sm">SQLight</span>
-            <Tag severity="info" value="v0.1.1" class="!text-xxs !font-mono !px-1.5 !py-0.5" />
           </div>
-          <p class="text-xxs text-dark-400 leading-relaxed">
+          <p class="text-xxs text-dark-400 leading-relaxed border-t border-dark-800 pt-2.5">
             {{ $t('settingsModal.aboutTitle') }}<br />
             {{ $t('settingsModal.aboutSubtitle') }}
           </p>
@@ -565,6 +573,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue';
 import { useI18n } from 'vue-i18n';
+import appIcon from '../../../src-tauri/icons/64x64.png';
 import Dialog from 'primevue/dialog';
 import Button from 'primevue/button';
 import Select from 'primevue/select';
@@ -624,7 +633,7 @@ function handleLocaleChange(val: unknown) {
 }
 
 const themePresets: { id: ThemePresetName; label: string; desc: string }[] = [
-  { id: 'Aura', label: 'Aura (現代)', desc: '精緻圓角與柔和光澤，SQLight 預設推薦' },
+  { id: 'Aura', label: 'Aura (現代)', desc: '精緻圓角與柔和光澤，PuffSQL 預設推薦' },
   { id: 'Lara', label: 'Lara (經典)', desc: '經典俐落 Prime 風格，清晰穩健' },
   { id: 'Nora', label: 'Nora (極簡)', desc: '高對比扁平線條，簡約素雅' },
   { id: 'Material', label: 'Material (質樸)', desc: 'Google Material 3 規範，流暢現代' },

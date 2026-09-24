@@ -4,7 +4,7 @@
     "windows": [
       {
         "label": "main",
-        "title": "SQLight - Lightweight SQL Client",
+        "title": "PuffSQL - Lightweight SQL Client",
         "width": 1280,
         "height": 800,
         "minWidth": 1368,

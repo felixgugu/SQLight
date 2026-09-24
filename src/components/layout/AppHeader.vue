@@ -7,12 +7,12 @@
   >
     <!-- Start: Branding & Connection / Database Pickers -->
     <template #start>
-      <div class="flex items-center space-x-2">
+      <div class="flex items-center space-x-2 flex-shrink-0">
         <!-- App Brand -->
-        <div class="flex items-center h-7 pr-2 border-r border-dark-700">
+        <div class="flex items-center justify-center h-7 w-8 min-w-[32px] flex-shrink-0 pr-2 border-r border-dark-700">
           <img
             :src="appIcon"
-            alt="SQLight"
+            alt="PuffSQL"
             class="h-6 w-6 select-none"
             draggable="false"
           />

@@ -290,7 +290,7 @@ function mockInvoke<T>(cmd: string, args?: Record<string, unknown>): Promise<T> 
         { name: 'model' },
         { name: 'msdb' },
         { name: 'AdventureWorks' },
-        { name: 'SQLightDB' },
+        { name: 'PuffSQLDB' },
       ] as unknown as T);
 
     case 'get_tables':
@@ -386,7 +386,7 @@ function mockInvoke<T>(cmd: string, args?: Record<string, unknown>): Promise<T> 
             category: 'custom',
             categoryLabel: '自訂範本',
             tags: ['範例', '自訂', 'Sample'],
-            description: '這是與應用程式同層放置的自訂語法檔案 (sql_custom_templates.json)。您可隨時以任一文字編輯器 (VS Code、Notepad) 編輯此檔案，儲存後在 SQLight 點擊「重新載入」即可即時生效！',
+            description: '這是與應用程式同層放置的自訂語法檔案 (sql_custom_templates.json)。您可隨時以任一文字編輯器 (VS Code、Notepad) 編輯此檔案，儲存後在 PuffSQL 點擊「重新載入」即可即時生效！',
             code: '-- 自訂 SQL 語法範本\n-- 支援在 sql_custom_templates.json 中自由擴充團隊專用語法\nSELECT \n    TOP 50 *\nFROM dbo.YourTable\nORDER BY Id DESC;',
             isCustom: true,
             createdAt: Date.now(),

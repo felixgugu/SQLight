@@ -370,7 +370,7 @@ function copyStatsMarkdown() {
   if (!stats.value) return;
   const s = stats.value;
 
-  let md = `### 📊 SQLight 執行效能分析報告\n\n`;
+  let md = `### 📊 PuffSQL 執行效能分析報告\n\n`;
   md += `- **執行時間**: ${s.executedAt}\n`;
   md += `- **CPU 耗時**: ${s.cpuTimeMs} ms (編譯: ${s.compileCpuTimeMs ?? 0} ms)\n`;
   md += `- **總執行耗時**: ${s.elapsedTimeMs} ms\n`;

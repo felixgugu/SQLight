@@ -64,7 +64,7 @@ export const GLOBAL_FONT_OPTIONS: GlobalFontOption[] = [
     name: 'default',
     label: '預設 (Inter / System)',
     value: '"Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft JhengHei UI", "Noto Sans TC", sans-serif',
-    description: '沿用 SQLight 預設字型，缺少指定字型時自動回退至系統字型。',
+    description: '沿用 PuffSQL 預設字型，缺少指定字型時自動回退至系統字型。',
   },
   {
     name: 'system',

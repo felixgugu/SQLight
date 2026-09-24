@@ -21,7 +21,7 @@ describe('custom window title bar (Windows)', () => {
     assert.equal(window.decorations, true, 'non-Windows platforms should keep native decorations');
     assert.equal(window.minWidth, 1368);
     assert.equal(window.resizable, true);
-    assert.equal(window.title, 'SQLight - Lightweight SQL Client', 'window title stays for taskbar / Alt+Tab');
+    assert.equal(window.title, 'PuffSQL - Lightweight SQL Client', 'window title stays for taskbar / Alt+Tab');
   });
 
   test('windows platform config hides decorations without changing other window fields', () => {

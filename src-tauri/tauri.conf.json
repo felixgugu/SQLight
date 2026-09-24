@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "SQLight",
+  "productName": "PuffSQL",
   "version": "0.1.1",
-  "identifier": "com.sqlight.app",
+  "identifier": "com.puffsql.app",
   "build": {
     "beforeDevCommand": "npm run dev",
     "devUrl": "http://localhost:1420",
@@ -13,7 +13,7 @@
     "windows": [
       {
         "label": "main",
-        "title": "SQLight - Lightweight SQL Client",
+        "title": "PuffSQL - Lightweight SQL Client",
         "width": 1280,
         "height": 800,
         "minWidth": 1368,

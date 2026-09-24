@@ -8,6 +8,7 @@
       text
       :disabled="disabled"
       class="!h-7 !w-7 !p-0"
+      :class="item.class"
       :aria-label="item.label"
       v-tooltip.bottom="item.tooltip"
       @click="emit('action', item.action)"
@@ -47,6 +48,7 @@ interface SqlEditorToolbarItem {
   label: string;
   tooltip: string;
   icon: Component;
+  class?: string;
 }
 
 const actions = computed<SqlEditorToolbarItem[]>(() => [
@@ -55,18 +57,21 @@ const actions = computed<SqlEditorToolbarItem[]>(() => [
     label: t('common.cut'),
     tooltip: t('editor.cutTooltip'),
     icon: Scissors,
+    class: 'hidden min-[1440px]:inline-flex toolbar-action-clipboard',
   },
   {
     action: 'copy',
     label: t('common.copy'),
     tooltip: t('editor.copyTooltip'),
     icon: Copy,
+    class: 'hidden min-[1440px]:inline-flex toolbar-action-clipboard',
   },
   {
     action: 'paste',
     label: t('common.paste'),
     tooltip: t('editor.pasteTooltip'),
     icon: ClipboardPaste,
+    class: 'hidden min-[1440px]:inline-flex toolbar-action-clipboard',
   },
   {
     action: 'unfoldAll',
@@ -82,3 +87,13 @@ const actions = computed<SqlEditorToolbarItem[]>(() => [
   },
 ]);
 </script>
+
+<style scoped>
+/* 當視窗處於最小寬度區間 (<= 1440px) 時，隱藏剪下、複製、貼上按鈕 */
+@media (max-width: 1440px) {
+  :deep(.toolbar-action-clipboard),
+  .toolbar-action-clipboard {
+    display: none !important;
+  }
+}
+</style>

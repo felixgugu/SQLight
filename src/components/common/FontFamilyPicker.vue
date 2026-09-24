@@ -60,7 +60,7 @@ const props = withDefaults(
   {
     defaultValue: '',
     preview: false,
-    previewText: 'SQLight 資料庫工具 · 查詢結果 · ABC 123',
+    previewText: 'PuffSQL 資料庫工具 · 查詢結果 · ABC 123',
     selectClass: 'w-full !text-xs !bg-dark-900 !border-dark-700 font-mono',
     previewClass: 'font-mono',
     inputPlaceholder: '輸入字型名稱，例如 "Noto Sans TC", sans-serif',

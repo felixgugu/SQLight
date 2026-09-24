@@ -92,4 +92,28 @@ describe('SQL editor toolbar actions', () => {
     assert.ok(triggerIndex !== -1, 'the mapped Monaco command should be triggered');
     assert.ok(focusIndex < triggerIndex, 'focus must be restored before triggering the command');
   });
+
+  test('clipboard actions (cut, copy, paste) are hidden at minimum window width', () => {
+    const source = readSource('src/components/layout/SqlEditorToolbarActions.vue');
+    assert.match(
+      source,
+      /action:\s*'cut'[\s\S]*?class:\s*'[^']*toolbar-action-clipboard[^']*'/,
+      'cut action must have the toolbar-action-clipboard class'
+    );
+    assert.match(
+      source,
+      /action:\s*'copy'[\s\S]*?class:\s*'[^']*toolbar-action-clipboard[^']*'/,
+      'copy action must have the toolbar-action-clipboard class'
+    );
+    assert.match(
+      source,
+      /action:\s*'paste'[\s\S]*?class:\s*'[^']*toolbar-action-clipboard[^']*'/,
+      'paste action must have the toolbar-action-clipboard class'
+    );
+    assert.match(
+      source,
+      /@media\s*\(\s*max-width:\s*1440px\s*\)\s*\{[\s\S]*?\.toolbar-action-clipboard\s*\{[\s\S]*?display:\s*none\s*!important;/,
+      'scoped media query must hide toolbar-action-clipboard at minimum window width'
+    );
+  });
 });
