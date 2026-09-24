@@ -682,6 +682,17 @@ export const useQueryStore = defineStore('query', () => {
     }
   }
 
+  function closeOtherResultTabs(keepId: string) {
+    const gridLayoutStore = useGridLayoutStore();
+    for (const tab of resultTabs.value) {
+      if (tab.id !== keepId && !tab.isPinned) {
+        gridLayoutStore.clearTab(tab.id);
+      }
+    }
+    resultTabs.value = resultTabs.value.filter((t) => t.id === keepId || t.isPinned);
+    activeResultTabId.value = keepId;
+  }
+
   function renameResultTab(id: string, newTitle: string) {
     const trimmed = newTitle.trim();
     if (!trimmed) return;
@@ -840,6 +851,7 @@ export const useQueryStore = defineStore('query', () => {
     togglePinTab,
     reorderResultTabs,
     deleteResultTab,
+    closeOtherResultTabs,
     renameResultTab,
     clearResults,
     clearMessages,

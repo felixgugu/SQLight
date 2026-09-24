@@ -361,6 +361,7 @@ const tabContextMenu = reactive<{
 const tabContextMenuItems = computed(() => {
   const tab = tabContextMenu.tab;
   if (!tab) return [];
+  const otherClosableCount = queryStore.resultTabs.filter((t) => t.id !== tab.id && !t.isPinned).length;
   return [
     {
       label: tab.title,
@@ -383,6 +384,12 @@ const tabContextMenuItems = computed(() => {
       icon: 'pi pi-times',
       disabled: queryStore.resultTabs.length <= 1,
       command: handleContextMenuClose,
+    },
+    {
+      label: '關閉其它結果 (Close Others)',
+      icon: 'pi pi-clone',
+      disabled: otherClosableCount === 0,
+      command: handleContextMenuCloseOthers,
     },
   ];
 });
@@ -410,6 +417,13 @@ function handleContextMenuClose() {
   const tab = tabContextMenu.tab;
   if (tab) {
     queryStore.deleteResultTab(tab.id);
+  }
+}
+
+function handleContextMenuCloseOthers() {
+  const tab = tabContextMenu.tab;
+  if (tab) {
+    queryStore.closeOtherResultTabs(tab.id);
   }
 }
 
