@@ -69,7 +69,6 @@
           />
           <div
             v-else
-            @dblclick.stop="startRenameTab(tab)"
             class="flex items-center space-x-1.5 min-w-0 flex-1"
           >
             <!-- Tab Name (left-aligned) -->
