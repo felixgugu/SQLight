@@ -55,7 +55,7 @@
             >
               <div class="flex items-center justify-between">
                 <div class="flex items-center space-x-2">
-                  <span class="w-4 h-4 rounded-full bg-brand-500/20 text-accent font-mono text-[10px] flex items-center justify-center font-bold">
+                  <span class="w-4 h-4 rounded-full bg-brand-500/20 text-accent font-mono text-xxs flex items-center justify-center font-semibold">
                     {{ idx + 1 }}
                   </span>
                   <span class="font-medium text-dark-200 text-xs">{{ getItemTitle(item.key) }}</span>
@@ -147,7 +147,7 @@
                       <span>{{ getItemTitle(item.key) }}</span>
                       <span
                         v-if="item.status === 'running'"
-                        class="text-[10px] text-accent animate-pulse"
+                        class="text-xxs font-medium text-accent animate-pulse"
                       >
                         {{ $t('exportSchemaModal.inProgress') }}
                       </span>

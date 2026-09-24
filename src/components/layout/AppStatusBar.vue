@@ -26,7 +26,7 @@
         <div class="h-3 w-px bg-dark-750" />
         <div class="flex items-center space-x-1" :title="$t('statusBar.spid', { spid: connectionStore.activeSpid })">
           <span class="text-dark-500">SPID:</span>
-          <Tag severity="info" :value="String(connectionStore.activeSpid)" class="!text-[9px] !px-1 !py-0 font-mono" />
+          <Tag severity="info" :value="String(connectionStore.activeSpid)" class="!text-xxs !px-1.5 !py-0 font-mono font-medium" />
         </div>
       </template>
     </div>
@@ -36,13 +36,13 @@
       <div class="flex items-center space-x-1.5">
         <span class="text-dark-500">{{ $t('common.status') }}:</span>
         <template v-if="queryStore.isCancelling">
-          <Tag severity="danger" :value="$t('common.running')" class="!text-[9px] !px-1.5 !py-0 animate-pulse" />
+          <Tag severity="danger" :value="$t('common.running')" class="!text-xxs !font-medium !px-1.5 !py-0 animate-pulse" />
         </template>
         <template v-else-if="queryStore.isExecuting">
-          <Tag severity="warn" :value="`${$t('statusBar.executing')} (${formattedElapsedTime})`" class="!text-[9px] !px-1.5 !py-0 animate-pulse" />
+          <Tag severity="warn" :value="`${$t('statusBar.executing')} (${formattedElapsedTime})`" class="!text-xxs !font-medium !px-1.5 !py-0 animate-pulse" />
         </template>
         <template v-else>
-          <Tag severity="success" :value="$t('statusBar.ready')" class="!text-[9px] !px-1.5 !py-0" />
+          <Tag severity="success" :value="$t('statusBar.ready')" class="!text-xxs !font-medium !px-1.5 !py-0" />
         </template>
       </div>
 

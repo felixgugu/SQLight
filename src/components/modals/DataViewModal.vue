@@ -236,14 +236,14 @@
                       </span>
                       <span
                         v-if="field.isPrimaryKey"
-                        class="text-[10px] bg-amber-500/20 text-warn border border-amber-500/30 px-1 py-0.2 rounded font-sans font-semibold"
+                        class="text-xxs bg-amber-500/20 text-warn border border-amber-500/30 px-1.5 py-0.5 rounded font-sans font-semibold"
                         title="主鍵 (Primary Key)"
                       >
                         PK
                       </span>
                       <span
                         v-if="field.isIdentity"
-                        class="text-[10px] bg-sky-500/20 text-info border border-sky-500/30 px-1 py-0.2 rounded font-sans font-semibold"
+                        class="text-xxs bg-sky-500/20 text-info border border-sky-500/30 px-1.5 py-0.5 rounded font-sans font-semibold"
                         title="識別欄位 (Identity)"
                       >
                         ID

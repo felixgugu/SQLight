@@ -116,7 +116,7 @@
             <span class="font-mono text-dark-100">
               {{ selectedColumnsCount > 1 ? `(${selectionStats.totalCells.toLocaleString()} ${$t('results.cellsUnit')})` : `${selectionStats.totalCells.toLocaleString()} ${$t('results.cellsUnit')}` }}
             </span>
-            <span v-if="selectionStats.numericCount > 0" class="text-dark-400 font-mono text-[10px]">
+            <span v-if="selectionStats.numericCount > 0" class="text-dark-400 font-mono text-xxs font-medium">
               [{{ selectionStats.numericCount.toLocaleString() }} {{ $t('results.numericUnit') }}]
             </span>
           </div>
@@ -144,8 +144,8 @@
             size="small"
             severity="secondary"
             @click="clearCellSelection"
-            v-tooltip.top="$t('results.clearSelectionTooltip')"
-            class="!ml-1 !p-0 !text-[10px] !underline"
+            :v-tooltip.top="$t('results.clearSelectionTooltip')"
+            class="!ml-1 !p-0 !text-xxs !font-medium !underline"
           />
         </template>
 
@@ -157,7 +157,7 @@
             <span class="text-dark-600">|</span>
             <span>{{ $t('structure.identityColumnsSummary', { count: identityCount }) }}</span>
             <span class="text-dark-600">|</span>
-            <span class="text-dark-500 italic text-[10px]">{{ $t('results.selectionTip') }}</span>
+            <span class="text-dark-500 italic text-xxs font-medium">{{ $t('results.selectionTip') }}</span>
           </div>
         </template>
       </div>
@@ -204,7 +204,7 @@
       <!-- ALTER TABLE Section Header -->
       <div class="px-2.5 py-1 text-xxs text-structure font-semibold uppercase tracking-wider flex items-center justify-between">
         <span>{{ $t('structure.generateAlterHeader') }}</span>
-        <span v-if="targetColumnName" class="text-dark-500 font-mono text-[10px] truncate max-w-[110px]">
+        <span v-if="targetColumnName" class="text-dark-500 font-mono text-xxs font-medium truncate max-w-[110px]">
           {{ targetColumnName }}
         </span>
       </div>

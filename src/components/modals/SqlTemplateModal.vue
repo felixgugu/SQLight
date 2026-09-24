@@ -143,14 +143,14 @@
                 <Tag
                   :severity="getCategorySeverity(tpl.category, tpl.isCustom)"
                   :value="tpl.categoryLabel || tpl.category"
-                  class="!text-[10px] !px-1.5 !py-0.2 uppercase tracking-wider"
+                  class="!text-xxs !font-medium !px-1.5 !py-0.5 uppercase tracking-wider"
                 />
 
                 <Tag
                   v-if="tpl.isCustom"
                   severity="danger"
                   :value="$t('sqlTemplates.customDoc')"
-                  class="!text-[10px] !px-1.5 !py-0.2"
+                  class="!text-xxs !font-medium !px-1.5 !py-0.5"
                 />
               </div>
 
@@ -174,7 +174,7 @@
               <span
                 v-for="tag in tpl.tags.slice(0, 3)"
                 :key="tag"
-                class="text-[10px] px-1 py-0.2 bg-dark-750/80 text-dark-400 rounded"
+                class="text-xxs font-medium px-1.5 py-0.5 bg-dark-750/80 text-dark-400 rounded"
               >
                 #{{ tag }}
               </span>

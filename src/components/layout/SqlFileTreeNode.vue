@@ -38,7 +38,7 @@
         <!-- Child count badge -->
         <span
           v-if="node.children && node.children.length > 0"
-          class="text-[10px] text-dark-500 font-sans flex-shrink-0 pr-1"
+          class="text-xxs text-dark-500 font-sans flex-shrink-0 pr-1"
         >
           {{ countSqlFiles(node) }}
         </span>
@@ -79,7 +79,7 @@
         <!-- File Size -->
         <span
           v-if="node.size !== undefined"
-          class="text-[9px] text-dark-500 font-sans flex-shrink-0 group-hover:text-dark-400 pr-1"
+          class="text-xxs text-dark-500 font-sans flex-shrink-0 group-hover:text-dark-400 pr-1"
         >
           {{ formatByteSize(node.size) }}
         </span>

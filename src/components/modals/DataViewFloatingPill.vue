@@ -23,7 +23,7 @@
             v-if="dataViewStore.filterText"
             value="過濾中"
             severity="warn"
-            class="!text-[9px] !py-0 !px-1 font-mono"
+            class="!text-xxs !font-medium !py-0 !px-1.5"
           />
         </div>
 

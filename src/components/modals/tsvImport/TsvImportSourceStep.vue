@@ -6,7 +6,7 @@
         <div class="flex items-center justify-between">
           <div class="text-xxs font-semibold text-dark-300 tracking-wide">{{ $t('tsvImportModal.targetTable') }}</div>
           <span v-if="store.isLoadingMetadata" class="text-xxs text-dark-400 flex items-center space-x-1">
-            <i class="pi pi-spin pi-spinner text-[10px]"></i>
+            <i class="pi pi-spin pi-spinner text-xxs"></i>
             <span>{{ $t('tsvImportModal.readingDefinitions') }}</span>
           </span>
         </div>

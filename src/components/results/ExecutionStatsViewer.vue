@@ -85,7 +85,7 @@
               <span class="text-lg font-bold text-dark-100">{{ stats.cpuTimeMs }}</span>
               <span class="text-dark-400 text-xxs">ms</span>
             </div>
-            <div class="text-[10px] text-dark-500 font-mono mt-0.5 truncate">
+            <div class="text-xxs text-dark-500 font-mono mt-0.5 truncate leading-normal">
               {{ $t('stats.compile', { ms: stats.compileCpuTimeMs ?? 0 }) }}
             </div>
           </template>
@@ -102,7 +102,7 @@
               <span class="text-lg font-bold text-dark-100">{{ stats.elapsedTimeMs }}</span>
               <span class="text-dark-400 text-xxs">ms</span>
             </div>
-            <div class="text-[10px] text-dark-500 font-mono mt-0.5 truncate">
+            <div class="text-xxs text-dark-500 font-mono mt-0.5 truncate leading-normal">
               {{ $t('stats.compile', { ms: stats.compileElapsedTimeMs ?? 0 }) }}
             </div>
           </template>
@@ -119,7 +119,7 @@
               <span class="text-lg font-bold text-ok">{{ stats.totalLogicalReads.toLocaleString() }}</span>
               <span class="text-dark-400 text-xxs">{{ $t('stats.pages') }}</span>
             </div>
-            <div class="text-[10px] text-ok font-mono mt-0.5 truncate">
+            <div class="text-xxs text-ok font-mono mt-0.5 truncate leading-normal">
               {{ $t('stats.size', { size: extractByteSize(stats.logicalReadsFormatted) }) }}
             </div>
           </template>
@@ -136,7 +136,7 @@
               <span class="text-lg font-bold text-dark-100">{{ stats.totalPhysicalReads.toLocaleString() }}</span>
               <span class="text-dark-400 text-xxs">{{ $t('stats.pages') }}</span>
             </div>
-            <div class="text-[10px] text-dark-500 font-mono mt-0.5 truncate">
+            <div class="text-xxs text-dark-500 font-mono mt-0.5 truncate leading-normal">
               {{ $t('stats.readAhead', { count: stats.totalReadAheadReads }) }}
             </div>
           </template>
@@ -153,7 +153,7 @@
               <span class="text-lg font-bold text-dark-100">{{ stats.totalPhysicalWrites.toLocaleString() }}</span>
               <span class="text-dark-400 text-xxs">{{ $t('stats.pagesWritten') }}</span>
             </div>
-            <div class="text-[10px] text-dark-500 font-mono mt-0.5 truncate">
+            <div class="text-xxs text-dark-500 font-mono mt-0.5 truncate leading-normal">
               {{ $t('stats.lobReads', { count: stats.totalLobReads }) }}
             </div>
           </template>
@@ -258,7 +258,7 @@
                 <Tag
                   :severity="data.isHighIo ? 'danger' : 'success'"
                   :value="data.isHighIo ? 'High IO' : 'OK'"
-                  class="!text-[10px] !px-1.5 !py-0.2"
+                  class="!text-xxs !font-medium !px-1.5 !py-0.5"
                 />
               </template>
             </Column>

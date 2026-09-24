@@ -47,7 +47,7 @@
                 v-if="connectionStore.activeConnection.alias"
                 severity="info"
                 :value="connectionStore.activeConnection.alias"
-                class="!text-[10px] !px-1 !py-0 flex-shrink-0"
+                class="!text-xxs !font-medium !px-1.5 !py-0 flex-shrink-0"
               />
             </div>
             <span v-else class="text-dark-400 text-xs">{{ $t('sidebar.connections') }}...</span>
@@ -70,10 +70,10 @@
                     v-if="slotProps.option.alias"
                     severity="info"
                     :value="slotProps.option.alias"
-                    class="!text-[9px] !px-1 !py-0"
+                    class="!text-xxs !font-medium !px-1.5 !py-0"
                   />
                 </div>
-                <span class="text-[10px] text-dark-400 font-mono truncate">
+                <span class="text-xxs text-dark-400 font-mono truncate">
                   {{ slotProps.option.username ? `${slotProps.option.username}@` : '' }}{{ slotProps.option.host }}:{{ slotProps.option.port }}
                 </span>
               </div>
@@ -278,11 +278,11 @@
                   <span class="font-medium text-dark-100 group-hover:text-danger transition-colors">
                     {{ query.title }}
                   </span>
-                  <span :class="['text-[9px] px-1 py-0.2 rounded border font-mono', query.badgeColor]">
+                  <span :class="['text-xxs font-medium px-1.5 py-0.5 rounded border font-mono', query.badgeColor]">
                     {{ query.badge }}
                   </span>
                 </div>
-                <span class="text-[10px] text-dark-400 leading-tight">
+                <span class="text-xxs text-dark-400 leading-normal">
                   {{ query.description }}
                 </span>
               </div>

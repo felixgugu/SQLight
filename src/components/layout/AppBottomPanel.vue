@@ -20,7 +20,7 @@
             v-if="tab.badge !== undefined && tab.badge > 0"
             :value="String(tab.badge)"
             :severity="tab.id === 'messages' && hasErrorMessages ? 'danger' : 'secondary'"
-            class="!text-[10px] !px-1 !py-0 !min-w-4 !h-4"
+            class="!text-xxs !font-medium !px-1 !py-0 !min-w-4 !h-4"
           />
         </Button>
       </div>

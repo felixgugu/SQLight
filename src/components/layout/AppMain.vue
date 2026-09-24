@@ -83,7 +83,7 @@
               v-if="getTabConnectionAlias(tab)"
               severity="secondary"
               :value="getTabConnectionAlias(tab)"
-              class="!text-[10px] !font-mono !px-1.5 !py-0 flex-shrink-0 ml-auto max-w-[85px] truncate"
+              class="!text-xxs !font-mono !px-1.5 !py-0 flex-shrink-0 ml-auto max-w-[85px] truncate"
               :class="workspaceStore.activeTabId === tab.id ? '' : '!font-normal'"
               :title="`${$t('sidebar.connections')}: ${getTabConnectionAlias(tab)}`"
             />

@@ -234,7 +234,7 @@
             <span class="font-mono text-dark-100">
               {{ selectedColumnsCount > 1 ? `(${selectionStats.totalCells.toLocaleString()} ${$t('results.cellsUnit')})` : `${selectionStats.totalCells.toLocaleString()} ${$t('results.cellsUnit')}` }}
             </span>
-            <span v-if="selectionStats.numericCount > 0" class="text-dark-400 font-mono text-[10px]">
+            <span v-if="selectionStats.numericCount > 0" class="text-dark-400 font-mono text-xxs font-medium">
               [{{ selectionStats.numericCount.toLocaleString() }} {{ $t('results.numericUnit') }}]
             </span>
           </div>
@@ -271,7 +271,7 @@
             severity="secondary"
             @click="clearCellSelection"
             :v-tooltip.top="$t('results.clearSelectionTooltip')"
-            class="!ml-1 !p-0 !text-[10px] !underline"
+            class="!ml-1 !p-0 !text-xxs !font-medium !underline"
           />
         </template>
 
@@ -281,7 +281,7 @@
             <span class="text-dark-600">|</span>
             <span>{{ $t('results.totalColumns', { count: resultSet.columns.length }) }}</span>
             <span class="text-dark-600">|</span>
-            <span class="text-dark-500 italic text-[10px]">{{ $t('results.selectionTip') }}</span>
+            <span class="text-dark-500 italic text-xxs font-medium">{{ $t('results.selectionTip') }}</span>
           </div>
         </template>
       </div>

@@ -175,11 +175,11 @@
               res.item.type === 'view' ? 'info' :
               res.item.type === 'procedure' ? 'warn' : 'secondary'
             "
-            class="!text-[10px] !px-1.5 !py-0.5 uppercase tracking-wider"
+            class="!text-xxs !font-medium !px-1.5 !py-0.5 uppercase tracking-wider"
           >
             <i
               :class="[
-                'mr-1 text-[10px]',
+                'mr-1 text-xxs',
                 res.item.type === 'table' ? 'pi pi-table' :
                 res.item.type === 'view' ? 'pi pi-list' :
                 res.item.type === 'procedure' ? 'pi pi-play' : 'pi pi-code'

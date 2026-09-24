@@ -181,7 +181,7 @@
               <Tag
                 :severity="rule.target === 'database' ? 'warn' : rule.target === 'table' ? 'success' : 'info'"
                 :value="rule.target === 'database' ? '資料庫' : rule.target === 'table' ? '資料表' : '全部'"
-                class="!text-[10px] !px-1.5 !py-0.5"
+                class="!text-xxs !font-medium !px-1.5 !py-0.5"
               />
               <!-- Pattern -->
               <span

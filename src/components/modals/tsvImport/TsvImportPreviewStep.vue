@@ -138,7 +138,7 @@
       >
         <div class="flex items-center justify-between text-xxs text-ok">
           <span class="flex items-center space-x-1.5">
-            <i class="pi pi-spin pi-spinner text-[10px]"></i>
+            <i class="pi pi-spin pi-spinner text-xxs"></i>
             <span>{{ $t('tsvImportModal.importingNotice') }}</span>
           </span>
           <span class="font-mono">

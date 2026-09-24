@@ -41,7 +41,7 @@
           v-if="aiChatStore.currentSql"
           value="已帶入 SQL"
           severity="info"
-          class="!text-[10px] !py-0 !px-1.5"
+          class="!text-xxs !font-medium !py-0 !px-1.5"
         />
       </div>
 

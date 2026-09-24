@@ -216,7 +216,7 @@
             v-if="connectionStore.activeConnectionId === conn.id && connectionStore.status === 'connected'"
             severity="success"
             :value="$t('sidebar.inUse')"
-            class="!text-[9px] !px-1 !py-0 !font-normal flex-shrink-0 mr-1"
+            class="!text-xxs !font-normal !px-1.5 !py-0 flex-shrink-0 mr-1"
             :title="$t('sidebar.currentActiveConn')"
           />
 
@@ -283,7 +283,7 @@
               <!-- Active database indicator -->
               <span
                 v-if="connectionStore.activeConnectionId === conn.id && connectionStore.activeDatabase === db"
-                class="text-[9px] px-1 py-0.2 rounded bg-amber-500/15 text-warn font-sans border border-amber-500/30 flex-shrink-0 mr-1"
+                class="text-xxs px-1.5 py-0.5 rounded bg-amber-500/15 text-warn font-sans border border-amber-500/30 flex-shrink-0 mr-1"
                 :title="$t('sidebar.currentActiveDb')"
               >
                 {{ $t('sidebar.inUse') }}
@@ -362,7 +362,7 @@
                         <span class="truncate flex-1">{{ table.name }}</span>
                         <span
                           v-if="activeLocatedKey === tableKey(conn.id, db, table.schema, table.name)"
-                          class="text-[9px] px-1 py-0.2 bg-brand-600 text-white rounded font-sans flex-shrink-0 animate-pulse ml-1"
+                          class="text-xxs px-1.5 py-0.5 bg-brand-600 text-white rounded font-sans flex-shrink-0 animate-pulse ml-1"
                         >
                           {{ $t('sidebar.located') }}
                         </span>
@@ -411,7 +411,7 @@
                           </span>
                           <span
                             v-if="isPendingColumn(col.name)"
-                            class="text-xxs px-1 py-0.2 bg-brand-500/30 text-accent rounded text-[9px] border border-brand-400/40 flex-shrink-0 animate-pulse"
+                            class="text-xxs px-1.5 py-0.5 bg-brand-500/30 text-accent rounded border border-brand-400/40 flex-shrink-0 animate-pulse"
                           >
                             {{ $t('sidebar.pendingPaste') }}
                           </span>
@@ -481,7 +481,7 @@
                         <span class="truncate flex-1">{{ view.name }}</span>
                         <span
                           v-if="activeLocatedKey === tableKey(conn.id, db, view.schema, view.name)"
-                          class="text-[9px] px-1 py-0.2 bg-purple-600 text-white rounded font-sans flex-shrink-0 animate-pulse ml-1"
+                          class="text-xxs px-1.5 py-0.5 bg-purple-600 text-white rounded font-sans flex-shrink-0 animate-pulse ml-1"
                         >
                           {{ $t('sidebar.located') }}
                         </span>
@@ -583,7 +583,7 @@
                       <span class="truncate flex-1">{{ proc.name }}</span>
                       <span
                         v-if="activeLocatedKey === tableKey(conn.id, db, proc.schema, proc.name)"
-                        class="text-[9px] px-1 py-0.2 bg-amber-700 text-white rounded font-sans flex-shrink-0 animate-pulse ml-1"
+                        class="text-xxs px-1.5 py-0.5 bg-amber-700 text-white rounded font-sans flex-shrink-0 animate-pulse ml-1"
                       >
                         {{ $t('sidebar.located') }}
                       </span>
@@ -641,7 +641,7 @@
                       <span class="truncate flex-1">{{ func.name }}</span>
                       <span
                         v-if="activeLocatedKey === tableKey(conn.id, db, func.schema, func.name)"
-                        class="text-[9px] px-1 py-0.2 bg-sky-700 text-white rounded font-sans flex-shrink-0 animate-pulse ml-1"
+                        class="text-xxs px-1.5 py-0.5 bg-sky-700 text-white rounded font-sans flex-shrink-0 animate-pulse ml-1"
                       >
                         {{ $t('sidebar.located') }}
                       </span>

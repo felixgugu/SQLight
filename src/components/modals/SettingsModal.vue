@@ -155,7 +155,7 @@
               @click="settingsStore.setPrimaryColor(color.name)"
             >
               <div
-                class="w-4.5 h-4.5 rounded-full flex-shrink-0 flex items-center justify-center text-white text-[9px] shadow-xs"
+                class="w-4.5 h-4.5 rounded-full flex-shrink-0 flex items-center justify-center text-white text-xxs shadow-xs"
                 :style="{ backgroundColor: color.color }"
               >
                 <i
@@ -205,7 +205,7 @@
                   :style="{ backgroundColor: surface.sampleLight }"
                   title="Light Surface"
                 />
-                <span class="text-[10px] text-dark-400 truncate">{{ surface.name }}</span>
+                <span class="text-xxs font-medium text-dark-400 truncate">{{ surface.name }}</span>
               </div>
             </button>
           </div>

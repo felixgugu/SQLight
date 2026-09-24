@@ -173,9 +173,9 @@
 
 .p-select.p-select-sm .p-select-dropdown .p-icon,
 .p-select-sm .p-select-dropdown .p-icon {
-  width: 0.625rem !important;
-  height: 0.625rem !important;
-  font-size: 0.625rem !important;
+  width: 0.6875rem !important;
+  height: 0.6875rem !important;
+  font-size: 0.6875rem !important;
 }
 
 /* Dropdown Overlay Panels (Teleported to body) */
@@ -562,9 +562,9 @@ html:not(.dark) .p-tooltip-bottom .p-tooltip-arrow {
 }
 
 .p-toast-close-icon {
-  font-size: 0.625rem !important; /* 10px */
-  width: 0.625rem !important;
-  height: 0.625rem !important;
+  font-size: 0.6875rem !important; /* 11px */
+  width: 0.6875rem !important;
+  height: 0.6875rem !important;
 }
 
 /* ==========================================================================

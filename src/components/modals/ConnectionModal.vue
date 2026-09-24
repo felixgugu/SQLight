@@ -64,7 +64,7 @@
             <i class="pi pi-server text-accent text-xs" />
             <span>{{ $t('connectionModal.serverAndDatabase') }}</span>
           </div>
-          <span class="text-[10px] font-normal text-dark-500 font-mono">* 為必填欄位</span>
+          <span class="text-xxs font-medium text-dark-500 font-mono">* 為必填欄位</span>
         </div>
 
         <div class="space-y-2.5 pt-0.5">
@@ -193,7 +193,7 @@
                 <Tag
                   :severity="form.modificationPrompt ? 'warn' : 'secondary'"
                   value="SAFE GUARD"
-                  class="!text-[9px] !px-1.5 !py-0 font-mono font-bold"
+                  class="!text-xxs !px-1.5 !py-0 font-mono font-semibold"
                 />
               </div>
               <p class="text-xxs text-dark-400 mt-1 leading-relaxed">
@@ -262,7 +262,7 @@
 
             <!-- Live Badge Preview -->
             <div class="ml-auto flex items-center space-x-1.5 px-2.5 py-1 rounded-lg bg-dark-900 border border-dark-750 text-xxs shadow-inner">
-              <span class="text-dark-500 font-mono text-[10px]">{{ $t('connectionModal.preview') }}</span>
+              <span class="text-dark-500 font-mono text-xxs font-medium">{{ $t('connectionModal.preview') }}</span>
               <span
                 class="w-2 h-2 rounded-full shrink-0 shadow-xs"
                 :style="{ backgroundColor: form.color || '#64748b' }"
@@ -274,7 +274,7 @@
                 v-if="form.alias.trim()"
                 severity="secondary"
                 :value="form.alias.trim()"
-                class="!text-[9px] !px-1 !py-0 font-mono uppercase"
+                class="!text-xxs !px-1.5 !py-0 font-mono font-medium uppercase"
               />
             </div>
           </div>

@@ -104,11 +104,11 @@
             <Tag
               :value="aiChatStore.isSelectionOnly ? $t('aiSqlChat.selectionOnlyTag') : $t('aiSqlChat.fullPageTag')"
               severity="info"
-              class="!text-[10px] !py-0.5 !px-1.5 flex-shrink-0"
+              class="!text-xxs !font-medium !py-0.5 !px-1.5 flex-shrink-0"
             />
             <span class="text-dark-300 group-hover:text-plan truncate max-w-[360px] font-mono transition-colors flex items-center gap-1">
               {{ sqlPreviewText }}
-              <i class="pi pi-eye text-[10px] text-dark-400 group-hover:text-plan ml-0.5" />
+              <i class="pi pi-eye text-xxs text-dark-400 group-hover:text-plan ml-0.5" />
             </span>
 
             <!-- Mouseover 浮動完整 SQL 預覽視窗 -->
@@ -131,7 +131,7 @@
                       class="text-dark-300 hover:text-ok transition-colors flex items-center gap-1 cursor-pointer"
                       @click.stop="copySql(aiChatStore.currentSql)"
                     >
-                      <i class="pi pi-copy text-[10px]" />{{ $t('aiSqlChat.copyBtn') }}
+                      <i class="pi pi-copy text-xxs" />{{ $t('aiSqlChat.copyBtn') }}
                     </button>
                   </div>
                 </div>
@@ -187,7 +187,7 @@
                 </div>
                 <div class="whitespace-pre-wrap select-text font-sans">{{ msg.content }}</div>
               </div>
-              <span class="text-[10px] text-dark-400 font-mono px-1">
+              <span class="text-xxs text-dark-400 font-mono px-1 font-medium">
                 {{ formatTime(msg.timestamp) }}
               </span>
             </div>
@@ -214,7 +214,7 @@
                             severity="secondary"
                             text
                             size="small"
-                            class="!text-[10px] !py-0.5 !px-1.5 !h-6"
+                            class="!text-xxs !font-medium !py-0.5 !px-1.5 !h-6"
                             @click="copySql(segment.value)"
                           />
                           <Button
@@ -222,7 +222,7 @@
                             icon="pi pi-external-link"
                             severity="primary"
                             size="small"
-                            class="!text-[10px] !py-0.5 !px-2 !h-6"
+                            class="!text-xxs !font-medium !py-0.5 !px-2 !h-6"
                             @click="openInNewTab(segment.value)"
                           />
                         </div>
@@ -233,12 +233,12 @@
                 </div>
 
                 <div v-if="msg.tokensUsed" class="mt-2 pt-1 border-t border-dark-750 flex justify-end">
-                  <span class="text-[10px] text-dark-400 font-mono">
+                  <span class="text-xxs text-dark-400 font-mono font-medium">
                     {{ $t('aiSqlChat.tokensUsed', { count: msg.tokensUsed }) }}
                   </span>
                 </div>
               </div>
-              <span class="text-[10px] text-dark-400 font-mono px-1">
+              <span class="text-xxs text-dark-400 font-mono px-1 font-medium">
                 {{ formatTime(msg.timestamp) }}
               </span>
             </div>
@@ -254,7 +254,7 @@
               severity="danger"
               text
               size="small"
-              class="!text-[10px] !py-0 !px-1 !h-5 ml-1"
+              class="!text-xxs !font-medium !py-0 !px-1.5 !h-5 ml-1"
               @click="aiChatStore.cancelGeneration()"
             />
           </div>

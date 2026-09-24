@@ -240,7 +240,7 @@
             <Link2 class="w-3.5 h-3.5" />
             <span>{{ $t('erDiagram.relationProperties') }}</span>
           </div>
-          <div class="truncate text-[10px] space-y-0.5" :class="isLightTheme ? 'text-slate-500' : 'text-dark-400'">
+          <div class="truncate text-xxs font-medium space-y-0.5" :class="isLightTheme ? 'text-slate-500' : 'text-dark-400'">
             <div class="flex items-center space-x-1">
               <span class="w-10 flex-shrink-0 font-sans" :class="isLightTheme ? 'text-slate-600' : 'text-dark-500'">{{ $t('erDiagram.source') }}</span>
               <span class="font-medium truncate" :class="isLightTheme ? 'text-slate-800' : 'text-dark-100'">{{ edgeMenu.sourceTable }}.{{ edgeMenu.sourceColumn }}</span>
@@ -254,7 +254,7 @@
 
         <!-- Cardinality Selection -->
         <div class="px-3 py-2 border-b" :class="isLightTheme ? 'border-slate-100' : 'border-dark-750'">
-          <div class="text-[10px] mb-1.5 font-sans flex items-center justify-between" :class="isLightTheme ? 'text-slate-500' : 'text-dark-400'">
+          <div class="text-xxs font-medium mb-1.5 font-sans flex items-center justify-between" :class="isLightTheme ? 'text-slate-500' : 'text-dark-400'">
             <span>{{ $t('erDiagram.cardinality') }}</span>
             <span class="font-bold font-sans" :class="isLightTheme ? 'text-accent' : 'text-accent'">{{ edgeMenu.cardinality }}</span>
           </div>

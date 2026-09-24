@@ -1,0 +1,207 @@
+# SQLight 專業 UI/UX 深度分析與改進提案報告
+
+> **評估基準與方法論**：本報告依據桌面開發者工具（DataGrip、VS Code、TablePlus）的人機介面指南、WCAG 2.2 AA 無障礙規範及 `ui-ux-pro-max` 專業設計體系，針對 SQLight 進行全方位評估與落地架構規劃。
+
+---
+
+## 1. 專案現狀總結與體驗評級 (UX Scorecard)
+
+| 維度 | 當前評級 | 現狀概述 |
+| :--- | :---: | :--- |
+| **資訊架構與佈局層次** | **B+** | 採用標準 IDE 三區佈局（側邊欄、編輯區、底部面板），但在頂部 Header 與多層 Tab 存在明顯的認知超載問題。 |
+| **視覺密度與設計一致性** | **A-** | 緊湊桌面風格（Compact Desktop Density）設計統一，深色模式基調專業；但在微字體與面板交界處對比度稍欠細膩。 |
+| **資料網格人體工學** | **A-** | Tabulator 虛擬滾動流暢，具備單元格複製與行內編輯；但缺乏 NULL 標籤化與多格即時數值統計（Sum/Avg/Count）。 |
+| **執行狀態與回饋感知** | **B** | 僅有頂部按鈕呼吸燈與狀態列計時，編輯區與結果區缺乏骨架屏（Skeleton）或動態進度條，長查詢時易產生卡頓焦慮。 |
+| **AI 助手與工作流整合** | **B+** | 浮動拖曳視窗與膠囊最小化機制完善，但在單螢幕下易遮擋 SQL 編輯區，缺乏側邊抽屜（Docked Drawer）並排模式。 |
+| **無障礙性與微排版** | **B** | 存在較多 9px~10px 極小字體，中文字可讀性在 4K 螢幕或 100% 縮放時較為吃力；部分鍵盤快捷鍵提示未完全貫穿。 |
+
+---
+
+## 2. 六大核心維度深度診斷與改造方案
+
+---
+
+### 維度一：頂部工具列（Header）資訊分流與職責收納
+
+#### 1. 痛點定位與分析
+* **組件檔案**：[`AppHeader.vue`](file:///G:/SQLight/src/components/layout/AppHeader.vue)
+* **問題**：頂部 Header 橫向集成了 20 多個控制項目（連線選單、資料庫選單、執行、全部執行、剪下、複製、貼上、展開、摺疊、格式化、開啟檔案、儲存檔案、新分頁、快搜、SQL 範本、AI 助手、DBA 工具箱、IO 統計開關、預估計畫開關、實際計畫開關、Limit 限制器、側邊欄開關、底部面板開關、系統設定、視窗控制項）。
+* **UX 衝擊**：
+  * 在 1366px 或常見筆電 1080p 解析度下，右側按鈕會直接超出可見邊界並被截斷（`overflow-hidden`）。
+  * 職責混雜：剪下、複製、貼上、代碼摺疊屬於 **Monaco 編輯器的內部局域操作**，放在視窗標題列會分散核心查詢（連線、執行、資料庫）的視覺焦點。
+
+#### 2. 解決方案與改造設計
+* **三層權重分流機制**：
+  1. **Primary Actions（常駐視窗核心）**：
+     * 連線切換器 + 資料庫切換器（維持左側）。
+     * 綠色主執行按鈕（SplitButton：點擊執行當前，下拉可選「執行全部」）。
+     * 常用搜尋（Ctrl+P 物件快搜、AI 助手）。
+  2. **Contextual Actions（下移至編輯器局域）**：
+     * 將剪下、複製、貼上、格式化、全部摺疊/展開移至 Monaco 編輯器右上方的小型 Floating/Hover Toolbar，或集中於右鍵上下文選單中。
+  3. **Secondary Actions（收納整併）**：
+     * 將 **IO 統計（SET STATISTICS IO/TIME）**、**預估執行計畫**、**實際執行計畫** 整合成一個 **「執行分析選項（Profiling / Plan Options）」按鈕**，點擊彈出下拉選單勾選，從原本佔用 3 個圖示寬度縮減為 1 個。
+     * 引入 **響應式溢出保護（Overflow Menu `···`）**：在視窗寬度過窄時，自動將放不下的圖示收折進更多選單中。
+
+---
+
+### 維度二：四層巢狀 Tab 的視覺層次重塑
+
+#### 1. 痛點定位與分析
+* **組件檔案**：
+  * 主工作區：[`AppMain.vue`](file:///G:/SQLight/src/components/layout/AppMain.vue)
+  * 底部面板：[`AppBottomPanel.vue`](file:///G:/SQLight/src/components/layout/AppBottomPanel.vue)
+  * 結果集：[`ResultGrid.vue`](file:///G:/SQLight/src/components/layout/ResultGrid.vue)
+* **問題**：SQLight 同時具備 4 層不同的 Tab：
+  * **Level 1**：主工作區檔案分頁（SQL 查詢 1, 2, Table Data, ER 圖...）
+  * **Level 2**：底部面板功能分頁（Results, Messages, Query History, Execution Stats）
+  * **Level 3**：查詢歷史結果分頁（Result #1 (12ms), Result #2 (45ms), Pinned...）
+  * **Level 4**：多結果集切換分頁（Result #1, Result #2...）
+* **UX 衝擊**：所有 Tab 外觀高度一致（28~32px 高度、深灰色圓角、類似的字體與間距），使用者切換時容易產生認知迷航，分不清目前是在切換檔案、切換功能面版、還是在切換查詢歷史。
+
+#### 2. 解決方案與改造設計
+* **建立明確的視覺形態分層（Morphological Hierarchy）**：
+  * **Level 1（主工作區 Tab）&rarr; 經典 IDE 檔案卡片式**：
+    * 頂部加入 Accent 主色指示條（1.5px）。
+    * 強化未儲存變更的 Dirty 圓點（Amber 500）。
+    * 左右邊緣加入平滑的水平滾動淡出遮罩（Fade Mask）。
+  * **Level 2（底部功能面板 Tab）&rarr; 膠囊型分段控制器（Segmented Control）**：
+    * 改為緊湊的嵌入式圓角膠囊按鈕組（如 `[ Results | Messages (3) | History | Stats ]`），不再使用卡片分頁外觀，直觀區隔「這是功能視圖切換」。
+  * **Level 3 & 4（結果歷史與多結果集 Tab）&rarr; 極簡數據標籤（Data Chips）**：
+    * 使用微型圓角 Chip 風格（如 `1: 124 rows`、`2: 50 rows`），搭配灰底與高亮邊框，消除「分頁中套分頁」的視覺壓迫。
+
+---
+
+### 維度三：長查詢與非同步作業的「回饋感知」（Progress Perception）
+
+#### 1. 痛點定位與分析
+* **組件檔案**：[`AppBottomPanel.vue`](file:///G:/SQLight/src/components/layout/AppBottomPanel.vue)、[`ResultGrid.vue`](file:///G:/SQLight/src/components/layout/ResultGrid.vue)、[`AppStatusBar.vue`](file:///G:/SQLight/src/components/layout/AppStatusBar.vue)
+* **問題**：
+  * 點擊執行後，只有 Header 的 Run 按鈕變為紅色 Stop 且狀態列顯示計時數字。
+  * 中央編輯器與底部網格區域處於完全靜態狀態，使用者視線聚焦在中央或表格時，無法即刻確認「後端是否真的在運作」。
+  * 查詢回傳 0 筆時，僅有孤立的「No rows returned」與小圖示，缺乏指引。
+
+#### 2. 解決方案與改造設計
+* **雙層進度指示器**：
+  * **頂部呼吸進度條**：在底部面板上緣加入一條極細的 **1.5px 無限循環進度條（Indeterminate Flow Line）**，在查詢執行中流動。
+  * **網格骨架屏（Skeleton Loading）**：結果區在等待回傳時，顯示 5~8 行帶淡入淡出 Shimmer 動畫的灰階骨架列，消除空白畫面的焦慮感。
+* **語意化空狀態引導（Actionable Empty States）**：
+  * 當結果為空或新建查詢時，以清晰的卡片提供快捷指引：
+    * ⌨️ 按下 `Ctrl + Enter` 執行當前語句，`Ctrl + Shift + Enter` 執行整頁。
+    * 🗄️ 雙擊左側物件總管的資料表快速生成查詢。
+    * 💡 按下 `Ctrl + Alt + T` 開啟常用 SQL 範本庫。
+
+---
+
+### 維度四：資料網格（Result Grid）人體工學升級
+
+#### 1. 痛點定位與分析
+* **組件檔案**：[`ResultGridItem.vue`](file:///G:/SQLight/src/components/results/ResultGridItem.vue)、[`tabulatorGrid.ts`](file:///G:/SQLight/src/utils/tabulatorGrid.ts)
+* **問題**：
+  * `NULL` 值、空字串 `""` 與數字 `0` 的視覺區隔度不夠顯著，DBA 難以一眼看出資料本質。
+  * 缺少多格反白時的即時數值統計功能（常見於 Excel / DataGrip / DBeaver）。
+  * 雖然支援行內編輯與 Commit，但提交前缺乏清晰的變更比對清單（Diff Preview）。
+
+#### 2. 解決方案與改造設計
+* **`NULL` 語意標籤化**：
+  * 所有 `NULL` 欄位渲染為淡色斜體、帶微底色圓角的 `NULL` 徽章，使其與純空字串 `""` 產生絕對視覺區隔。
+* **儲存格即時統計列（Quick Aggregates）**：
+  * 當使用者按住 Shift 或滑鼠框選多個儲存格時，在網格右下角或全域狀態列即時顯示統計摘要：
+    * `已選取: 8 格 | 計數: 8 | 數值加總 (Sum): 12,450 | 平均 (Avg): 1,556.25`
+* **安全的 Commit Diff 對話框**：
+  * 點擊「提交 (Commit)」時，跳出變更審查確認彈窗，條列出即將執行的具體 SQL（如 `UPDATE [Users] SET [Age] = 30 WHERE [Id] = 1001`），確認無誤後再發送，避免誤寫或髒讀。
+
+---
+
+### 維度五：AI 助手佈局模式（Floating vs Docked Drawer）
+
+#### 1. 痛點定位與分析
+* **組件檔案**：[`AiSqlChatModal.vue`](file:///G:/SQLight/src/components/modals/AiSqlChatModal.vue)
+* **問題**：AI 對話視窗目前為獨立懸浮窗（Fixed Teleport），雖然支援自由拖曳與縮小為膠囊，但在筆電或單螢幕環境下，懸浮窗會直接擋住 Monaco 編輯器或查詢結果，使用者必須頻繁拖拉移動視窗。
+
+#### 2. 解決方案與改造設計
+* **雙模式無縫切換（Docked Side Drawer vs Floating Window）**：
+  * 在 AI 視窗右上角控制項加入 **「停靠至右側（Dock to Right）」** 按鈕。
+  * **停靠模式**：AI Chat 作為主工作區右側的折疊面板，與 Monaco 編輯器並排；右側面板附帶寬度拖曳 Splitter，程式碼區提供一鍵 **「插入游標處 (Insert)」** 與 **「替換選取代碼 (Replace)」**。
+  * **懸浮模式**：適合外接多螢幕或需要全螢幕深入檢視長對話時使用。
+
+---
+
+### 維度六：微排版、無障礙規範與視覺精緻度
+
+#### 1. 痛點定位與分析
+* **樣式檔案**：[`main.css`](file:///G:/SQLight/src/assets/main.css)、各佈局組件
+* **問題**：
+  * 專案中普遍使用 `!text-[9px]`、`!text-[10px]` 等極小字級，在中文字體渲染時筆畫容易擠成一團。
+  * 連線環境標籤（PROD, DEV）目前以圓點顏色區分，在某些色弱情境或快速操作下容易忽略環境風險。
+
+#### 2. 解決方案與改造設計
+* **字體階層規範化（Type Scale Normalization）**：
+  * **最小字級底線**：UI 介面元素最低限制為 `11px (0.6875rem)`，次要文字輔以適當的 `font-medium` 與行高，禁止使用 9px 中文字體。
+  * **設定新增「UI 縮放 / 密度設定」**：在偏好設定中提供 Compact（緊湊 12px）與 Comfortable（標準 13px）切換，滿足不同解析度螢幕需求。
+* **高危環境強化警告（PROD Visual Guard）**：
+  * 當切換至 PROD（生產環境）連線時，視窗頂部或底部狀態列顯示明顯但不刺眼的紅色警戒條，且執行 `DELETE` / `UPDATE` 無 `WHERE` 時強制觸發二度確認。
+
+---
+
+## 3. 改造前後架構概念對比 (Before vs. After)
+
+```text
+【改造前 Current Layout】
+┌────────────────────────────────────────────────────────────────────────┐
+│ AppHeader: [Conn][DB] [Run][RunAll] [Cut][Copy][Paste][Fold] [Fmt][Save]│ ← 橫向塞滿 20+ 按鈕
+│            [Find][Tpl][AI][DBA] [IO][Plan][ActPlan][Limit] [Side][Bot] │   容易溢出、職責混雜
+├───────────┬────────────────────────────────────────────────────────────┤
+│ Explorer  │ Query Tabs (Level 1): [ Tab 1.sql ] [ Tab 2.sql ]          │
+│           ├────────────────────────────────────────────────────────────┤
+│           │ Monaco Editor (純編輯區)                                    │
+│           ├────────────────────────────────────────────────────────────┤
+│           │ Bottom Panel (Level 2): [ Results ] [ Messages ] [ Stats ] │ ← 4 層 Tab 外觀雷同
+│           │ ┌────────────────────────────────────────────────────────┐ │
+│           │ │ Results Tabs (Level 3): [ Result 1 ] [ Result 2 ]      │ │
+│           │ │ Data Grid: [Result #1 (Level 4)]                       │ │
+│           │ └────────────────────────────────────────────────────────┘ │
+└───────────┴────────────────────────────────────────────────────────────┘
+
+【改造後 Proposed Blueprint】
+┌────────────────────────────────────────────────────────────────────────┐
+│ AppHeader: [Conn][DB] ── [▶ Run ▾] ── [🔍 Search] [✨ AI] [⚙] [━ ❐ ✕]   │ ← 精煉聚焦高頻核心操作
+├───────────┬──────────────────────────────────────────────┬─────────────┤
+│ Explorer  │ Query Tabs (卡片式檔案分頁): [ 📄 Users.sql ● ]│ ✨ AI Chat  │
+│           ├──────────────────────────────────────────────┤ (可停靠側欄) │
+│           │ Monaco Editor + [右上浮動: 剪貼/摺疊/格式化]   │ 對話、解釋、  │
+│           ├──────────────────────────────────────────────┤ 一鍵寫入代碼 │
+│           │ ═════ 1.5px 呼吸流動進度條 (查詢執行中) ═════ │             │
+│           │ ⟦ Results ⟧ ⟦ Messages (2) ⟧ ⟦ History ⟧     │ (亦可一鍵切換│
+│           │ ┌──────────────────────────────────────────┐ │  為獨立懸浮窗)│
+│           │ │ Chips: (1) 1,420 rows  (2) 15 rows       │ │             │
+│           │ │ Tabulator Grid [NULL 徽章] [即時數值統計] │ │             │
+│           │ └──────────────────────────────────────────┘ │             │
+└───────────┴──────────────────────────────────────────────┴─────────────┘
+```
+
+---
+
+## 4. 推薦實施路線圖 (Implementation Roadmap)
+
+### 階段一：立竿見影的高價值輕量優化 (P1 - 預計工時小，效益極大)
+1. **Header 瘦身與職責分流**：
+   - 移出剪下、複製、貼上、代碼摺疊按鈕至編輯器內。
+   - 將 IO 統計、預估計畫、實際計畫整合成單一「執行選項」下拉選單。
+2. **Result Grid 資料體驗補強**：
+   - `NULL` 欄位渲染為專屬樣式徽章。
+   - 選取數值儲存格時，在狀態列即時計算 Count / Sum / Avg。
+
+### 階段二：介面層級感與感知回饋提升 (P2)
+1. **巢狀 Tab 語意化外觀重構**：
+   - 主工作區保留卡片分頁樣式；底部面板改為膠囊型 Segmented Control；多結果集改為極簡 Chip。
+2. **長查詢執行回饋系統**：
+   - 底部面板加入 1.5px 呼吸流動進度條。
+   - 網格等待期引入 Shimmer 骨架屏動畫。
+   - 設計內容豐富的 Empty State 引導卡片。
+
+### 階段三：高階工作流與無障礙健全 (P3)
+1. **AI 助手 Docked 側邊欄模式**：
+   - 支援固定在主工作區右側（可拖曳分欄），並保留一鍵彈出為懸浮窗功能。
+2. **字級規範化與 PROD 安全防護**：
+   - 清除小於 11px 的微字體，提供 UI 密度選項。
+   - 增加生產環境（PROD）的高辨識度警戒識別與危險操作二次防護。

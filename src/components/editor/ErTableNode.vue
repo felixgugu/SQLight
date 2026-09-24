@@ -101,7 +101,7 @@
 
         <!-- Right Column Info: Data Type -->
         <div
-          class="flex items-center space-x-1 flex-shrink-0 text-[10px]"
+          class="flex items-center space-x-1 flex-shrink-0 text-xxs font-medium"
           :class="nodeData.isEditMode && !isColumnChecked(col.name)
             ? (isLightTheme ? 'text-slate-600/70' : 'text-[#cccccc]/70')
             : (isLightTheme ? 'text-slate-600' : 'text-dark-400')"
@@ -122,14 +122,14 @@
     >
       <div class="flex items-center space-x-1">
         <CheckSquare class="w-3 h-3 flex-shrink-0" :class="isLightTheme ? 'text-warn' : 'text-warn'" />
-        <span class="text-[10px]">欄位 ({{ checkedCount }}/{{ nodeData.columns.length }})</span>
+        <span class="text-xxs font-medium">欄位 ({{ checkedCount }}/{{ nodeData.columns.length }})</span>
       </div>
 
       <div class="flex items-center space-x-1">
         <button
           type="button"
           @click.stop="checkAllColumns"
-          class="px-1.5 py-0.5 rounded text-[10px] transition-colors cursor-pointer border"
+          class="px-1.5 py-0.5 rounded text-xxs font-medium transition-colors cursor-pointer border"
           :class="isLightTheme ? 'bg-white hover:bg-slate-100 text-slate-700 border-slate-200' : 'bg-dark-800 hover:bg-dark-750 text-dark-200 hover:text-white border-dark-700'"
           title="全部勾選顯示"
         >
@@ -138,7 +138,7 @@
         <button
           type="button"
           @click.stop="uncheckAllColumns"
-          class="px-1.5 py-0.5 rounded text-[10px] transition-colors cursor-pointer border"
+          class="px-1.5 py-0.5 rounded text-xxs font-medium transition-colors cursor-pointer border"
           :class="isLightTheme ? 'bg-white hover:bg-slate-100 text-slate-700 border-slate-200' : 'bg-dark-800 hover:bg-dark-750 text-dark-200 hover:text-white border-dark-700'"
           title="全部取消 (已有連線的欄位將自動保留)"
         >
