@@ -182,17 +182,19 @@ test('multiple result sets default to hiding toolbars until explicitly toggled',
   assert.equal(store.isToolbarHidden('tab-m', true), true);
 });
 
-test('the hide-toolbar toggle sits next to 等分高度 and reaches every grid pane', () => {
+test('the hide-toolbar toggle sits in AppBottomPanel and reaches every grid pane', () => {
+  const panel = readSource('src/components/layout/AppBottomPanel.vue');
+  assert.match(panel, /toggleToolbarVisibility/);
+  assert.match(panel, /results\.hideToolbars/);
+  assert.match(panel, /results\.showToolbars/);
+
   const grid = readSource('src/components/results/ResultGrid.vue');
-  const hideButton = sliceBetween(grid, '<div class="flex items-center space-x-1 flex-shrink-0">', '<!-- Reset Heights Button in Stacked Mode -->');
-  assert.match(hideButton, /隱藏工具列|results\.hideToolbars/, 'the button must be labelled 隱藏工具列');
-  assert.match(hideButton, /gridLayoutStore\.toggleToolbarHidden|toggleToolbarVisibility/);
   assert.equal(
     (grid.match(/:hide-toolbar="toolbarHidden"/g) ?? []).length,
-    4,
-    'single, maximized, stacked and tabbed panes must all receive the flag'
+    3,
+    'single, maximized, and stacked panes must all receive the flag'
   );
-  assert.match(grid, /resultSets\.length > 1 && gridLayoutStore\.isToolbarHidden/);
+  assert.match(grid, /gridLayoutStore\.isToolbarHidden\(props\.tabId \?\? null, true\)/);
 
   const item = readSource('src/components/results/ResultGridItem.vue');
   assert.match(item, /hideToolbar\?: boolean;/);
@@ -217,8 +219,6 @@ test('result grids wire layout restore and capture into the Tabulator lifecycle'
   assert.match(item, /tabId\?: string \| null;/, 'result grid item must accept an explicit tab id');
 
   const grid = readFileSync(resolve(process.cwd(), 'src/components/results/ResultGrid.vue'), 'utf-8');
-  assert.match(grid, /gridLayoutStore\.getActiveSetIndex/, 'must restore the selected Result #N');
-  assert.match(grid, /gridLayoutStore\.setActiveSetIndex/, 'must remember the selected Result #N');
   assert.match(grid, /:key="itemKey\(/);
   assert.match(grid, /:tab-id="tabId"/, 'parent must pass an explicit tab id');
 

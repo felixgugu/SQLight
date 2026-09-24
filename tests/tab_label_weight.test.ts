@@ -73,19 +73,6 @@ test('inactive query result tabs carry no bold weight class', () => {
   );
 });
 
-test('result set tabs only gain weight when selected', () => {
-  const source = readSource('src/components/results/ResultGrid.vue');
-  assert.doesNotMatch(
-    source,
-    /'h-5\.5 px-2 rounded text-xxs font-medium/,
-    'the result set tab base classes must not bold every tab'
-  );
-  assert.match(
-    source,
-    /activeTabIndex === idx\s*\?\s*'bg-primary\/15 text-primary border border-primary\/40 font-semibold shadow-xs'/,
-    'the selected result set tab keeps its emphasis'
-  );
-});
 
 test('the multi result set grid badge drops the theme bold weight', () => {
   const source = readSource('src/components/results/ResultGridItem.vue');

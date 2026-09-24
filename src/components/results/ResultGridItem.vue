@@ -173,12 +173,6 @@
           class="!text-xxs !py-0.5 !px-2"
         />
 
-        <div class="h-3.5 w-px bg-dark-750 mx-0.5"></div>
-
-        <!-- Row Count Indicator -->
-        <span class="text-xxs text-dark-400">
-          <strong class="text-dark-200">{{ resultSet.rows.length.toLocaleString() }}</strong> {{ $t('results.rowCount', { count: '' }).trim() || 'rows' }}
-        </span>
 
         <!-- Maximize / Restore Toggle (when multiple result sets) -->
         <Button
@@ -280,8 +274,10 @@
             <span>{{ $t('results.totalRows', { count: resultSet.rows.length.toLocaleString() }) }}</span>
             <span class="text-dark-600">|</span>
             <span>{{ $t('results.totalColumns', { count: resultSet.columns.length }) }}</span>
-            <span class="text-dark-600">|</span>
-            <span class="text-dark-500 italic text-xxs font-medium">{{ $t('results.selectionTip') }}</span>
+            <template v-if="displayDuration !== undefined">
+              <span class="text-dark-600">|</span>
+              <span>Duration: <strong class="text-accent font-mono">{{ displayDuration }}ms</strong></span>
+            </template>
           </div>
         </template>
       </div>
@@ -659,6 +655,7 @@ const props = defineProps<{
   tabId?: string | null;
   /** Hides the grid toolbar and the info bar, leaving only the data area (multi result set view). */
   hideToolbar?: boolean;
+  durationMs?: number;
 }>();
 
 defineEmits<{
@@ -672,6 +669,16 @@ const connectionStore = useConnectionStore();
 const schemaStore = useSchemaStore();
 const dataViewStore = useDataViewStore();
 const gridLayoutStore = useGridLayoutStore();
+
+const displayDuration = computed<number | undefined>(() => {
+  if (props.durationMs !== undefined) return props.durationMs;
+  if (props.queryTab?.durationMs !== undefined) return props.queryTab.durationMs;
+  if (props.tabId) {
+    const tab = queryStore.resultTabs.find((t) => t.id === props.tabId);
+    if (tab) return tab.durationMs;
+  }
+  return queryStore.activeResultTab?.durationMs ?? queryStore.activeResult?.executionTimeMs;
+});
 
 // Quick filter input is debounced once the result set is big enough for a single filter pass to
 // be felt. Measured on a 150 column result set: ~21ms per pass at 1k rows, ~497ms at 50k rows,

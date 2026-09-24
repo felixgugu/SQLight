@@ -1,50 +1,126 @@
 <template>
   <div class="h-full bg-dark-850 flex flex-col overflow-hidden select-none border-t border-dark-700">
-    <!-- Bottom Panel Header Tabs -->
-    <div class="h-8 bg-dark-850 border-b border-dark-700 flex items-center justify-between px-2 text-xs flex-shrink-0">
-      <!-- Tabs Switcher -->
-      <div class="flex items-center space-x-1">
-        <Button
-          v-for="tab in panelTabs"
-          :key="tab.id"
-          :severity="workspaceStore.bottomPanelTab === tab.id ? 'primary' : 'secondary'"
-          :text="workspaceStore.bottomPanelTab !== tab.id"
-          size="small"
-          class="!h-6 !px-2 !py-0 !text-xs"
-          :class="workspaceStore.bottomPanelTab === tab.id ? '!font-medium' : '!font-normal'"
-          @click="workspaceStore.setBottomPanelTab(tab.id)"
+    <!-- Combined Bottom Panel Header Tabs Bar: Left (SQL Result Tabs) + Auto Space + Right (Messages | History | Stats) + Minimize -->
+    <div class="h-9 bg-dark-850 border-b border-dark-750 flex items-center justify-between px-1.5 select-none flex-shrink-0 overflow-hidden">
+      <!-- Left: SQL Result Tabs Bar (with horizontal scroll) -->
+      <div
+        ref="resultsTabsBarRef"
+        @wheel="handleResultTabsWheel"
+        class="flex-1 min-w-0 h-full flex items-end px-0.5 space-x-1.5 overflow-x-auto overflow-y-hidden select-none"
+        :class="{ 'results-inactive': workspaceStore.bottomPanelTab !== 'results' }"
+      >
+        <div
+          v-for="(rtab, idx) in queryStore.resultTabs"
+          :key="rtab.id"
+          @pointerdown="onTabPointerDown($event, idx)"
+          @click="handleTabClick(rtab.id)"
+          @contextmenu.prevent="openTabContextMenu($event, rtab)"
+          :class="[
+            'result-tab-item h-7 px-2 flex items-center space-x-1.5 text-xxs rounded-t cursor-grab active:cursor-grabbing transition-all duration-100 group max-w-[220px] border flex-shrink-0 select-none touch-none',
+            queryStore.activeResultTabId === rtab.id
+              ? 'font-medium shadow-xs border-primary active-tab'
+              : 'bg-dark-800/80 text-dark-400 hover:text-dark-200 border-dark-700 hover:border-dark-600 hover:bg-dark-800',
+            isPointerDragging && dragSourceIndex === idx ? 'opacity-35 border-dashed border-brand-400 scale-95' : '',
+            dropHoverIndex === idx && isPointerDragging && dropHoverIndex !== dragSourceIndex ? 'border-brand-400 bg-brand-500/25 ring-1 ring-brand-400 scale-102' : ''
+          ]"
+          :style="getResultTabStyle(rtab)"
+          :title="`${rtab.title}\n執行時間: ${rtab.executedAt} (${rtab.durationMs}ms)\n筆數: ${rtab.rowCount} rows\n\nSQL 語句:\n${rtab.sql}`"
         >
-          <component :is="tab.icon" class="w-3.5 h-3.5" />
-          <span>{{ tab.label }}</span>
-          <Badge
-            v-if="tab.badge !== undefined && tab.badge > 0"
-            :value="String(tab.badge)"
-            :severity="tab.id === 'messages' && hasErrorMessages ? 'danger' : 'secondary'"
-            class="!text-xxs !font-medium !px-1 !py-0 !min-w-4 !h-4"
+          <!-- Pin / Unpin Button -->
+          <button
+            type="button"
+            @click.stop="queryStore.togglePinTab(rtab.id)"
+            :class="[
+              'p-0.5 rounded transition-colors cursor-pointer',
+              rtab.isPinned
+                ? 'text-warn'
+                : (queryStore.activeResultTabId === rtab.id && workspaceStore.bottomPanelTab === 'results' ? 'text-dark-400 hover:text-dark-100' : 'text-dark-500 hover:text-dark-300 opacity-60 group-hover:opacity-100')
+            ]"
+            :title="rtab.isPinned ? '已釘選（不會被自動清理，點擊解除釘選）' : '釘選此結果（保護不被自動移除）'"
+          >
+            <Pin class="w-2.5 h-2.5" :class="rtab.isPinned ? 'fill-current' : ''" />
+          </button>
+
+          <!-- Tab Title (Normal Span OR Inline Rename Input) -->
+          <input
+            v-if="editingTabId === rtab.id"
+            ref="renameInputRef"
+            v-model="editingTabTitle"
+            @click.stop
+            @pointerdown.stop
+            @keydown.enter.stop="saveRenameTab(rtab.id)"
+            @keydown.esc.stop="cancelRenameTab"
+            @blur="saveRenameTab(rtab.id)"
+            class="bg-dark-900 border border-brand-500 text-dark-100 rounded px-1 py-0 text-xxs font-sans focus:outline-none w-20 flex-1 min-w-0"
           />
-        </Button>
+          <span
+            v-else
+            class="truncate flex-1 select-none"
+          >
+            {{ rtab.title }}
+          </span>
+
+          <!-- Status Badge (if error) -->
+          <span
+            v-if="editingTabId !== rtab.id && rtab.result.messages.some((m) => m.level === 'error')"
+            class="text-xxs px-1 py-0.2 rounded font-mono flex-shrink-0 pointer-events-none bg-rose-100 dark:bg-rose-900/90 text-danger border border-rose-200 dark:border-rose-700/50"
+          >
+            Err
+          </span>
+
+          <!-- Delete Tab Button (Disabled on the last remaining result tab) -->
+          <button
+            v-if="editingTabId !== rtab.id"
+            type="button"
+            @click.stop="queryStore.deleteResultTab(rtab.id)"
+            :disabled="queryStore.resultTabs.length <= 1"
+            :class="[
+              'p-0.5 rounded transition-opacity flex-shrink-0',
+              queryStore.resultTabs.length <= 1
+                ? 'opacity-20 cursor-not-allowed text-dark-600'
+                : (queryStore.activeResultTabId === rtab.id && workspaceStore.bottomPanelTab === 'results' ? 'text-dark-400 hover:text-danger hover:bg-rose-500/15' : 'text-dark-400 hover:text-danger hover:bg-rose-500/15 opacity-0 group-hover:opacity-100 cursor-pointer')
+            ]"
+            :title="queryStore.resultTabs.length <= 1 ? '最後一個查詢結果不可刪除' : '關閉此結果'"
+          >
+            <X class="w-2.5 h-2.5" />
+          </button>
+        </div>
       </div>
 
-      <!-- Right Summary & Panel Controls -->
-      <div class="flex items-center space-x-3 text-xxs font-mono text-dark-400">
-        <span v-if="queryStore.activeResultTab">
-          Duration: <strong class="text-accent">{{ queryStore.activeResultTab.durationMs }}ms</strong>
-        </span>
-        <span v-if="queryStore.activeResultTab">
-          Rows: <strong class="text-ok">{{ queryStore.activeResultTab.rowCount }}</strong>
-          <span
-            v-if="queryStore.activeResultTab.result.resultSets.length > 1"
-            class="text-dark-400 font-normal ml-1"
+      <!-- PrimeVue Result Tab Context Menu -->
+      <ContextMenu ref="tabContextMenuRef" :model="tabContextMenuItems" />
+
+      <!-- Right: Grid Actions + Text-style Tabs (Messages | History | Stats) + Panel Minimize Control -->
+      <div class="flex items-center space-x-1 pl-2 flex-shrink-0 text-xs">
+        <!-- Grid Actions (only when in results tab and has active result sets) -->
+        <template v-if="workspaceStore.bottomPanelTab === 'results' && activeResultSetsCount > 0">
+          <!-- 顯示工具列 / 隱藏工具列 -->
+          <button
+            type="button"
+            @click="toggleToolbarVisibility"
+            class="h-6 px-1.5 py-0.5 rounded text-xs transition-colors cursor-pointer select-none text-dark-400 hover:text-dark-200 hover:bg-dark-800"
+            :title="isToolbarHidden ? $t('results.showToolbarsTooltip') : $t('results.hideToolbarsTooltip')"
           >
-            ({{ queryStore.activeResultTab.result.resultSets.map(r => r.rowCount ?? r.rows?.length ?? 0).join(' + ') }})
-          </span>
-        </span>
-        <span v-else-if="queryStore.activeResult">
-          Duration: <strong class="text-accent">{{ queryStore.activeResult.executionTimeMs }}ms</strong>
-        </span>
-        <span v-if="!queryStore.activeResultTab && queryStore.activeResult">
-          Affected: <strong class="text-ok">{{ queryStore.activeResult.affectedRows }}</strong>
-        </span>
+            <span>{{ isToolbarHidden ? $t('results.showToolbars') : $t('results.hideToolbars') }}</span>
+          </button>
+
+          <div class="h-3.5 w-px bg-dark-750 mx-1 flex-shrink-0"></div>
+        </template>
+
+        <!-- Panel Tabs: 訊息 | 歷程 | 統計 -->
+        <button
+          v-for="tab in panelTabs"
+          :key="tab.id"
+          type="button"
+          @click="workspaceStore.setBottomPanelTab(tab.id)"
+          class="h-6 px-1.5 py-0.5 rounded text-xs transition-colors cursor-pointer select-none"
+          :class="workspaceStore.bottomPanelTab === tab.id ? '!font-medium' : '!font-normal'"
+          :style="workspaceStore.bottomPanelTab === tab.id ? { color: 'var(--p-primary-color, #3b82f6)' } : {}"
+        >
+          <span :class="workspaceStore.bottomPanelTab === tab.id ? 'text-primary' : 'text-dark-400 hover:text-dark-200'">{{ tab.label }}</span>
+        </button>
+
+        <div class="h-3.5 w-px bg-dark-750 mx-1 flex-shrink-0"></div>
 
         <Button
           icon="pi pi-minus"
@@ -61,103 +137,13 @@
 
     <!-- Panel Body -->
     <div class="flex-1 overflow-hidden bg-dark-900">
-      <!-- Tab 1: Results Grid with Multi-Result Tabs Bar -->
-      <div v-if="workspaceStore.bottomPanelTab === 'results'" class="w-full h-full flex flex-col">
-        <!-- Results History Tabs Bar (Latest at leftmost, rightwards older) -->
-        <div
-          v-if="queryStore.resultTabs.length > 0"
-          ref="resultsTabsBarRef"
-          @wheel="handleResultTabsWheel"
-          class="h-9 bg-dark-850 border-b border-dark-750 flex items-end px-1.5 space-x-1.5 overflow-x-auto overflow-y-hidden select-none flex-shrink-0"
-        >
-          <div
-            v-for="(rtab, idx) in queryStore.resultTabs"
-            :key="rtab.id"
-            @pointerdown="onTabPointerDown($event, idx)"
-            @click="handleTabClick(rtab.id)"
-            @contextmenu.prevent="openTabContextMenu($event, rtab)"
-            :class="[
-              'result-tab-item h-7 px-2 flex items-center space-x-1.5 text-xxs rounded-t cursor-grab active:cursor-grabbing transition-all duration-100 group max-w-[220px] border flex-shrink-0 select-none touch-none',
-              queryStore.activeResultTabId === rtab.id
-                ? 'font-medium shadow-xs border-primary active-tab'
-                : 'bg-dark-800/80 text-dark-400 hover:text-dark-200 border-dark-700 hover:border-dark-600 hover:bg-dark-800',
-              isPointerDragging && dragSourceIndex === idx ? 'opacity-35 border-dashed border-brand-400 scale-95' : '',
-              dropHoverIndex === idx && isPointerDragging && dropHoverIndex !== dragSourceIndex ? 'border-brand-400 bg-brand-500/25 ring-1 ring-brand-400 scale-102' : ''
-            ]"
-            :style="getResultTabStyle(rtab)"
-            :title="`${rtab.title}\n執行時間: ${rtab.executedAt} (${rtab.durationMs}ms)\n筆數: ${rtab.rowCount} rows\n\nSQL 語句:\n${rtab.sql}`"
-          >
-            <!-- Pin / Unpin Button -->
-            <button
-              type="button"
-              @click.stop="queryStore.togglePinTab(rtab.id)"
-              :class="[
-                'p-0.5 rounded transition-colors cursor-pointer',
-                rtab.isPinned
-                  ? 'text-warn'
-                  : (queryStore.activeResultTabId === rtab.id ? 'text-dark-400 hover:text-dark-100' : 'text-dark-500 hover:text-dark-300 opacity-60 group-hover:opacity-100')
-              ]"
-              :title="rtab.isPinned ? '已釘選（不會被自動清理，點擊解除釘選）' : '釘選此結果（保護不被自動移除）'"
-            >
-              <Pin class="w-2.5 h-2.5" :class="rtab.isPinned ? 'fill-current' : ''" />
-            </button>
-
-            <!-- Tab Title (Normal Span OR Inline Rename Input) -->
-            <input
-              v-if="editingTabId === rtab.id"
-              ref="renameInputRef"
-              v-model="editingTabTitle"
-              @click.stop
-              @pointerdown.stop
-              @keydown.enter.stop="saveRenameTab(rtab.id)"
-              @keydown.esc.stop="cancelRenameTab"
-              @blur="saveRenameTab(rtab.id)"
-              class="bg-dark-900 border border-brand-500 text-dark-100 rounded px-1 py-0 text-xxs font-sans focus:outline-none w-20 flex-1 min-w-0"
-            />
-            <span
-              v-else
-              class="truncate flex-1 select-none"
-            >
-              {{ rtab.title }}
-            </span>
-
-            <!-- Status Badge (if error) -->
-            <span
-              v-if="editingTabId !== rtab.id && rtab.result.messages.some((m) => m.level === 'error')"
-              class="text-xxs px-1 py-0.2 rounded font-mono flex-shrink-0 pointer-events-none bg-rose-100 dark:bg-rose-900/90 text-danger border border-rose-200 dark:border-rose-700/50"
-            >
-              Err
-            </span>
-
-            <!-- Delete Tab Button (Disabled on the last remaining result tab) -->
-            <button
-              v-if="editingTabId !== rtab.id"
-              type="button"
-              @click.stop="queryStore.deleteResultTab(rtab.id)"
-              :disabled="queryStore.resultTabs.length <= 1"
-              :class="[
-                'p-0.5 rounded transition-opacity flex-shrink-0',
-                queryStore.resultTabs.length <= 1
-                  ? 'opacity-20 cursor-not-allowed text-dark-600'
-                  : (queryStore.activeResultTabId === rtab.id ? 'text-dark-400 hover:text-danger hover:bg-rose-500/15' : 'text-dark-400 hover:text-danger hover:bg-rose-500/15 opacity-0 group-hover:opacity-100 cursor-pointer')
-              ]"
-              :title="queryStore.resultTabs.length <= 1 ? '最後一個查詢結果不可刪除' : '關閉此結果'"
-            >
-              <X class="w-2.5 h-2.5" />
-            </button>
-          </div>
-        </div>
-
-        <!-- PrimeVue Result Tab Context Menu -->
-        <ContextMenu ref="tabContextMenuRef" :model="tabContextMenuItems" />
-
-        <!-- Result Grid Viewer Area -->
-        <div class="flex-1 min-h-0 overflow-hidden">
-          <ResultGrid
-            :result-sets="queryStore.activeResult?.resultSets ?? []"
-            :tab-id="queryStore.activeResultTabId"
-          />
-        </div>
+      <!-- Tab 1: Results Grid -->
+      <div v-if="workspaceStore.bottomPanelTab === 'results'" class="w-full h-full flex flex-col min-h-0 overflow-hidden">
+        <ResultGrid
+          :result-sets="queryStore.activeResult?.resultSets ?? []"
+          :tab-id="queryStore.activeResultTabId"
+          :duration-ms="queryStore.activeResultTab?.durationMs"
+        />
       </div>
 
       <!-- Tab 2: Messages -->
@@ -187,13 +173,13 @@
 import { ref, computed, reactive, nextTick, onBeforeUnmount } from 'vue';
 import { useI18n } from 'vue-i18n';
 import Button from 'primevue/button';
-import Badge from 'primevue/badge';
 import ContextMenu from 'primevue/contextmenu';
-import { TableProperties, MessageSquare, History, Pin, X, Gauge } from 'lucide-vue-next';
+import { Pin, X } from 'lucide-vue-next';
 import { useWorkspaceStore } from '@/stores/workspaceStore';
 import { useQueryStore } from '@/stores/queryStore';
 import { useSettingsStore } from '@/stores/settingsStore';
 import { useConnectionStore } from '@/stores/connectionStore';
+import { useGridLayoutStore } from '@/stores/gridLayoutStore';
 import ResultGrid from '@/components/results/ResultGrid.vue';
 import ResultMessages from '@/components/results/ResultMessages.vue';
 import QueryHistory from '@/components/results/QueryHistory.vue';
@@ -206,6 +192,19 @@ const workspaceStore = useWorkspaceStore();
 const queryStore = useQueryStore();
 const settingsStore = useSettingsStore();
 const connectionStore = useConnectionStore();
+const gridLayoutStore = useGridLayoutStore();
+
+const activeResultSetsCount = computed(() => {
+  return queryStore.activeResultTab?.result?.resultSets?.length ?? queryStore.activeResult?.resultSets?.length ?? 0;
+});
+
+const isToolbarHidden = computed(() => {
+  return gridLayoutStore.isToolbarHidden(queryStore.activeResultTabId, true);
+});
+
+function toggleToolbarVisibility() {
+  gridLayoutStore.toggleToolbarHidden(queryStore.activeResultTabId, true);
+}
 
 const resultsTabsBarRef = ref<HTMLDivElement | null>(null);
 const dragSourceIndex = ref<number | null>(null);
@@ -309,6 +308,7 @@ function handleTabClick(tabId: string) {
   if (hasMovedBeyondThreshold || isPointerDragging.value) {
     return;
   }
+  workspaceStore.setBottomPanelTab('results');
   queryStore.selectResultTab(tabId);
 }
 
@@ -430,34 +430,19 @@ onBeforeUnmount(() => {
   document.body.style.userSelect = '';
 });
 
-const hasErrorMessages = computed(() => {
-  return queryStore.sessionMessages.some((m) => m.level === 'error');
-});
 
-const panelTabs = computed<{ id: BottomPanelTab; label: string; icon: typeof TableProperties; badge?: number }[]>(() => [
-  {
-    id: 'results',
-    label: t('results.tabResults'),
-    icon: TableProperties,
-    badge: queryStore.resultTabs.length > 0 ? queryStore.resultTabs.length : (queryStore.activeResult?.resultSets[0]?.rowCount ?? 0),
-  },
+const panelTabs = computed<{ id: BottomPanelTab; label: string }[]>(() => [
   {
     id: 'messages',
     label: t('results.tabMessages'),
-    icon: MessageSquare,
-    badge: queryStore.sessionMessages.length,
   },
   {
     id: 'history',
     label: t('results.tabHistory'),
-    icon: History,
-    badge: queryStore.history.length,
   },
   {
     id: 'stats',
     label: t('results.tabStats'),
-    icon: Gauge,
-    badge: queryStore.activeExecutionStats?.tableStats.length,
   },
 ]);
 
@@ -525,5 +510,16 @@ function getResultTabStyle(rtab: QueryResultTab): Record<string, string> {
   margin-bottom: -1px;
   z-index: 10;
   box-shadow: 0 -1px 3px rgba(0, 0, 0, 0.06);
+}
+
+.results-inactive .result-tab-item.active-tab {
+  border-top-color: rgb(var(--color-dark-700)) !important;
+  border-left-color: rgb(var(--color-dark-700)) !important;
+  border-right-color: rgb(var(--color-dark-700)) !important;
+  border-bottom-color: rgb(var(--color-dark-750)) !important;
+  background-color: rgba(var(--color-dark-800), 0.5) !important;
+  color: rgb(var(--color-dark-400)) !important;
+  margin-bottom: 0;
+  box-shadow: none;
 }
 </style>

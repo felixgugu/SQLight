@@ -115,16 +115,18 @@ test('the Explorer status tag overrides the bold PrimeVue tag weight', () => {
  */
 const GRID_CHROME_ROOT = /w-full h-full flex flex-col bg-dark-900 overflow-hidden[^"]*/;
 
+const GRID_CONTAINERS = [
+  'src/components/results/ResultGridItem.vue',
+  'src/components/results/ResultGrid.vue',
+  'src/components/editor/TableDataViewer.vue',
+  'src/components/editor/TableStructureViewer.vue',
+];
+
 const GRID_TOOLBARS = [
   {
     path: 'src/components/results/ResultGridItem.vue',
     start: '<!-- Subheader Toolbar',
     end: '<!-- Empty State -->',
-  },
-  {
-    path: 'src/components/results/ResultGrid.vue',
-    start: '<!-- View Mode Header Bar',
-    end: '<!-- Mode 1: Stacked Multi-Grid View',
   },
   {
     path: 'src/components/editor/TableDataViewer.vue',
@@ -139,7 +141,7 @@ const GRID_TOOLBARS = [
 ];
 
 test('the grid containers opt into the global UI font', () => {
-  for (const { path } of GRID_TOOLBARS) {
+  for (const path of GRID_CONTAINERS) {
     const containerLine = readSource(path)
       .split('\n')
       .find((line) => GRID_CHROME_ROOT.test(line));

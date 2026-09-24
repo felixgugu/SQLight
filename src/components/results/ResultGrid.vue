@@ -18,181 +18,70 @@
       :set-index="0"
       :total-sets="1"
       :hide-toolbar="toolbarHidden"
+      :duration-ms="durationMs"
       class="flex-1 w-full"
     />
 
-    <!-- Multiple Result Sets (> 1) -->
-    <template v-else>
-      <!-- View Mode Header Bar (Stacked SSMS vs Tabbed) -->
-      <div class="h-7 bg-dark-850 border-b border-dark-750 flex items-center justify-between px-2 flex-shrink-0">
-        <!-- Left: Result Sets Overview / Tabbed Buttons -->
-        <div class="flex items-center space-x-1.5 min-w-0">
-          <div class="flex items-center space-x-1 text-xxs font-sans text-primary font-medium px-1.5 py-0.5 rounded bg-dark-800 border border-dark-700">
-            <Layers class="w-3 h-3 text-primary" />
-            <span>{{ $t('results.resultSetsOverview', { count: effectiveResultSets.length, total: totalRowsSum.toLocaleString() }) }}</span>
-          </div>
-
-          <!-- If in Tabbed Mode, render tab buttons -->
-          <div v-if="viewMode === 'tabbed'" class="flex items-center space-x-1 ml-1 overflow-x-auto">
-            <button
-              v-for="(set, idx) in effectiveResultSets"
-              :key="idx"
-              @click="activeTabIndex = idx"
-              :class="[
-                'h-5.5 px-2 rounded text-xxs transition-colors flex items-center space-x-1 cursor-pointer flex-shrink-0',
-                activeTabIndex === idx
-                  ? 'bg-primary/15 text-primary border border-primary/40 font-semibold shadow-xs'
-                  : 'text-dark-400 hover:text-dark-100 hover:bg-dark-800 border border-transparent'
-              ]"
-            >
-              <span>Result #{{ idx + 1 }}</span>
-              <span :class="activeTabIndex === idx ? 'text-primary/70 font-semibold' : 'text-dark-400'">({{ set.rowCount ?? set.rows.length }})</span>
-            </button>
-          </div>
-
-          <!-- Notice when a grid is maximized in Stacked mode -->
-          <div
-            v-else-if="maximizedIndex !== null"
-            class="flex items-center space-x-1.5 text-xxs text-warn bg-amber-500/15 border border-amber-500/30 px-2 py-0.5 rounded"
-          >
-            <span>{{ $t('results.maximizedResult', { index: maximizedIndex + 1 }) }}</span>
-            <button
-              @click="maximizedIndex = null"
-              class="text-warn hover:text-warn underline cursor-pointer font-medium"
-            >
-              {{ $t('results.restoreMultiGrid') }}
-            </button>
-          </div>
-        </div>
-
-        <!-- Right: Layout Switcher & Actions -->
-        <div class="flex items-center space-x-1 flex-shrink-0">
-          <!-- Hide Grid Toolbars / Info Bars (applies to every grid of this result tab) -->
-          <button
-            v-if="resultSets.length > 1"
-            type="button"
-            @click="toggleToolbarVisibility"
-            :class="[
-              'px-2 py-0.5 rounded text-xxs bg-dark-800 hover:bg-dark-750 border transition-colors flex items-center space-x-1 cursor-pointer',
-              toolbarHidden
-                ? 'border-primary/50 text-primary'
-                : 'border-dark-700 text-dark-300 hover:text-dark-100'
-            ]"
-            :title="toolbarHidden ? $t('results.showToolbarsTooltip') : $t('results.hideToolbarsTooltip')"
-          >
-            <component :is="toolbarHidden ? Eye : EyeOff" class="w-2.5 h-2.5" />
-            <span>{{ toolbarHidden ? $t('results.showToolbars') : $t('results.hideToolbars') }}</span>
-          </button>
-
-          <!-- Reset Heights Button in Stacked Mode -->
-          <button
-            v-if="viewMode === 'stacked' && maximizedIndex === null"
-            type="button"
-            @click="resetEqualHeights"
-            class="px-2 py-0.5 rounded text-xxs bg-dark-800 hover:bg-dark-750 text-dark-300 hover:text-dark-100 border border-dark-700 transition-colors flex items-center space-x-1 cursor-pointer"
-            :title="$t('results.equalHeightsTooltip')"
-          >
-            <Split class="w-2.5 h-2.5" />
-            <span>{{ $t('results.equalHeights') }}</span>
-          </button>
-
-          <!-- Toggle View Mode Button -->
-          <button
-            type="button"
-            @click="toggleViewMode"
-            class="px-2 py-0.5 rounded text-xxs bg-dark-800 hover:bg-dark-750 text-dark-300 hover:text-dark-100 border border-dark-700 transition-colors flex items-center space-x-1 cursor-pointer"
-            :title="viewMode === 'stacked' ? $t('results.switchToTabsTooltip') : $t('results.switchToStackedTooltip')"
-          >
-            <component :is="viewMode === 'stacked' ? Rows : LayoutGrid" class="w-2.5 h-2.5 text-primary" />
-            <span>{{ viewMode === 'stacked' ? $t('results.ssmsStacked') : $t('results.tabbedView') }}</span>
-          </button>
-        </div>
-      </div>
-
-      <!-- Mode 1: Stacked Multi-Grid View (SSMS Style) -->
+    <!-- Multiple Result Sets (> 1): Always Stacked SSMS Multi-Grid View -->
+    <div
+      v-else
+      class="flex-1 w-full flex flex-col overflow-hidden min-h-0"
+    >
+      <!-- If one grid is maximized -->
       <div
-        v-if="viewMode === 'stacked'"
-        class="flex-1 w-full flex flex-col overflow-hidden min-h-0"
-      >
-        <!-- If one grid is maximized -->
-        <div
-          v-if="maximizedIndex !== null && effectiveResultSets[maximizedIndex]"
-          class="flex-1 w-full overflow-hidden"
-        >
-          <ResultGridItem
-            :key="itemKey(maximizedIndex)"
-            :tab-id="tabId"
-            :result-set="effectiveResultSets[maximizedIndex]!"
-            :set-index="maximizedIndex"
-            :total-sets="effectiveResultSets.length"
-            :is-maximized="true"
-            :hide-toolbar="toolbarHidden"
-            @toggle-maximize="toggleMaximize(maximizedIndex)"
-          />
-        </div>
-
-        <!-- Normal Stacked Layout with Splitters -->
-        <template v-else>
-          <template v-for="(set, idx) in effectiveResultSets" :key="idx">
-            <div
-              :style="paneHeights[idx] ? { height: `${paneHeights[idx]}px` } : { flex: '1 1 0%' }"
-              class="w-full min-h-[60px] flex-shrink-0 overflow-hidden"
-            >
-              <ResultGridItem
-                :key="itemKey(idx)"
-                :tab-id="tabId"
-                :result-set="set"
-                :set-index="idx"
-                :total-sets="effectiveResultSets.length"
-                :is-maximized="false"
-                :hide-toolbar="toolbarHidden"
-                @toggle-maximize="toggleMaximize(idx)"
-              />
-            </div>
-
-            <!-- Draggable Horizontal Splitter between panes -->
-            <ResizableSplitter
-              v-if="idx < effectiveResultSets.length - 1"
-              direction="vertical"
-              :is-dragging="draggingSplitterIndex === idx"
-              @pointerdown="onSplitterPointerDown(idx, $event)"
-              @dblclick="resetEqualHeights"
-            />
-          </template>
-        </template>
-      </div>
-
-      <!-- Mode 2: Tabbed Multi-Grid View -->
-      <div
-        v-else-if="viewMode === 'tabbed' && effectiveResultSets[activeTabIndex]"
+        v-if="maximizedIndex !== null && effectiveResultSets[maximizedIndex]"
         class="flex-1 w-full overflow-hidden"
       >
         <ResultGridItem
-          :key="itemKey(activeTabIndex)"
+          :key="itemKey(maximizedIndex)"
           :tab-id="tabId"
-          :result-set="effectiveResultSets[activeTabIndex]!"
-          :set-index="activeTabIndex"
+          :result-set="effectiveResultSets[maximizedIndex]!"
+          :set-index="maximizedIndex"
           :total-sets="effectiveResultSets.length"
-          :is-maximized="false"
+          :is-maximized="true"
           :hide-toolbar="toolbarHidden"
-          @toggle-maximize="toggleMaximize(activeTabIndex)"
+          :duration-ms="durationMs"
+          @toggle-maximize="toggleMaximize(maximizedIndex)"
         />
       </div>
-    </template>
+
+      <!-- Normal Stacked Layout with Splitters -->
+      <template v-else>
+        <template v-for="(set, idx) in effectiveResultSets" :key="idx">
+          <div
+            :style="paneHeights[idx] ? { height: `${paneHeights[idx]}px` } : { flex: '1 1 0%' }"
+            class="w-full min-h-[60px] flex-shrink-0 overflow-hidden"
+          >
+            <ResultGridItem
+              :key="itemKey(idx)"
+              :tab-id="tabId"
+              :result-set="set"
+              :set-index="idx"
+              :total-sets="effectiveResultSets.length"
+              :is-maximized="false"
+              :hide-toolbar="toolbarHidden"
+              :duration-ms="durationMs"
+              @toggle-maximize="toggleMaximize(idx)"
+            />
+          </div>
+
+          <!-- Draggable Horizontal Splitter between panes -->
+          <ResizableSplitter
+            v-if="idx < effectiveResultSets.length - 1"
+            direction="vertical"
+            :is-dragging="draggingSplitterIndex === idx"
+            @pointerdown="onSplitterPointerDown(idx, $event)"
+            @dblclick="resetEqualHeights"
+          />
+        </template>
+      </template>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onBeforeUnmount, nextTick } from 'vue';
-import {
-  Inbox,
-  Layers,
-  Split,
-  Rows,
-  LayoutGrid,
-  Eye,
-  EyeOff,
-} from 'lucide-vue-next';
+import { Inbox } from 'lucide-vue-next';
 import ResizableSplitter from '@/components/common/ResizableSplitter.vue';
 import ResultGridItem from '@/components/results/ResultGridItem.vue';
 import { useGridLayoutStore } from '@/stores/gridLayoutStore';
@@ -201,6 +90,7 @@ import type { ResultSet } from '@/types/query';
 const props = defineProps<{
   resultSets: ResultSet[];
   tabId?: string | null;
+  durationMs?: number;
 }>();
 
 const fallbackEmptyResultSet: ResultSet = {
@@ -217,8 +107,6 @@ const effectiveResultSets = computed<ResultSet[]>(() => {
 });
 
 const containerRef = ref<HTMLDivElement | null>(null);
-const viewMode = ref<'stacked' | 'tabbed'>('stacked');
-const activeTabIndex = ref(0);
 const maximizedIndex = ref<number | null>(null);
 
 const gridLayoutStore = useGridLayoutStore();
@@ -226,16 +114,13 @@ const gridLayoutStore = useGridLayoutStore();
 /**
  * Per result tab view mode: hides the toolbar and info bar of every grid in this tab. The state
  * lives in the layout store so it survives switching between result tabs and bottom panel tabs,
- * and is dropped when the result tab closes. Single result sets keep their toolbar because the
- * header carrying this toggle only renders for multiple result sets.
+ * and is dropped when the result tab closes. Single result sets and multi result sets both
+ * default to hiding toolbars and share this toggle.
  */
 const toolbarHidden = computed(
-  () => props.resultSets.length > 1 && gridLayoutStore.isToolbarHidden(props.tabId ?? null, true)
+  () => (props.resultSets.length > 1 && gridLayoutStore.isToolbarHidden(props.tabId ?? null, true)) || gridLayoutStore.isToolbarHidden(props.tabId ?? null, true)
 );
 
-function toggleToolbarVisibility() {
-  gridLayoutStore.toggleToolbarHidden(props.tabId ?? null, true);
-}
 
 /** Component key doubles as the persistent layout key for the result set it renders. */
 function itemKey(setIndex: number | null | undefined): string {
@@ -245,20 +130,6 @@ function itemKey(setIndex: number | null | undefined): string {
 // Pixel heights for each stacked pane
 const paneHeights = ref<number[]>([]);
 const draggingSplitterIndex = ref<number | null>(null);
-
-const totalRowsSum = computed(() => {
-  return effectiveResultSets.value.reduce((sum, rs) => sum + (rs.rowCount ?? rs.rows?.length ?? 0), 0);
-});
-
-function toggleViewMode() {
-  viewMode.value = viewMode.value === 'stacked' ? 'tabbed' : 'stacked';
-  maximizedIndex.value = null;
-  if (viewMode.value === 'stacked') {
-    nextTick(() => {
-      recalculateHeights();
-    });
-  }
-}
 
 function toggleMaximize(index: number) {
   if (maximizedIndex.value === index) {
@@ -270,10 +141,8 @@ function toggleMaximize(index: number) {
 
 function getAvailableHeight(): number {
   if (!containerRef.value) return 0;
-  // Exclude view mode toolbar (28px = h-7) and all horizontal splitters (6px each)
-  const headerHeight = effectiveResultSets.value.length > 1 ? 28 : 0;
   const splittersTotal = Math.max(0, (effectiveResultSets.value.length - 1) * 6);
-  const total = containerRef.value.clientHeight - headerHeight - splittersTotal;
+  const total = containerRef.value.clientHeight - splittersTotal;
   return Math.max(total, 60 * effectiveResultSets.value.length);
 }
 
@@ -319,13 +188,10 @@ function recalculateHeights() {
   });
 }
 
-// Watch for effectiveResultSets changes to re-init heights; remember which Result #N was selected per tab.
+// Watch for effectiveResultSets changes to re-init heights
 watch(
   () => effectiveResultSets.value,
-  (sets) => {
-    const remembered = gridLayoutStore.getActiveSetIndex(props.tabId ?? null);
-    const maxIndex = Math.max(0, sets.length - 1);
-    activeTabIndex.value = remembered == null ? 0 : Math.min(Math.max(remembered, 0), maxIndex);
+  () => {
     maximizedIndex.value = null;
     nextTick(() => {
       resetEqualHeights();
@@ -333,10 +199,6 @@ watch(
   },
   { deep: false }
 );
-
-watch(activeTabIndex, (index) => {
-  gridLayoutStore.setActiveSetIndex(props.tabId ?? null, index);
-});
 
 // Splitter Dragging Logic
 let startDragY = 0;
@@ -409,7 +271,7 @@ let resizeObserver: ResizeObserver | null = null;
 onMounted(() => {
   if (containerRef.value && typeof ResizeObserver !== 'undefined') {
     resizeObserver = new ResizeObserver(() => {
-      if (viewMode.value === 'stacked' && draggingSplitterIndex.value === null) {
+      if (draggingSplitterIndex.value === null) {
         recalculateHeights();
       }
     });
