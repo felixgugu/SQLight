@@ -116,24 +116,17 @@
             />
             <span
               v-else
-              @dblclick.stop="startRenameTab(rtab)"
-              class="truncate flex-1 cursor-text"
-              title="雙擊或右鍵重新命名此結果分頁"
+              class="truncate flex-1 select-none"
             >
               {{ rtab.title }}
             </span>
 
-            <!-- Status / Row Count Badge (if error or custom title without row count) -->
+            <!-- Status Badge (if error) -->
             <span
-              v-if="editingTabId !== rtab.id && (rtab.result.messages.some((m) => m.level === 'error') || !rtab.title.includes('r'))"
-              :class="[
-                'text-xxs px-1 py-0.2 rounded font-mono flex-shrink-0 pointer-events-none',
-                rtab.result.messages.some((m) => m.level === 'error')
-                  ? 'bg-rose-100 dark:bg-rose-900/90 text-danger border border-rose-200 dark:border-rose-700/50'
-                  : (queryStore.activeResultTabId === rtab.id ? 'bg-dark-750 text-dark-200' : 'bg-dark-700 text-dark-300')
-              ]"
+              v-if="editingTabId !== rtab.id && rtab.result.messages.some((m) => m.level === 'error')"
+              class="text-xxs px-1 py-0.2 rounded font-mono flex-shrink-0 pointer-events-none bg-rose-100 dark:bg-rose-900/90 text-danger border border-rose-200 dark:border-rose-700/50"
             >
-              {{ rtab.result.messages.some((m) => m.level === 'error') ? 'Err' : `${rtab.rowCount}r` }}
+              Err
             </span>
 
             <!-- Delete Tab Button (Disabled on the last remaining result tab) -->

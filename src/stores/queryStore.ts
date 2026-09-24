@@ -384,8 +384,8 @@ export const useQueryStore = defineStore('query', () => {
       const seq = queryExecutionSeq;
       const setsLabel = result.resultSets.length > 1 ? ` [${result.resultSets.length} sets]` : '';
       const tabTitle = isShowplan
-        ? `${seq}.${tableName} [Plan]${setsLabel} ${rowCount}r`
-        : `${seq}.${tableName}${setsLabel} ${rowCount}r`;
+        ? `${seq}.${tableName} [Plan]${setsLabel}`
+        : `${seq}.${tableName}${setsLabel}`;
 
       const newTab: QueryResultTab = {
         id: `tab-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
@@ -535,7 +535,7 @@ export const useQueryStore = defineStore('query', () => {
 
       queryExecutionSeq++;
       const seq = queryExecutionSeq;
-      const tabTitle = `${seq}.${tableName} 0r`;
+      const tabTitle = `${seq}.${tableName}`;
 
       const errorResult: QueryResult = {
         resultSets: [],

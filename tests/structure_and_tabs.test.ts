@@ -72,7 +72,7 @@ test('newly added tabs are always placed at the front (index 0 / leftmost)', () 
   assert.equal(store.activeTabId, store.tabs[0].id);
 });
 
-test('queryExecutionSeq increments sequentially and titles follow $SEQ.$Tabname $rowNumber r', async () => {
+test('queryExecutionSeq increments sequentially and titles follow $SEQ.$Tabname', async () => {
   const store = useQueryStore();
 
   queryService.executeQuery = async (_connId, _db, sql) => {
@@ -95,14 +95,14 @@ test('queryExecutionSeq increments sequentially and titles follow $SEQ.$Tabname 
   // First query
   await store.execute('conn-1', 'master', 'SELECT * FROM Customers;');
   assert.equal(store.resultTabs.length, 1);
-  assert.equal(store.resultTabs[0]?.title, '1.Customers 50r');
+  assert.equal(store.resultTabs[0]?.title, '1.Customers');
   assert.equal(store.resultTabs[0]?.seq, 1);
   assert.equal(store.resultTabs[0]?.rowCount, 50);
 
   // Second query
   await store.execute('conn-1', 'master', 'SELECT * FROM Orders;');
   assert.equal(store.resultTabs.length, 2);
-  assert.equal(store.resultTabs[0]?.title, '2.Orders 12r');
+  assert.equal(store.resultTabs[0]?.title, '2.Orders');
   assert.equal(store.resultTabs[0]?.seq, 2);
   assert.equal(store.resultTabs[0]?.rowCount, 12);
 
@@ -112,7 +112,7 @@ test('queryExecutionSeq increments sequentially and titles follow $SEQ.$Tabname 
   };
   await store.execute('conn-1', 'master', 'SELECT * FROM NonExistentTable;');
   assert.equal(store.resultTabs.length, 3);
-  assert.equal(store.resultTabs[0]?.title, '3.NonExistentTable 0r');
+  assert.equal(store.resultTabs[0]?.title, '3.NonExistentTable');
   assert.equal(store.resultTabs[0]?.seq, 3);
   assert.equal(store.resultTabs[0]?.rowCount, 0);
 });
@@ -144,7 +144,7 @@ test('queryStore aggregates rowCount across multiple resultSets and adds [N sets
   await store.execute('conn-1', 'master', 'SELECT TOP 1000 * FROM tblLoginData; SELECT TOP 100 * FROM tblServiceEntry;');
   assert.equal(store.resultTabs.length, 1);
   assert.equal(store.resultTabs[0]?.rowCount, 45); // 18 + 27
-  assert.equal(store.resultTabs[0]?.title, '1.tblLoginData [2 sets] 45r');
+  assert.equal(store.resultTabs[0]?.title, '1.tblLoginData [2 sets]');
 
   // Multi-query with 3 result sets (18, 27, 30 rows)
   queryService.executeQuery = async () => {
@@ -175,7 +175,7 @@ test('queryStore aggregates rowCount across multiple resultSets and adds [N sets
   await store.execute('conn-1', 'master', 'SELECT * FROM tbl1; SELECT * FROM tbl2; SELECT * FROM tbl3;');
   assert.equal(store.resultTabs.length, 2);
   assert.equal(store.resultTabs[0]?.rowCount, 75); // 18 + 27 + 30
-  assert.equal(store.resultTabs[0]?.title, '2.tbl1 [3 sets] 75r');
+  assert.equal(store.resultTabs[0]?.title, '2.tbl1 [3 sets]');
 });
 
 
