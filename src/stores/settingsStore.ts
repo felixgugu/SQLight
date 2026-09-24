@@ -38,12 +38,26 @@ export interface AppSettings {
   maxResultTabs: number;
   defaultMaxRows: number | null;
   editorHighlightColor: string;
+  /** PNG data URL painted behind the SQL editor, aligned to its bottom-right corner. */
+  editorBackgroundImage: string;
+  editorBackgroundImageEnabled: boolean;
+  /** Backdrop opacity, 0-1. Keeps code readable when the artwork sits under the text. */
+  editorBackgroundImageOpacity: number;
+  /** Backdrop height as a percentage of the editor viewport (10-100). */
+  editorBackgroundImageSize: number;
   gridFontFamily: string;
   erTheme: 'dark' | 'light';
   hiddenTableRules?: FilterRule[];
 }
 
 const STORAGE_KEY = 'sqlight_app_settings';
+
+/** Coerces a persisted number into `[min, max]`, falling back when it is missing or not numeric. */
+function clampNumber(value: unknown, min: number, max: number, fallback: number): number {
+  const num = typeof value === 'number' ? value : Number(value);
+  if (!Number.isFinite(num)) return fallback;
+  return Math.min(max, Math.max(min, num));
+}
 
 const DEFAULT_SETTINGS: AppSettings = {
   colorMode: 'dark',
@@ -62,6 +76,10 @@ const DEFAULT_SETTINGS: AppSettings = {
   maxResultTabs: 10,
   defaultMaxRows: 10000,
   editorHighlightColor: '#feffe0',
+  editorBackgroundImage: '',
+  editorBackgroundImageEnabled: false,
+  editorBackgroundImageOpacity: 0.25,
+  editorBackgroundImageSize: 60,
   gridFontFamily: DEFAULT_GRID_FONT_FAMILY,
   erTheme: 'dark',
   hiddenTableRules: [],
@@ -105,6 +123,14 @@ export const useSettingsStore = defineStore('settings', () => {
   const maxResultTabs = ref<number>(initial.maxResultTabs);
   const defaultMaxRows = ref<number | null>(initial.defaultMaxRows);
   const editorHighlightColor = ref<string>(initial.editorHighlightColor || '#feffe0');
+  const editorBackgroundImage = ref<string>(initial.editorBackgroundImage || '');
+  const editorBackgroundImageEnabled = ref<boolean>(initial.editorBackgroundImageEnabled ?? false);
+  const editorBackgroundImageOpacity = ref<number>(
+    clampNumber(initial.editorBackgroundImageOpacity, 0, 1, DEFAULT_SETTINGS.editorBackgroundImageOpacity)
+  );
+  const editorBackgroundImageSize = ref<number>(
+    clampNumber(initial.editorBackgroundImageSize, 10, 100, DEFAULT_SETTINGS.editorBackgroundImageSize)
+  );
   const gridFontFamily = ref<string>(initial.gridFontFamily || DEFAULT_GRID_FONT_FAMILY);
   const erTheme = ref<'dark' | 'light'>(initial.erTheme || 'dark');
   const hiddenTableRules = ref<FilterRule[]>(
@@ -147,6 +173,37 @@ export const useSettingsStore = defineStore('settings', () => {
   function setLocale(newLocale: SupportedLocale, primevueConfig?: any) {
     locale.value = newLocale;
     setAppLocale(newLocale, primevueConfig);
+  }
+
+  /**
+   * Stores (or clears) the editor backdrop image. Selecting an image enables the backdrop so the
+   * user sees the result immediately; clearing it disables the layer as well.
+   */
+  function setEditorBackgroundImage(dataUrl: string) {
+    editorBackgroundImage.value = dataUrl || '';
+    editorBackgroundImageEnabled.value = Boolean(dataUrl);
+  }
+
+  function setEditorBackgroundImageEnabled(enabled: boolean) {
+    editorBackgroundImageEnabled.value = enabled;
+  }
+
+  function setEditorBackgroundImageOpacity(opacity: number) {
+    editorBackgroundImageOpacity.value = clampNumber(
+      opacity,
+      0,
+      1,
+      DEFAULT_SETTINGS.editorBackgroundImageOpacity
+    );
+  }
+
+  function setEditorBackgroundImageSize(size: number) {
+    editorBackgroundImageSize.value = clampNumber(
+      size,
+      10,
+      100,
+      DEFAULT_SETTINGS.editorBackgroundImageSize
+    );
   }
 
   function addFilterRule(pattern: string, target: FilterTarget = 'all', description?: string) {
@@ -241,6 +298,10 @@ export const useSettingsStore = defineStore('settings', () => {
       maxResultTabs: maxResultTabs.value,
       defaultMaxRows: defaultMaxRows.value,
       editorHighlightColor: editorHighlightColor.value,
+      editorBackgroundImage: editorBackgroundImage.value,
+      editorBackgroundImageEnabled: editorBackgroundImageEnabled.value,
+      editorBackgroundImageOpacity: editorBackgroundImageOpacity.value,
+      editorBackgroundImageSize: editorBackgroundImageSize.value,
       gridFontFamily: gridFontFamily.value,
       erTheme: erTheme.value,
       hiddenTableRules: hiddenTableRules.value,
@@ -270,6 +331,10 @@ export const useSettingsStore = defineStore('settings', () => {
       maxResultTabs,
       defaultMaxRows,
       editorHighlightColor,
+      editorBackgroundImage,
+      editorBackgroundImageEnabled,
+      editorBackgroundImageOpacity,
+      editorBackgroundImageSize,
       gridFontFamily,
       erTheme,
       hiddenTableRules,
@@ -297,6 +362,10 @@ export const useSettingsStore = defineStore('settings', () => {
     maxResultTabs.value = DEFAULT_SETTINGS.maxResultTabs;
     defaultMaxRows.value = DEFAULT_SETTINGS.defaultMaxRows;
     editorHighlightColor.value = DEFAULT_SETTINGS.editorHighlightColor;
+    editorBackgroundImage.value = DEFAULT_SETTINGS.editorBackgroundImage;
+    editorBackgroundImageEnabled.value = DEFAULT_SETTINGS.editorBackgroundImageEnabled;
+    editorBackgroundImageOpacity.value = DEFAULT_SETTINGS.editorBackgroundImageOpacity;
+    editorBackgroundImageSize.value = DEFAULT_SETTINGS.editorBackgroundImageSize;
     gridFontFamily.value = DEFAULT_SETTINGS.gridFontFamily;
     erTheme.value = DEFAULT_SETTINGS.erTheme;
     hiddenTableRules.value = [];
@@ -325,6 +394,14 @@ export const useSettingsStore = defineStore('settings', () => {
     maxResultTabs,
     defaultMaxRows,
     editorHighlightColor,
+    editorBackgroundImage,
+    editorBackgroundImageEnabled,
+    editorBackgroundImageOpacity,
+    editorBackgroundImageSize,
+    setEditorBackgroundImage,
+    setEditorBackgroundImageEnabled,
+    setEditorBackgroundImageOpacity,
+    setEditorBackgroundImageSize,
     gridFontFamily,
     erTheme,
     hiddenTableRules,

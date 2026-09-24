@@ -343,6 +343,9 @@
             />
           </div>
         </div>
+
+        <!-- Custom editor backdrop image (bottom-right aligned) -->
+        <EditorBackgroundSettings />
       </div>
 
       <!-- Tab 2: Query & Results Settings -->
@@ -602,6 +605,7 @@ import {
 import FontFamilyPicker from '@/components/common/FontFamilyPicker.vue';
 import TableFilterTab from './TableFilterTab.vue';
 import AiSettingsTab from './settings/AiSettingsTab.vue';
+import EditorBackgroundSettings from './settings/EditorBackgroundSettings.vue';
 import { pickReadableTextColor } from '@/utils/connectionColor';
 
 defineProps<{

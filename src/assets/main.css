@@ -993,3 +993,35 @@ html:not(.dark) .ai-markdown-table th {
   color: #000000;
   font-weight: 700;
 }
+
+/* ==========================================================================
+   SQL Editor Custom Backdrop (.sqlight-editor-*)
+   ========================================================================== */
+
+/*
+ * Monaco paints an opaque background from the active theme colour. When the user enables a backdrop
+ * image the shell adds `.sqlight-editor-transparent` so every surface that would cover the picture
+ * is cleared and only the text layer keeps painting.
+ */
+.sqlight-editor-transparent .monaco-editor,
+.sqlight-editor-transparent .monaco-editor .monaco-editor-background,
+.sqlight-editor-transparent .monaco-editor .margin {
+  background-color: transparent !important;
+}
+
+/*
+ * The backdrop owns its own layer above the editor surface colour and below Monaco's scrollable
+ * content, so it stays pinned to the bottom-right corner of the viewport while the SQL scrolls.
+ * The layer must span the whole viewport: an absolutely positioned box without a size would
+ * collapse to 0x0 and never paint the picture.
+ */
+.sqlight-editor-watermark {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background-size: auto 60%;
+  background-repeat: no-repeat;
+  background-position: right bottom;
+  pointer-events: none;
+  user-select: none;
+}

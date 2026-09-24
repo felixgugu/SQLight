@@ -1,9 +1,25 @@
 <template>
-  <div ref="editorContainer" class="w-full h-full overflow-hidden" />
+  <div
+    class="sqlight-editor-shell relative w-full h-full overflow-hidden"
+    :class="{ 'sqlight-editor-transparent': isBackgroundImageActive }"
+  >
+    <!--
+      Optional user backdrop. It is pinned to the bottom-right of the visible viewport (outside the
+      scrollable content) and sits behind the editor, whose own background turns transparent so the
+      artwork shows through without ever scrolling away with the SQL text.
+    -->
+    <div
+      v-if="isBackgroundImageActive"
+      class="sqlight-editor-watermark"
+      :style="backgroundImageStyle"
+      aria-hidden="true"
+    />
+    <div ref="editorContainer" class="relative z-[1] w-full h-full overflow-hidden" />
+  </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onBeforeUnmount, watch } from 'vue';
+import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue';
 import { monaco } from '@/utils/monaco';
 import { setupSqlCompletionProvider } from '@/utils/sqlCompletionProvider';
 import { useSettingsStore } from '@/stores/settingsStore';
@@ -46,6 +62,21 @@ const SQL_EDITOR_ACTION_COMMANDS: Record<SqlEditorToolbarAction, string> = {
   unfoldAll: 'editor.unfoldAll',
   foldAll: 'editor.foldAll',
 };
+
+/** The backdrop only renders when a picture was picked and the user kept it switched on. */
+const isBackgroundImageActive = computed(
+  () => settingsStore.editorBackgroundImageEnabled && Boolean(settingsStore.editorBackgroundImage)
+);
+
+/**
+ * `background-size: auto N%` scales the picture against the editor height, so the artwork keeps its
+ * aspect ratio and stays anchored to the bottom-right corner at any window size.
+ */
+const backgroundImageStyle = computed<Record<string, string>>(() => ({
+  backgroundImage: `url("${settingsStore.editorBackgroundImage}")`,
+  opacity: String(settingsStore.editorBackgroundImageOpacity),
+  backgroundSize: `auto ${settingsStore.editorBackgroundImageSize}%`,
+}));
 
 function hexToRgba(hex: string, alpha: number): string {
   let cleanHex = hex.replace('#', '');
