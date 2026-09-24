@@ -388,6 +388,14 @@ function handleGlobalKeydown(e: KeyboardEvent) {
     isQuickFinderOpen.value = !isQuickFinderOpen.value;
     return;
   }
+
+  // Ctrl/Cmd + Shift + A -> Manually trigger SQL Completion in active editor (and prevent browser Tab Search)
+  if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'a' || e.key === 'A')) {
+    e.preventDefault();
+    mainWorkspaceRef.value?.focusEditor();
+    mainWorkspaceRef.value?.triggerSuggest();
+    return;
+  }
 }
 
 function handleAiChatCustomEvent(e: Event) {

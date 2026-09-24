@@ -735,6 +735,12 @@ function focusEditor(line?: number, col?: number) {
   });
 }
 
+function triggerSuggest() {
+  nextTick(() => {
+    monacoRef.value?.triggerSuggest();
+  });
+}
+
 function getSelectedOrFullQuery(): { sql: string; isSelection: boolean } {
   if (monacoRef.value && workspaceStore.activeTab?.type === 'sql_editor') {
     return monacoRef.value.getSelectedOrFullQuery();
@@ -971,6 +977,7 @@ defineExpose({
   getSelectedOrFullQuery,
   scrollToStart,
   focusEditor,
+  triggerSuggest,
 });
 </script>
 

@@ -32,6 +32,7 @@ export interface AppSettings {
   editorFontFamily: string;
   editorWordWrap: 'on' | 'off';
   editorTabSize: number;
+  editorAutoCompletion: boolean;
   maxResultTabs: number;
   defaultMaxRows: number | null;
   editorHighlightColor: string;
@@ -56,6 +57,7 @@ const DEFAULT_SETTINGS: AppSettings = {
   editorFontFamily: '"Fira Code", Consolas, Monaco, monospace',
   editorWordWrap: 'on',
   editorTabSize: 2,
+  editorAutoCompletion: true,
   maxResultTabs: 10,
   defaultMaxRows: 10000,
   editorHighlightColor: '#feffe0',
@@ -99,6 +101,7 @@ export const useSettingsStore = defineStore('settings', () => {
   const editorFontFamily = ref<string>(initial.editorFontFamily);
   const editorWordWrap = ref<'on' | 'off'>(initial.editorWordWrap);
   const editorTabSize = ref<number>(initial.editorTabSize);
+  const editorAutoCompletion = ref<boolean>(initial.editorAutoCompletion ?? true);
   const maxResultTabs = ref<number>(initial.maxResultTabs);
   const defaultMaxRows = ref<number | null>(initial.defaultMaxRows);
   const editorHighlightColor = ref<string>(initial.editorHighlightColor || '#feffe0');
@@ -230,6 +233,7 @@ export const useSettingsStore = defineStore('settings', () => {
       editorFontFamily: editorFontFamily.value,
       editorWordWrap: editorWordWrap.value,
       editorTabSize: editorTabSize.value,
+      editorAutoCompletion: editorAutoCompletion.value,
       maxResultTabs: maxResultTabs.value,
       defaultMaxRows: defaultMaxRows.value,
       editorHighlightColor: editorHighlightColor.value,
@@ -259,6 +263,7 @@ export const useSettingsStore = defineStore('settings', () => {
       editorFontFamily,
       editorWordWrap,
       editorTabSize,
+      editorAutoCompletion,
       maxResultTabs,
       defaultMaxRows,
       editorHighlightColor,
@@ -286,6 +291,7 @@ export const useSettingsStore = defineStore('settings', () => {
     editorFontFamily.value = DEFAULT_SETTINGS.editorFontFamily;
     editorWordWrap.value = DEFAULT_SETTINGS.editorWordWrap;
     editorTabSize.value = DEFAULT_SETTINGS.editorTabSize;
+    editorAutoCompletion.value = DEFAULT_SETTINGS.editorAutoCompletion;
     maxResultTabs.value = DEFAULT_SETTINGS.maxResultTabs;
     defaultMaxRows.value = DEFAULT_SETTINGS.defaultMaxRows;
     editorHighlightColor.value = DEFAULT_SETTINGS.editorHighlightColor;
@@ -313,6 +319,7 @@ export const useSettingsStore = defineStore('settings', () => {
     editorFontFamily,
     editorWordWrap,
     editorTabSize,
+    editorAutoCompletion,
     maxResultTabs,
     defaultMaxRows,
     editorHighlightColor,

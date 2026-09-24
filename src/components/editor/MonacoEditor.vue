@@ -37,6 +37,7 @@ let highlightDecorations: monaco.editor.IEditorDecorationsCollection | null = nu
 let dragOverHandler: ((e: DragEvent) => void) | null = null;
 let dropHandler: ((e: DragEvent) => void) | null = null;
 let editorMouseDownHandler: ((e: MouseEvent) => void) | null = null;
+let triggerSuggestEventListener: (() => void) | null = null;
 
 const SQL_EDITOR_ACTION_COMMANDS: Record<SqlEditorToolbarAction, string> = {
   cut: 'editor.action.clipboardCutAction',
@@ -306,6 +307,12 @@ function runEditorAction(action: SqlEditorToolbarAction) {
   editorInstance.trigger('sqlight-toolbar', SQL_EDITOR_ACTION_COMMANDS[action], null);
 }
 
+function triggerSuggest() {
+  if (!editorInstance) return;
+  editorInstance.focus();
+  editorInstance.trigger('keyboard', 'editor.action.triggerSuggest', {});
+}
+
 onMounted(() => {
   if (!editorContainer.value) return;
 
@@ -326,12 +333,14 @@ onMounted(() => {
     readOnly: props.readOnly ?? false,
     cursorBlinking: 'smooth',
     wordWrap: settingsStore.editorWordWrap ? 'on' : 'off',
-    suggestOnTriggerCharacters: true,
-    quickSuggestions: {
-      other: true,
-      comments: false,
-      strings: false,
-    },
+    suggestOnTriggerCharacters: settingsStore.editorAutoCompletion,
+    quickSuggestions: settingsStore.editorAutoCompletion
+      ? {
+          other: true,
+          comments: false,
+          strings: false,
+        }
+      : false,
     acceptSuggestionOnCommitCharacter: true,
     acceptSuggestionOnEnter: 'on',
     tabCompletion: 'on',
@@ -432,6 +441,24 @@ onMounted(() => {
   editorInstance.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyP, () => {
     window.dispatchEvent(new CustomEvent('sqlight:open-quick-finder'));
   });
+
+  // Shortcut: Ctrl/Cmd + Shift + A -> Manually trigger code suggestions / completion
+  editorInstance.addCommand(
+    monaco.KeyMod.CtrlCmd | monaco.KeyMod.Shift | monaco.KeyCode.KeyA,
+    () => {
+      triggerSuggest();
+    }
+  );
+
+  // Disable default Ctrl/Cmd + Space trigger to prevent conflict with IME switching
+  editorInstance.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Space, () => {});
+
+  triggerSuggestEventListener = () => {
+    if (editorInstance) {
+      triggerSuggest();
+    }
+  };
+  window.addEventListener('sqlight:trigger-suggest', triggerSuggestEventListener);
 
   // Context Menu: 常用 SQL 範本庫 (SQL Templates)
   editorInstance.addAction({
@@ -690,6 +717,7 @@ watch(
     settingsStore.editorFontFamily,
     settingsStore.editorWordWrap,
     settingsStore.editorTabSize,
+    settingsStore.editorAutoCompletion,
   ],
   () => {
     if (editorInstance) {
@@ -698,6 +726,14 @@ watch(
         fontFamily: settingsStore.editorFontFamily,
         wordWrap: settingsStore.editorWordWrap ? 'on' : 'off',
         tabSize: settingsStore.editorTabSize,
+        suggestOnTriggerCharacters: settingsStore.editorAutoCompletion,
+        quickSuggestions: settingsStore.editorAutoCompletion
+          ? {
+              other: true,
+              comments: false,
+              strings: false,
+            }
+          : false,
       });
     }
   }
@@ -789,6 +825,10 @@ onBeforeUnmount(() => {
       editorMouseDownHandler = null;
     }
   }
+  if (triggerSuggestEventListener) {
+    window.removeEventListener('sqlight:trigger-suggest', triggerSuggestEventListener);
+    triggerSuggestEventListener = null;
+  }
   if (highlightDecorations) {
     highlightDecorations.clear();
     highlightDecorations = null;
@@ -834,6 +874,7 @@ defineExpose({
   runEditorAction,
   insertTextAtCursor,
   getTableNameAtCursor,
+  triggerSuggest,
   focus,
 });
 </script>

@@ -296,6 +296,15 @@
           />
         </div>
 
+        <!-- Auto Completion Trigger Switch -->
+        <div class="flex items-center justify-between pt-2 border-t border-dark-800">
+          <div>
+            <label class="font-medium text-dark-100 block">自動觸發補全 (Auto-trigger Completion)</label>
+            <span class="text-xxs text-dark-400">鍵入字元或符號時自動彈出補全建議（關閉後仍可透過 Ctrl+Shift+A 手動喚起）</span>
+          </div>
+          <ToggleSwitch v-model="settingsStore.editorAutoCompletion" />
+        </div>
+
         <!-- Highlight Color -->
         <div class="flex items-center justify-between pt-2 border-t border-dark-800">
           <div>
@@ -552,8 +561,8 @@
                 <span>編輯器與格式化</span>
               </div>
               <div class="flex justify-between items-center py-0.5">
-                <span class="text-dark-300">程式碼智慧自動補全</span>
-                <kbd class="bg-dark-800 px-1.5 py-0.5 rounded text-warn border border-dark-700">Ctrl + Space</kbd>
+                <span class="text-dark-300">程式碼智慧補全 (手動喚起)</span>
+                <kbd class="bg-dark-800 px-1.5 py-0.5 rounded text-warn border border-dark-700">Ctrl+Shift+A</kbd>
               </div>
               <div class="flex justify-between items-center py-0.5">
                 <span class="text-dark-300">格式化 SQL (選取/當前語句)</span>
