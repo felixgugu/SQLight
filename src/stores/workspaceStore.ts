@@ -482,10 +482,41 @@ export const useWorkspaceStore = defineStore('workspace', () => {
     activeTabId.value = tabId;
   }
 
+  const editorViewStateCache = new Map<string, any>();
+
+  function saveEditorViewState(tabId: string, state: any) {
+    if (!tabId || !state) return;
+    editorViewStateCache.set(tabId, state);
+  }
+
+  function getEditorViewState(tabId: string): any {
+    if (!tabId) return null;
+    return editorViewStateCache.get(tabId) ?? null;
+  }
+
+  function deleteEditorViewState(tabId: string) {
+    editorViewStateCache.delete(tabId);
+  }
+
+  function updateTabCursorPosition(
+    tabId: string,
+    position: { lineNumber: number; column: number }
+  ) {
+    const tab = tabs.value.find((t) => t.id === tabId);
+    if (tab && tab.type === 'sql_editor') {
+      (tab as SqlEditorTab).cursorPosition = {
+        lineNumber: position.lineNumber,
+        column: position.column,
+      };
+      saveTabsToStorage(tabs.value);
+    }
+  }
+
   function closeTab(tabId: string) {
     const index = tabs.value.findIndex((t) => t.id === tabId);
     if (index === -1) return;
 
+    deleteEditorViewState(tabId);
     tabs.value.splice(index, 1);
 
     if (activeTabId.value === tabId) {
@@ -654,6 +685,10 @@ export const useWorkspaceStore = defineStore('workspace', () => {
   }
 
   function closeOtherTabs(tabId: string) {
+    const toDelete = tabs.value.filter((t) => t.id !== tabId).map((t) => t.id);
+    for (const id of toDelete) {
+      deleteEditorViewState(id);
+    }
     tabs.value = tabs.value.filter((t) => t.id === tabId);
     activeTabId.value = tabId;
   }
@@ -800,5 +835,9 @@ export const useWorkspaceStore = defineStore('workspace', () => {
     autoSaveSqlFiles,
     startAutoSaveTimer,
     stopAutoSaveTimer,
+    saveEditorViewState,
+    getEditorViewState,
+    deleteEditorViewState,
+    updateTabCursorPosition,
   };
 });

@@ -122,6 +122,8 @@
           <MonacoEditor
             ref="monacoRef"
             :key="workspaceStore.activeTab.id"
+            :tab-id="workspaceStore.activeTab.id"
+            :initial-cursor="(workspaceStore.activeTab as SqlEditorTab).cursorPosition"
             v-model="(workspaceStore.activeTab as SqlEditorTab).query"
             @execute="(sql, mode) => runQuery(mode || 'current', sql)"
             @format="formatCode"
@@ -374,6 +376,9 @@ function getTabItemStyle(tab: WorkspaceTab, idx: number) {
     const isCustom = Boolean(settingsStore.activeSqlTabBgColor && settingsStore.activeSqlTabBgColor !== '#1e40af');
     if (!isCustom) {
       baseStyle['--tab-top-accent'] = 'var(--p-primary-color, #3b82f6)';
+      if (isActive) {
+        baseStyle['--tab-border'] = 'var(--p-primary-color, #3b82f6)';
+      }
     }
   }
 
@@ -724,7 +729,7 @@ function scrollToStart() {
   }
 }
 
-function focusEditor(line = 1, col = 1) {
+function focusEditor(line?: number, col?: number) {
   nextTick(() => {
     monacoRef.value?.focus(line, col);
   });
@@ -745,7 +750,7 @@ function handleAddNewTab() {
   workspaceStore.addSqlTab();
   nextTick(() => {
     scrollToStart();
-    focusEditor();
+    focusEditor(1, 1);
   });
 }
 
@@ -994,8 +999,8 @@ defineExpose({
   background-color: var(--tab-active-surface, rgb(var(--color-dark-900))) !important;
   color: var(--tab-active-text, rgb(var(--color-dark-100))) !important;
   border-top-color: var(--tab-top-accent) !important;
-  border-left-color: rgb(var(--color-dark-700)) !important;
-  border-right-color: rgb(var(--color-dark-700)) !important;
+  border-left-color: var(--tab-top-accent) !important;
+  border-right-color: var(--tab-top-accent) !important;
   margin-bottom: -1px;
   z-index: 10;
   box-shadow: 0 -1px 3px rgba(0, 0, 0, 0.06);

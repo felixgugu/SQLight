@@ -18,6 +18,8 @@ import type { SqlEditorToolbarAction } from '@/types/editor';
 const props = defineProps<{
   modelValue: string;
   readOnly?: boolean;
+  tabId?: string;
+  initialCursor?: { lineNumber: number; column: number };
 }>();
 
 const emit = defineEmits<{
@@ -345,6 +347,26 @@ onMounted(() => {
 
   setupSqlCompletionProvider();
 
+  // Restore editor view state (scroll position, selections, folding) or initial cursor position
+  const savedViewState = props.tabId ? workspaceStore.getEditorViewState(props.tabId) : null;
+  if (savedViewState) {
+    editorInstance.restoreViewState(savedViewState);
+  } else if (props.initialCursor) {
+    const pos = new monaco.Position(props.initialCursor.lineNumber, props.initialCursor.column);
+    editorInstance.setPosition(pos);
+    editorInstance.revealPositionInCenterIfOutsideViewport(pos);
+  }
+
+  // Real-time cursor position tracking to sync with workspaceStore
+  editorInstance.onDidChangeCursorPosition((e) => {
+    if (props.tabId) {
+      workspaceStore.updateTabCursorPosition(props.tabId, {
+        lineNumber: e.position.lineNumber,
+        column: e.position.column,
+      });
+    }
+  });
+
   editorInstance.onDidChangeModelContent(() => {
     if (editorInstance) {
       const val = editorInstance.getValue();
@@ -651,7 +673,12 @@ onMounted(() => {
 
   if (!props.readOnly) {
     setTimeout(() => {
-      focus(1, 1);
+      if (editorInstance) {
+        editorInstance.focus();
+        if (!savedViewState && !props.initialCursor) {
+          editorInstance.setPosition(new monaco.Position(1, 1));
+        }
+      }
     }, 50);
   }
 });
@@ -767,16 +794,33 @@ onBeforeUnmount(() => {
     highlightDecorations = null;
   }
   if (editorInstance) {
+    if (props.tabId) {
+      const pos = editorInstance.getPosition();
+      if (pos) {
+        workspaceStore.updateTabCursorPosition(props.tabId, {
+          lineNumber: pos.lineNumber,
+          column: pos.column,
+        });
+      }
+      const viewState = editorInstance.saveViewState();
+      if (viewState) {
+        workspaceStore.saveEditorViewState(props.tabId, viewState);
+      }
+    }
     editorInstance.dispose();
     editorInstance = null;
   }
 });
 
-function focus(lineNumber = 1, column = 1) {
+function focus(lineNumber?: number, column?: number) {
   dispatchClearGridSelection();
   if (editorInstance) {
     editorInstance.focus();
-    editorInstance.setPosition(new monaco.Position(lineNumber, column));
+    if (lineNumber !== undefined && column !== undefined) {
+      const pos = new monaco.Position(lineNumber, column);
+      editorInstance.setPosition(pos);
+      editorInstance.revealPositionInCenterIfOutsideViewport(pos);
+    }
   }
 }
 

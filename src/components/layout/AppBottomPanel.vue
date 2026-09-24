@@ -79,7 +79,7 @@
             :class="[
               'result-tab-item h-7 px-2 flex items-center space-x-1.5 text-xxs rounded-t cursor-grab active:cursor-grabbing transition-all duration-100 group max-w-[220px] border flex-shrink-0 select-none touch-none',
               queryStore.activeResultTabId === rtab.id
-                ? 'font-medium shadow-xs border-dark-600'
+                ? 'font-medium shadow-xs border-dark-600 active-tab'
                 : 'bg-dark-800/80 text-dark-400 hover:text-dark-200 border-dark-700 hover:border-dark-600 hover:bg-dark-800',
               isPointerDragging && dragSourceIndex === idx ? 'opacity-35 border-dashed border-brand-400 scale-95' : '',
               dropHoverIndex === idx && isPointerDragging && dropHoverIndex !== dragSourceIndex ? 'border-brand-400 bg-brand-500/25 ring-1 ring-brand-400 scale-102' : ''
@@ -199,6 +199,7 @@ import { TableProperties, MessageSquare, History, Pin, X, Gauge } from 'lucide-v
 import { useWorkspaceStore } from '@/stores/workspaceStore';
 import { useQueryStore } from '@/stores/queryStore';
 import { useSettingsStore } from '@/stores/settingsStore';
+import { useConnectionStore } from '@/stores/connectionStore';
 import ResultGrid from '@/components/results/ResultGrid.vue';
 import ResultMessages from '@/components/results/ResultMessages.vue';
 import QueryHistory from '@/components/results/QueryHistory.vue';
@@ -209,6 +210,7 @@ import type { QueryResultTab } from '@/types/query';
 const workspaceStore = useWorkspaceStore();
 const queryStore = useQueryStore();
 const settingsStore = useSettingsStore();
+const connectionStore = useConnectionStore();
 
 const resultsTabsBarRef = ref<HTMLDivElement | null>(null);
 const dragSourceIndex = ref<number | null>(null);
@@ -463,29 +465,74 @@ function onSelectHistory(sql: string) {
   workspaceStore.addSqlTab(sql);
 }
 
-function getResultTabStyle(rtab: QueryResultTab) {
+function getResultTabConnectionColor(rtab: QueryResultTab): string | undefined {
+  const connId = rtab.connectionId || workspaceStore.activeTab?.connectionId || connectionStore.activeConnectionId;
+  if (!connId) return undefined;
+  const conn = connectionStore.getConnectionById(connId) || connectionStore.connections.find((c) => c.id === connId);
+  return conn?.color || undefined;
+}
+
+function getResultTabTopAccent(rtab: QueryResultTab): string {
+  const connColor = getResultTabConnectionColor(rtab);
+  if (connColor) return connColor;
+  return 'var(--p-primary-color, #3b82f6)';
+}
+
+function getResultTabStyle(rtab: QueryResultTab): Record<string, string> {
   const isActive = queryStore.activeResultTabId === rtab.id;
   if (!isActive) return {};
+
+  const topAccent = getResultTabTopAccent(rtab);
+  const isLight = settingsStore.colorMode === 'light';
 
   const isCustomBg = Boolean(settingsStore.activeSqlTabBgColor && settingsStore.activeSqlTabBgColor !== '#1e40af');
   const isCustomText = Boolean(settingsStore.activeSqlTabTextColor && settingsStore.activeSqlTabTextColor !== '#ffffff');
 
   if (isCustomBg || isCustomText) {
     return {
+      '--tab-top-accent': topAccent,
+      '--tab-active-surface': settingsStore.activeSqlTabBgColor,
+      '--tab-active-text': settingsStore.activeSqlTabTextColor,
+      '--tab-border': topAccent,
       backgroundColor: settingsStore.activeSqlTabBgColor,
       color: settingsStore.activeSqlTabTextColor,
-      borderColor: settingsStore.activeSqlTabBgColor,
-      borderTopColor: settingsStore.activeSqlTabBgColor,
+      borderTopColor: topAccent,
+      borderLeftColor: topAccent,
+      borderRightColor: topAccent,
+      borderBottomColor: 'transparent',
     };
   }
 
-  const isLight = settingsStore.colorMode === 'light';
   return {
+    '--tab-top-accent': topAccent,
+    '--tab-active-surface': isLight ? '#ffffff' : 'rgb(var(--color-dark-900))',
+    '--tab-active-text': isLight ? '#0f172a' : 'rgb(var(--color-dark-100))',
+    '--tab-border': topAccent,
     backgroundColor: isLight ? '#ffffff' : 'rgb(var(--color-dark-900))',
     color: isLight ? '#0f172a' : 'rgb(var(--color-dark-100))',
-    borderColor: 'rgb(var(--color-dark-700))',
-    borderTopColor: 'var(--p-primary-color, #3b82f6)',
-    borderTopWidth: '1px',
+    borderTopColor: topAccent,
+    borderLeftColor: topAccent,
+    borderRightColor: topAccent,
+    borderBottomColor: 'transparent',
   };
 }
 </script>
+
+<style scoped>
+.result-tab-item {
+  position: relative;
+  transition: all 0.15s ease;
+}
+
+.result-tab-item.active-tab {
+  background-color: var(--tab-active-surface, rgb(var(--color-dark-900))) !important;
+  color: var(--tab-active-text, rgb(var(--color-dark-100))) !important;
+  border-top-color: var(--tab-top-accent, var(--p-primary-color, #3b82f6)) !important;
+  border-left-color: var(--tab-top-accent, var(--p-primary-color, #3b82f6)) !important;
+  border-right-color: var(--tab-top-accent, var(--p-primary-color, #3b82f6)) !important;
+  border-bottom-color: transparent !important;
+  margin-bottom: -1px;
+  z-index: 10;
+  box-shadow: 0 -1px 3px rgba(0, 0, 0, 0.06);
+}
+</style>

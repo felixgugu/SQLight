@@ -1,5 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { TAB_CATEGORY_THEMES, getTabThemeStyle } from '../src/utils/tabTheme';
 import type { TabType } from '../src/types/workspace';
 
@@ -116,3 +118,90 @@ test('getTabThemeStyle allows custom SQL colors to override sql_editor active ta
   const activeErStyle = getTabThemeStyle('er_diagram', true, customBg, customText);
   assert.equal(activeErStyle['--tab-bg'], '#155e75');
 });
+
+test('AppBottomPanel active result tab applies theme/connection borders (top, left, right) like editor tabs', () => {
+  const panelSrc = readFileSync(
+    resolve(process.cwd(), 'src/components/layout/AppBottomPanel.vue'),
+    'utf-8'
+  );
+
+  // Active result tab has active-tab class
+  assert.match(
+    panelSrc,
+    /queryStore\.activeResultTabId === rtab\.id\s*\?\s*'[^']*active-tab[^']*'/,
+    'active result tab must receive the active-tab class'
+  );
+
+  // Scoped CSS styles active tab top, left, right border accent and seamless bottom overlap
+  assert.match(
+    panelSrc,
+    /\.result-tab-item\.active-tab\s*\{[\s\S]*?border-top-color:\s*var\(--tab-top-accent[\s\S]*?!important/,
+    'active result tab must have border-top-color set to theme accent'
+  );
+  assert.match(
+    panelSrc,
+    /\.result-tab-item\.active-tab\s*\{[\s\S]*?border-left-color:\s*var\(--tab-top-accent[\s\S]*?!important/,
+    'active result tab must have border-left-color set to theme accent'
+  );
+  assert.match(
+    panelSrc,
+    /\.result-tab-item\.active-tab\s*\{[\s\S]*?border-right-color:\s*var\(--tab-top-accent[\s\S]*?!important/,
+    'active result tab must have border-right-color set to theme accent'
+  );
+  assert.match(
+    panelSrc,
+    /\.result-tab-item\.active-tab\s*\{[\s\S]*?border-bottom-color:\s*transparent\s*!important/,
+    'active result tab must have transparent bottom border'
+  );
+  assert.match(
+    panelSrc,
+    /\.result-tab-item\.active-tab\s*\{[\s\S]*?margin-bottom:\s*-1px/,
+    'active result tab must have margin-bottom: -1px to merge with panel'
+  );
+
+  // getResultTabStyle sets topAccent and connection color support
+  assert.match(
+    panelSrc,
+    /getResultTabTopAccent/,
+    'getResultTabTopAccent helper must calculate theme/connection top accent'
+  );
+  assert.match(
+    panelSrc,
+    /getResultTabConnectionColor/,
+    'getResultTabConnectionColor helper must support connection color override'
+  );
+  assert.match(
+    panelSrc,
+    /borderLeftColor:\s*topAccent/,
+    'getResultTabStyle must set borderLeftColor to topAccent'
+  );
+  assert.match(
+    panelSrc,
+    /borderRightColor:\s*topAccent/,
+    'getResultTabStyle must set borderRightColor to topAccent'
+  );
+});
+
+test('AppMain active workspace tab applies theme/connection borders on top, left, and right', () => {
+  const mainSrc = readFileSync(
+    resolve(process.cwd(), 'src/components/layout/AppMain.vue'),
+    'utf-8'
+  );
+
+  assert.match(
+    mainSrc,
+    /\.query-tab-item\.active-tab\s*\{[\s\S]*?border-top-color:\s*var\(--tab-top-accent\)\s*!important/,
+    'active workspace tab must have border-top-color set to theme accent'
+  );
+  assert.match(
+    mainSrc,
+    /\.query-tab-item\.active-tab\s*\{[\s\S]*?border-left-color:\s*var\(--tab-top-accent\)\s*!important/,
+    'active workspace tab must have border-left-color set to theme accent'
+  );
+  assert.match(
+    mainSrc,
+    /\.query-tab-item\.active-tab\s*\{[\s\S]*?border-right-color:\s*var\(--tab-top-accent\)\s*!important/,
+    'active workspace tab must have border-right-color set to theme accent'
+  );
+});
+
