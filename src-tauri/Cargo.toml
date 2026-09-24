@@ -1,6 +1,6 @@
 [package]
 name = "sqlight"
-version = "0.1.0"
+version = "0.1.1"
 description = "Lightweight desktop SQL client for Microsoft SQL Server"
 authors = ["SQLight Team"]
 edition = "2021"

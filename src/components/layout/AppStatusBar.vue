@@ -56,7 +56,7 @@
       <div class="h-3 w-px bg-dark-750" />
 
       <div class="flex items-center space-x-1">
-        <span class="text-accent">SQLight v0.1.0</span>
+        <span class="text-accent">SQLight v0.1.1</span>
       </div>
     </div>
   </footer>

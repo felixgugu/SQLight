@@ -498,7 +498,7 @@
               SQL
             </div>
             <span class="font-semibold text-dark-100 text-sm">SQLight</span>
-            <Tag severity="info" value="v0.1.0" class="!text-xxs !font-mono !px-1.5 !py-0.5" />
+            <Tag severity="info" value="v0.1.1" class="!text-xxs !font-mono !px-1.5 !py-0.5" />
           </div>
           <p class="text-xxs text-dark-400 leading-relaxed">
             極致輕量、現代高效的 Microsoft SQL Server 桌面客戶端。<br />
