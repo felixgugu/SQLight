@@ -350,6 +350,227 @@ html:not(.dark) .p-menu-item.p-focus .p-menu-item-content {
 }
 
 /* ==========================================================================
+   Monaco Editor Context Menu - Aligned with PrimeVue ContextMenu
+   ========================================================================== */
+:root {
+  --vscode-cornerRadius-large: 0.375rem !important; /* 6px */
+  --vscode-cornerRadius-small: 0.25rem !important;  /* 4px */
+}
+
+/* 頂層容器 (Context View & Container) */
+.context-view,
+.context-view.monaco-component {
+  font-family: inherit !important;
+}
+
+.context-view .monaco-menu-container,
+.context-view.monaco-menu-container,
+.monaco-menu-container {
+  outline: none !important;
+  border: none !important;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.6), 0 8px 10px -6px rgba(0, 0, 0, 0.6) !important;
+  border-radius: 0.375rem !important;
+  overflow: hidden !important;
+  padding: 0 !important;
+  background: transparent !important;
+}
+
+/* 核心滾動外殼 (Monaco Scrollable Element - Monaco 在此處寫了 inline styles) */
+.context-view .monaco-scrollable-element,
+.monaco-menu-container .monaco-scrollable-element {
+  border-radius: 0.375rem !important;
+  outline: none !important;
+  box-shadow: none !important;
+  overflow: hidden !important;
+}
+
+html.dark .context-view .monaco-scrollable-element,
+.dark .context-view .monaco-scrollable-element,
+html.dark .monaco-menu-container .monaco-scrollable-element,
+.dark .monaco-menu-container .monaco-scrollable-element {
+  background-color: rgb(var(--color-dark-800)) !important;
+  border: 1px solid rgb(var(--color-dark-700)) !important;
+  color: rgb(var(--color-dark-200)) !important;
+}
+
+html:not(.dark) .context-view .monaco-scrollable-element,
+html:not(.dark) .monaco-menu-container .monaco-scrollable-element {
+  background-color: #ffffff !important;
+  border: 1px solid rgb(var(--color-dark-700)) !important;
+  color: rgb(var(--color-dark-300)) !important;
+}
+
+/* 內部 Menu 區塊 */
+.context-view .monaco-menu,
+.monaco-menu-container .monaco-menu {
+  border: none !important;
+  border-radius: 0.375rem !important;
+  background: transparent !important;
+  padding: 0.25rem !important;
+  min-width: 170px !important;
+  box-shadow: none !important;
+}
+
+.context-view .monaco-menu .monaco-action-bar.vertical,
+.monaco-menu-container .monaco-menu .monaco-action-bar.vertical {
+  background: transparent !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  text-align: left !important;
+}
+
+.context-view .monaco-menu .actions-container,
+.monaco-menu-container .monaco-menu .actions-container {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 0.125rem !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  width: 100% !important;
+}
+
+/* 項目外觀 (Action Item) */
+.context-view .monaco-action-bar.vertical .action-item,
+.monaco-menu-container .monaco-action-bar.vertical .action-item {
+  display: flex !important;
+  align-items: center !important;
+  border-radius: 0.25rem !important;
+  font-size: 0.75rem !important;
+  line-height: 1.25rem !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  background: transparent !important;
+  transition: background-color 0.1s ease, color 0.1s ease !important;
+  border: none !important;
+  outline: none !important;
+}
+
+.context-view .monaco-action-bar.vertical .action-menu-item,
+.monaco-menu-container .monaco-action-bar.vertical .action-menu-item {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  width: 100% !important;
+  height: auto !important;
+  min-height: 1.625rem !important;
+  padding: 0.3125rem 0.5rem !important;
+  border-radius: 0.25rem !important;
+  text-decoration: none !important;
+  color: inherit !important;
+  outline: none !important;
+  box-sizing: border-box !important;
+}
+
+/* 標籤文字 */
+.context-view .monaco-action-bar.vertical .action-label:not(.separator),
+.monaco-menu-container .monaco-action-bar.vertical .action-label:not(.separator) {
+  font-size: 0.75rem !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  line-height: 1.25rem !important;
+}
+
+html.dark .context-view .monaco-action-bar.vertical .action-label:not(.separator),
+.dark .context-view .monaco-action-bar.vertical .action-label:not(.separator) {
+  color: rgb(var(--color-dark-200)) !important;
+}
+
+html:not(.dark) .context-view .monaco-action-bar.vertical .action-label:not(.separator) {
+  color: rgb(var(--color-dark-300)) !important;
+}
+
+/* 懸停與焦點選取狀態 (Hover & Focused) */
+html.dark .context-view .monaco-action-bar.vertical .action-item.focused,
+html.dark .context-view .monaco-action-bar.vertical .action-item:hover:not(.disabled),
+html.dark .context-view .monaco-action-bar.vertical .action-item.focused > .action-menu-item,
+html.dark .context-view .monaco-action-bar.vertical .action-menu-item:focus,
+.dark .context-view .monaco-action-bar.vertical .action-item.focused,
+.dark .context-view .monaco-action-bar.vertical .action-item:hover:not(.disabled),
+.dark .context-view .monaco-action-bar.vertical .action-item.focused > .action-menu-item,
+.dark .context-view .monaco-action-bar.vertical .action-menu-item:focus {
+  background-color: rgb(var(--color-dark-750)) !important;
+  color: rgb(var(--color-dark-100)) !important;
+  outline: none !important;
+}
+
+html.dark .context-view .monaco-action-bar.vertical .action-item.focused .action-label,
+html.dark .context-view .monaco-action-bar.vertical .action-item:hover:not(.disabled) .action-label,
+.dark .context-view .monaco-action-bar.vertical .action-item.focused .action-label,
+.dark .context-view .monaco-action-bar.vertical .action-item:hover:not(.disabled) .action-label {
+  color: rgb(var(--color-dark-100)) !important;
+}
+
+html:not(.dark) .context-view .monaco-action-bar.vertical .action-item.focused,
+html:not(.dark) .context-view .monaco-action-bar.vertical .action-item:hover:not(.disabled),
+html:not(.dark) .context-view .monaco-action-bar.vertical .action-item.focused > .action-menu-item,
+html:not(.dark) .context-view .monaco-action-bar.vertical .action-menu-item:focus {
+  background-color: rgb(var(--color-dark-750)) !important;
+  color: rgb(var(--color-dark-100)) !important;
+  outline: none !important;
+}
+
+html:not(.dark) .context-view .monaco-action-bar.vertical .action-item.focused .action-label,
+html:not(.dark) .context-view .monaco-action-bar.vertical .action-item:hover:not(.disabled) .action-label {
+  color: rgb(var(--color-dark-100)) !important;
+}
+
+/* 停用項目 (Disabled) */
+.context-view .monaco-action-bar.vertical .action-item.disabled {
+  opacity: 0.45 !important;
+  cursor: not-allowed !important;
+}
+
+.context-view .monaco-action-bar.vertical .action-item.disabled:hover,
+.context-view .monaco-action-bar.vertical .action-item.disabled > .action-menu-item:hover {
+  background-color: transparent !important;
+}
+
+/* 快捷鍵膠囊 (Keybinding) */
+.context-view .monaco-action-bar.vertical .keybinding,
+.monaco-menu-container .monaco-action-bar.vertical .keybinding {
+  font-size: 0.6875rem !important; /* 11px */
+  opacity: 0.75 !important;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace !important;
+  margin-left: 1.5rem !important;
+  padding: 0.1rem 0.4rem !important;
+  border-radius: 0.2rem !important;
+  line-height: 1 !important;
+}
+
+html.dark .context-view .monaco-action-bar.vertical .keybinding,
+.dark .context-view .monaco-action-bar.vertical .keybinding {
+  color: rgb(var(--color-dark-300)) !important;
+  background-color: rgba(var(--color-dark-900), 0.5) !important;
+  border: 1px solid rgba(var(--color-dark-700), 0.5) !important;
+}
+
+html:not(.dark) .context-view .monaco-action-bar.vertical .keybinding {
+  color: rgb(var(--color-dark-400)) !important;
+  background-color: rgba(var(--color-dark-700), 0.15) !important;
+  border: 1px solid rgba(var(--color-dark-700), 0.25) !important;
+}
+
+html.dark .context-view .monaco-action-bar.vertical .action-item.focused .keybinding,
+html.dark .context-view .monaco-action-bar.vertical .action-item:hover .keybinding,
+.dark .context-view .monaco-action-bar.vertical .action-item.focused .keybinding,
+.dark .context-view .monaco-action-bar.vertical .action-item:hover .keybinding {
+  color: rgb(var(--color-dark-200)) !important;
+  opacity: 1 !important;
+}
+
+/* 分隔線 (Separator) */
+.context-view .monaco-action-bar.vertical .action-item.separator,
+.context-view .monaco-action-bar.vertical .action-label.separator {
+  border-bottom: 1px solid rgb(var(--color-dark-700)) !important;
+  margin: 0.25rem 0.25rem !important;
+  height: 0 !important;
+  min-height: 0 !important;
+  padding: 0 !important;
+  opacity: 0.8 !important;
+  box-sizing: border-box !important;
+}
+
+/* ==========================================================================
    PrimeVue Dialog Theme-Aware Border Radius Unification
    All dialogs respect the active theme preset tokens (Aura, Lara, Nora, Material)
    ========================================================================== */

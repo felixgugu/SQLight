@@ -6,7 +6,7 @@
       <div
         ref="resultsTabsBarRef"
         @wheel="handleResultTabsWheel"
-        class="flex-1 min-w-0 h-full flex items-end px-0.5 space-x-1.5 overflow-x-auto overflow-y-hidden select-none"
+        class="flex-1 min-w-0 h-full flex items-end px-0.5 overflow-x-auto overflow-y-hidden select-none"
         :class="{ 'results-inactive': workspaceStore.bottomPanelTab !== 'results' }"
       >
         <div
@@ -16,10 +16,10 @@
           @click="handleTabClick(rtab.id)"
           @contextmenu.prevent="openTabContextMenu($event, rtab)"
           :class="[
-            'result-tab-item h-7 px-2 flex items-center space-x-1.5 text-xxs rounded-t cursor-grab active:cursor-grabbing transition-all duration-100 group max-w-[220px] border flex-shrink-0 select-none touch-none',
+            'result-tab-item h-7 px-2 flex items-center space-x-1.5 text-xxs cursor-grab active:cursor-grabbing transition-all duration-100 group max-w-[220px] border flex-shrink-0 select-none touch-none relative',
             queryStore.activeResultTabId === rtab.id
-              ? 'font-medium shadow-xs border-primary active-tab'
-              : 'bg-dark-800/80 text-dark-400 hover:text-dark-200 border-dark-700 hover:border-dark-600 hover:bg-dark-800',
+              ? 'font-medium shadow-sm border-primary active-tab'
+              : 'bg-dark-850/60 border-dark-750/70 hover:border-dark-600 hover:bg-dark-800/90',
             isPointerDragging && dragSourceIndex === idx ? 'opacity-35 border-dashed border-brand-400 scale-95' : '',
             dropHoverIndex === idx && isPointerDragging && dropHoverIndex !== dragSourceIndex ? 'border-brand-400 bg-brand-500/25 ring-1 ring-brand-400 scale-102' : ''
           ]"
@@ -34,7 +34,7 @@
               'p-0.5 rounded transition-colors cursor-pointer',
               rtab.isPinned
                 ? 'text-warn'
-                : (queryStore.activeResultTabId === rtab.id && workspaceStore.bottomPanelTab === 'results' ? 'text-dark-400 hover:text-dark-100' : 'text-dark-500 hover:text-dark-300 opacity-60 group-hover:opacity-100')
+                : (queryStore.activeResultTabId === rtab.id && workspaceStore.bottomPanelTab === 'results' ? 'text-dark-400 hover:text-dark-100 opacity-70 group-hover:opacity-100' : 'text-dark-500 hover:text-dark-300 opacity-0 group-hover:opacity-75')
             ]"
             :title="rtab.isPinned ? '已釘選（不會被自動清理，點擊解除釘選）' : '釘選此結果（保護不被自動移除）'"
           >
@@ -75,10 +75,10 @@
             @click.stop="queryStore.deleteResultTab(rtab.id)"
             :disabled="queryStore.resultTabs.length <= 1"
             :class="[
-              'p-0.5 rounded transition-opacity flex-shrink-0',
+              'p-0.5 rounded transition-all flex-shrink-0',
               queryStore.resultTabs.length <= 1
                 ? 'opacity-20 cursor-not-allowed text-dark-600'
-                : (queryStore.activeResultTabId === rtab.id && workspaceStore.bottomPanelTab === 'results' ? 'text-dark-400 hover:text-danger hover:bg-rose-500/15' : 'text-dark-400 hover:text-danger hover:bg-rose-500/15 opacity-0 group-hover:opacity-100 cursor-pointer')
+                : (queryStore.activeResultTabId === rtab.id && workspaceStore.bottomPanelTab === 'results' ? 'text-dark-400 hover:text-danger hover:bg-rose-500/15 opacity-50 group-hover:opacity-100 cursor-pointer' : 'text-dark-400 hover:text-danger hover:bg-rose-500/15 opacity-0 group-hover:opacity-75 hover:!opacity-100 cursor-pointer')
             ]"
             :title="queryStore.resultTabs.length <= 1 ? '最後一個查詢結果不可刪除' : '關閉此結果'"
           >
@@ -113,7 +113,7 @@
           :key="tab.id"
           type="button"
           @click="workspaceStore.setBottomPanelTab(tab.id)"
-          class="h-6 px-1.5 py-0.5 rounded text-xs transition-colors cursor-pointer select-none"
+          class="panel-sub-tab h-6 px-2 py-0.5 rounded text-xs transition-all cursor-pointer select-none border border-transparent"
           :class="workspaceStore.bottomPanelTab === tab.id ? '!font-medium' : '!font-normal'"
           :style="workspaceStore.bottomPanelTab === tab.id ? { color: 'var(--p-primary-color, #3b82f6)' } : {}"
         >
@@ -474,10 +474,16 @@ function getResultTabTopAccent(rtab: QueryResultTab): string {
 
 function getResultTabStyle(rtab: QueryResultTab): Record<string, string> {
   const isActive = queryStore.activeResultTabId === rtab.id;
-  if (!isActive) return {};
-
   const topAccent = getResultTabTopAccent(rtab);
   const isLight = settingsStore.colorMode === 'light';
+
+  if (!isActive) {
+    return {
+      '--tab-top-accent': topAccent,
+      '--tab-text': isLight ? '#64748b' : '#94a3b8',
+      '--tab-hover-text': isLight ? '#0f172a' : '#f8fafc',
+    };
+  }
 
   return {
     '--tab-top-accent': topAccent,
@@ -497,10 +503,21 @@ function getResultTabStyle(rtab: QueryResultTab): Record<string, string> {
 <style scoped>
 .result-tab-item {
   position: relative;
+  border-radius: 0;
+  color: var(--tab-text, #94a3b8);
   transition: all 0.15s ease;
 }
 
+.result-tab-item:hover {
+  color: var(--tab-hover-text, #f8fafc);
+}
+
+.result-tab-item + .result-tab-item {
+  margin-left: -1px;
+}
+
 .result-tab-item.active-tab {
+  height: 29px !important;
   background-color: var(--tab-active-surface, rgb(var(--color-dark-900))) !important;
   color: var(--tab-active-text, rgb(var(--color-dark-100))) !important;
   border-top-color: var(--tab-top-accent, var(--p-primary-color, #3b82f6)) !important;
@@ -509,10 +526,23 @@ function getResultTabStyle(rtab: QueryResultTab): Record<string, string> {
   border-bottom-color: transparent !important;
   margin-bottom: -1px;
   z-index: 10;
-  box-shadow: 0 -1px 3px rgba(0, 0, 0, 0.06);
+  box-shadow: 0 -2px 6px rgba(0, 0, 0, 0.08);
+}
+
+/* 頂部高光指示條 (Top Accent Indicator) 增強活躍結果分頁辨識度 */
+.result-tab-item.active-tab::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background-color: var(--tab-top-accent, var(--p-primary-color, #3b82f6));
+  z-index: 2;
 }
 
 .results-inactive .result-tab-item.active-tab {
+  height: 28px !important;
   border-top-color: rgb(var(--color-dark-700)) !important;
   border-left-color: rgb(var(--color-dark-700)) !important;
   border-right-color: rgb(var(--color-dark-700)) !important;
@@ -521,5 +551,19 @@ function getResultTabStyle(rtab: QueryResultTab): Record<string, string> {
   color: rgb(var(--color-dark-400)) !important;
   margin-bottom: 0;
   box-shadow: none;
+}
+
+.results-inactive .result-tab-item.active-tab::before {
+  display: none;
+}
+
+.panel-sub-tab.\!font-medium {
+  background-color: rgba(var(--color-dark-750), 0.9);
+  border-color: rgba(var(--p-primary-color), 0.35);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.panel-sub-tab.\!font-normal:hover {
+  background-color: rgba(var(--color-dark-800), 0.8);
 }
 </style>

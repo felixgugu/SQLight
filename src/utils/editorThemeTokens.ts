@@ -54,6 +54,13 @@ export function buildEditorTheme(surfaceName: string, mode: 'dark' | 'light'): M
         'editor.lineHighlightBackground': pal['800'],
         'editor.selectionBackground': '#2563eb40',
         'editorCursor.foreground': '#60a5fa',
+        'menu.background': pal['800'],
+        'menu.foreground': pal['200'],
+        'menu.selectionBackground': pal['700'],
+        'menu.selectionForeground': '#ffffff',
+        'menu.selectionBorder': '#00000000',
+        'menu.separatorBackground': pal['700'],
+        'menu.border': pal['700'],
       },
     };
   }
@@ -69,6 +76,13 @@ export function buildEditorTheme(surfaceName: string, mode: 'dark' | 'light'): M
       'editor.lineHighlightBackground': pal['100'],
       'editor.selectionBackground': '#bfdbfe80',
       'editorCursor.foreground': '#2563eb',
+      'menu.background': '#ffffff',
+      'menu.foreground': pal['800'],
+      'menu.selectionBackground': pal['100'],
+      'menu.selectionForeground': pal['950'],
+      'menu.selectionBorder': '#00000000',
+      'menu.separatorBackground': pal['200'],
+      'menu.border': pal['200'],
     },
   };
 }

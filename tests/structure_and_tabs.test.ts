@@ -25,14 +25,14 @@ beforeEach(() => {
   resetQueryExecutionSeq();
 });
 
-test('addTableStructureTab adds a tab at index 0 (leftmost) and switches active tab', () => {
+test('addTableStructureTab appends a tab at the end and switches active tab', () => {
   const store = useWorkspaceStore();
   const initialCount = store.tabs.length;
 
   store.addTableStructureTab('dbo', 'Employees', 'conn-1', 'AdventureWorks');
 
   assert.equal(store.tabs.length, initialCount + 1);
-  const createdTab = store.tabs[0];
+  const createdTab = store.tabs[store.tabs.length - 1];
   assert.equal(createdTab?.type, 'table_structure');
   assert.equal(createdTab?.title, 'dbo.Employees (Structure)');
   assert.equal(store.activeTabId, createdTab?.id);
@@ -43,7 +43,7 @@ test('addTableStructureTab adds a tab at index 0 (leftmost) and switches active 
   assert.equal(store.activeTabId, createdTab?.id);
 });
 
-test('newly added tabs are always placed at the front (index 0 / leftmost)', () => {
+test('newly added tabs are placed sequentially (oldest -> newest, appended to the right)', () => {
   const store = useWorkspaceStore();
 
   // Initial tab exists
@@ -52,25 +52,25 @@ test('newly added tabs are always placed at the front (index 0 / leftmost)', () 
 
   // 1. Add new SQL tab
   store.addSqlTab('SELECT 1;', 'Query 10.sql');
-  assert.equal(store.tabs[0].title, 'Query 10.sql');
-  assert.equal(store.activeTabId, store.tabs[0].id);
-  assert.equal(store.tabs[1].id, originalFirstId);
+  assert.equal(store.tabs[store.tabs.length - 1].title, 'Query 10.sql');
+  assert.equal(store.activeTabId, store.tabs[store.tabs.length - 1].id);
+  assert.equal(store.tabs[0].id, originalFirstId);
 
   // 2. Add another SQL tab
   store.addSqlTab('SELECT 2;', 'Query 11.sql');
-  assert.equal(store.tabs[0].title, 'Query 11.sql');
-  assert.equal(store.tabs[1].title, 'Query 10.sql');
-  assert.equal(store.activeTabId, store.tabs[0].id);
+  assert.equal(store.tabs[store.tabs.length - 1].title, 'Query 11.sql');
+  assert.equal(store.tabs[store.tabs.length - 2].title, 'Query 10.sql');
+  assert.equal(store.activeTabId, store.tabs[store.tabs.length - 1].id);
 
   // 3. Add Table Data tab
   store.addTableDataTab('sales', 'Customers', 'conn-1', 'TestDB');
-  assert.equal(store.tabs[0].title, 'sales.Customers (Data)');
-  assert.equal(store.activeTabId, store.tabs[0].id);
+  assert.equal(store.tabs[store.tabs.length - 1].title, 'sales.Customers (Data)');
+  assert.equal(store.activeTabId, store.tabs[store.tabs.length - 1].id);
 
   // 4. Add Execution Plan tab
   store.addExecutionPlanTab('<ShowPlanXML />', 'SELECT 1;', 'Plan Alpha');
-  assert.equal(store.tabs[0].title, 'Plan Alpha');
-  assert.equal(store.activeTabId, store.tabs[0].id);
+  assert.equal(store.tabs[store.tabs.length - 1].title, 'Plan Alpha');
+  assert.equal(store.activeTabId, store.tabs[store.tabs.length - 1].id);
 });
 
 test('queryExecutionSeq increments sequentially and titles follow $SEQ.$Tabname', async () => {
@@ -107,15 +107,39 @@ test('queryExecutionSeq increments sequentially and titles follow $SEQ.$Tabname'
   assert.equal(store.resultTabs[0]?.seq, 2);
   assert.equal(store.resultTabs[0]?.rowCount, 12);
 
-  // Third query fails with error
+  // Third query fails with error -> should not create a new result tab
   queryService.executeQuery = async () => {
     throw new Error('Table does not exist');
   };
   await store.execute('conn-1', 'master', 'SELECT * FROM NonExistentTable;');
-  assert.equal(store.resultTabs.length, 3);
-  assert.equal(store.resultTabs[0]?.title, '3.NonExistentTable');
-  assert.equal(store.resultTabs[0]?.seq, 3);
-  assert.equal(store.resultTabs[0]?.rowCount, 0);
+  assert.equal(store.resultTabs.length, 2);
+  assert.equal(store.executionError, 'Table does not exist');
+
+  // Fourth query succeeds but returns 0 rows (no data) -> should not create a new result tab
+  queryService.executeQuery = async () => ({
+    resultSets: [
+      {
+        columns: [{ name: 'Id', dataType: 'int', nullable: false, ordinal: 0 }],
+        rows: [],
+        rowCount: 0,
+      },
+    ],
+    messages: [],
+    affectedRows: 0,
+    executionTimeMs: 5,
+  } as QueryResult);
+  await store.execute('conn-1', 'master', 'SELECT * FROM Customers WHERE 1 = 0;');
+  assert.equal(store.resultTabs.length, 2);
+
+  // Fifth query has 0 resultSets (e.g. DDL / DML) -> should not create a new result tab
+  queryService.executeQuery = async () => ({
+    resultSets: [],
+    messages: [{ level: 'info', message: '(1 row affected)', timestamp: new Date().toISOString() }],
+    affectedRows: 1,
+    executionTimeMs: 10,
+  } as QueryResult);
+  await store.execute('conn-1', 'master', 'UPDATE Customers SET Name = "New";');
+  assert.equal(store.resultTabs.length, 2);
 });
 
 test('queryStore aggregates rowCount across multiple resultSets and adds [N sets] to tab title', async () => {
@@ -199,7 +223,7 @@ test('addErDiagramTab adds an er_diagram tab at index 0 and activates it', () =>
   });
 
   assert.equal(store.tabs.length, initialCount + 1);
-  const createdTab = store.tabs[0];
+  const createdTab = store.tabs[store.tabs.length - 1];
   assert.equal(createdTab?.type, 'er_diagram');
   assert.equal(createdTab?.title, 'ER: Orders');
   assert.equal(store.activeTabId, createdTab?.id);
@@ -225,7 +249,7 @@ test('addErDiagramTab defaults depth to 2 when omitted', () => {
     database: 'Northwind',
   });
 
-  const tab = store.tabs[0] as any;
+  const tab = store.tabs[store.tabs.length - 1] as any;
   assert.equal(tab.type, 'er_diagram');
   assert.equal(tab.depth, 2);
 });
@@ -247,7 +271,7 @@ test('addErDiagramTab supports restoring from file with initialData', () => {
   });
 
   assert.equal(store.tabs.length, initialCount + 1);
-  const createdTab = store.tabs[0];
+  const createdTab = store.tabs[store.tabs.length - 1];
   assert.equal(createdTab?.type, 'er_diagram');
   assert.equal(createdTab?.title, 'CustomerModel.sqlight-er.json');
   assert.equal(store.activeTabId, createdTab?.id);

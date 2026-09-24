@@ -135,7 +135,7 @@
           icon="pi pi-play"
           severity="success"
           size="small"
-          class="!h-7 !w-7 !p-0"
+          class="!h-7 !w-14 !p-0"
           v-tooltip.bottom="$t('header.runTooltip')"
           @click="$emit('run-query', 'current')"
         />
@@ -144,7 +144,7 @@
           :icon="queryStore.isCancelling ? 'pi pi-spin pi-spinner' : 'pi pi-stop'"
           severity="danger"
           size="small"
-          class="!h-7 !w-7 !p-0 animate-pulse"
+          class="!h-7 !w-14 !p-0 animate-pulse"
           :disabled="queryStore.isCancelling"
           v-tooltip.bottom="queryStore.isCancelling ? $t('common.running') : $t('header.cancelQueryTooltip')"
           @click="$emit('cancel-query')"
@@ -156,7 +156,7 @@
           severity="success"
           size="small"
           outlined
-          class="!h-7 !w-7 !p-0"
+          class="!h-7 !w-14 !p-0"
           :disabled="queryStore.isExecuting"
           v-tooltip.bottom="$t('header.runAllTooltip')"
           @click="$emit('run-query', 'all')"

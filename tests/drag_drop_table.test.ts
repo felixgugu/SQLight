@@ -59,7 +59,7 @@ test('dropping table on tab bar opens a new SQL tab with SELECT statement', () =
   );
 
   assert.equal(store.tabs.length, initialCount + 1);
-  const newTab = store.tabs[0] as SqlEditorTab;
+  const newTab = store.tabs[store.tabs.length - 1] as SqlEditorTab;
   assert.equal(newTab.type, 'sql_editor');
   assert.equal(newTab.title, 'Products.sql');
   assert.equal(newTab.connectionId, 'conn-local');

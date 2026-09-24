@@ -32,7 +32,7 @@ test('opening ER diagrams for different tables creates independent tabs', () => 
   });
 
   assert.equal(store.tabs.length, initialCount + 1);
-  const tab1 = store.tabs[0] as ErDiagramTab;
+  const tab1 = store.tabs[store.tabs.length - 1] as ErDiagramTab;
   assert.equal(tab1.type, 'er_diagram');
   assert.equal(tab1.rootTable, 'Customers');
   assert.equal(tab1.title, 'ER: Customers');
@@ -47,7 +47,7 @@ test('opening ER diagrams for different tables creates independent tabs', () => 
   });
 
   assert.equal(store.tabs.length, initialCount + 2);
-  const tab2 = store.tabs[0] as ErDiagramTab;
+  const tab2 = store.tabs[store.tabs.length - 1] as ErDiagramTab;
   assert.equal(tab2.type, 'er_diagram');
   assert.equal(tab2.rootTable, 'Orders');
   assert.equal(tab2.title, 'ER: Orders');

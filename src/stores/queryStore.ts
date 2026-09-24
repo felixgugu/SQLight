@@ -372,52 +372,65 @@ export const useQueryStore = defineStore('query', () => {
       }
 
       const hasError = result.messages.some((m) => m.level === 'error');
-      const rowCount = result.resultSets.length > 0
+      const totalRows = result.resultSets.length > 0
         ? result.resultSets.reduce((sum, rs) => sum + (rs.rowCount ?? rs.rows?.length ?? 0), 0)
+        : 0;
+      const hasData = result.resultSets.length > 0 && totalRows > 0;
+      const rowCount = result.resultSets.length > 0
+        ? totalRows
         : (result.affectedRows ?? 0);
       const timeStr = new Date().toLocaleTimeString();
       const parsed = parseTargetTableFromSql(sql);
       const tableName = parsed?.tableName || extractFirstTableName(sql);
       const schema = parsed?.schema;
 
-      queryExecutionSeq++;
-      const seq = queryExecutionSeq;
-      const setsLabel = result.resultSets.length > 1 ? ` [${result.resultSets.length} sets]` : '';
-      const tabTitle = isShowplan
-        ? `${seq}.${tableName} [Plan]${setsLabel}`
-        : `${seq}.${tableName}${setsLabel}`;
+      if (hasData) {
+        queryExecutionSeq++;
+        const seq = queryExecutionSeq;
+        const setsLabel = result.resultSets.length > 1 ? ` [${result.resultSets.length} sets]` : '';
+        const tabTitle = isShowplan
+          ? `${seq}.${tableName} [Plan]${setsLabel}`
+          : `${seq}.${tableName}${setsLabel}`;
 
-      const newTab: QueryResultTab = {
-        id: `tab-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
-        title: tabTitle,
-        sql,
-        result,
-        executedAt: timeStr,
-        isPinned: false,
-        durationMs: duration,
-        rowCount,
-        connectionId,
-        database,
-        tableName,
-        schema,
-        seq,
-        isShowplan,
-      };
+        const newTab: QueryResultTab = {
+          id: `tab-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+          title: tabTitle,
+          sql,
+          result,
+          executedAt: timeStr,
+          isPinned: false,
+          durationMs: duration,
+          rowCount,
+          connectionId,
+          database,
+          tableName,
+          schema,
+          seq,
+          isShowplan,
+        };
 
-      if (result.resultSets) {
-        for (const rs of result.resultSets) {
-          if (rs.rows && Array.isArray(rs.rows)) {
-            rs.rows = markRaw(rs.rows);
+        if (result.resultSets) {
+          for (const rs of result.resultSets) {
+            if (rs.rows && Array.isArray(rs.rows)) {
+              rs.rows = markRaw(rs.rows);
+            }
           }
         }
-      }
 
-      insertNewTab(newTab);
+        insertNewTab(newTab);
+      }
 
       if (isShowplan) {
         try {
           const workspaceStore = useWorkspaceStore();
           workspaceStore.setBottomPanelTab('results');
+        } catch {
+          // ignore if workspaceStore is unavailable (e.g. unit tests)
+        }
+      } else if (!hasData) {
+        try {
+          const workspaceStore = useWorkspaceStore();
+          workspaceStore.setBottomPanelTab('messages');
         } catch {
           // ignore if workspaceStore is unavailable (e.g. unit tests)
         }
@@ -529,13 +542,6 @@ export const useQueryStore = defineStore('query', () => {
 
       executionError.value = msg;
       const timeStr = new Date().toLocaleTimeString();
-      const parsed = parseTargetTableFromSql(sql);
-      const tableName = parsed?.tableName || extractFirstTableName(sql);
-      const schema = parsed?.schema;
-
-      queryExecutionSeq++;
-      const seq = queryExecutionSeq;
-      const tabTitle = `${seq}.${tableName}`;
 
       const errorResult: QueryResult = {
         resultSets: [],
@@ -551,23 +557,12 @@ export const useQueryStore = defineStore('query', () => {
         executionTimeMs: duration,
       };
 
-      const newTab: QueryResultTab = {
-        id: `tab-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
-        title: tabTitle,
-        sql,
-        result: errorResult,
-        executedAt: timeStr,
-        isPinned: false,
-        durationMs: duration,
-        rowCount: 0,
-        connectionId,
-        database,
-        tableName,
-        schema,
-        seq,
-      };
-
-      insertNewTab(newTab);
+      try {
+        const workspaceStore = useWorkspaceStore();
+        workspaceStore.setBottomPanelTab('messages');
+      } catch {
+        // ignore if workspaceStore is unavailable (e.g. unit tests)
+      }
 
       sessionMessageSeq++;
       sessionMessages.value.unshift({

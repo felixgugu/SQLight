@@ -263,7 +263,7 @@ export const useWorkspaceStore = defineStore('workspace', () => {
       filePath,
       isDirty: false,
     };
-    tabs.value.unshift(newTab);
+    tabs.value.push(newTab);
     activeTabId.value = tabId;
     return tabId;
   }
@@ -321,7 +321,7 @@ export const useWorkspaceStore = defineStore('workspace', () => {
     if (sourceIdx !== -1) {
       tabs.value.splice(sourceIdx + 1, 0, newTab);
     } else {
-      tabs.value.unshift(newTab);
+      tabs.value.push(newTab);
     }
 
     activeTabId.value = newTabId;
@@ -362,7 +362,7 @@ export const useWorkspaceStore = defineStore('workspace', () => {
       database: effectiveDb,
       isDirty: false,
     };
-    tabs.value.unshift(newTab);
+    tabs.value.push(newTab);
     activeTabId.value = tabId;
   }
 
@@ -400,7 +400,7 @@ export const useWorkspaceStore = defineStore('workspace', () => {
       database: effectiveDb,
       isDirty: false,
     };
-    tabs.value.unshift(newTab);
+    tabs.value.push(newTab);
     activeTabId.value = tabId;
   }
 
@@ -427,7 +427,7 @@ export const useWorkspaceStore = defineStore('workspace', () => {
       database: effectiveDb,
       isDirty: false,
     };
-    tabs.value.unshift(newTab);
+    tabs.value.push(newTab);
     activeTabId.value = tabId;
     return newTab;
   }
@@ -478,7 +478,7 @@ export const useWorkspaceStore = defineStore('workspace', () => {
       fileName: options.fileName,
       isDirty: false,
     };
-    tabs.value.unshift(newTab);
+    tabs.value.push(newTab);
     activeTabId.value = tabId;
   }
 

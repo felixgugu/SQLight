@@ -8,26 +8,11 @@
       class="workspace-tab-bar h-9 bg-dark-850 flex items-center px-1.5 space-x-1 select-none flex-shrink-0 overflow-hidden transition-colors"
       :class="[isBarDragOver ? 'bg-dark-800 ring-1 ring-inset ring-brand-500/40' : '']"
     >
-      <!-- Fixed Left: Add New Query Tab Button -->
-      <Button
-        icon="pi pi-plus"
-        severity="secondary"
-        size="small"
-        text
-        rounded
-        class="!h-7 !w-7 !p-0 !text-accent"
-        v-tooltip.bottom="$t('editor.newTab')"
-        @click="handleAddNewTab"
-      />
-
-      <!-- Vertical Divider -->
-      <div class="h-4 w-px bg-dark-750 mx-0.5 flex-shrink-0"></div>
-
       <!-- Scrollable Tabs List -->
       <div
         ref="queryTabsBarRef"
         @wheel="handleTabsWheel"
-        class="query-tabs-scroll flex-1 flex items-center space-x-1 overflow-x-auto overflow-y-hidden select-none h-full"
+        class="query-tabs-scroll flex-1 flex items-center overflow-x-auto overflow-y-hidden select-none h-full"
       >
         <!-- Tabs List -->
         <div
@@ -40,7 +25,7 @@
           @dragleave.stop="handleTabItemDragLeave($event, tab)"
           @drop.stop.prevent="handleTabItemDrop($event, tab)"
           :class="[
-            'query-tab-item h-7 px-2.5 flex items-center space-x-2 text-xs rounded-t border-x cursor-grab active:cursor-grabbing transition-all duration-100 group max-w-[280px] select-none touch-none flex-shrink-0',
+            'query-tab-item h-7 px-2.5 flex items-center space-x-2 text-xs border cursor-grab active:cursor-grabbing transition-all duration-100 group max-w-[280px] select-none touch-none flex-shrink-0 relative',
             workspaceStore.activeTabId === tab.id ? 'font-medium shadow-sm active-tab' : 'inactive-tab shadow-xs',
             isPointerDragging && dragSourceIndex === idx ? 'opacity-35 border-dashed border-brand-400 scale-95' : '',
             dropHoverIndex === idx && isPointerDragging && dropHoverIndex !== dragSourceIndex ? 'border-brand-400 bg-brand-500/25 ring-1 ring-brand-400 scale-102' : '',
@@ -49,11 +34,11 @@
           :style="getTabItemStyle(tab, idx)"
           :title="getTabTooltip(tab)"
         >
-          <FileCode v-if="tab.type === 'sql_editor'" class="w-3.5 h-3.5 flex-shrink-0 transition-colors" :class="workspaceStore.activeTabId === tab.id ? 'text-primary' : 'text-primary/70'" />
-          <Table2 v-else-if="tab.type === 'table_data'" class="w-3.5 h-3.5 flex-shrink-0 transition-colors" :class="workspaceStore.activeTabId === tab.id ? 'text-ok' : 'text-ok'" />
-          <TableProperties v-else-if="tab.type === 'table_structure'" class="w-3.5 h-3.5 flex-shrink-0 transition-colors" :class="workspaceStore.activeTabId === tab.id ? 'text-structure' : 'text-structure'" />
-          <Network v-else-if="tab.type === 'execution_plan'" class="w-3.5 h-3.5 flex-shrink-0 transition-colors" :class="workspaceStore.activeTabId === tab.id ? 'text-plan' : 'text-plan'" />
-          <Workflow v-else-if="tab.type === 'er_diagram'" class="w-3.5 h-3.5 flex-shrink-0 transition-colors" :class="workspaceStore.activeTabId === tab.id ? 'text-er' : 'text-er'" />
+          <FileCode v-if="tab.type === 'sql_editor'" class="w-3.5 h-3.5 flex-shrink-0 transition-opacity" :class="workspaceStore.activeTabId === tab.id ? 'text-primary opacity-100' : 'text-primary/70 opacity-60 group-hover:opacity-100'" />
+          <Table2 v-else-if="tab.type === 'table_data'" class="w-3.5 h-3.5 flex-shrink-0 transition-opacity" :class="workspaceStore.activeTabId === tab.id ? 'text-ok opacity-100' : 'text-ok/80 opacity-60 group-hover:opacity-100'" />
+          <TableProperties v-else-if="tab.type === 'table_structure'" class="w-3.5 h-3.5 flex-shrink-0 transition-opacity" :class="workspaceStore.activeTabId === tab.id ? 'text-structure opacity-100' : 'text-structure/80 opacity-60 group-hover:opacity-100'" />
+          <Network v-else-if="tab.type === 'execution_plan'" class="w-3.5 h-3.5 flex-shrink-0 transition-opacity" :class="workspaceStore.activeTabId === tab.id ? 'text-plan opacity-100' : 'text-plan/80 opacity-60 group-hover:opacity-100'" />
+          <Workflow v-else-if="tab.type === 'er_diagram'" class="w-3.5 h-3.5 flex-shrink-0 transition-opacity" :class="workspaceStore.activeTabId === tab.id ? 'text-er opacity-100' : 'text-er/80 opacity-60 group-hover:opacity-100'" />
 
           <!-- Title Display OR Inline Rename Input -->
           <input
@@ -101,13 +86,29 @@
             v-if="editingTabId !== tab.id"
             type="button"
             @click.stop="workspaceStore.closeTab(tab.id)"
-            class="p-0.5 rounded transition-opacity flex-shrink-0 opacity-0 group-hover:opacity-100 text-dark-400 hover:text-danger hover:bg-rose-500/15 cursor-pointer"
+            class="p-0.5 rounded transition-all flex-shrink-0 text-dark-400 hover:text-danger hover:bg-rose-500/15 cursor-pointer"
+            :class="workspaceStore.activeTabId === tab.id ? 'opacity-40 group-hover:opacity-100' : 'opacity-0 group-hover:opacity-70 hover:!opacity-100'"
             :title="$t('editor.closeTab')"
           >
             <X class="w-2.5 h-2.5" />
           </button>
         </div>
       </div>
+
+      <!-- Vertical Divider -->
+      <div class="h-4 w-px bg-dark-750 mx-0.5 flex-shrink-0"></div>
+
+      <!-- Fixed Right: Add New Query Tab Button -->
+      <Button
+        icon="pi pi-plus"
+        severity="secondary"
+        size="small"
+        text
+        rounded
+        class="!h-7 !w-7 !p-0 !text-accent flex-shrink-0"
+        v-tooltip.bottom="$t('editor.newTab')"
+        @click="handleAddNewTab"
+      />
     </div>
 
     <!-- PrimeVue Tab Context Menu -->
@@ -366,16 +367,11 @@ function getTabItemStyle(tab: WorkspaceTab, idx: number) {
   );
 
   const connColor = getTabConnectionColor(tab);
-  if (connColor) {
-    baseStyle['--tab-top-accent'] = connColor;
-  } else if (tab.type === 'sql_editor') {
-    baseStyle['--tab-top-accent'] = 'var(--p-primary-color, #3b82f6)';
-  }
+  const accentColor = connColor || (tab.type === 'sql_editor' ? 'var(--p-primary-color, #3b82f6)' : (baseStyle['--tab-top-accent'] || 'var(--p-primary-color, #3b82f6)'));
+  baseStyle['--tab-top-accent'] = accentColor;
 
   if (isActive) {
-    // 目前查詢分頁邊框套用主題顏色
-    baseStyle['--tab-border'] = 'var(--p-primary-color, #3b82f6)';
-    baseStyle['--tab-top-accent'] = 'var(--p-primary-color, #3b82f6)';
+    baseStyle['--tab-border'] = 'rgb(var(--color-dark-700))';
   }
 
   return baseStyle;
@@ -645,8 +641,9 @@ function handleDangerousModalCancel() {
 async function executeSql(connId: string, db: string, targetSql: string) {
   const result = await queryStore.execute(connId, db, targetSql);
 
-  // Auto-switch to Results or Messages (if DDL/DML has 0 result sets or error, show Messages like SSMS)
-  if (result && (result.messages.some((m) => m.level === 'error') || result.resultSets.length === 0)) {
+  // Auto-switch to Results or Messages (if query has no data or error, show Messages like SSMS)
+  const totalRows = result?.resultSets?.reduce((sum, rs) => sum + (rs.rowCount ?? rs.rows?.length ?? 0), 0) ?? 0;
+  if (!result || result.messages.some((m) => m.level === 'error') || result.resultSets.length === 0 || totalRows === 0) {
     workspaceStore.setBottomPanelTab('messages');
   } else {
     workspaceStore.setBottomPanelTab('results');
@@ -725,6 +722,12 @@ function scrollToStart() {
   }
 }
 
+function scrollToEnd() {
+  if (queryTabsBarRef.value) {
+    queryTabsBarRef.value.scrollLeft = queryTabsBarRef.value.scrollWidth;
+  }
+}
+
 function focusEditor(line?: number, col?: number) {
   nextTick(() => {
     monacoRef.value?.focus(line, col);
@@ -751,7 +754,7 @@ function getSelectedOrFullQuery(): { sql: string; isSelection: boolean } {
 function handleAddNewTab() {
   workspaceStore.addSqlTab();
   nextTick(() => {
-    scrollToStart();
+    scrollToEnd();
     focusEditor(1, 1);
   });
 }
@@ -937,7 +940,12 @@ async function handleTabItemDrop(e: DragEvent, tab: WorkspaceTab) {
 watch(
   () => workspaceStore.activeTabId,
   (newId) => {
-    if (workspaceStore.tabs[0]?.id === newId) {
+    const tabs = workspaceStore.tabs;
+    if (tabs.length > 0 && tabs[tabs.length - 1]?.id === newId) {
+      nextTick(() => {
+        scrollToEnd();
+      });
+    } else if (tabs[0]?.id === newId) {
       nextTick(() => {
         scrollToStart();
       });
@@ -972,6 +980,7 @@ defineExpose({
   getTableNameAtCursor,
   getSelectedOrFullQuery,
   scrollToStart,
+  scrollToEnd,
   focusEditor,
   triggerSuggest,
 });
@@ -982,12 +991,20 @@ defineExpose({
   position: relative;
   background-color: var(--tab-bg);
   border-top-width: 1px;
+  border-left-width: 1px;
+  border-right-width: 1px;
+  border-bottom-width: 1px;
   border-top-color: var(--tab-border);
   border-left-color: var(--tab-border);
   border-right-color: var(--tab-border);
+  border-bottom-color: transparent;
   color: var(--tab-text);
-  border-radius: 6px 6px 0 0;
+  border-radius: 0;
   transition: all 0.15s ease;
+}
+
+.query-tab-item + .query-tab-item {
+  margin-left: -1px;
 }
 
 .query-tab-item:hover {
@@ -999,14 +1016,28 @@ defineExpose({
 }
 
 .query-tab-item.active-tab {
+  height: 29px !important;
   background-color: var(--tab-active-surface, rgb(var(--color-dark-900))) !important;
   color: var(--tab-active-text, rgb(var(--color-dark-100))) !important;
   border-top-color: var(--tab-top-accent) !important;
   border-left-color: var(--tab-top-accent) !important;
   border-right-color: var(--tab-top-accent) !important;
+  border-bottom-color: var(--tab-active-surface, rgb(var(--color-dark-900))) !important;
   margin-bottom: -1px;
   z-index: 10;
-  box-shadow: 0 -1px 3px rgba(0, 0, 0, 0.06);
+  box-shadow: 0 -2px 6px rgba(0, 0, 0, 0.08);
+}
+
+/* 頂部高光指示條 (Top Accent Indicator) */
+.query-tab-item.active-tab::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background-color: var(--tab-top-accent, var(--p-primary-color, #3b82f6));
+  z-index: 2;
 }
 
 .query-tabs-scroll {
