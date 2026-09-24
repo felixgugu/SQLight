@@ -40,7 +40,7 @@ export const useGridLayoutStore = defineStore('gridLayout', () => {
   const activeSetIndexByTab = new Map<string, number>();
   // Toolbar visibility is the opposite case: the header button and every grid pane of the tab
   // render from it, so this one has to be reactive.
-  const toolbarHiddenByTab = ref(new Set<string>());
+  const toolbarHiddenByTab = ref(new Map<string, boolean>());
 
   function layoutKey(tabId: string | null | undefined, setIndex: number): string {
     return buildLayoutKey(tabId, setIndex);
@@ -105,26 +105,25 @@ export const useGridLayoutStore = defineStore('gridLayout', () => {
   }
 
   /** Whether one result tab hides the toolbar and info bars of all its grids. */
-  function isToolbarHidden(tabId: string | null | undefined): boolean {
-    return !!tabId && toolbarHiddenByTab.value.has(tabId);
+  function isToolbarHidden(tabId: string | null | undefined, defaultHidden: boolean = false): boolean {
+    if (!tabId) return defaultHidden;
+    const explicit = toolbarHiddenByTab.value.get(tabId);
+    return explicit !== undefined ? explicit : defaultHidden;
   }
 
   /** Sets the toolbar visibility of one result tab. An unknown tab id is ignored. */
   function setToolbarHidden(tabId: string | null | undefined, hidden: boolean): void {
     if (!tabId) return;
-    const next = new Set(toolbarHiddenByTab.value);
-    if (hidden) {
-      next.add(tabId);
-    } else {
-      next.delete(tabId);
-    }
+    const next = new Map(toolbarHiddenByTab.value);
+    next.set(tabId, hidden);
     toolbarHiddenByTab.value = next;
   }
 
   /** Flips the toolbar visibility of one result tab; returns the resulting state. */
-  function toggleToolbarHidden(tabId: string | null | undefined): boolean {
+  function toggleToolbarHidden(tabId: string | null | undefined, defaultHidden: boolean = false): boolean {
     if (!tabId) return false;
-    const hidden = !toolbarHiddenByTab.value.has(tabId);
+    const current = isToolbarHidden(tabId, defaultHidden);
+    const hidden = !current;
     setToolbarHidden(tabId, hidden);
     return hidden;
   }
@@ -133,7 +132,11 @@ export const useGridLayoutStore = defineStore('gridLayout', () => {
   function clearTab(tabId: string | null | undefined): void {
     if (!tabId) return;
     activeSetIndexByTab.delete(tabId);
-    toolbarHiddenByTab.value.delete(tabId);
+    if (toolbarHiddenByTab.value.has(tabId)) {
+      const next = new Map(toolbarHiddenByTab.value);
+      next.delete(tabId);
+      toolbarHiddenByTab.value = next;
+    }
     const prefix = `${tabId}:`;
     for (const key of [...layouts.keys()]) {
       if (key.startsWith(prefix)) layouts.delete(key);

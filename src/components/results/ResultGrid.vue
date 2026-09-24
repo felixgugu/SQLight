@@ -230,11 +230,11 @@ const gridLayoutStore = useGridLayoutStore();
  * header carrying this toggle only renders for multiple result sets.
  */
 const toolbarHidden = computed(
-  () => props.resultSets.length > 1 && gridLayoutStore.isToolbarHidden(props.tabId ?? null)
+  () => props.resultSets.length > 1 && gridLayoutStore.isToolbarHidden(props.tabId ?? null, true)
 );
 
 function toggleToolbarVisibility() {
-  gridLayoutStore.toggleToolbarHidden(props.tabId ?? null);
+  gridLayoutStore.toggleToolbarHidden(props.tabId ?? null, true);
 }
 
 /** Component key doubles as the persistent layout key for the result set it renders. */

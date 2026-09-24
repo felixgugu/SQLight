@@ -362,25 +362,20 @@ function getTabItemStyle(tab: WorkspaceTab, idx: number) {
   const baseStyle = getTabThemeStyle(
     tab.type,
     isActive,
-    settingsStore.activeSqlTabBgColor,
-    settingsStore.activeSqlTabTextColor,
     settingsStore.colorMode === 'light'
   );
 
   const connColor = getTabConnectionColor(tab);
   if (connColor) {
     baseStyle['--tab-top-accent'] = connColor;
-    if (isActive) {
-      baseStyle['--tab-border'] = connColor;
-    }
   } else if (tab.type === 'sql_editor') {
-    const isCustom = Boolean(settingsStore.activeSqlTabBgColor && settingsStore.activeSqlTabBgColor !== '#1e40af');
-    if (!isCustom) {
-      baseStyle['--tab-top-accent'] = 'var(--p-primary-color, #3b82f6)';
-      if (isActive) {
-        baseStyle['--tab-border'] = 'var(--p-primary-color, #3b82f6)';
-      }
-    }
+    baseStyle['--tab-top-accent'] = 'var(--p-primary-color, #3b82f6)';
+  }
+
+  if (isActive) {
+    // 目前查詢分頁邊框套用主題顏色
+    baseStyle['--tab-border'] = 'var(--p-primary-color, #3b82f6)';
+    baseStyle['--tab-top-accent'] = 'var(--p-primary-color, #3b82f6)';
   }
 
   return baseStyle;

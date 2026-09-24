@@ -415,7 +415,7 @@
       :closable="false"
       :dismissableMask="true"
       :showHeader="false"
-      class="w-[92vw] max-w-5xl h-[88vh] max-h-[850px] !bg-dark-850 !border !rounded-lg overflow-hidden flex flex-col shadow-2xl"
+      class="w-[92vw] max-w-5xl h-[88vh] max-h-[850px] !bg-dark-850 !border overflow-hidden flex flex-col shadow-2xl"
       :class="requiresModificationPrompt ? (commitModal.confirmStep === 2 ? '!border-rose-600/80 shadow-rose-950/40' : '!border-amber-600/80 shadow-amber-950/30') : '!border-dark-700'"
       contentClass="!p-0 !bg-dark-850 h-full flex flex-col"
     >

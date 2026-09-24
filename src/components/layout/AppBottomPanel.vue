@@ -79,7 +79,7 @@
             :class="[
               'result-tab-item h-7 px-2 flex items-center space-x-1.5 text-xxs rounded-t cursor-grab active:cursor-grabbing transition-all duration-100 group max-w-[220px] border flex-shrink-0 select-none touch-none',
               queryStore.activeResultTabId === rtab.id
-                ? 'font-medium shadow-xs border-dark-600 active-tab'
+                ? 'font-medium shadow-xs border-primary active-tab'
                 : 'bg-dark-800/80 text-dark-400 hover:text-dark-200 border-dark-700 hover:border-dark-600 hover:bg-dark-800',
               isPointerDragging && dragSourceIndex === idx ? 'opacity-35 border-dashed border-brand-400 scale-95' : '',
               dropHoverIndex === idx && isPointerDragging && dropHoverIndex !== dragSourceIndex ? 'border-brand-400 bg-brand-500/25 ring-1 ring-brand-400 scale-102' : ''
@@ -493,24 +493,6 @@ function getResultTabStyle(rtab: QueryResultTab): Record<string, string> {
 
   const topAccent = getResultTabTopAccent(rtab);
   const isLight = settingsStore.colorMode === 'light';
-
-  const isCustomBg = Boolean(settingsStore.activeSqlTabBgColor && settingsStore.activeSqlTabBgColor !== '#1e40af');
-  const isCustomText = Boolean(settingsStore.activeSqlTabTextColor && settingsStore.activeSqlTabTextColor !== '#ffffff');
-
-  if (isCustomBg || isCustomText) {
-    return {
-      '--tab-top-accent': topAccent,
-      '--tab-active-surface': settingsStore.activeSqlTabBgColor,
-      '--tab-active-text': settingsStore.activeSqlTabTextColor,
-      '--tab-border': topAccent,
-      backgroundColor: settingsStore.activeSqlTabBgColor,
-      color: settingsStore.activeSqlTabTextColor,
-      borderTopColor: topAccent,
-      borderLeftColor: topAccent,
-      borderRightColor: topAccent,
-      borderBottomColor: 'transparent',
-    };
-  }
 
   return {
     '--tab-top-accent': topAccent,

@@ -6,11 +6,11 @@
     :closable="false"
     :dismissableMask="true"
     :showHeader="false"
-    class="w-full max-w-2xl !bg-dark-850 !border !border-dark-700 !rounded-xl shadow-2xl overflow-hidden ring-1 ring-black/5 dark:ring-white/10"
-    contentClass="!p-0 !bg-dark-850"
+    class="w-full max-w-2xl h-[80vh] !bg-dark-850 !border !border-dark-700 shadow-2xl overflow-hidden ring-1 ring-black/5 dark:ring-white/10 flex flex-col"
+    contentClass="!p-0 !bg-dark-850 h-full flex flex-col overflow-hidden"
   >
     <!-- Search Header Bar -->
-    <div class="p-3 border-b border-dark-700 bg-dark-900/60 flex flex-col space-y-2.5">
+    <div class="p-3 border-b border-dark-700 bg-dark-900/60 flex flex-col space-y-2.5 flex-shrink-0">
       <div class="flex items-center space-x-2">
         <IconField class="flex-1">
           <InputIcon class="pi pi-search text-accent" />
@@ -121,7 +121,7 @@
     <!-- Loading Progress State -->
     <div
       v-if="isLoading"
-      class="px-4 py-8 flex flex-col items-center justify-center space-y-2 text-dark-400"
+      class="flex-1 px-4 py-8 flex flex-col items-center justify-center space-y-2 text-dark-400"
     >
       <i class="pi pi-spin pi-spinner text-2xl text-accent"></i>
       <span class="text-xs">{{ $t('quickFinder.loading') }}</span>
@@ -130,7 +130,7 @@
     <!-- Empty State (No connection) -->
     <div
       v-else-if="!connectionStore.activeConnectionId || connectionStore.status !== 'connected'"
-      class="px-4 py-12 flex flex-col items-center justify-center space-y-2 text-dark-400"
+      class="flex-1 px-4 py-12 flex flex-col items-center justify-center space-y-2 text-dark-400"
     >
       <i class="pi pi-server text-3xl text-dark-600 mb-1"></i>
       <span class="text-xs text-dark-300 font-medium">{{ $t('quickFinder.noConnection') }}</span>
@@ -140,7 +140,7 @@
     <!-- Empty State (No matched objects) -->
     <div
       v-else-if="scoredResults.length === 0"
-      class="px-4 py-12 flex flex-col items-center justify-center space-y-1.5 text-dark-400"
+      class="flex-1 px-4 py-12 flex flex-col items-center justify-center space-y-1.5 text-dark-400"
     >
       <i class="pi pi-search text-3xl text-dark-600 mb-1"></i>
       <span class="text-xs text-dark-300">{{ $t('quickFinder.notFound', { query: searchQuery }) }}</span>
@@ -151,7 +151,7 @@
     <div
       v-else
       ref="resultsListRef"
-      class="max-h-[380px] overflow-y-auto divide-y divide-dark-800/60 p-1 font-mono text-xs"
+      class="flex-1 overflow-y-auto divide-y divide-dark-800/60 p-1 font-mono text-xs"
     >
       <div
         v-for="(res, idx) in scoredResults"
@@ -301,7 +301,7 @@
     </div>
 
     <!-- Bottom Status & Keyboard Guide Footer -->
-    <div class="h-9 px-3 border-t border-dark-700 bg-dark-900/90 flex items-center justify-between text-xxs text-dark-400">
+    <div class="h-9 px-3 border-t border-dark-700 bg-dark-900/90 flex items-center justify-between text-xxs text-dark-400 flex-shrink-0">
       <!-- Left: Shortcut Key hints -->
       <div class="flex items-center space-x-3">
         <span class="flex items-center space-x-1">

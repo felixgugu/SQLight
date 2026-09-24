@@ -13,8 +13,13 @@
         :class="[
           dataViewStore.isMaximized
             ? 'fixed inset-0 w-screen h-screen rounded-none z-[9991]'
-            : 'w-[94vw] max-w-4xl h-[84vh] max-h-[800px] rounded-xl'
+            : 'w-[94vw] max-w-4xl h-[84vh] max-h-[800px]'
         ]"
+        :style="{
+          borderRadius: dataViewStore.isMaximized
+            ? '0px'
+            : 'var(--p-dialog-border-radius, var(--p-overlay-modal-border-radius, var(--p-content-border-radius, 0.5rem)))',
+        }"
       >
         <!-- Header -->
         <div

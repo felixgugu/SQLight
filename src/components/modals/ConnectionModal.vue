@@ -4,12 +4,12 @@
     modal
     :dismissable-mask="true"
     :closable="true"
-    class="w-full max-w-xl font-sans !border !border-dark-700/80 !shadow-2xl !bg-dark-900 !rounded-2xl overflow-hidden"
+    class="w-full max-w-xl h-[80vh] font-sans !border !border-dark-700/80 !shadow-2xl !bg-dark-900 overflow-hidden flex flex-col"
     :pt="{
-      root: { class: '!bg-dark-900 !border-dark-700/80 !rounded-2xl' },
-      header: { class: '!bg-dark-850/90 !border-b !border-dark-750 !px-5 !py-3.5 !rounded-t-2xl' },
-      content: { class: '!bg-dark-900 !px-5 !py-4' },
-      footer: { class: '!bg-dark-850/80 !border-t !border-dark-750 !px-5 !py-3 !rounded-b-2xl' }
+      root: { class: '!bg-dark-900 !border-dark-700/80 flex flex-col' },
+      header: { class: '!bg-dark-850/90 !border-b !border-dark-750 !px-5 !py-3.5 flex-shrink-0' },
+      content: { class: '!bg-dark-900 !px-5 !py-4 flex-1 overflow-y-auto' },
+      footer: { class: '!bg-dark-850/80 !border-t !border-dark-750 !px-5 !py-3 flex-shrink-0' }
     }"
     @update:visible="val => !val && close()"
   >

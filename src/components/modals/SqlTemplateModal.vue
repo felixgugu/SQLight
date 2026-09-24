@@ -7,7 +7,7 @@
     :closable="false"
     :dismissableMask="true"
     :showHeader="false"
-    class="w-full max-w-5xl h-[84vh] !bg-dark-850 !border !border-dark-700 !rounded-xl shadow-2xl overflow-hidden ring-1 ring-black/5 dark:ring-white/10"
+    class="w-full max-w-5xl h-[80vh] !bg-dark-850 !border !border-dark-700 shadow-2xl overflow-hidden ring-1 ring-black/5 dark:ring-white/10"
     contentClass="!p-0 !bg-dark-850 h-full flex flex-col"
   >
     <!-- Top Header & Search Area -->

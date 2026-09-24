@@ -350,6 +350,25 @@ html:not(.dark) .p-menu-item.p-focus .p-menu-item-content {
 }
 
 /* ==========================================================================
+   PrimeVue Dialog Theme-Aware Border Radius Unification
+   All dialogs respect the active theme preset tokens (Aura, Lara, Nora, Material)
+   ========================================================================== */
+.p-dialog:not(.p-dialog-maximized) {
+  border-radius: var(--p-dialog-border-radius, var(--p-overlay-modal-border-radius, var(--p-content-border-radius, 0.5rem))) !important;
+  overflow: hidden !important;
+}
+
+.p-dialog:not(.p-dialog-maximized) .p-dialog-header {
+  border-top-left-radius: inherit !important;
+  border-top-right-radius: inherit !important;
+}
+
+.p-dialog:not(.p-dialog-maximized) .p-dialog-footer {
+  border-bottom-left-radius: inherit !important;
+  border-bottom-right-radius: inherit !important;
+}
+
+/* ==========================================================================
    PrimeVue Dialog Header Action / Close Button Unification (No Circular Frame)
    ========================================================================== */
 .p-dialog .p-dialog-header .p-dialog-header-actions .p-dialog-close-button,

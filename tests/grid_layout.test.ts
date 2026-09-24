@@ -164,6 +164,24 @@ test('hidden toolbars are remembered per result tab and cleared with the tab', (
   assert.equal(store.isToolbarHidden('tab-t'), false);
 });
 
+test('multiple result sets default to hiding toolbars until explicitly toggled', () => {
+  const store = freshStore();
+  // When defaultHidden is true (multi result sets view):
+  assert.equal(store.isToolbarHidden('tab-m', true), true);
+
+  // Toggling flips from default-hidden (true) to visible (false)
+  assert.equal(store.toggleToolbarHidden('tab-m', true), false);
+  assert.equal(store.isToolbarHidden('tab-m', true), false);
+
+  // Toggling again flips from visible (false) back to hidden (true)
+  assert.equal(store.toggleToolbarHidden('tab-m', true), true);
+  assert.equal(store.isToolbarHidden('tab-m', true), true);
+
+  // Clearing the tab resets the preference back to defaultHidden
+  store.clearTab('tab-m');
+  assert.equal(store.isToolbarHidden('tab-m', true), true);
+});
+
 test('the hide-toolbar toggle sits next to 等分高度 and reaches every grid pane', () => {
   const grid = readSource('src/components/results/ResultGrid.vue');
   const hideButton = sliceBetween(grid, '<div class="flex items-center space-x-1 flex-shrink-0">', '<!-- Reset Heights Button in Stacked Mode -->');

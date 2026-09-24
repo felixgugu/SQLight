@@ -4,7 +4,8 @@
     modal
     :closable="step !== 'running'"
     :dismissable-mask="step !== 'running'"
-    class="w-full max-w-xl font-sans"
+    class="w-full max-w-xl h-[80vh] font-sans flex flex-col"
+    content-class="flex-1 overflow-y-auto"
     @update:visible="val => !val && handleClose()"
   >
     <template #header>

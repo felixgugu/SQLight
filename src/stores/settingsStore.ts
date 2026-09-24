@@ -38,8 +38,6 @@ export interface AppSettings {
   maxResultTabs: number;
   defaultMaxRows: number | null;
   editorHighlightColor: string;
-  activeSqlTabBgColor: string;
-  activeSqlTabTextColor: string;
   gridFontFamily: string;
   erTheme: 'dark' | 'light';
   hiddenTableRules?: FilterRule[];
@@ -64,8 +62,6 @@ const DEFAULT_SETTINGS: AppSettings = {
   maxResultTabs: 10,
   defaultMaxRows: 10000,
   editorHighlightColor: '#feffe0',
-  activeSqlTabBgColor: '#1e40af',
-  activeSqlTabTextColor: '#ffffff',
   gridFontFamily: DEFAULT_GRID_FONT_FAMILY,
   erTheme: 'dark',
   hiddenTableRules: [],
@@ -109,8 +105,6 @@ export const useSettingsStore = defineStore('settings', () => {
   const maxResultTabs = ref<number>(initial.maxResultTabs);
   const defaultMaxRows = ref<number | null>(initial.defaultMaxRows);
   const editorHighlightColor = ref<string>(initial.editorHighlightColor || '#feffe0');
-  const activeSqlTabBgColor = ref<string>(initial.activeSqlTabBgColor || '#1e40af');
-  const activeSqlTabTextColor = ref<string>(initial.activeSqlTabTextColor || '#ffffff');
   const gridFontFamily = ref<string>(initial.gridFontFamily || DEFAULT_GRID_FONT_FAMILY);
   const erTheme = ref<'dark' | 'light'>(initial.erTheme || 'dark');
   const hiddenTableRules = ref<FilterRule[]>(
@@ -247,8 +241,6 @@ export const useSettingsStore = defineStore('settings', () => {
       maxResultTabs: maxResultTabs.value,
       defaultMaxRows: defaultMaxRows.value,
       editorHighlightColor: editorHighlightColor.value,
-      activeSqlTabBgColor: activeSqlTabBgColor.value,
-      activeSqlTabTextColor: activeSqlTabTextColor.value,
       gridFontFamily: gridFontFamily.value,
       erTheme: erTheme.value,
       hiddenTableRules: hiddenTableRules.value,
@@ -278,8 +270,6 @@ export const useSettingsStore = defineStore('settings', () => {
       maxResultTabs,
       defaultMaxRows,
       editorHighlightColor,
-      activeSqlTabBgColor,
-      activeSqlTabTextColor,
       gridFontFamily,
       erTheme,
       hiddenTableRules,
@@ -307,8 +297,6 @@ export const useSettingsStore = defineStore('settings', () => {
     maxResultTabs.value = DEFAULT_SETTINGS.maxResultTabs;
     defaultMaxRows.value = DEFAULT_SETTINGS.defaultMaxRows;
     editorHighlightColor.value = DEFAULT_SETTINGS.editorHighlightColor;
-    activeSqlTabBgColor.value = DEFAULT_SETTINGS.activeSqlTabBgColor;
-    activeSqlTabTextColor.value = DEFAULT_SETTINGS.activeSqlTabTextColor;
     gridFontFamily.value = DEFAULT_SETTINGS.gridFontFamily;
     erTheme.value = DEFAULT_SETTINGS.erTheme;
     hiddenTableRules.value = [];
@@ -337,8 +325,6 @@ export const useSettingsStore = defineStore('settings', () => {
     maxResultTabs,
     defaultMaxRows,
     editorHighlightColor,
-    activeSqlTabBgColor,
-    activeSqlTabTextColor,
     gridFontFamily,
     erTheme,
     hiddenTableRules,

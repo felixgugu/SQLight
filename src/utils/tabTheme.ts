@@ -143,23 +143,25 @@ export const TAB_CATEGORY_THEMES: Record<TabType, TabCategoryTheme> = {
 };
 
 /**
- * Computes CSS variable styling for a tab given its type, active state, and optional SQL overrides.
+ * Computes CSS variable styling for a tab given its type, active state, and optional light/dark or legacy overrides.
  */
 export function getTabThemeStyle(
   type: TabType,
   isActive: boolean,
-  customSqlBg?: string,
+  customSqlBgOrIsLight?: string | boolean,
   customSqlText?: string,
   isLight = false
 ): Record<string, string> {
+  const customSqlBg = typeof customSqlBgOrIsLight === 'string' ? customSqlBgOrIsLight : undefined;
+  const actualIsLight = typeof customSqlBgOrIsLight === 'boolean' ? customSqlBgOrIsLight : isLight;
   const theme = TAB_CATEGORY_THEMES[type] || TAB_CATEGORY_THEMES.sql_editor;
 
   if (isActive) {
     const isCustom = Boolean(type === 'sql_editor' && customSqlBg && customSqlBg !== '#1e40af');
-    const bg = type === 'sql_editor' && customSqlBg ? customSqlBg : theme.active.bg;
-    const text = type === 'sql_editor' && customSqlText ? customSqlText : theme.active.text;
-    const border = type === 'sql_editor' && customSqlBg ? customSqlBg : theme.active.border;
-    const topAccent = type === 'sql_editor' && customSqlBg ? customSqlBg : theme.active.topAccent;
+    const bg = isCustom ? customSqlBg! : theme.active.bg;
+    const text = isCustom && customSqlText ? customSqlText : theme.active.text;
+    const border = isCustom ? customSqlBg! : (type === 'sql_editor' ? 'var(--p-primary-color, #3b82f6)' : theme.active.border);
+    const topAccent = isCustom ? customSqlBg! : (type === 'sql_editor' ? 'var(--p-primary-color, #3b82f6)' : theme.active.topAccent);
 
     return {
       '--tab-bg': bg,
@@ -170,21 +172,21 @@ export function getTabThemeStyle(
       '--tab-text': text,
       '--tab-hover-text': text,
       '--tab-badge-bg': theme.active.badgeBg,
-      '--tab-icon-color': text,
-      '--tab-active-surface': isCustom ? bg : (isLight ? '#ffffff' : 'rgb(var(--color-dark-900))'),
-      '--tab-active-text': isCustom && customSqlText ? customSqlText : (isLight ? '#0f172a' : '#f0f0f5'),
+      '--tab-icon-color': type === 'sql_editor' ? 'var(--p-primary-color, #3b82f6)' : text,
+      '--tab-active-surface': isCustom ? bg : (actualIsLight ? '#ffffff' : 'rgb(var(--color-dark-900))'),
+      '--tab-active-text': isCustom && customSqlText ? customSqlText : (actualIsLight ? '#0f172a' : '#f0f0f5'),
     };
   }
 
   return {
-    '--tab-bg': isLight ? 'rgba(226, 232, 240, 0.6)' : theme.inactive.bg,
-    '--tab-hover-bg': isLight ? 'rgba(203, 213, 225, 0.7)' : theme.inactive.hoverBg,
-    '--tab-border': isLight ? 'rgba(203, 213, 225, 0.8)' : theme.inactive.border,
-    '--tab-hover-border': isLight ? 'rgba(148, 163, 184, 0.9)' : theme.inactive.hoverBorder,
-    '--tab-top-accent': isLight ? theme.iconColorLight : theme.inactive.topAccent,
-    '--tab-text': isLight ? '#475569' : theme.inactive.text,
-    '--tab-hover-text': isLight ? '#0f172a' : theme.inactive.hoverText,
-    '--tab-badge-bg': isLight ? 'rgba(203, 213, 225, 0.8)' : theme.inactive.badgeBg,
-    '--tab-icon-color': isLight ? theme.iconColorLight : theme.iconColor,
+    '--tab-bg': actualIsLight ? 'rgba(226, 232, 240, 0.6)' : theme.inactive.bg,
+    '--tab-hover-bg': actualIsLight ? 'rgba(203, 213, 225, 0.7)' : theme.inactive.hoverBg,
+    '--tab-border': actualIsLight ? 'rgba(203, 213, 225, 0.8)' : theme.inactive.border,
+    '--tab-hover-border': actualIsLight ? 'rgba(148, 163, 184, 0.9)' : theme.inactive.hoverBorder,
+    '--tab-top-accent': actualIsLight ? theme.iconColorLight : theme.inactive.topAccent,
+    '--tab-text': actualIsLight ? '#475569' : theme.inactive.text,
+    '--tab-hover-text': actualIsLight ? '#0f172a' : theme.inactive.hoverText,
+    '--tab-badge-bg': actualIsLight ? 'rgba(203, 213, 225, 0.8)' : theme.inactive.badgeBg,
+    '--tab-icon-color': actualIsLight ? theme.iconColorLight : theme.iconColor,
   };
 }

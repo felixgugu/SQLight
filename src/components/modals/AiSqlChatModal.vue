@@ -8,13 +8,14 @@
       :class="[
         isMaximized
           ? 'inset-0 w-screen h-screen rounded-none border-0 shadow-none'
-          : 'rounded-xl border border-dark-700 shadow-2xl bg-dark-850'
+          : 'border border-dark-700 shadow-2xl bg-dark-850'
       ]"
-      :style="isMaximized ? { top: 0, left: 0, width: '100vw', height: '100vh' } : {
+      :style="isMaximized ? { top: 0, left: 0, width: '100vw', height: '100vh', borderRadius: '0px' } : {
         top: `${pos.top}px`,
         left: `${pos.left}px`,
         width: `${size.width}px`,
         height: `${size.height}px`,
+        borderRadius: 'var(--p-dialog-border-radius, var(--p-overlay-modal-border-radius, var(--p-content-border-radius, 0.5rem)))',
       }"
     >
       <!-- Top Header / Drag Titlebar -->

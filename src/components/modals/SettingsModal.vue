@@ -4,7 +4,7 @@
     modal
     :dismissable-mask="true"
     :closable="true"
-    class="w-[860px] h-[660px] max-w-[95vw] max-h-[92vh] font-sans"
+    class="w-[860px] h-[80vh] max-w-[95vw] max-h-[92vh] font-sans"
     content-class="!p-0 flex flex-col overflow-hidden h-full"
     @update:visible="val => !val && $emit('close')"
   >
@@ -341,96 +341,6 @@
               class="w-20 !h-7 !bg-dark-900 !border-dark-700 !text-xs !font-mono text-center uppercase"
               placeholder="#feffe0"
             />
-          </div>
-        </div>
-
-        <!-- Active SQL Tab Color -->
-        <div class="pt-3 border-t border-dark-800 space-y-3">
-          <div>
-            <label class="font-medium text-dark-100 block">{{ $t('settingsModal.activeTabColor') }}</label>
-            <span class="text-xxs text-dark-400">{{ $t('settingsModal.activeTabColorDesc') }}</span>
-          </div>
-
-          <!-- Color controls: Background & Foreground -->
-          <div class="grid grid-cols-2 gap-3 bg-dark-900 p-2.5 rounded border border-dark-800">
-            <!-- Background Color -->
-            <div class="space-y-1.5">
-              <span class="text-xxs text-dark-300 block font-medium">{{ $t('settingsModal.activeTabBg') }}</span>
-              <div class="flex items-center space-x-2">
-                <input
-                  type="color"
-                  v-model="settingsStore.activeSqlTabBgColor"
-                  class="w-7 h-7 rounded border border-dark-700 bg-dark-900 cursor-pointer p-0.5"
-                  title="選擇背景顏色"
-                />
-                <InputText
-                  v-model="settingsStore.activeSqlTabBgColor"
-                  class="w-20 !h-7 !bg-dark-850 !border-dark-700 !text-xs !font-mono text-center uppercase"
-                />
-              </div>
-            </div>
-
-            <!-- Text Color -->
-            <div class="space-y-1.5">
-              <span class="text-xxs text-dark-300 block font-medium">{{ $t('settingsModal.activeTabText') }}</span>
-              <div class="flex items-center space-x-2">
-                <input
-                  type="color"
-                  v-model="settingsStore.activeSqlTabTextColor"
-                  class="w-7 h-7 rounded border border-dark-700 bg-dark-900 cursor-pointer p-0.5"
-                  title="選擇文字顏色"
-                />
-                <InputText
-                  v-model="settingsStore.activeSqlTabTextColor"
-                  class="w-20 !h-7 !bg-dark-850 !border-dark-700 !text-xs !font-mono text-center uppercase"
-                />
-              </div>
-            </div>
-          </div>
-
-          <!-- Presets & Live Preview -->
-          <div class="flex items-center justify-between pt-1">
-            <!-- Presets -->
-            <div class="flex items-center space-x-1.5">
-              <span class="text-xxs text-dark-400">{{ $t('settingsModal.quickPresets') }}</span>
-              <button
-                v-for="preset in [
-                  { name: 'Royal Blue', bg: '#1e40af', text: '#ffffff' },
-                  { name: 'Ocean Sky', bg: '#0369a1', text: '#ffffff' },
-                  { name: 'Emerald', bg: '#065f46', text: '#ffffff' },
-                  { name: 'Purple', bg: '#6b21a8', text: '#ffffff' },
-                  { name: 'Amber', bg: '#92400e', text: '#ffffff' },
-                  { name: 'Rose', bg: '#9f1239', text: '#ffffff' },
-                  { name: 'Dark Slate', bg: '#374151', text: '#ffffff' },
-                ]"
-                :key="preset.bg"
-                type="button"
-                @click="settingsStore.activeSqlTabBgColor = preset.bg; settingsStore.activeSqlTabTextColor = preset.text"
-                class="w-4 h-4 rounded-full border border-dark-600 hover:scale-110 transition-transform cursor-pointer"
-                :style="{ backgroundColor: preset.bg }"
-                :title="preset.name"
-              />
-            </div>
-
-            <!-- Live Preview Badge -->
-            <div class="flex items-center space-x-1.5 text-xxs">
-              <span class="text-dark-400">{{ $t('settingsModal.previewBadge') }}</span>
-              <div
-                class="h-6 px-2.5 flex items-center space-x-1.5 rounded text-xs font-medium shadow-xs"
-                :style="{
-                  backgroundColor: settingsStore.activeSqlTabBgColor,
-                  color: settingsStore.activeSqlTabTextColor,
-                }"
-              >
-                <i class="pi pi-file-code text-xs" :style="{ color: settingsStore.activeSqlTabTextColor }" />
-                <span>Query 1.sql</span>
-                <span
-                  class="text-[9px] font-mono px-1 rounded bg-black/20"
-                  :style="{ color: settingsStore.activeSqlTabTextColor }"
-                  >master</span
-                >
-              </div>
-            </div>
           </div>
         </div>
       </div>

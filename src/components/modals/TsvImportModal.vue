@@ -6,7 +6,8 @@
       @click.self="handleBackdropClick"
     >
       <div
-        class="w-[92vw] max-w-5xl h-[86vh] max-h-[880px] bg-dark-850 border border-dark-700 rounded-xl shadow-2xl flex flex-col overflow-hidden text-dark-100"
+        class="w-[92vw] max-w-5xl h-[80vh] max-h-[880px] bg-dark-850 border border-dark-700 shadow-2xl flex flex-col overflow-hidden text-dark-100"
+        :style="{ borderRadius: 'var(--p-dialog-border-radius, var(--p-overlay-modal-border-radius, var(--p-content-border-radius, 0.5rem)))' }"
       >
         <!-- Header -->
         <div

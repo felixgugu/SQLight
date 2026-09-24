@@ -6,6 +6,7 @@ import { useQueryStore, resetQueryExecutionSeq } from '../src/stores/queryStore'
 import { useSettingsStore } from '../src/stores/settingsStore';
 import { queryService } from '../src/services/queryService';
 import { splitSqlStatements } from '../src/utils/sqlStatementExtractor';
+import { getTabThemeStyle } from '../src/utils/tabTheme';
 import type { QueryResult } from '../src/types/query';
 
 const data = new Map<string, string>();
@@ -179,23 +180,10 @@ test('queryStore aggregates rowCount across multiple resultSets and adds [N sets
 });
 
 
-test('settingsStore includes customizable active tab colors with proper defaults and reset', () => {
-  const store = useSettingsStore();
-
-  assert.equal(store.activeSqlTabBgColor, '#1e40af');
-  assert.equal(store.activeSqlTabTextColor, '#ffffff');
-
-  // Customize values
-  store.activeSqlTabBgColor = '#9333ea';
-  store.activeSqlTabTextColor = '#fef08a';
-
-  assert.equal(store.activeSqlTabBgColor, '#9333ea');
-  assert.equal(store.activeSqlTabTextColor, '#fef08a');
-
-  // Reset to defaults
-  store.resetToDefaults();
-  assert.equal(store.activeSqlTabBgColor, '#1e40af');
-  assert.equal(store.activeSqlTabTextColor, '#ffffff');
+test('active SQL query tab applies theme color to borders', () => {
+  const style = getTabThemeStyle('sql_editor', true);
+  assert.equal(style['--tab-border'], 'var(--p-primary-color, #3b82f6)');
+  assert.equal(style['--tab-top-accent'], 'var(--p-primary-color, #3b82f6)');
 });
 
 test('addErDiagramTab adds an er_diagram tab at index 0 and activates it', () => {
