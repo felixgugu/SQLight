@@ -61,26 +61,39 @@ export function useGridExport(options: UseGridExportOptions): UseGridExportRetur
   }
 
   function copyCurrentRow(row: CellValue[] | null | undefined) {
-    if (row) {
+    if (row && row.length > 0) {
       const rowStr = row.map(formatCellForExport).join('\t');
       navigator.clipboard.writeText(rowStr);
       options.showToast('已複製整列資料至剪貼簿 (TSV)', 'success', 2000);
+    } else {
+      options.showToast('查無資料列可供複製 (0 筆)', 'info', 2000);
     }
     options.onMenuClose?.();
   }
 
   function copyCurrentRowAsJson(columns: ColumnDef[], row: CellValue[] | null | undefined) {
-    if (row) {
+    if (row && row.length > 0) {
       const jsonStr = exportRowAsJson(columns, row);
       navigator.clipboard.writeText(jsonStr);
       options.showToast('已複製目前列為 JSON 物件', 'success', 2000);
+    } else {
+      options.showToast('查無資料列可供複製 (0 筆)', 'info', 2000);
     }
     options.onMenuClose?.();
   }
 
   function copySelectedCells() {
+    const rows = options.getRows();
+    if (!rows.length) {
+      options.showToast('查無資料可供選取與複製 (0 筆)', 'info', 2000);
+      return;
+    }
+
     const blocks = options.selection.getSelectionBlocks();
-    if (blocks.length === 0) return;
+    if (blocks.length === 0) {
+      options.showToast('尚未選取任何儲存格', 'warning', 2000);
+      return;
+    }
 
     const lines: string[] = [];
     let copiedCells = 0;
@@ -105,8 +118,17 @@ export function useGridExport(options: UseGridExportOptions): UseGridExportRetur
   }
 
   function copySelectedAsJson() {
+    const rows = options.getRows();
+    if (!rows.length) {
+      options.showToast('查無資料可供選取與複製 (0 筆)', 'info', 2000);
+      return;
+    }
+
     const blocks = options.selection.getSelectionBlocks();
-    if (blocks.length === 0) return;
+    if (blocks.length === 0) {
+      options.showToast('尚未選取任何儲存格', 'warning', 2000);
+      return;
+    }
 
     const parts: string[] = [];
     let rowTotal = 0;
@@ -130,7 +152,11 @@ export function useGridExport(options: UseGridExportOptions): UseGridExportRetur
   function copyAsTsv() {
     const rows = options.getRows();
     const columns = options.getColumns();
-    if (!rows.length) return;
+    if (!rows.length) {
+      options.showToast('查無資料可供複製 (0 筆)', 'info', 2000);
+      options.onMenuClose?.();
+      return;
+    }
     const visualIndices = options.selection.getVisualDataColIndices();
     const headers = visualIndices.map((cIdx) => columns[cIdx]?.name || '').join('\t');
     const rowsText = rows
@@ -151,7 +177,11 @@ export function useGridExport(options: UseGridExportOptions): UseGridExportRetur
   function copyAsCsv() {
     const rows = options.getRows();
     const columns = options.getColumns();
-    if (!rows.length) return;
+    if (!rows.length) {
+      options.showToast('查無資料可供複製 (0 筆)', 'info', 2000);
+      options.onMenuClose?.();
+      return;
+    }
     const visualIndices = options.selection.getVisualDataColIndices();
     const headers = visualIndices.map((cIdx) => escapeCsv(columns[cIdx]?.name || '')).join(',');
     const rowsText = rows
@@ -172,7 +202,11 @@ export function useGridExport(options: UseGridExportOptions): UseGridExportRetur
   function copyAsJson() {
     const rows = options.getRows();
     const columns = options.getColumns();
-    if (!rows.length) return;
+    if (!rows.length) {
+      options.showToast('查無資料可供複製 (0 筆)', 'info', 2000);
+      options.onMenuClose?.();
+      return;
+    }
     const visualIndices = options.selection.getVisualDataColIndices();
     const cols = visualIndices.map((cIdx) => ({ name: columns[cIdx]?.name || '' }));
     const rowsData = rows.map((r) => visualIndices.map((cIdx) => r[cIdx]));
@@ -186,7 +220,11 @@ export function useGridExport(options: UseGridExportOptions): UseGridExportRetur
   function copyAsMarkdown() {
     const rows = options.getRows();
     const columns = options.getColumns();
-    if (!rows.length) return;
+    if (!rows.length) {
+      options.showToast('查無資料可供複製 (0 筆)', 'info', 2000);
+      options.onMenuClose?.();
+      return;
+    }
     const visualIndices = options.selection.getVisualDataColIndices();
     const cols = visualIndices.map((cIdx) => ({ name: columns[cIdx]?.name || '' }));
     const rowsData = rows.map((r) => visualIndices.map((cIdx) => r[cIdx]));

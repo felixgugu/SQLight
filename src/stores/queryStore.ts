@@ -771,6 +771,20 @@ export const useQueryStore = defineStore('query', () => {
       // In-place update of target result set or all result sets
       if (res.resultSets.length === 1 && isMultiSet && targetSql !== tab.sql && tab.result.resultSets[setIndex]) {
         tab.result.resultSets[setIndex] = res.resultSets[0]!;
+      } else if (res.resultSets.length === 0 && isMultiSet && targetSql !== tab.sql && tab.result.resultSets[setIndex]) {
+        tab.result.resultSets[setIndex] = {
+          columns: tab.result.resultSets[setIndex]!.columns ?? [],
+          rows: [],
+          rowCount: 0,
+        };
+      } else if (res.resultSets.length === 0) {
+        const prevColumns = tab.result.resultSets[0]?.columns ?? [];
+        tab.result.resultSets = [{
+          columns: prevColumns,
+          rows: [],
+          rowCount: 0,
+        }];
+        tab.result.affectedRows = res.affectedRows;
       } else {
         tab.result.resultSets = res.resultSets;
         tab.result.affectedRows = res.affectedRows;

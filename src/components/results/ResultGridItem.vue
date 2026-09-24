@@ -25,9 +25,10 @@
           <InputText
             v-model="quickFilterInput"
             type="text"
-            placeholder="Search grid..."
+            :placeholder="hasRows ? 'Search grid...' : '無資料可供搜尋'"
+            :disabled="!hasRows"
             size="small"
-            class="w-full !bg-dark-900 !border-dark-700 !py-0.5 !pl-7 !pr-6 !text-xs"
+            class="w-full !bg-dark-900 !border-dark-700 !py-0.5 !pl-7 !pr-6 !text-xs disabled:opacity-50 disabled:cursor-not-allowed"
           />
         </IconField>
 
@@ -68,7 +69,7 @@
               size="small"
               :severity="modifiedCount > 0 ? 'warn' : 'secondary'"
               outlined
-              :disabled="modifiedCount === 0"
+              :disabled="modifiedCount === 0 || !hasRows"
               @click="handleRevertChanges"
               v-tooltip.top="'退回所有未提交的修改 (Revert All)'"
               class="!text-xxs !py-0.5 !px-2 select-none"
@@ -81,7 +82,7 @@
               :label="`提交 ${modifiedCount > 0 ? '(' + modifiedCount + ')' : ''}`"
               size="small"
               :severity="modifiedCount > 0 ? 'success' : 'secondary'"
-              :disabled="modifiedCount === 0"
+              :disabled="modifiedCount === 0 || !hasRows"
               @click="openCommitModal"
               v-tooltip.top="'提交所有修改至資料庫 (Commit Changes)'"
               class="!text-xxs !py-0.5 !px-2.5 font-semibold select-none shadow-xs"
@@ -912,6 +913,7 @@ interface CellModification {
 
 const modifiedCells = ref<Record<string, CellModification>>({});
 const modifiedCount = computed(() => Object.keys(modifiedCells.value).length);
+const hasRows = computed(() => (props.resultSet?.rows?.length ?? 0) > 0);
 
 const pkColumnIndices = computed<number[]>(() => {
   if (!props.resultSet || editability.value.pkColumns.length === 0) return [];
@@ -1015,6 +1017,10 @@ function closeCommitModal() {
 }
 
 function handleRevertChanges() {
+  if (!hasRows.value) {
+    workspaceStore.showToast('目前無資料可供退回', 'info', 2000);
+    return;
+  }
   if (modifiedCount.value === 0 || !props.resultSet) return;
 
   for (const mod of Object.values(modifiedCells.value)) {
@@ -1027,6 +1033,10 @@ function handleRevertChanges() {
 }
 
 function openCommitModal() {
+  if (!hasRows.value) {
+    workspaceStore.showToast('目前無資料可供提交', 'info', 2000);
+    return;
+  }
   if (modifiedCount.value === 0 || !editability.value.canEdit || !editability.value.targetTable) return;
 
   const rowsMap = new Map<string, RowModification>();
@@ -1290,6 +1300,11 @@ function copyCurrentRowAsJson() {
 }
 
 function openDataView() {
+  if (!hasRows.value) {
+    workspaceStore.showToast('查無資料列可供檢視 (0 筆)', 'info', 2000);
+    contextMenu.visible = false;
+    return;
+  }
   const row = contextMenu.rowData || (contextMenu.rowIndex >= 0 && props.resultSet ? props.resultSet.rows[contextMenu.rowIndex] : null);
   if (!row || !props.resultSet) {
     contextMenu.visible = false;
@@ -1577,6 +1592,11 @@ watch(quickFilter, (value) => {
 });
 
 function handleGenerateDml(type: 'INSERT' | 'UPDATE' | 'DELETE') {
+  if (!hasRows.value) {
+    workspaceStore.showToast('查無資料列可供產生 DML (0 筆)', 'info', 2000);
+    contextMenu.visible = false;
+    return;
+  }
   const row = contextMenu.rowData || (contextMenu.rowIndex >= 0 && props.resultSet ? props.resultSet.rows[contextMenu.rowIndex] : null);
   if (!row || !props.resultSet) {
     contextMenu.visible = false;
