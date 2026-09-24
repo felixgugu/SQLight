@@ -6,6 +6,16 @@ interface RangeModuleInternals {
   layoutElement?: (visibleRows?: boolean) => void;
 }
 
+export const CLEAR_GRID_SELECTION_EVENT = 'sqlight:clear-grid-selection';
+
+/** Dispatches a global event to instruct active data grids to clear their range selection. */
+export function dispatchClearGridSelection(): void {
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent(CLEAR_GRID_SELECTION_EVENT));
+  }
+}
+
+
 /**
  * Drops every active range.
  *

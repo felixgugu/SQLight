@@ -13,7 +13,11 @@ import {
   coerceEditedValue,
   fieldForColumnIndex,
 } from '../src/utils/tabulatorColumns';
-import { clearGridRanges } from '../src/utils/tabulatorGrid';
+import {
+  clearGridRanges,
+  CLEAR_GRID_SELECTION_EVENT,
+  dispatchClearGridSelection,
+} from '../src/utils/tabulatorGrid';
 import type { CellValue, ColumnDef } from '../src/types/query';
 
 interface ColumnStub {
@@ -335,3 +339,74 @@ test('boolean values render as theme aware pills', () => {
     assert.match(rule, new RegExp(`color: ${text}`), `${selector} text colour`);
   }
 });
+
+test('dispatchClearGridSelection dispatches CLEAR_GRID_SELECTION_EVENT', () => {
+  assert.equal(CLEAR_GRID_SELECTION_EVENT, 'sqlight:clear-grid-selection');
+
+  const dispatched: Event[] = [];
+  const originalWindow = globalThis.window;
+  (globalThis as any).window = {
+    dispatchEvent: (event: Event) => {
+      dispatched.push(event);
+      return true;
+    },
+  };
+
+  try {
+    dispatchClearGridSelection();
+    assert.equal(dispatched.length, 1);
+    assert.equal(dispatched[0]!.type, 'sqlight:clear-grid-selection');
+  } finally {
+    (globalThis as any).window = originalWindow;
+  }
+});
+
+test('clearCellSelection resets selection state and removes grid ranges', () => {
+  let removeCalled = 0;
+  const table = {
+    getColumns: () => [{ getField: () => '0', isVisible: () => true, getDefinition: () => ({ title: 'id' }) }],
+    getRanges: () => [{
+      getColumns: () => [{ getField: () => '0', isVisible: () => true, getDefinition: () => ({ title: 'id' }) }],
+      getRows: () => [{ getData: () => [1] }],
+      getTopEdge: () => 0,
+      getBottomEdge: () => 0,
+      getLeftEdge: () => 0,
+      getRightEdge: () => 0,
+      remove: () => { removeCalled++; },
+    }],
+    getDataCount: () => 1,
+    on: () => {},
+  } as unknown as Tabulator;
+
+  const selection = useGridSelection({
+    getTable: () => table,
+    getContainer: () => null,
+    getColumns: () => [],
+  });
+
+  selection.refresh();
+  assert.equal(selection.hasSelection.value, true);
+  assert.notEqual(selection.selectionStats.value, null);
+
+  selection.clearCellSelection();
+  assert.equal(selection.hasSelection.value, false);
+  assert.equal(selection.selectionStats.value, null);
+  assert.equal(selection.selectedColumnsCount.value, 0);
+  assert.ok(removeCalled > 0, 'grid range remove was called');
+});
+
+test('MonacoEditor and AppMain wire editor clicking to dispatchClearGridSelection', () => {
+  const monacoSrc = readFileSync(resolve(process.cwd(), 'src/components/editor/MonacoEditor.vue'), 'utf-8');
+  assert.match(monacoSrc, /dispatchClearGridSelection\(\)/, 'MonacoEditor must call dispatchClearGridSelection');
+  assert.match(monacoSrc, /editorContainer\.value\.addEventListener\('mousedown'/, 'MonacoEditor attaches mousedown on editorContainer');
+  assert.match(monacoSrc, /editorInstance\.onMouseDown/, 'MonacoEditor calls onMouseDown');
+  assert.match(monacoSrc, /editorInstance\.onDidFocusEditorText/, 'MonacoEditor calls onDidFocusEditorText');
+
+  const appMainSrc = readFileSync(resolve(process.cwd(), 'src/components/layout/AppMain.vue'), 'utf-8');
+  assert.match(appMainSrc, /@mousedown="dispatchClearGridSelection"/, 'AppMain binds mousedown on editor wrapper');
+
+  const gridSelectionSrc = readFileSync(resolve(process.cwd(), 'src/composables/useGridSelection.ts'), 'utf-8');
+  assert.match(gridSelectionSrc, /CLEAR_GRID_SELECTION_EVENT/, 'useGridSelection listens to CLEAR_GRID_SELECTION_EVENT');
+  assert.match(gridSelectionSrc, /active\.closest\('\.monaco-editor'\)/, 'useGridSelection protects Monaco editor from Ctrl+C intercept');
+});
+

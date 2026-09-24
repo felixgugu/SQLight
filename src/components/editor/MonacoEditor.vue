@@ -11,6 +11,7 @@ import { useWorkspaceStore } from '@/stores/workspaceStore';
 import { extractStatementAtCursor, type ExtractedStatement } from '@/utils/sqlStatementExtractor';
 import { extractTableIdentifierAtCursor, type ExtractedTableIdentifier } from '@/utils/sqlIdentifierExtractor';
 import { analyzeSmartPasteContext } from '@/utils/sqlSmartPaste';
+import { dispatchClearGridSelection } from '@/utils/tabulatorGrid';
 import { format as formatSql } from 'sql-formatter';
 import type { SqlEditorToolbarAction } from '@/types/editor';
 
@@ -33,6 +34,7 @@ let editorInstance: monaco.editor.IStandaloneCodeEditor | null = null;
 let highlightDecorations: monaco.editor.IEditorDecorationsCollection | null = null;
 let dragOverHandler: ((e: DragEvent) => void) | null = null;
 let dropHandler: ((e: DragEvent) => void) | null = null;
+let editorMouseDownHandler: ((e: MouseEvent) => void) | null = null;
 
 const SQL_EDITOR_ACTION_COMMANDS: Record<SqlEditorToolbarAction, string> = {
   cut: 'editor.action.clipboardCutAction',
@@ -632,6 +634,21 @@ onMounted(() => {
   editorContainer.value.addEventListener('dragover', dragOverHandler, true);
   editorContainer.value.addEventListener('drop', dropHandler, true);
 
+  editorMouseDownHandler = () => {
+    dispatchClearGridSelection();
+  };
+  editorContainer.value.addEventListener('mousedown', editorMouseDownHandler, true);
+
+  editorInstance.onMouseDown(() => {
+    dispatchClearGridSelection();
+  });
+  editorInstance.onDidFocusEditorText(() => {
+    dispatchClearGridSelection();
+  });
+  editorInstance.onDidFocusEditorWidget(() => {
+    dispatchClearGridSelection();
+  });
+
   if (!props.readOnly) {
     setTimeout(() => {
       focus(1, 1);
@@ -735,9 +752,15 @@ function getTableNameAtCursor(): ExtractedTableIdentifier | null {
 }
 
 onBeforeUnmount(() => {
-  if (editorContainer.value && dragOverHandler && dropHandler) {
-    editorContainer.value.removeEventListener('dragover', dragOverHandler, true);
-    editorContainer.value.removeEventListener('drop', dropHandler, true);
+  if (editorContainer.value) {
+    if (dragOverHandler && dropHandler) {
+      editorContainer.value.removeEventListener('dragover', dragOverHandler, true);
+      editorContainer.value.removeEventListener('drop', dropHandler, true);
+    }
+    if (editorMouseDownHandler) {
+      editorContainer.value.removeEventListener('mousedown', editorMouseDownHandler, true);
+      editorMouseDownHandler = null;
+    }
   }
   if (highlightDecorations) {
     highlightDecorations.clear();
@@ -750,6 +773,7 @@ onBeforeUnmount(() => {
 });
 
 function focus(lineNumber = 1, column = 1) {
+  dispatchClearGridSelection();
   if (editorInstance) {
     editorInstance.focus();
     editorInstance.setPosition(new monaco.Position(lineNumber, column));

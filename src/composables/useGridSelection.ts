@@ -2,7 +2,7 @@ import { getCurrentInstance, onMounted, onUnmounted, ref, type Ref } from 'vue';
 import type { Tabulator, TabulatorCellComponent, TabulatorRowComponent } from 'tabulator-tables';
 import type { CellValue, ColumnDef } from '@/types/query';
 import { ROW_INDEX_FIELD, columnIndexFromField } from '@/utils/tabulatorColumns';
-import { clearGridRanges } from '@/utils/tabulatorGrid';
+import { clearGridRanges, CLEAR_GRID_SELECTION_EVENT } from '@/utils/tabulatorGrid';
 
 /**
  * Spreadsheet-style selection for the Tabulator grids.
@@ -279,7 +279,12 @@ export function useGridSelection(
 
   function handleKeyDown(event: KeyboardEvent) {
     const active = document.activeElement as HTMLElement | null;
-    if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA')) {
+    if (
+      active &&
+      (active.tagName === 'INPUT' ||
+        active.tagName === 'TEXTAREA' ||
+        Boolean(active.closest('.monaco-editor')))
+    ) {
       return;
     }
 
@@ -302,8 +307,19 @@ export function useGridSelection(
       (event.key === 'c' || event.key === 'C') &&
       hasSelection.value
     ) {
+      if (document.activeElement?.closest('.monaco-editor')) {
+        return;
+      }
       event.preventDefault();
       options.onCopySelected?.();
+    }
+  }
+
+  function handleClearSelectionEvent() {
+    const table = options.getTable();
+    const hasRanges = table ? Boolean(table.getRanges?.().length) : false;
+    if (hasSelection.value || hasRanges) {
+      clearCellSelection();
     }
   }
 
@@ -340,12 +356,14 @@ export function useGridSelection(
     onMounted(() => {
       if (typeof window !== 'undefined') {
         window.addEventListener('keydown', handleKeyDown);
+        window.addEventListener(CLEAR_GRID_SELECTION_EVENT, handleClearSelectionEvent);
       }
     });
 
     onUnmounted(() => {
       if (typeof window !== 'undefined') {
         window.removeEventListener('keydown', handleKeyDown);
+        window.removeEventListener(CLEAR_GRID_SELECTION_EVENT, handleClearSelectionEvent);
       }
       if (frameId !== null && typeof cancelAnimationFrame !== 'undefined') {
         cancelAnimationFrame(frameId);

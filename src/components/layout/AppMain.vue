@@ -118,7 +118,7 @@
     <div class="flex-1 relative overflow-hidden bg-dark-900 flex flex-col">
       <div v-if="workspaceStore.activeTab?.type === 'sql_editor'" class="w-full h-full flex flex-col">
         <!-- Monaco SQL Editor Component -->
-        <div class="flex-1 relative overflow-hidden">
+        <div class="flex-1 relative overflow-hidden" @mousedown="dispatchClearGridSelection">
           <MonacoEditor
             ref="monacoRef"
             :key="workspaceStore.activeTab.id"
@@ -199,6 +199,7 @@ import { saveSqlToFile, openSqlFromFile } from '@/utils/fileStorage';
 import { sqlFolderService } from '@/services/sqlFolderService';
 import { getTabThemeStyle } from '@/utils/tabTheme';
 import { detectDangerousSqlStatements } from '@/utils/sqlGuard';
+import { dispatchClearGridSelection } from '@/utils/tabulatorGrid';
 import type { SqlEditorToolbarAction } from '@/types/editor';
 import type { SqlEditorTab, TableDataTab, TableStructureTab, ExecutionPlanTab, ErDiagramTab, WorkspaceTab } from '@/types/workspace';
 
@@ -312,6 +313,9 @@ function handleTabClick(tabId: string) {
     return;
   }
   workspaceStore.setActiveTab(tabId);
+  if (workspaceStore.activeTab?.type === 'sql_editor') {
+    dispatchClearGridSelection();
+  }
 }
 
 function getTabConnectionColor(tab: WorkspaceTab): string | undefined {
