@@ -8,12 +8,17 @@
     <!-- Start: Branding & Connection / Database Pickers -->
     <template #start>
       <div class="flex items-center space-x-2 flex-shrink-0">
-        <!-- App Brand -->
-        <div class="flex items-center justify-center h-7 w-8 min-w-[32px] flex-shrink-0 pr-2 border-r border-dark-700">
+        <!-- App Brand: bleeds to the title-bar edges (no top/left/bottom gap) at the full row height.
+             The negative left margin cancels the toolbar's 10px horizontal padding plus its 1px left
+             border, `pr-2` keeps the breathing room before the divider that separates the brand from
+             the connection picker. -->
+        <div
+          class="flex items-center justify-center h-10 min-w-[40px] flex-shrink-0 -ml-[11px] pr-2 border-r border-dark-700"
+        >
           <img
             :src="appIcon"
             alt="PuffSQL"
-            class="h-6 w-6 select-none"
+            class="h-10 w-10 select-none"
             draggable="false"
           />
         </div>

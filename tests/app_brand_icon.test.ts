@@ -20,7 +20,6 @@ describe('AppHeader brand icon', () => {
     );
     assert.match(source, /:src="appIcon"/);
     assert.match(source, /alt="PuffSQL"/, 'the icon needs an accessible name');
-    assert.match(source, /class="h-6 w-6 select-none"/, 'the brand icon should render at 24x24 in the 40px toolbar');
     assert.match(source, /draggable="false"/, 'the icon must not start a native image drag inside the title bar');
     assert.doesNotMatch(source, />SQLight<\/span>/, 'the text brand should be gone');
   });
@@ -33,12 +32,33 @@ describe('AppHeader brand icon', () => {
     );
   });
 
-  test('the brand icon container has a fixed width and does not shrink', () => {
+  test('the brand icon fills the toolbar row and bleeds to the top/left/bottom edges', () => {
     const source = readSource('src/components/layout/AppHeader.vue');
+
     assert.match(
       source,
-      /class="[^"]*w-8[^"]*flex-shrink-0[^"]*border-r border-dark-700[^"]*"/,
-      'the brand icon container must have a fixed width and flex-shrink-0'
+      /class="h-10 w-10 select-none"/,
+      'the icon must fill the full 40px row height so no gap is left above or below it'
+    );
+    assert.match(
+      source,
+      /class="flex items-center justify-center h-10 min-w-\[40px\] flex-shrink-0 -ml-\[11px\] pr-2 border-r border-dark-700"/,
+      'the brand cell must span the row, cancel the toolbar 10px padding + 1px left border and keep the divider'
+    );
+    assert.match(
+      source,
+      /!h-10 !bg-dark-850/,
+      'the toolbar row height itself must stay at 40px'
+    );
+  });
+
+  test('the brand cell keeps a width floor and never shrinks', () => {
+    const source = readSource('src/components/layout/AppHeader.vue');
+
+    assert.match(
+      source,
+      /class="[^"]*min-w-\[40px\][^"]*flex-shrink-0[^"]*border-r border-dark-700[^"]*"/,
+      'the brand cell must not collapse when the toolbar is squeezed'
     );
   });
 
