@@ -480,17 +480,19 @@ function getResultTabStyle(rtab: QueryResultTab): Record<string, string> {
   if (!isActive) {
     return {
       '--tab-top-accent': topAccent,
-      '--tab-text': isLight ? '#64748b' : '#94a3b8',
+      // Slate-600 keeps the inactive label readable on the grey chrome (slate-500 fell to ~4:1).
+      '--tab-text': isLight ? '#475569' : '#94a3b8',
       '--tab-hover-text': isLight ? '#0f172a' : '#f8fafc',
     };
   }
 
   return {
     '--tab-top-accent': topAccent,
-    '--tab-active-surface': isLight ? '#ffffff' : 'rgb(var(--color-dark-900))',
+    // The active result tab merges into the canvas in both modes (no hardcoded white in light).
+    '--tab-active-surface': 'rgb(var(--color-dark-900))',
     '--tab-active-text': isLight ? '#0f172a' : 'rgb(var(--color-dark-100))',
     '--tab-border': topAccent,
-    backgroundColor: isLight ? '#ffffff' : 'rgb(var(--color-dark-900))',
+    backgroundColor: 'rgb(var(--color-dark-900))',
     color: isLight ? '#0f172a' : 'rgb(var(--color-dark-100))',
     borderTopColor: topAccent,
     borderLeftColor: topAccent,

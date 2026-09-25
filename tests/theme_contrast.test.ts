@@ -13,6 +13,7 @@ import {
   contrastRatio,
   mixRgb,
   parseHexColor,
+  relativeLuminance,
   resolveConnectionLabelColor,
   type RgbColor,
 } from '../src/utils/connectionColor';
@@ -61,6 +62,51 @@ test('the separator step clears 3:1 as a non-text affordance and is never a body
       assert.ok(ratio >= 3, `${surface}/${mode}: dark-600 on dark-900 is ${ratio.toFixed(2)}:1`);
     }
   }
+});
+
+test('the light theme paints a soft grey canvas instead of pure white', () => {
+  const SURFACE_STEPS = ['700', '750', '800', '850', '900', '950'] as const;
+
+  for (const surface of SURFACES) {
+    const tokens = buildThemeTokens(surface, 'light');
+    for (const step of SURFACE_STEPS) {
+      assert.notEqual(
+        tokens[`--color-dark-${step}`],
+        '255 255 255',
+        `${surface}/light: dark-${step} must not be pure white`
+      );
+    }
+
+    const canvas = relativeLuminance(tokensToRgba(tokens['--color-dark-900']!));
+    const raised = relativeLuminance(tokensToRgba(tokens['--color-raised']!));
+    const chrome = relativeLuminance(tokensToRgba(tokens['--color-dark-850']!));
+    const panel = relativeLuminance(tokensToRgba(tokens['--color-dark-800']!));
+
+    // A full-screen #ffffff canvas (luminance 1.0) is the glare the light theme avoids; the
+    // chrome, panel and row steps stay below the canvas and only the raised overlay sits above it.
+    assert.ok(canvas <= 0.93, `${surface}/light: canvas is too bright (${canvas.toFixed(3)})`);
+    assert.ok(raised > canvas, `${surface}/light: the raised overlay must sit above the canvas`);
+    assert.ok(chrome < canvas, `${surface}/light: chrome must stay below the canvas`);
+    assert.ok(panel < chrome, `${surface}/light: panels must stay below the chrome`);
+  }
+});
+
+test('light-mode overlays and popups use the raised token instead of hardcoded white', () => {
+  const css = readFileSync(resolve(process.cwd(), 'src/assets/main.css'), 'utf-8');
+
+  for (const rule of [
+    /html:not\(\.dark\) \.p-select-overlay \{[\s\S]*?background-color: rgb\(var\(--color-raised\)\)/,
+    /html:not\(\.dark\) \.p-contextmenu,\s*\nhtml:not\(\.dark\) \.p-menu \{[\s\S]*?background-color: rgb\(var\(--color-raised\)\)/,
+    /html:not\(\.dark\) \.p-tooltip \.p-tooltip-text \{[\s\S]*?background-color: rgb\(var\(--color-raised\)\)/,
+  ]) {
+    assert.match(css, rule, 'light overlay surfaces must resolve through --color-raised');
+  }
+
+  assert.doesNotMatch(
+    css,
+    /html:not\(\.dark\)[^{]*\{[^}]*background-color: #ffffff/,
+    'the light theme must not hardcode white surfaces'
+  );
 });
 
 test('role accent colours clear 4.5:1 on the light surfaces and on the dark surfaces', () => {
@@ -135,8 +181,9 @@ function hexToChannels(hex: string): string {
 }
 
 test('inactive workspace tabs keep 3:1 icons in light mode', () => {
-  // Composite of the inactive light tab background (rgba(226,232,240,0.6) over slate-100).
-  const tabStripSurface = { r: 232, g: 237, b: 244 };
+  // Composite of the inactive light tab background (rgba(226,232,240,0.45)) over the light
+  // chrome surface (--color-dark-850 = #e9eef4).
+  const tabStripSurface = { r: 230, g: 235, b: 242 };
   for (const theme of Object.values(TAB_CATEGORY_THEMES)) {
     const ratio = contrastRatio(parseHexColor(theme.iconColorLight)!, tabStripSurface);
     assert.ok(ratio >= 3, `${theme.type} light icon is ${ratio.toFixed(2)}:1`);
@@ -188,7 +235,7 @@ test('Monaco themes keep syntax and gutter colours readable', () => {
 
 test('connection labels stay readable in light mode without touching the stored colour', () => {
   const presets = ['#ef4444', '#f97316', '#eab308', '#10b981', '#06b6d4', '#3b82f6', '#8b5cf6', '#ec4899'];
-  const panelSurface = parseHexColor('#f1f5f9')!;
+  const panelSurface = parseHexColor('#e2e8f0')!;
 
   for (const preset of presets) {
     assert.equal(resolveConnectionLabelColor(preset, 'dark'), preset, 'dark mode keeps the raw colour');

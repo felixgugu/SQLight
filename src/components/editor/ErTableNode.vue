@@ -3,7 +3,7 @@
     class="w-full h-full backdrop-blur rounded-lg overflow-hidden flex flex-col font-sans transition-all select-none group relative border"
     :class="[
       isLightTheme
-        ? 'bg-white/95 border-slate-400 hover:border-brand-500/70 shadow-md shadow-slate-300/40 text-slate-800'
+        ? 'bg-slate-50/95 border-slate-400 hover:border-brand-500/70 shadow-md shadow-slate-300/40 text-slate-800'
         : 'bg-dark-850/95 border-dark-700 hover:border-brand-500/70 shadow-xl shadow-black/40 text-dark-100',
       isSelected
         ? (isLightTheme ? 'ring-2 ring-brand-500 border-brand-500 shadow-brand-500/20' : 'ring-2 ring-brand-400 border-brand-400 shadow-brand-500/20')
@@ -66,7 +66,7 @@
             :disabled="isColumnConnected(col.name)"
             @click.stop="toggleColumn(col.name)"
             class="w-3 h-3 rounded cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed flex-shrink-0"
-            :class="isLightTheme ? 'bg-white border-slate-300 text-warn' : 'bg-dark-900 border-dark-600 text-warn'"
+            :class="isLightTheme ? 'bg-slate-50 border-slate-300 text-warn' : 'bg-dark-900 border-dark-600 text-warn'"
             :title="
               isColumnConnected(col.name)
                 ? '此欄位已有外鍵或關聯連線，不可隱藏'
@@ -130,7 +130,7 @@
           type="button"
           @click.stop="checkAllColumns"
           class="px-1.5 py-0.5 rounded text-xxs font-medium transition-colors cursor-pointer border"
-          :class="isLightTheme ? 'bg-white hover:bg-slate-100 text-slate-700 border-slate-200' : 'bg-dark-800 hover:bg-dark-750 text-dark-200 hover:text-white border-dark-700'"
+          :class="isLightTheme ? 'bg-slate-50 hover:bg-slate-100 text-slate-700 border-slate-200' : 'bg-dark-800 hover:bg-dark-750 text-dark-200 hover:text-white border-dark-700'"
           title="全部勾選顯示"
         >
           全選
@@ -139,7 +139,7 @@
           type="button"
           @click.stop="uncheckAllColumns"
           class="px-1.5 py-0.5 rounded text-xxs font-medium transition-colors cursor-pointer border"
-          :class="isLightTheme ? 'bg-white hover:bg-slate-100 text-slate-700 border-slate-200' : 'bg-dark-800 hover:bg-dark-750 text-dark-200 hover:text-white border-dark-700'"
+          :class="isLightTheme ? 'bg-slate-50 hover:bg-slate-100 text-slate-700 border-slate-200' : 'bg-dark-800 hover:bg-dark-750 text-dark-200 hover:text-white border-dark-700'"
           title="全部取消 (已有連線的欄位將自動保留)"
         >
           全取消

@@ -7,7 +7,7 @@
     <!-- ER Diagram Top Toolbar -->
     <div
       class="h-10 px-3 flex items-center justify-between flex-shrink-0 z-20 border-b transition-colors duration-200"
-      :class="isLightTheme ? 'bg-white border-slate-200 shadow-2xs' : 'bg-dark-900 border-dark-750'"
+      :class="isLightTheme ? 'bg-slate-50 border-slate-200 shadow-2xs' : 'bg-dark-900 border-dark-750'"
     >
       <!-- Left Controls: Info & Relation Depth & Layout -->
       <div class="flex items-center space-x-2">
@@ -83,7 +83,7 @@
         <!-- Zoom Controls -->
         <div
           class="flex items-center rounded overflow-hidden border"
-          :class="isLightTheme ? 'bg-white border-slate-200' : 'bg-dark-800 border-dark-700'"
+          :class="isLightTheme ? 'bg-slate-50 border-slate-200' : 'bg-dark-800 border-dark-700'"
         >
           <Button
             type="button"
@@ -210,7 +210,7 @@
       <!-- Floating Stats & Linking Tip (Bottom Left) -->
       <div
         class="absolute bottom-3 left-3 backdrop-blur px-3 py-1.5 rounded-md text-[11px] flex items-center space-x-3 pointer-events-none z-10 font-sans shadow-lg border"
-        :class="isLightTheme ? 'bg-white/90 border-slate-200 text-slate-600 shadow-slate-200/50' : 'bg-dark-900/90 border-dark-750 text-dark-300'"
+        :class="isLightTheme ? 'bg-slate-50/90 border-slate-200 text-slate-600 shadow-slate-200/50' : 'bg-dark-900/90 border-dark-750 text-dark-300'"
       >
         <span>{{ $t('erDiagram.tableCount') }}<strong :class="isLightTheme ? 'text-slate-900' : 'text-dark-100'">{{ nodeCount }}</strong></span>
         <span :class="isLightTheme ? 'text-slate-500' : 'text-dark-600'">•</span>
@@ -231,7 +231,7 @@
         v-if="edgeMenu.visible"
         :style="{ top: `${edgeMenu.y}px`, left: `${edgeMenu.x}px` }"
         class="fixed z-50 backdrop-blur border rounded-lg shadow-2xl py-1.5 w-64 text-xs font-sans select-none animate-in fade-in zoom-in-95 duration-100"
-        :class="isLightTheme ? 'bg-white/95 border-slate-200 text-slate-700 shadow-slate-300/60' : 'bg-dark-850/95 border-dark-700 text-dark-200'"
+        :class="isLightTheme ? 'bg-slate-50/95 border-slate-200 text-slate-700 shadow-slate-300/60' : 'bg-dark-850/95 border-dark-700 text-dark-200'"
         @click.stop
       >
         <!-- Header Info -->
@@ -735,7 +735,7 @@ function initGraph() {
             args: {
               attrs: {
                 fill: isLightTheme.value ? '#4f46e5' : '#818cf8',
-                stroke: isLightTheme.value ? '#ffffff' : '#0f172a',
+                stroke: isLightTheme.value ? '#f1f5f9' : '#0f172a',
               },
             },
           },
@@ -744,7 +744,7 @@ function initGraph() {
             args: {
               attrs: {
                 fill: isLightTheme.value ? '#4f46e5' : '#818cf8',
-                stroke: isLightTheme.value ? '#ffffff' : '#0f172a',
+                stroke: isLightTheme.value ? '#f1f5f9' : '#0f172a',
               },
             },
           }
@@ -880,7 +880,7 @@ function applyEdgeCardinality(
           fontFamily: erCanvasFontFamily.value,
         },
         rect: {
-          fill: isLight ? '#ffffff' : '#181825',
+          fill: isLight ? '#f8fafc' : '#181825',
           rx: 3,
           ry: 3,
           stroke: isLight ? '#cbd5e1' : '#475569',
@@ -900,7 +900,7 @@ function applyEdgeCardinality(
           fontFamily: erCanvasFontFamily.value,
         },
         rect: {
-          fill: isLight ? '#ffffff' : '#181825',
+          fill: isLight ? '#f8fafc' : '#181825',
           rx: 3,
           ry: 3,
           stroke: isLight ? '#cbd5e1' : '#475569',

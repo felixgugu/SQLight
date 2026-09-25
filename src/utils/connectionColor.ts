@@ -14,7 +14,7 @@ export interface RgbColor {
 }
 
 /** The least forgiving light surface in the app (panel background, `--color-dark-800`). */
-const DEFAULT_LIGHT_SURFACE = '#f1f5f9';
+const DEFAULT_LIGHT_SURFACE = '#e2e8f0';
 const MIN_TEXT_CONTRAST = 4.5;
 
 export function parseHexColor(input: string | undefined | null): RgbColor | null {

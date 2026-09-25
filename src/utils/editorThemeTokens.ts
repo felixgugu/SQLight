@@ -1,7 +1,8 @@
 /**
  * Monaco theme definitions, kept as pure data so the contrast regression test can assert them
  * without booting the editor. Syntax colours are chosen to clear 4.5:1 against their own
- * editor background (dark: the surface palette's 900 step, light: #ffffff).
+ * editor background (dark: the surface palette's 900 step, light: the palette's 100 step, the
+ * soft grey canvas the rest of the light theme paints).
  */
 import { SURFACE_PALETTES } from '@/services/themeManager';
 
@@ -26,12 +27,12 @@ export const MONACO_DARK_RULES: MonacoRule[] = [
   { token: 'operator.sql', foreground: 'f472b6' },
 ];
 
-/** Light syntax palette (>= 4.5:1 on #ffffff). */
+/** Light syntax palette (>= 4.5:1 on every surface palette's 100 step). */
 export const MONACO_LIGHT_RULES: MonacoRule[] = [
   { token: 'keyword', foreground: '0369a1', fontStyle: 'bold' },
   { token: 'string', foreground: '047857' },
   { token: 'number', foreground: 'b45309' },
-  { token: 'comment', foreground: '64748b', fontStyle: 'italic' },
+  { token: 'comment', foreground: '475569', fontStyle: 'italic' },
   { token: 'operator.sql', foreground: 'be185d' },
 ];
 
@@ -69,16 +70,16 @@ export function buildEditorTheme(surfaceName: string, mode: 'dark' | 'light'): M
     base: 'vs',
     rules: MONACO_LIGHT_RULES,
     colors: {
-      'editor.background': '#ffffff',
+      'editor.background': pal['100'],
       'editor.foreground': pal['950'],
       'editorLineNumber.foreground': pal['500'],
       'editorLineNumber.activeForeground': '#2563eb',
-      'editor.lineHighlightBackground': pal['100'],
+      'editor.lineHighlightBackground': pal['200'],
       'editor.selectionBackground': '#bfdbfe80',
       'editorCursor.foreground': '#2563eb',
-      'menu.background': '#ffffff',
+      'menu.background': pal['50'],
       'menu.foreground': pal['800'],
-      'menu.selectionBackground': pal['100'],
+      'menu.selectionBackground': pal['200'],
       'menu.selectionForeground': pal['950'],
       'menu.selectionBorder': '#00000000',
       'menu.separatorBackground': pal['200'],

@@ -13,14 +13,18 @@
 
     /* ==========================================================================
        Light Mode Semantic Palette (Channels for rgb(var(...) / <alpha>))
-       Text steps (100-600) are shifted one step darker than the surface steps so the
-       muted step keeps >= 4.5:1 on the panel surfaces (#f1f5f9).
+       The canvas is a soft grey (slate-100) rather than pure white, which keeps a full-screen
+       workspace comfortable to read; every surface below it deepens by one notch so panels,
+       hover states and inset wells stay distinguishable. `--color-raised` is the single
+       surface that sits above the canvas and is reserved for menus, popovers and dialogs.
+       Text steps (100-600) are shifted one step darker than the surface steps so the muted
+       step keeps >= 4.5:1 on the panel surface (#e2e8f0).
        ========================================================================== */
-    --color-dark-950: 241 245 249;   /* Slate 100 - Inner canvas / backdrop */
-    --color-dark-900: 255 255 255;   /* Pure White - Main app background */
-    --color-dark-850: 248 250 252;   /* Slate 50 - Outer background (toolbars, header, sidebar, status) */
-    --color-dark-800: 241 245 249;   /* Slate 100 - Panel background, secondary surface */
-    --color-dark-750: 226 232 240;   /* Slate 200 - Surface background, active rows */
+    --color-dark-950: 218 225 235;   /* Inset wells / code preview backdrop */
+    --color-dark-900: 241 245 249;   /* Slate 100 - Main app canvas (editor, grid, results) */
+    --color-dark-850: 233 238 244;   /* Outer background (toolbars, header, sidebar, status) */
+    --color-dark-800: 226 232 240;   /* Slate 200 - Panel background, secondary surface */
+    --color-dark-750: 215 223 233;   /* Surface background, active rows, dividers */
     --color-dark-700: 203 213 225;   /* Slate 300 - Border color / divider */
     --color-dark-600: 100 116 139;   /* Slate 500 - Separator / hover border (non-text only) */
     --color-dark-500: 71 85 105;     /* Slate 600 - Muted text / placeholder */
@@ -28,9 +32,10 @@
     --color-dark-300: 30 41 59;      /* Slate 800 - Body text */
     --color-dark-200: 15 23 42;      /* Slate 900 - High contrast text */
     --color-dark-100: 2 6 23;        /* Slate 950 - Brightest / prominent text */
+    --color-raised: 248 250 252;     /* Slate 50 - Raised overlay surface (menus, dialogs, tooltips) */
 
-    /* Theme-aware accent roles: light values clear 4.5:1 on #ffffff, on the panel surface and
-       on the 15-25% self-hue tints used by the status chips. */
+    /* Theme-aware accent roles: light values clear 4.5:1 on the raised overlay surface, on the
+       panel surface (#e2e8f0) and on the 15-25% self-hue tints used by the status chips. */
     --color-accent: 29 78 216;       /* Blue 700 */
     --color-ok: 6 95 70;             /* Emerald 800 */
     --color-danger: 159 18 57;       /* Rose 800 */
@@ -62,6 +67,7 @@
     --color-dark-300: 226 232 240;   /* Slate 200 - Body text */
     --color-dark-200: 241 245 249;   /* Slate 100 - High contrast text */
     --color-dark-100: 248 250 252;   /* Slate 50 - Brightest / prominent text */
+    --color-raised: 30 30 38;        /* #1e1e26 - Raised overlay surface (menus, dialogs, tooltips) */
 
     /* Theme-aware accent roles (dark values: >= 4.5:1 on #0f172a and the raised surface) */
     --color-accent: 96 165 250;      /* Blue 400 */
@@ -192,7 +198,7 @@ html.dark .p-select-overlay,
 }
 
 html:not(.dark) .p-select-overlay {
-  background-color: #ffffff !important;
+  background-color: rgb(var(--color-raised)) !important;
   border: 1px solid rgb(var(--color-dark-700)) !important;
   box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1) !important;
 }
@@ -292,7 +298,7 @@ html.dark .p-menu,
 
 html:not(.dark) .p-contextmenu,
 html:not(.dark) .p-menu {
-  background-color: #ffffff !important;
+  background-color: rgb(var(--color-raised)) !important;
   border: 1px solid rgb(var(--color-dark-700)) !important;
   box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1) !important;
 }
@@ -395,7 +401,7 @@ html.dark .monaco-menu-container .monaco-scrollable-element,
 
 html:not(.dark) .context-view .monaco-scrollable-element,
 html:not(.dark) .monaco-menu-container .monaco-scrollable-element {
-  background-color: #ffffff !important;
+  background-color: rgb(var(--color-raised)) !important;
   border: 1px solid rgb(var(--color-dark-700)) !important;
   color: rgb(var(--color-dark-300)) !important;
 }
@@ -663,7 +669,7 @@ html.dark .p-tooltip .p-tooltip-text,
 }
 
 html:not(.dark) .p-tooltip .p-tooltip-text {
-  background-color: #ffffff !important;
+  background-color: rgb(var(--color-raised)) !important;
   color: rgb(var(--color-dark-300)) !important;
   border: 1px solid rgb(var(--color-dark-700)) !important;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12) !important;
@@ -679,7 +685,7 @@ html.dark .p-tooltip-right .p-tooltip-arrow,
   border-right-color: rgb(var(--color-dark-800)) !important;
 }
 html:not(.dark) .p-tooltip-right .p-tooltip-arrow {
-  border-right-color: #ffffff !important;
+  border-right-color: rgb(var(--color-raised)) !important;
 }
 
 html.dark .p-tooltip-left .p-tooltip-arrow,
@@ -687,7 +693,7 @@ html.dark .p-tooltip-left .p-tooltip-arrow,
   border-left-color: rgb(var(--color-dark-800)) !important;
 }
 html:not(.dark) .p-tooltip-left .p-tooltip-arrow {
-  border-left-color: #ffffff !important;
+  border-left-color: rgb(var(--color-raised)) !important;
 }
 
 html.dark .p-tooltip-top .p-tooltip-arrow,
@@ -695,7 +701,7 @@ html.dark .p-tooltip-top .p-tooltip-arrow,
   border-top-color: rgb(var(--color-dark-800)) !important;
 }
 html:not(.dark) .p-tooltip-top .p-tooltip-arrow {
-  border-top-color: #ffffff !important;
+  border-top-color: rgb(var(--color-raised)) !important;
 }
 
 html.dark .p-tooltip-bottom .p-tooltip-arrow,
@@ -703,7 +709,7 @@ html.dark .p-tooltip-bottom .p-tooltip-arrow,
   border-bottom-color: rgb(var(--color-dark-800)) !important;
 }
 html:not(.dark) .p-tooltip-bottom .p-tooltip-arrow {
-  border-bottom-color: #ffffff !important;
+  border-bottom-color: rgb(var(--color-raised)) !important;
 }
 
 /* External specialized tooltips (HTML Query Plan) */

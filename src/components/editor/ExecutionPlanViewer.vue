@@ -1018,7 +1018,9 @@ body > .qp-tt ::selection,
    Execution Plan Classic Light Theme Styles
    ========================================================================== */
 .plan-render-canvas.theme-classic {
-  background-color: #ffffff !important;
+  /* The classic plan page keeps SSMS' yellow operator boxes but sits on the theme's raised
+     surface instead of pure white. */
+  background-color: #f8fafc !important;
   border: 1px solid #cbd5e1 !important;
   color: #0f172a !important;
 }

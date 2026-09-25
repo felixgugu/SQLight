@@ -279,23 +279,23 @@ test('light theme palette keeps the header anchored and the accents readable', (
   const lightBlock = themeBlock(css, 'html:not\\(\\.dark\\) \\.tabulator');
 
   // Header: a distinct surface, slate text, readable sort arrows and a stronger bottom line.
-  assert.match(lightBlock, /--sq-grid-header-bg: #f8fafc/);
+  assert.match(lightBlock, /--sq-grid-header-bg: #e9eef4/);
   assert.match(lightBlock, /--sq-grid-header-text: #475569/);
   // The sort arrow is the only sort affordance, so it must clear 3:1 on the light header.
   assert.match(lightBlock, /--sq-grid-sort-icon: #64748b/);
   assert.match(lightBlock, /--sq-grid-sort-icon-hover: #1e293b/);
-  assert.match(lightBlock, /--sq-grid-border: #e2e8f0/);
+  assert.match(lightBlock, /--sq-grid-border: #cbd5e1/);
   assert.match(
     css,
     /\.tabulator \.tabulator-header,\s*\n\.tabulator \.tabulator-footer \{\s*\n\s*border-color: var\(--sq-grid-border\)/,
     'the header must keep the 1px structural line'
   );
 
-  // Rows: white surface, soft separators, a hover tint and softer-than-black text.
-  assert.match(lightBlock, /--sq-grid-bg: #ffffff/);
+  // Rows: the soft grey canvas surface, soft separators, a hover tint and softer-than-black text.
+  assert.match(lightBlock, /--sq-grid-bg: #f1f5f9/);
   assert.match(lightBlock, /--sq-grid-fg: #1e293b/);
-  assert.match(lightBlock, /--sq-grid-line: #f1f5f9/);
-  assert.match(lightBlock, /--sq-grid-row-hover: #f1f5f9/);
+  assert.match(lightBlock, /--sq-grid-line: #e2e8f0/);
+  assert.match(lightBlock, /--sq-grid-row-hover: #e2e8f0/);
   assert.match(css, /\.tabulator-row:hover \{\s*\n\s*background-color: var\(--sq-grid-row-hover\)/);
 
   // Selection: a barely-there wash with a bright focus border and handle.
@@ -324,14 +324,14 @@ test('boolean values render as theme aware pills', () => {
   assert.match(truePill, /color: #059669/);
 
   const falsePill = /html:not\(\.dark\) \.sqlight-bool-badge\.sqlight-bool-false \{([\s\S]*?)\n\}/.exec(css)?.[1] ?? '';
-  assert.match(falsePill, /background-color: #f1f5f9/);
-  assert.match(falsePill, /color: #64748b/);
+  assert.match(falsePill, /background-color: #e2e8f0/);
+  assert.match(falsePill, /color: #475569/);
 
   // The structure viewer badges get the same treatment.
   for (const [selector, background, text] of [
     ['\\.sqlight-badge-pk', '#fffbeb', '#b45309'],
     ['\\.sqlight-badge-yes', '#ecfdf5', '#059669'],
-    ['\\.sqlight-badge-no', '#f1f5f9', '#64748b'],
+    ['\\.sqlight-badge-no', '#e2e8f0', '#475569'],
     ['\\.sqlight-badge-identity', '#ecfeff', '#0e7490'],
   ] as const) {
     const rule = new RegExp(`html:not\\(\\.dark\\) ${selector} \\{([\\s\\S]*?)\\n\\}`, 'g').exec(css)?.[1] ?? '';
@@ -409,4 +409,3 @@ test('MonacoEditor and AppMain wire editor clicking to dispatchClearGridSelectio
   assert.match(gridSelectionSrc, /CLEAR_GRID_SELECTION_EVENT/, 'useGridSelection listens to CLEAR_GRID_SELECTION_EVENT');
   assert.match(gridSelectionSrc, /active\.closest\('\.monaco-editor'\)/, 'useGridSelection protects Monaco editor from Ctrl+C intercept');
 });
-

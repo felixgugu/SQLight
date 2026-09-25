@@ -45,11 +45,13 @@ export interface SurfaceOption {
 }
 
 export const SURFACE_OPTIONS: SurfaceOption[] = [
-  { name: 'slate', label: '微藍冷調 (Slate)', sampleDark: '#0f172a', sampleLight: '#f8fafc', token: '{slate}' },
-  { name: 'gray', label: '中性經典 (Gray)', sampleDark: '#111827', sampleLight: '#f9fafb', token: '{gray}' },
-  { name: 'zinc', label: '現代金屬 (Zinc)', sampleDark: '#18181b', sampleLight: '#fafafa', token: '{zinc}' },
-  { name: 'neutral', label: '極簡純淨 (Neutral)', sampleDark: '#171717', sampleLight: '#fafafa', token: '{neutral}' },
-  { name: 'stone', label: '微暖石灰 (Stone)', sampleDark: '#1c1917', sampleLight: '#fafaf9', token: '{stone}' },
+  // `sampleLight` mirrors the light canvas (palette 100) so the swatch shows the soft grey the
+  // theme actually paints, not the near-white overlay tone.
+  { name: 'slate', label: '微藍冷調 (Slate)', sampleDark: '#0f172a', sampleLight: '#f1f5f9', token: '{slate}' },
+  { name: 'gray', label: '中性經典 (Gray)', sampleDark: '#111827', sampleLight: '#f3f4f6', token: '{gray}' },
+  { name: 'zinc', label: '現代金屬 (Zinc)', sampleDark: '#18181b', sampleLight: '#f4f4f5', token: '{zinc}' },
+  { name: 'neutral', label: '極簡純淨 (Neutral)', sampleDark: '#171717', sampleLight: '#f5f5f5', token: '{neutral}' },
+  { name: 'stone', label: '微暖石灰 (Stone)', sampleDark: '#1c1917', sampleLight: '#f5f5f4', token: '{stone}' },
 ];
 
 export interface GlobalFontOption {
@@ -234,8 +236,8 @@ export function applyGlobalSurfaceVariables(surfaceName: string, mode: 'dark' | 
  * Builds every `--color-*` custom property for one surface palette + colour mode.
  *
  * Kept as a pure function (no DOM access) so the contrast regression test can assert the
- * same values the runtime applies. The surface steps (750-950) keep their original mapping;
- * the text steps (100-600) are shifted by one so the muted step stays >= 4.5:1 in both modes.
+ * same values the runtime applies. The text steps (100-600) are shifted by one so the muted
+ * step stays >= 4.5:1 in both modes; the surface steps are described inline below.
  */
 export function buildThemeTokens(surfaceName: string, mode: 'dark' | 'light'): Record<string, string> {
   const pal = (SURFACE_PALETTES[surfaceName] ?? SURFACE_PALETTES['slate'])!;
@@ -267,13 +269,17 @@ export function buildThemeTokens(surfaceName: string, mode: 'dark' | 'light'): R
         '--color-dark-300': rgbStr(p200),
         '--color-dark-200': rgbStr(p100),
         '--color-dark-100': rgbStr(p50),
+        '--color-raised': rgbStr(p800),
       }
     : {
-        '--color-dark-950': rgbStr(p100),
-        '--color-dark-900': '255 255 255',
-        '--color-dark-850': rgbStr(p50),
-        '--color-dark-800': rgbStr(p100),
-        '--color-dark-750': rgbStr(p200),
+        // Light mode runs the ramp from the canvas downwards: the main background is a soft grey
+        // (never pure white, which is harsh at full-screen brightness) and each lower step deepens
+        // the tone so panels, hover states and inset wells stay distinguishable from it.
+        '--color-dark-950': rgbStr(blendRgb(p200, p300, 0.35)), // inset wells (code previews)
+        '--color-dark-900': rgbStr(p100), // main app canvas (editor, grid, results)
+        '--color-dark-850': rgbStr(blendRgb(p100, p200, 0.55)), // chrome (header, sidebar, tab bar)
+        '--color-dark-800': rgbStr(p200), // panels, menus, inputs
+        '--color-dark-750': rgbStr(blendRgb(p200, p300, 0.5)), // hover / active rows, dividers
         '--color-dark-700': rgbStr(p300),
         '--color-dark-600': rgbStr(p500),
         '--color-dark-500': rgbStr(p600),
@@ -281,6 +287,8 @@ export function buildThemeTokens(surfaceName: string, mode: 'dark' | 'light'): R
         '--color-dark-300': rgbStr(p800),
         '--color-dark-200': rgbStr(p900),
         '--color-dark-100': rgbStr(p950),
+        // The only surface lighter than the canvas: menus, popovers, tooltips and dialogs.
+        '--color-raised': rgbStr(p50),
       };
 
   for (const [role, colors] of Object.entries(THEME_ROLE_COLORS)) {
@@ -341,9 +349,18 @@ export const themeManager = {
       const match = SURFACE_OPTIONS.find((s) => s.name === surfaceName);
       const token = match ? match.token : `{${surfaceName}}`;
       const pal = palette(token) as Record<string, any>;
+      // PrimeVue uses `surface.0` for light-mode form fields, content and overlay backgrounds and
+      // for dark-mode text. The light scheme therefore gets the palette's 50 step (a soft grey
+      // instead of pure white) while the dark scheme keeps the pure white text colour.
       updateSurfacePalette({
-        0: '#ffffff',
-        ...pal,
+        light: {
+          0: pal['50'],
+          ...pal,
+        },
+        dark: {
+          0: '#ffffff',
+          ...pal,
+        },
       });
     } catch (e) {
       console.warn(`[themeManager] Failed to update surface palette "${surfaceName}":`, e);

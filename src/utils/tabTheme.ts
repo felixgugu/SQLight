@@ -173,7 +173,9 @@ export function getTabThemeStyle(
       '--tab-hover-text': text,
       '--tab-badge-bg': theme.active.badgeBg,
       '--tab-icon-color': type === 'sql_editor' ? 'var(--p-primary-color, #3b82f6)' : text,
-      '--tab-active-surface': isCustom ? bg : (actualIsLight ? '#ffffff' : 'rgb(var(--color-dark-900))'),
+      // The active tab merges into the content canvas in both modes, so it uses the canvas token
+      // instead of a hardcoded white in light mode.
+      '--tab-active-surface': isCustom ? bg : 'rgb(var(--color-dark-900))',
       '--tab-active-text': isCustom && customSqlText ? customSqlText : (actualIsLight ? '#0f172a' : '#f8fafc'),
     };
   }
@@ -184,7 +186,9 @@ export function getTabThemeStyle(
     '--tab-border': actualIsLight ? 'rgba(203, 213, 225, 0.6)' : theme.inactive.border,
     '--tab-hover-border': actualIsLight ? 'rgba(148, 163, 184, 0.8)' : theme.inactive.hoverBorder,
     '--tab-top-accent': actualIsLight ? theme.iconColorLight : theme.inactive.topAccent,
-    '--tab-text': actualIsLight ? '#64748b' : theme.inactive.text,
+    // The inactive light label sits on a rgba(226,232,240,0.45) tab over the grey chrome, so it
+    // keeps the slate-600 step rather than slate-500 to stay above 4.5:1.
+    '--tab-text': actualIsLight ? '#475569' : theme.inactive.text,
     '--tab-hover-text': actualIsLight ? '#0f172a' : theme.inactive.hoverText,
     '--tab-badge-bg': actualIsLight ? 'rgba(203, 213, 225, 0.6)' : theme.inactive.badgeBg,
     '--tab-icon-color': actualIsLight ? theme.iconColorLight : theme.iconColor,

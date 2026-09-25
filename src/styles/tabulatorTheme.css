@@ -48,17 +48,20 @@ html.dark .tabulator {
 }
 
 html:not(.dark) .tabulator {
-  --sq-grid-bg: #ffffff;
-  --sq-grid-header-bg: #f8fafc;
-  --sq-grid-header-hover: #f1f5f9;
+  /* Light mode sits on the same soft grey canvas as the rest of the app instead of white, so
+     every grey here is one notch deeper than before to keep the hierarchy readable. */
+  --sq-grid-bg: #f1f5f9;
+  --sq-grid-header-bg: #e9eef4;
+  --sq-grid-header-hover: #e2e8f0;
   --sq-grid-header-text: #475569;
   --sq-grid-fg: #1e293b;
-  --sq-grid-muted: #64748b;
+  /* Muted grid text must clear 4.5:1 on the #f1f5f9 canvas and on the #e2e8f0 hover surface. */
+  --sq-grid-muted: #475569;
   /* The header keeps the stronger line that anchors it; rows and cells stay softly separated. */
-  --sq-grid-border: #e2e8f0;
-  --sq-grid-line: #f1f5f9;
-  --sq-grid-row-hover: #f1f5f9;
-  --sq-grid-row-stripe: #f8fafc;
+  --sq-grid-border: #cbd5e1;
+  --sq-grid-line: #e2e8f0;
+  --sq-grid-row-hover: #e2e8f0;
+  --sq-grid-row-stripe: #e9eef4;
   --sq-grid-sort-icon: #64748b;
   --sq-grid-sort-icon-hover: #1e293b;
   --sq-grid-sort-icon-active: #2563eb;
@@ -81,7 +84,7 @@ html:not(.dark) .tabulator {
   --sq-grid-range-handle: #2563eb;
   /* White would be unreadable on a light tint, so the light theme keeps the normal text colour. */
   --sq-grid-range-text: var(--sq-grid-fg);
-  --sq-grid-editor-bg: #ffffff;
+  --sq-grid-editor-bg: #f8fafc;
 }
 
 /* --------------------------------------------------------------------------
@@ -349,9 +352,10 @@ html:not(.dark) .sqlight-bool-badge.sqlight-bool-true {
 }
 
 html:not(.dark) .sqlight-bool-badge.sqlight-bool-false {
-  border: 1px solid #e2e8f0;
-  background-color: #f1f5f9;
-  color: #64748b;
+  /* The "false" pill must stay visible on the #f1f5f9 canvas, so it is one notch deeper. */
+  border: 1px solid #cbd5e1;
+  background-color: #e2e8f0;
+  color: #475569;
 }
 
 /* --------------------------------------------------------------------------
@@ -455,7 +459,7 @@ html:not(.dark) .sqlight-bool-badge.sqlight-bool-false {
 
 html:not(.dark) .tabulator-tooltip {
   border-color: #cbd5e1;
-  background: #ffffff;
+  background: #f8fafc;
   color: #1e293b;
 }
 
@@ -513,9 +517,9 @@ html:not(.dark) .sqlight-badge-yes {
 }
 
 html:not(.dark) .sqlight-badge-no {
-  border-color: #e2e8f0;
-  background-color: #f1f5f9;
-  color: #64748b;
+  border-color: #cbd5e1;
+  background-color: #e2e8f0;
+  color: #475569;
 }
 
 html:not(.dark) .sqlight-badge-identity {
@@ -525,7 +529,7 @@ html:not(.dark) .sqlight-badge-identity {
 }
 
 html:not(.dark) .sqlight-badge-muted {
-  color: #94a3b8;
+  color: #475569;
 }
 
 /* --------------------------------------------------------------------------

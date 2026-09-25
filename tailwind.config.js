@@ -39,6 +39,7 @@ export default {
         // Theme-aware accent roles. Unlike the fixed `brand` scale above (which is used for
         // solid backgrounds whose text is white), these resolve per colour mode so accent text
         // and icons stay >= 4.5:1 in light and dark mode. See services/themeManager.ts.
+        raised: withOpacity('--color-raised'), // Menus, popovers, tooltips: the one surface above the canvas
         accent: withOpacity('--color-accent'),
         ok: withOpacity('--color-ok'),
         danger: withOpacity('--color-danger'),
