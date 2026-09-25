@@ -1,4 +1,4 @@
-# SQLight 專案架構地圖 (AGENTS.md)
+# PuffSQL 專案架構地圖 (AGENTS.md)
 
 ## 1. 專案簡介與技術棧
 - **用途**：極致輕量、現代高效的 Microsoft SQL Server (T-SQL) 跨平台桌面客戶端。

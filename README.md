@@ -1,4 +1,4 @@
-# SQLight
+# PuffSQL
 
 **極致輕量的 Microsoft SQL Server (T-SQL) 跨平台桌面客戶端**
 
@@ -6,7 +6,7 @@ Tauri v2 + Rust + Vue 3 + TypeScript + PrimeVue 4 + Monaco Editor + Tabulator
 
 ---
 
-SQLight 是為日常 T-SQL 查詢與簡單資料庫操作設計的桌面客戶端。相較 SSMS、DataGrip、DBeaver 等完整工具，它主打**啟動快、體積小**，把日常最常用的功能做順：原生 Rust 後端、Monaco 編輯器、物件總管、可瀏覽大量資料的結果網格（後端逐列串流，預設每組結果上限 10,000 筆，可調高或取消），以及執行計畫與統計分析。
+PuffSQL 是為日常 T-SQL 查詢與簡單資料庫操作設計的桌面客戶端。相較 SSMS、DataGrip、DBeaver 等完整工具，它主打**啟動快、體積小**，把日常最常用的功能做順：原生 Rust 後端、Monaco 編輯器、物件總管、可瀏覽大量資料的結果網格（後端逐列串流，預設每組結果上限 10,000 筆，可調高或取消），以及執行計畫與統計分析。
 
 ## 核心特色
 
@@ -125,4 +125,4 @@ docs/            架構規劃與維護進度
 
 ## 授權
 
-Copyright © 2026 SQLight Team. All rights reserved.
+Copyright © 2026 PuffSQL Team. All rights reserved.

@@ -547,7 +547,7 @@ async function openSqlFile() {
     if (result.opened) {
       const fileName = result.fileName || 'Opened.sql';
       if (result.fileType === 'er_diagram' && result.erData) {
-        const title = fileName.replace(/\.(sqlight-er|x6)?\.json$/i, '') || 'ER Diagram';
+        const title = fileName.replace(/\.(puffsql-er|sqlight-er|x6)?\.json$/i, '') || 'ER Diagram';
         workspaceStore.addErDiagramTab({
           title,
           initialData: result.erData,

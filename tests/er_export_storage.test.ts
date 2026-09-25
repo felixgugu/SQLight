@@ -115,13 +115,13 @@ test('saveErDiagramToFile prompts showSaveFilePicker with JSON filter and writes
   const res = await saveErDiagramToFile(sampleJson, 'Customer_ER');
 
   assert.equal(res.saved, true);
-  assert.equal(res.fileName, 'Customer_ER.sqlight-er.json');
+  assert.equal(res.fileName, 'Customer_ER.puffsql-er.json');
   assert.equal(writtenText, sampleJson);
   assert.equal(streamClosed, true);
-  assert.equal(pickerCalledWith.suggestedName, 'Customer_ER.sqlight-er.json');
-  assert.equal(pickerCalledWith.types[0].description, 'SQLight ER 模型 (*.sqlight-er.json, *.json)');
+  assert.equal(pickerCalledWith.suggestedName, 'Customer_ER.puffsql-er.json');
+  assert.equal(pickerCalledWith.types[0].description, 'PuffSQL ER 模型 (*.puffsql-er.json, *.json)');
   assert.ok(pickerCalledWith.types[0].accept['application/json'].includes('.json'));
-  assert.ok(!pickerCalledWith.types[0].accept['application/json'].includes('.sqlight-er.json'));
+  assert.ok(!pickerCalledWith.types[0].accept['application/json'].includes('.puffsql-er.json'));
 
   delete (globalThis as any).window;
 });
@@ -148,7 +148,7 @@ test('saveDataUriToFile / saveSvgToFile / saveErDiagramToFile return { saved: fa
   assert.equal(resSvg.saved, false);
   assert.equal(resSvg.fileName, undefined);
 
-  const resJson = await saveErDiagramToFile('{}', 'Orders.sqlight-er.json');
+  const resJson = await saveErDiagramToFile('{}', 'Orders.puffsql-er.json');
   assert.equal(resJson.saved, false);
   assert.equal(resJson.fileName, undefined);
 

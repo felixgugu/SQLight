@@ -25,7 +25,7 @@ async function listenImportProgress(
       onProgress(payload);
     });
   } catch (err) {
-    console.warn('[SQLight] import progress listener unavailable:', err);
+    console.warn('[PuffSQL] import progress listener unavailable:', err);
     return () => {};
   }
 }
@@ -51,7 +51,7 @@ export const tsvImportService = {
     } catch (err) {
       // Unique metadata is only used for in-file duplicate warnings; the database stays the
       // final authority through the transactional insert, so this never blocks the import.
-      console.warn('[SQLight] unable to read unique index metadata:', err);
+      console.warn('[PuffSQL] unable to read unique index metadata:', err);
       return [];
     }
   },

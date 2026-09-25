@@ -116,7 +116,12 @@ export async function savePlanToFile(
 }
 
 function processOpenedContent(fileName: string, content: string): OpenFileResult {
-  if (fileName.endsWith('.json') || fileName.endsWith('.sqlight-er.json')) {
+  if (
+    fileName.endsWith('.json') ||
+    fileName.endsWith('.puffsql-er.json') ||
+    // Pre-rename ER models stay readable.
+    fileName.endsWith('.sqlight-er.json')
+  ) {
     try {
       const parsed = JSON.parse(content);
       if (
@@ -151,7 +156,7 @@ export async function openSqlFromFile(): Promise<OpenFileResult> {
       const [handle] = await window.showOpenFilePicker({
         types: [
           {
-            description: '支援的檔案 (*.sql, *.sqlight-er.json, *.json, *.txt)',
+            description: '支援的檔案 (*.sql, *.puffsql-er.json, *.json, *.txt)',
             accept: {
               'text/plain': ['.sql', '.txt'],
               'application/json': ['.json'],
@@ -164,7 +169,7 @@ export async function openSqlFromFile(): Promise<OpenFileResult> {
             },
           },
           {
-            description: 'ER Model Diagram (*.sqlight-er.json, *.json)',
+            description: 'ER Model Diagram (*.puffsql-er.json, *.sqlight-er.json, *.json)',
             accept: {
               'application/json': ['.json'],
             },
@@ -188,7 +193,7 @@ export async function openSqlFromFile(): Promise<OpenFileResult> {
   return new Promise((resolve) => {
     const input = document.createElement('input');
     input.type = 'file';
-    input.accept = '.sql,.txt,.json,.sqlight-er.json';
+    input.accept = '.sql,.txt,.json,.puffsql-er.json,.sqlight-er.json';
     input.style.display = 'none';
     input.onchange = async () => {
       const file = input.files?.[0];
@@ -414,17 +419,17 @@ export async function saveSvgToFile(
  */
 export async function saveErDiagramToFile(
   jsonContent: string,
-  suggestedName: string = 'er-diagram.sqlight-er.json'
+  suggestedName: string = 'er-diagram.puffsql-er.json'
 ): Promise<SaveFileResult> {
-  const normalizedName = suggestedName.endsWith('.sqlight-er.json')
+  const normalizedName = suggestedName.endsWith('.puffsql-er.json')
     ? suggestedName
     : suggestedName.endsWith('.json')
     ? suggestedName
-    : `${suggestedName}.sqlight-er.json`;
+    : `${suggestedName}.puffsql-er.json`;
 
   return saveTextWithPicker(jsonContent, {
     suggestedName: normalizedName,
-    fileDescription: 'SQLight ER 模型 (*.sqlight-er.json, *.json)',
+    fileDescription: 'PuffSQL ER 模型 (*.puffsql-er.json, *.json)',
     mimeType: 'application/json',
     extensions: ['.json'],
   });

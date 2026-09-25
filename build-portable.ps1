@@ -3,7 +3,7 @@
 )
 
 # ========================================================================
-# SQLight - 單機免安裝版 (Portable) 自動建置與打包指令碼
+# PuffSQL - 單機免安裝版 (Portable) 自動建置與打包指令碼
 # 編碼規範：UTF-8 with BOM (相容 Windows PowerShell 5.1 與 PowerShell 7+)
 # ========================================================================
 
@@ -12,13 +12,13 @@
 $OutputEncoding = [System.Text.Encoding]::UTF8
 chcp 65001 >$null 2>&1
 
-$Host.UI.RawUI.WindowTitle = "SQLight - 單機免安裝版打包程式"
+$Host.UI.RawUI.WindowTitle = "PuffSQL - 單機免安裝版打包程式"
 
 # 確保工作目錄為當前指令碼所在目錄
 Set-Location -LiteralPath $PSScriptRoot
 
 Write-Host "========================================================================" -ForegroundColor Cyan
-Write-Host "  SQLight - 單機免安裝版 (Portable) 自動建置與打包" -ForegroundColor Cyan
+Write-Host "  PuffSQL - 單機免安裝版 (Portable) 自動建置與打包" -ForegroundColor Cyan
 Write-Host "========================================================================" -ForegroundColor Cyan
 Write-Host ""
 
@@ -66,6 +66,19 @@ if (-not (Test-Path $OutDir)) {
     New-Item -ItemType Directory -Path $OutDir -Force | Out-Null
 }
 Write-Host "  - 輸出路徑: $OutDir" -ForegroundColor Gray
+
+# 清除更名前留下的產物，避免使用者誤點舊的 SQLight.exe
+$StaleArtifacts = @(
+    "$OutDir\SQLight.exe",
+    "$OutDir\SQLight-Portable.zip",
+    "$OutDir\sqlight.log"
+)
+foreach ($StalePath in $StaleArtifacts) {
+    if (Test-Path $StalePath) {
+        Remove-Item -LiteralPath $StalePath -Force
+        Write-Host "  - 已移除舊版命名殘留: $(Split-Path $StalePath -Leaf)" -ForegroundColor DarkGray
+    }
+}
 Write-Host ""
 
 # ------------------------------------------------------------------------
@@ -88,12 +101,12 @@ Write-Host ""
 Write-Host "[4/5] 正在匯出免安裝執行檔與相依函式庫..." -ForegroundColor Yellow
 
 $CandidateExes = @(
-    "$PSScriptRoot\src-tauri\target\x86_64-pc-windows-msvc\release\sqlight.exe",
-    "$PSScriptRoot\src-tauri\target\x86_64-pc-windows-msvc\release\SQLight.exe",
-    "$PSScriptRoot\src-tauri\target\release\sqlight.exe",
-    "$PSScriptRoot\src-tauri\target\release\SQLight.exe",
-    "$PSScriptRoot\src-tauri\target\x86_64-pc-windows-gnu\release\sqlight.exe",
-    "$PSScriptRoot\src-tauri\target\x86_64-pc-windows-gnu\release\SQLight.exe"
+    "$PSScriptRoot\src-tauri\target\x86_64-pc-windows-msvc\release\puffsql.exe",
+    "$PSScriptRoot\src-tauri\target\x86_64-pc-windows-msvc\release\PuffSQL.exe",
+    "$PSScriptRoot\src-tauri\target\release\puffsql.exe",
+    "$PSScriptRoot\src-tauri\target\release\PuffSQL.exe",
+    "$PSScriptRoot\src-tauri\target\x86_64-pc-windows-gnu\release\puffsql.exe",
+    "$PSScriptRoot\src-tauri\target\x86_64-pc-windows-gnu\release\PuffSQL.exe"
 )
 
 $ExistingExes = @($CandidateExes | Where-Object { Test-Path $_ } | Get-Item | Sort-Object LastWriteTime -Descending)
@@ -103,7 +116,7 @@ if ($ExistingExes.Count -eq 0) {
 
 $ExeSrc = $ExistingExes[0].FullName
 
-$TargetExe = "$OutDir\SQLight.exe"
+$TargetExe = "$OutDir\PuffSQL.exe"
 Copy-Item -LiteralPath $ExeSrc -Destination $TargetExe -Force
 Write-Host "  - 已匯出主程式: $TargetExe" -ForegroundColor Green
 
@@ -135,9 +148,9 @@ Write-Host ""
 # ------------------------------------------------------------------------
 # 5. 製作免安裝可攜版壓縮檔 (方便分享與攜帶)
 # ------------------------------------------------------------------------
-Write-Host "[5/5] 正在打包可攜版壓縮檔 (SQLight-Portable.zip)..." -ForegroundColor Yellow
+Write-Host "[5/5] 正在打包可攜版壓縮檔 (PuffSQL-Portable.zip)..." -ForegroundColor Yellow
 
-$ZipPath = "$OutDir\SQLight-Portable.zip"
+$ZipPath = "$OutDir\PuffSQL-Portable.zip"
 if (Test-Path $ZipPath) {
     Remove-Item -LiteralPath $ZipPath -Force
 }
@@ -161,7 +174,7 @@ Write-Host ""
 # 顯示完成資訊與大小摘要
 # ------------------------------------------------------------------------
 Write-Host "========================================================================" -ForegroundColor Cyan
-Write-Host "  [完成] SQLight 單機免安裝程式已打包成功！" -ForegroundColor Cyan
+Write-Host "  [完成] PuffSQL 單機免安裝程式已打包成功！" -ForegroundColor Cyan
 Write-Host "========================================================================" -ForegroundColor Cyan
 
 $ExeItem = Get-Item $TargetExe
@@ -184,7 +197,7 @@ if ($HasDll) {
 } else {
     Write-Host "  2. 這是 100% 獨立單一執行檔 (已內嵌 WebView2Loader 與靜態 VC 執行階段，零外部依賴)。" -ForegroundColor Green
 }
-Write-Host "  3. 只要將 SQLight.exe 複製到任何 Windows 10/11 電腦或隨身碟，雙擊即可直接運行！" -ForegroundColor White
+Write-Host "  3. 只要將 PuffSQL.exe 複製到任何 Windows 10/11 電腦或隨身碟，雙擊即可直接運行！" -ForegroundColor White
 Write-Host "========================================================================" -ForegroundColor Cyan
 Write-Host ""
 
@@ -193,4 +206,3 @@ if (-not $NoPause) {
     Start-Process explorer.exe -ArgumentList "/select,`"$TargetExe`""
     Read-Host "按 Enter 鍵結束..."
 }
-

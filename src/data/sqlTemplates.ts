@@ -147,7 +147,7 @@ WHERE NOT EXISTS (
     code: `-- 1. 純量變數宣告與行內初始化 (SQL Server 2008+)
 DECLARE 
     @UserId INT = 1001,
-    @UserName NVARCHAR(50) = N'SQLight User',
+    @UserName NVARCHAR(50) = N'PuffSQL User',
     @StartDate DATE = '2026-01-01',
     @TotalAmount DECIMAL(18, 2) = 0.00,
     @IsActive BIT = 1;
@@ -626,7 +626,7 @@ DECLARE @Sql NVARCHAR(MAX);
 DECLARE @ParamDef NVARCHAR(500);
 
 -- 定義業務查詢變數
-DECLARE @SearchKeyword NVARCHAR(100) = N'SQLight';
+DECLARE @SearchKeyword NVARCHAR(100) = N'PuffSQL';
 DECLARE @MinAmount DECIMAL(18, 2) = 5000.00;
 DECLARE @TotalMatchCount INT;
 
@@ -787,4 +787,3 @@ WHERE r.blocking_session_id <> 0;
   // ==========================================
   ...TABLE_INSPECTION_TEMPLATES,
 ];
-

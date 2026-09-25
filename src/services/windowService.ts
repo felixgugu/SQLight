@@ -17,7 +17,7 @@ async function resolveWindow(): Promise<Window | null> {
     const { getCurrentWindow } = await import('@tauri-apps/api/window');
     return getCurrentWindow();
   } catch (err) {
-    console.warn('[SQLight] window API unavailable:', err);
+    console.warn('[PuffSQL] window API unavailable:', err);
     return null;
   }
 }
@@ -41,7 +41,7 @@ export const windowService = {
     try {
       return await window.isMaximized();
     } catch (err) {
-      console.warn('[SQLight] Unable to read window maximized state:', err);
+      console.warn('[PuffSQL] Unable to read window maximized state:', err);
       return false;
     }
   },
@@ -52,7 +52,7 @@ export const windowService = {
     try {
       await window.minimize();
     } catch (err) {
-      console.warn('[SQLight] Unable to minimize window:', err);
+      console.warn('[PuffSQL] Unable to minimize window:', err);
     }
   },
 
@@ -62,7 +62,7 @@ export const windowService = {
     try {
       await window.toggleMaximize();
     } catch (err) {
-      console.warn('[SQLight] Unable to toggle window maximize state:', err);
+      console.warn('[PuffSQL] Unable to toggle window maximize state:', err);
     }
   },
 
@@ -72,7 +72,7 @@ export const windowService = {
     try {
       await window.close();
     } catch (err) {
-      console.warn('[SQLight] Unable to close window:', err);
+      console.warn('[PuffSQL] Unable to close window:', err);
     }
   },
 
@@ -86,7 +86,7 @@ export const windowService = {
     try {
       return await window.onResized(() => handler());
     } catch (err) {
-      console.warn('[SQLight] window resize listener unavailable:', err);
+      console.warn('[PuffSQL] window resize listener unavailable:', err);
       return () => {};
     }
   },

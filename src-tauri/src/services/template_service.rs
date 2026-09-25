@@ -88,7 +88,7 @@ impl TemplateService {
             category: "custom".to_string(),
             category_label: Some("自訂範本".to_string()),
             tags: vec!["範例".to_string(), "自訂".to_string(), "Sample".to_string()],
-            description: "這是與應用程式同層放置的自訂語法檔案 (sql_custom_templates.json)。您可隨時以任一文字編輯器 (VS Code、Notepad) 編輯此檔案，儲存後在 SQLight 點擊「重新載入」即可即時生效！".to_string(),
+            description: "這是與應用程式同層放置的自訂語法檔案 (sql_custom_templates.json)。您可隨時以任一文字編輯器 (VS Code、Notepad) 編輯此檔案，儲存後在 PuffSQL 點擊「重新載入」即可即時生效！".to_string(),
             code: "-- 自訂 SQL 語法範本\n-- 支援在 sql_custom_templates.json 中自由擴充團隊專用語法\nSELECT \n    TOP 50 *\nFROM dbo.YourTable\nORDER BY Id DESC;".to_string(),
             is_custom: Some(true),
             created_at: Some(chrono::Utc::now().timestamp_millis()),

@@ -1,12 +1,12 @@
 [package]
-name = "sqlight"
+name = "puffsql"
 version = "0.1.1"
 description = "Lightweight desktop SQL client for Microsoft SQL Server"
-authors = ["SQLight Team"]
+authors = ["PuffSQL Team"]
 edition = "2021"
 
 [lib]
-name = "sqlight_lib"
+name = "puffsql_lib"
 crate-type = ["staticlib", "rlib"]
 
 [build-dependencies]

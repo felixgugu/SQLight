@@ -81,5 +81,5 @@ for (const file of filesToPatch) {
 }
 
 if (patchedCount > 0) {
-  console.log(`[SQLight] Successfully patched ${patchedCount} html-query-plan file(s) for modern ESM strict-mode & persistent tooltips.`);
+  console.log(`[PuffSQL] Successfully patched ${patchedCount} html-query-plan file(s) for modern ESM strict-mode & persistent tooltips.`);
 }

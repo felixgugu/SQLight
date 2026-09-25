@@ -17,12 +17,12 @@ use services::ConnectionManager;
 pub fn run() {
     // Initialize/clear the query log file on each application launch
     if let Err(e) = services::QueryLogger::init() {
-        eprintln!("[SQLight] Failed to initialize query log file: {}", e);
+        eprintln!("[PuffSQL] Failed to initialize query log file: {}", e);
     }
 
     // Initialize/clear the AI request log file on each application launch
     if let Err(e) = services::AiLogger::init() {
-        eprintln!("[SQLight] Failed to initialize AI log file: {}", e);
+        eprintln!("[PuffSQL] Failed to initialize AI log file: {}", e);
     }
 
     let connection_manager = ConnectionManager::new();
@@ -66,5 +66,5 @@ pub fn run() {
         ])
 
         .run(tauri::generate_context!())
-        .expect("error while running SQLight application");
+        .expect("error while running PuffSQL application");
 }

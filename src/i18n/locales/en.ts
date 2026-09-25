@@ -340,7 +340,7 @@ export default {
     diagnoseLatestError: 'AI Diagnose Latest Error',
     diagnoseLatestErrorTooltip: 'Invoke AI Assistant to diagnose the latest error',
     physicalLog: 'Log File',
-    openLogTooltip: 'Open physical log file (sqlight.log)',
+    openLogTooltip: 'Open physical log file (puffsql.log)',
     noMessages: 'No messages in this session',
     aiDiagnose: 'AI Diagnose',
     aiDiagnoseTooltip: 'Diagnose this error with AI to get suggestions',

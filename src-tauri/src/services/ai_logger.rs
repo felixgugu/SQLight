@@ -46,7 +46,7 @@ impl AiLogger {
         let now = Local::now().format("%Y-%m-%d %H:%M:%S");
         let header = format!(
             "================================================================================\n\
-             SQLight AI Request Log - Session Started at {}\n\
+             PuffSQL AI Request Log - Session Started at {}\n\
              Log File: {}\n\
              ================================================================================\n\n",
             now,
@@ -184,7 +184,7 @@ mod tests {
         let _ = AiLogger::init();
         let path = AiLogger::resolve_log_path();
         let content_after_init = fs::read_to_string(&path).unwrap_or_default();
-        assert!(content_after_init.contains("SQLight AI Request Log"));
+        assert!(content_after_init.contains("PuffSQL AI Request Log"));
 
         // Test logging an AI request
         let sample_req = r#"{"model":"gpt-4o","messages":[{"role":"user","content":"SELECT 1;"}]}"#;
@@ -207,7 +207,7 @@ mod tests {
         // Re-init (simulating application reopen) should clear old requests & responses
         let _ = AiLogger::init();
         let content_after_reopen = fs::read_to_string(&path).unwrap_or_default();
-        assert!(content_after_reopen.contains("SQLight AI Request Log"));
+        assert!(content_after_reopen.contains("PuffSQL AI Request Log"));
         assert!(!content_after_reopen.contains("SELECT 1;"));
         assert!(!content_after_reopen.contains("Here is the result"));
     }

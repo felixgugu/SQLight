@@ -340,7 +340,7 @@ export default {
     diagnoseLatestError: 'AI 診斷最新錯誤',
     diagnoseLatestErrorTooltip: '呼叫 AI 智能助手深度診斷最新發生的錯誤',
     physicalLog: '實體日誌',
-    openLogTooltip: '開啟與應用程式同目錄的實體日誌檔 (sqlight.log)',
+    openLogTooltip: '開啟與應用程式同目錄的實體日誌檔 (puffsql.log)',
     noMessages: '本次階段無任何訊息',
     aiDiagnose: 'AI 診斷',
     aiDiagnoseTooltip: '使用 AI 智能診斷此錯誤並取得修復建議',

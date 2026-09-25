@@ -1964,7 +1964,7 @@ async function exportAsJson() {
 
   const jsonStr = JSON.stringify(payload, null, 2);
   try {
-    const res = await saveErDiagramToFile(jsonStr, `${title}.sqlight-er.json`);
+    const res = await saveErDiagramToFile(jsonStr, `${title}.puffsql-er.json`);
     if (res.saved) {
       workspaceStore.showToast(`已成功儲存 X6 格式原始碼: ${res.fileName}`, 'success');
     }

@@ -418,11 +418,11 @@ function mockInvoke<T>(cmd: string, args?: Record<string, unknown>): Promise<T> 
       return Promise.resolve('./sql_custom_templates.json' as unknown as T);
 
     case 'open_query_log_file':
-      console.info('[Dev/Browser] Opening mock query log file: ./sqlight.log');
-      return Promise.resolve('./sqlight.log' as unknown as T);
+      console.info('[Dev/Browser] Opening mock query log file: ./puffsql.log');
+      return Promise.resolve('./puffsql.log' as unknown as T);
 
     case 'get_query_log_path':
-      return Promise.resolve('./sqlight.log' as unknown as T);
+      return Promise.resolve('./puffsql.log' as unknown as T);
 
     case 'log_ai_request':
       console.info('[Dev/Browser] log_ai_request:', args);

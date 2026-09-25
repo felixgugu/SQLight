@@ -1,5 +1,5 @@
 /**
- * SQLight theme for Tabulator grids.
+ * PuffSQL theme for Tabulator grids.
  *
  * Loaded after `tabulator-tables/dist/css/tabulator.css` so these rules win. Both colour schemes
  * are keyed off the global `html.dark` class set by `services/themeManager.ts`, which keeps the

@@ -327,7 +327,7 @@ export function startGridPerfDiag(options: GridPerfDiagOptions): () => void {
     runHorizontalScrollBenchmark(container)
       .then((stats) => {
         benchmarkResult = `benchmark avg ${stats.avgMs}ms p95 ${stats.p95Ms}ms max ${stats.maxMs}ms over32 ${stats.overBudgetFrames}/${stats.frames}`;
-        console.info('[SQLight][grid-perf]', label ?? '', stats, collectGridPerfSnapshot(table, container));
+        console.info('[PuffSQL][grid-perf]', label ?? '', stats, collectGridPerfSnapshot(table, container));
         renderHud();
       })
       .catch((err) => {
@@ -350,7 +350,7 @@ export function startGridPerfDiag(options: GridPerfDiagOptions): () => void {
         filterResult =
           `filter p95 apply ${report.p95ApplyMs}ms max ${report.maxApplyMs}ms ` +
           `p95 settle ${report.p95SettleMs}ms (${report.samples.map((s) => s.applyMs).join('/')})`;
-        console.info('[SQLight][grid-perf][filter]', label ?? '', report);
+        console.info('[PuffSQL][grid-perf][filter]', label ?? '', report);
         renderHud();
       })
       .catch((err) => {

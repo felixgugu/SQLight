@@ -6,14 +6,14 @@ use std::io::Write;
 use std::path::PathBuf;
 use std::sync::Mutex;
 
-pub const LOG_FILE_NAME: &str = "sqlight.log";
+pub const LOG_FILE_NAME: &str = "puffsql.log";
 
 static LOG_MUTEX: Mutex<()> = Mutex::new(());
 
 pub struct QueryLogger;
 
 impl QueryLogger {
-    /// Resolves the path to sqlight.log located alongside the application.
+    /// Resolves the path to puffsql.log located alongside the application.
     pub fn resolve_log_path() -> PathBuf {
         // 1. If running in development (target directory in executable path), place in cwd (project root)
         if let Ok(exe) = std::env::current_exe() {
@@ -47,7 +47,7 @@ impl QueryLogger {
         let now = Local::now().format("%Y-%m-%d %H:%M:%S");
         let header = format!(
             "================================================================================\n\
-             SQLight Query Log - Session Started at {}\n\
+             PuffSQL Query Log - Session Started at {}\n\
              Log File: {}\n\
              ================================================================================\n\n",
             now,

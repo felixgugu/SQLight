@@ -3,7 +3,7 @@
  *
  * The published package ships no type definitions and the community `@types/tabulator-tables`
  * package lags behind the runtime (6.3.x) and does not describe the range/border APIs this
- * project relies on. Declaring only the members SQLight actually uses keeps `vue-tsc` honest
+ * project relies on. Declaring only the members PuffSQL actually uses keeps `vue-tsc` honest
  * without pretending to cover the whole library.
  */
 declare module 'tabulator-tables' {

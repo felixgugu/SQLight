@@ -223,9 +223,8 @@ test('history and messages expand/collapse set behavior preserves individual and
 
 test('queryService openQueryLogFile and getQueryLogPath return valid log path in browser/mock environment', async () => {
   const logPath = await queryService.getQueryLogPath();
-  assert.ok(logPath.includes('sqlight.log'), 'getQueryLogPath should resolve to sqlight.log');
+  assert.ok(logPath.includes('puffsql.log'), 'getQueryLogPath should resolve to puffsql.log');
 
   const openedPath = await queryService.openQueryLogFile();
-  assert.ok(openedPath.includes('sqlight.log'), 'openQueryLogFile should open sqlight.log');
+  assert.ok(openedPath.includes('puffsql.log'), 'openQueryLogFile should open puffsql.log');
 });
-
